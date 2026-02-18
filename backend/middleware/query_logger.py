@@ -21,6 +21,7 @@ improvement — this table makes that easy to query later.
 import sqlite3
 import json
 import os
+from typing import Optional
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -60,9 +61,9 @@ def log_query(
     *,
     session_id:       str,
     user_query:       str,
-    structured_query: dict | None,
+    structured_query: Optional[dict],
     execution_status: str,
-    error_detail:     str | None = None,
+    error_detail:     Optional[str] = None,
 ) -> int:
     """
     Insert one log row. Returns the new row id.

@@ -3,9 +3,10 @@ import { useState, useRef, useEffect } from 'react'
 const EXAMPLE_QUERIES = [
   'Rank top 10 by power this month',
   'Show e0101 energy last 7 days',
+  'Compare e0101 vs e0206 power today',
+  'e0405 and e0410 and e0411 power last 7 days',
   'Show e0206 voltage today',
   'Top 5 by reactive power all time',
-  'Which AHU uses most energy this week?',
 ]
 
 const METRICS = [
@@ -13,14 +14,17 @@ const METRICS = [
   'volts_l_n_avg', 'apparent_power_total', 'power_demand', 'reactive_power_total',
 ]
 
-export default function ChatPanel({ messages, isLoading, onQuery }) {
-  const [input, setInput] = useState('')
+export default function ChatPanel({ messages, isLoading, onQuery, onClear }) {
+  const [input, setInput]           = useState('')
   const [isRecording, setIsRecording] = useState(false)
-  const messagesEndRef = useRef(null)
-  const textareaRef = useRef(null)
-  const recognitionRef = useRef(null)
+  const messagesEndRef  = useRef(null)
+  const textareaRef     = useRef(null)
+  const recognitionRef  = useRef(null)
 
-  // Auto-scroll to bottom
+  // Auto-focus input on mount
+  useEffect(() => { textareaRef.current?.focus() }, [])
+
+  // Auto-scroll to bottom whenever messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
@@ -48,9 +52,12 @@ export default function ChatPanel({ messages, isLoading, onQuery }) {
     if (textareaRef.current) textareaRef.current.style.height = '42px'
   }
 
-  function handleChip(text) {
-    setInput(text)
-    textareaRef.current?.focus()
+  function handleChipClick(text) {
+    onQuery(text)
+  }
+
+  function handleUserMessageClick(text) {
+    if (!isLoading) onQuery(text)
   }
 
   function toggleVoice() {
@@ -58,26 +65,22 @@ export default function ChatPanel({ messages, isLoading, onQuery }) {
       alert('Voice input is not supported in this browser. Try Chrome.')
       return
     }
-
     if (isRecording) {
       recognitionRef.current?.stop()
       setIsRecording(false)
       return
     }
-
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    const SR  = window.SpeechRecognition || window.webkitSpeechRecognition
     const rec = new SR()
-    rec.lang = 'en-US'
-    rec.interimResults = false
+    rec.lang            = 'en-US'
+    rec.interimResults  = false
     rec.maxAlternatives = 1
-
     rec.onresult = (e) => {
       const transcript = e.results[0][0].transcript
       setInput(prev => prev ? `${prev} ${transcript}` : transcript)
     }
-    rec.onend = () => setIsRecording(false)
+    rec.onend   = () => setIsRecording(false)
     rec.onerror = () => setIsRecording(false)
-
     rec.start()
     recognitionRef.current = rec
     setIsRecording(true)
@@ -85,12 +88,22 @@ export default function ChatPanel({ messages, isLoading, onQuery }) {
 
   return (
     <div className="chat-panel">
+
       {/* Instruction banner */}
       <div className="instruction-banner">
-        <h3>Supported Queries</h3>
+        <div className="banner-header">
+          <h3>Example Queries</h3>
+          <button className="clear-btn" onClick={onClear} title="Clear chat">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+            </svg>
+            Clear
+          </button>
+        </div>
         <div className="instruction-chips">
           {EXAMPLE_QUERIES.map(q => (
-            <button key={q} className="chip" onClick={() => handleChip(q)}>{q}</button>
+            <button key={q} className="chip" onClick={() => handleChipClick(q)} disabled={isLoading}>{q}</button>
           ))}
         </div>
         <div className="metrics-list">
@@ -102,7 +115,12 @@ export default function ChatPanel({ messages, isLoading, onQuery }) {
       <div className="messages">
         {messages.map(msg => (
           <div key={msg.id} className={`message ${msg.role}`}>
-            <div className="message-bubble" style={{ whiteSpace: 'pre-wrap' }}>
+            <div
+              className={`message-bubble ${msg.role === 'user' && !isLoading ? 'clickable' : ''}`}
+              style={{ whiteSpace: 'pre-wrap' }}
+              onClick={() => msg.role === 'user' && handleUserMessageClick(msg.text)}
+              title={msg.role === 'user' ? 'Click to re-run' : undefined}
+            >
               {msg.text}
             </div>
             {msg.time && <span className="message-time">{msg.time}</span>}
@@ -112,9 +130,7 @@ export default function ChatPanel({ messages, isLoading, onQuery }) {
         {isLoading && (
           <div className="message assistant">
             <div className="thinking">
-              <div className="thinking-dots">
-                <span /><span /><span />
-              </div>
+              <div className="thinking-dots"><span /><span /><span /></div>
               querying...
             </div>
           </div>
@@ -152,7 +168,7 @@ export default function ChatPanel({ messages, isLoading, onQuery }) {
             className="send-btn"
             onClick={submit}
             disabled={isLoading || !input.trim()}
-            title="Send query"
+            title="Send"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"/>
@@ -160,6 +176,7 @@ export default function ChatPanel({ messages, isLoading, onQuery }) {
             </svg>
           </button>
         </div>
+        <p className="input-hint">Enter to send · Shift+Enter for new line · Click a past query to re-run</p>
       </div>
     </div>
   )
