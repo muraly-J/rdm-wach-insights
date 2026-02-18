@@ -78,10 +78,26 @@ export default function OutputPanel({ result, isLoading }) {
   if (isLoading && !result) {
     return (
       <div className="output-panel">
-        <div className="output-empty">
-          <p style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: '#3d526e' }}>
-            Retrieving data...
-          </p>
+        <div className="output-content">
+          <div className="query-meta">
+            <div className="skeleton" style={{ width: 80,  height: 22, borderRadius: 3 }} />
+            <div className="skeleton" style={{ width: 120, height: 22, borderRadius: 3 }} />
+            <div className="skeleton" style={{ width: 80,  height: 22, borderRadius: 3 }} />
+          </div>
+          <div className="chart-card">
+            <div className="chart-card-header">
+              <div className="skeleton" style={{ width: 200, height: 14, borderRadius: 3 }} />
+            </div>
+            <div className="chart-body">
+              <div className="skeleton" style={{ width: '100%', height: 320, borderRadius: 6 }} />
+            </div>
+          </div>
+          <div className="summary-card">
+            <div className="skeleton" style={{ width: 70,  height: 11, borderRadius: 2, marginBottom: 12 }} />
+            <div className="skeleton" style={{ width: '100%', height: 14, borderRadius: 3, marginBottom: 8 }} />
+            <div className="skeleton" style={{ width: '85%',  height: 14, borderRadius: 3, marginBottom: 8 }} />
+            <div className="skeleton" style={{ width: '60%',  height: 14, borderRadius: 3 }} />
+          </div>
         </div>
       </div>
     )

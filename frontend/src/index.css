@@ -131,15 +131,6 @@ html, body, #root {
   background: var(--teal-dim);
 }
 
-.instruction-banner h3 {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--teal);
-  margin-bottom: 10px;
-}
-
 .instruction-chips {
   display: flex;
   flex-wrap: wrap;
@@ -465,7 +456,74 @@ html, body, #root {
 
 .chart-body { padding: 20px 8px 8px; }
 
-/* summary card */
+/* skeleton loader */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--border) 50%, var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* banner header with clear button */
+.banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.banner-header h3 {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 0;
+}
+
+.clear-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.clear-btn:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* re-run clickable messages */
+.message-bubble.clickable {
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.message-bubble.clickable:hover {
+  border-color: var(--teal) !important;
+}
+
+/* input hint */
+.input-hint {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 7px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
 .summary-card {
   background: var(--bg-panel);
   border: 1px solid var(--border);

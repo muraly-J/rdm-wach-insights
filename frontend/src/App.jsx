@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import axios from 'axios'
 import ChatPanel from './components/ChatPanel.jsx'
 import OutputPanel from './components/OutputPanel.jsx'
@@ -10,21 +10,20 @@ export default function App() {
     {
       id: '0',
       role: 'assistant',
-      text: 'Ask me about AHU energy performance. Try "Rank the top 10 devices by power this month" or "Show e0101 energy for the last 7 days".',
+      text: 'Ask me about AHU energy performance in the WACH ward. Try one of the example queries on the left, or type your own.',
     }
   ])
   const [currentResult, setCurrentResult] = useState(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading]         = useState(false)
 
   const addMessage = useCallback((role, text, isError = false) => {
     const msg = {
-      id: crypto.randomUUID(),
+      id:   crypto.randomUUID(),
       role: isError ? 'error' : role,
       text,
       time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
     }
     setMessages(prev => [...prev, msg])
-    return msg.id
   }, [])
 
   const handleQuery = useCallback(async (query) => {
@@ -32,30 +31,40 @@ export default function App() {
 
     addMessage('user', query)
     setIsLoading(true)
+    setCurrentResult(null)
 
     try {
-      const response = await axios.post('/api/query', {
+      const { data } = await axios.post('/api/query', {
         user_query: query,
         session_id: SESSION_ID,
       })
 
-      const data = response.data
       setCurrentResult(data)
-      addMessage('assistant',
-        `Query complete — ${data.query_type === 'time_series'
-          ? `${data.device_ids.join(', ')} · ${data.metric} · ${data.time_range.replace(/_/g, ' ')}`
-          : `Top ${data.chart?.data?.length ?? '?'} devices · ${data.metric} · ${data.time_range.replace(/_/g, ' ')}`
-        }`
-      )
+
+      const label = data.query_type === 'time_series'
+        ? `${data.device_ids.join(', ')} · ${data.metric.replace(/_/g, ' ')} · ${data.time_range.replace(/_/g, ' ')}`
+        : `Top ${data.chart?.data?.length ?? '?'} devices · ${data.metric.replace(/_/g, ' ')} · ${data.time_range.replace(/_/g, ' ')}`
+
+      addMessage('assistant', `Done — ${label}`)
+
     } catch (err) {
-      const msg = err.response?.data?.error || 'Something went wrong. Please try again.'
-      const suggestion = err.response?.data?.suggestion
-      addMessage('assistant', suggestion ? `${msg}\n\n${suggestion}` : msg, true)
+      const errMsg     = err.response?.data?.error      || 'Something went wrong. Please try again.'
+      const suggestion = err.response?.data?.suggestion || null
+      addMessage('assistant', suggestion ? `${errMsg}\n\n${suggestion}` : errMsg, true)
       setCurrentResult(null)
     } finally {
       setIsLoading(false)
     }
   }, [isLoading, addMessage])
+
+  const handleClear = useCallback(() => {
+    setMessages([{
+      id:   crypto.randomUUID(),
+      role: 'assistant',
+      text: 'Chat cleared. Ask me about AHU energy performance in the WACH ward.',
+    }])
+    setCurrentResult(null)
+  }, [])
 
   return (
     <div className="app">
@@ -82,6 +91,7 @@ export default function App() {
           messages={messages}
           isLoading={isLoading}
           onQuery={handleQuery}
+          onClear={handleClear}
         />
         <OutputPanel result={currentResult} isLoading={isLoading} />
       </div>
