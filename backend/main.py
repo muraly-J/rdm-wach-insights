@@ -7,7 +7,15 @@ Run with: uvicorn backend.main:app --reload (from project root)
 
 import os
 import sys
-sys.path.insert(0, os.path.dirname(__file__))
+
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_ROOT_DIR = os.path.dirname(_THIS_DIR)
+
+# Ensure both backend/ (for flat imports) and project root are on sys.path
+if _THIS_DIR not in sys.path:
+    sys.path.insert(0, _THIS_DIR)
+if _ROOT_DIR not in sys.path:
+    sys.path.insert(0, _ROOT_DIR)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +24,8 @@ from dotenv import load_dotenv
 from middleware.query_logger import init_db
 from routes.query import router as query_router
 
-load_dotenv()
+# Load .env from backend/ directory explicitly
+load_dotenv(os.path.join(_THIS_DIR, ".env"))
 
 app = FastAPI(
     title="WACH Insight API",
