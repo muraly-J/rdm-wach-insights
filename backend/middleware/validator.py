@@ -12,6 +12,7 @@ Responsibilities:
 """
 
 from dataclasses import dataclass, field
+from typing import Union
 from models.schemas import (
     StructuredQuery,
     ALLOWED_METRICS,
@@ -97,7 +98,7 @@ def validate_query(query: StructuredQuery) -> ValidationResult:
     )
 
 
-def validate_raw_dict(raw: dict) -> tuple[StructuredQuery | None, ValidationResult]:
+def validate_raw_dict(raw: dict) -> tuple[Union[StructuredQuery, None], ValidationResult]:
     """
     Convenience wrapper: parse a raw dict (LLM output) into a StructuredQuery,
     then validate it. Returns (query, result) — query is None if parsing failed.

@@ -16,6 +16,7 @@ Flow:
 import os
 import json
 import re
+from typing import Optional, Union
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -34,7 +35,7 @@ def _get_client() -> OpenAI:
     return OpenAI(base_url=_LMS_BASE_URL, api_key=_LMS_API_KEY)
 
 
-def _extract_json(text: str) -> dict | None:
+def _extract_json(text: str) -> Optional[dict]:
     """
     Robustly extract a JSON object from LLM output.
     Handles: raw JSON, ```json fences, stray text before/after.
@@ -67,7 +68,7 @@ def _extract_json(text: str) -> dict | None:
     return None
 
 
-def translate_query(user_query: str) -> tuple[StructuredQuery | None, str | None]:
+def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None], Union[str, None]]:
     """
     Main entry point. Converts a natural language string to a validated StructuredQuery.
 
