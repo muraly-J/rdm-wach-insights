@@ -1,0 +1,133 @@
+"""
+charts.py
+─────────
+Converts pandas DataFrames from influx_client into Recharts-ready JSON payloads
+and CSV strings for download.
+
+Two public functions:
+  build_line_chart()  → for time_series queries  (UC-1)
+  build_bar_chart()   → for ranking queries       (UC-2)
+
+Both return a ChartPayload dict that the FastAPI route sends directly to React.
+"""
+
+import io
+import pandas as pd
+from typing import List, Dict, Any, Optional
+
+
+# ── Recharts line chart (time series) ────────────────────────────────────────
+
+def build_line_chart(
+    df: pd.DataFrame,
+    metric: str,
+    time_range: str,
+) -> Dict[str, Any]:
+    """
+    Input:  DataFrame indexed by time, one column per device_id.
+    Output: {
+        "chart_type": "line",
+        "metric": "power_total",
+        "time_range": "last_7d",
+        "device_ids": ["e0101"],
+        "data": [{"time": "Feb 10 08:00", "e0101": 1200.5}, ...],
+        "csv": "time,e0101\n2026-02-10 08:00:00,1200.5\n...",
+    }
+    """
+    if df.empty:
+        return _empty_payload("line", metric, time_range)
+
+    device_ids: List[str] = list(df.columns)
+
+    # Format timestamps based on time range — keeps x-axis labels readable
+    label_format = _time_label_format(time_range)
+
+    records = []
+    for ts, row in df.iterrows():
+        entry: Dict[str, Any] = {"time": ts.strftime(label_format)}
+        for device in device_ids:
+            val = row.get(device)
+            if pd.notna(val):
+                entry[device] = round(float(val), 3)
+            else:
+                entry[device] = None
+        records.append(entry)
+
+    csv_str = _df_to_csv(df)
+
+    return {
+        "chart_type":  "line",
+        "metric":      metric,
+        "time_range":  time_range,
+        "device_ids":  device_ids,
+        "data":        records,
+        "csv":         csv_str,
+    }
+
+
+# ── Recharts bar chart (ranking) ──────────────────────────────────────────────
+
+def build_bar_chart(
+    df: pd.DataFrame,
+    metric: str,
+    time_range: str,
+    top_n: Optional[int] = 10,
+) -> Dict[str, Any]:
+    """
+    Input:  DataFrame with columns ['device_id', 'value'], sorted descending.
+    Output: {
+        "chart_type": "bar",
+        "metric": "power_total",
+        "time_range": "last_30d",
+        "data": [{"device_id": "e0405", "value": 2300.1}, ...],
+        "csv": "device_id,value\ne0405,2300.1\n...",
+    }
+    """
+    if df.empty:
+        return _empty_payload("bar", metric, time_range)
+
+    df = df.head(top_n or 10).copy()
+    df["value"] = df["value"].round(3)
+
+    records = df.to_dict(orient="records")
+    csv_str = df.to_csv(index=False)
+
+    return {
+        "chart_type":  "bar",
+        "metric":      metric,
+        "time_range":  time_range,
+        "data":        records,
+        "csv":         csv_str,
+    }
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _time_label_format(time_range: str) -> str:
+    """Return a strftime format string appropriate for the time range granularity."""
+    return {
+        "last_24h":  "%H:%M",           # 08:05
+        "last_7d":   "%b %d %H:%M",     # Feb 10 08:00
+        "last_30d":  "%b %d",           # Feb 10
+        "all_time":  "%b %Y",           # Feb 2025
+    }.get(time_range, "%b %d %H:%M")
+
+
+def _df_to_csv(df: pd.DataFrame) -> str:
+    """Convert a time-indexed DataFrame to a CSV string with readable timestamps."""
+    export = df.copy()
+    export.index = export.index.strftime("%Y-%m-%d %H:%M:%S")
+    export.index.name = "time"
+    return export.to_csv()
+
+
+def _empty_payload(chart_type: str, metric: str, time_range: str) -> Dict[str, Any]:
+    return {
+        "chart_type":  chart_type,
+        "metric":      metric,
+        "time_range":  time_range,
+        "device_ids":  [],
+        "data":        [],
+        "csv":         "",
+        "empty":       True,
+    }
