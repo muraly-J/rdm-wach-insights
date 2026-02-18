@@ -5,6 +5,8 @@ Run from the backend/ directory: python3 middleware_test.py
 
 import sys
 import os
+# Add the project root to sys.path so 'models' can be found
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.insert(0, os.path.dirname(__file__))
 
 from middleware.validator import validate_raw_dict
