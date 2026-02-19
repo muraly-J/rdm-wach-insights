@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import axios from 'axios'
-import ChatPanel from './components/ChatPanel.jsx'
-import OutputPanel from './components/OutputPanel.jsx'
+import ChatView from './components/ChatView.jsx'
 
 const SESSION_ID = crypto.randomUUID()
 
@@ -10,27 +9,30 @@ export default function App() {
     {
       id: '0',
       role: 'assistant',
-      text: 'Ask me about AHU energy performance. Try "Rank the top 10 devices by power this month" or "Show e0101 energy for the last 7 days".',
+      text: 'Ask me about AHU energy performance in the WACH ward. Try one of the examples below, or type your own query.',
+      result: null,
     }
   ])
-  const [currentResult, setCurrentResult] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
-
-  const addMessage = useCallback((role, text, isError = false) => {
-    const msg = {
-      id: crypto.randomUUID(),
-      role: isError ? 'error' : role,
-      text,
-      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-    }
-    setMessages(prev => [...prev, msg])
-    return msg.id
-  }, [])
 
   const handleQuery = useCallback(async (query) => {
     if (!query.trim() || isLoading) return
 
-    addMessage('user', query)
+    const userMsg = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      text: query,
+      result: null,
+    }
+    const assistantId = crypto.randomUUID()
+    const pendingMsg = {
+      id: assistantId,
+      role: 'assistant',
+      text: null,
+      result: null,
+    }
+
+    setMessages(prev => [...prev, userMsg, pendingMsg])
     setIsLoading(true)
 
     try {
@@ -38,24 +40,38 @@ export default function App() {
         user_query: query,
         session_id: SESSION_ID,
       })
-
       const data = response.data
-      setCurrentResult(data)
-      addMessage('assistant',
-        `Query complete — ${data.query_type === 'time_series'
+
+      setMessages(prev => prev.map(m => m.id === assistantId ? {
+        ...m,
+        text: data.query_type === 'time_series'
           ? `${data.device_ids.join(', ')} · ${data.metric} · ${data.time_range.replace(/_/g, ' ')}`
-          : `Top ${data.chart?.data?.length ?? '?'} devices · ${data.metric} · ${data.time_range.replace(/_/g, ' ')}`
-        }`
-      )
+          : `Top ${data.chart?.data?.length ?? '?'} devices · ${data.metric} · ${data.time_range.replace(/_/g, ' ')}`,
+        result: data,
+      } : m))
+
     } catch (err) {
       const msg = err.response?.data?.error || 'Something went wrong. Please try again.'
       const suggestion = err.response?.data?.suggestion
-      addMessage('assistant', suggestion ? `${msg}\n\n${suggestion}` : msg, true)
-      setCurrentResult(null)
+      setMessages(prev => prev.map(m => m.id === assistantId ? {
+        ...m,
+        role: 'error',
+        text: suggestion ? `${msg}\n\n${suggestion}` : msg,
+        result: null,
+      } : m))
     } finally {
       setIsLoading(false)
     }
-  }, [isLoading, addMessage])
+  }, [isLoading])
+
+  const handleClear = useCallback(() => {
+    setMessages([{
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      text: 'Ask me about AHU energy performance in the WACH ward. Try one of the examples below, or type your own query.',
+      result: null,
+    }])
+  }, [])
 
   return (
     <div className="app">
@@ -68,23 +84,21 @@ export default function App() {
           </div>
           <div>
             <div className="header-title">WACH Insight</div>
+            <div className="header-subtitle">Women &amp; Child Ward · Hospital KL · AHU Analytics</div>
           </div>
         </div>
-        <div className="header-subtitle">Women &amp; Child Ward · Hospital KL · AHU Analytics</div>
         <div className="header-status">
           <div className="status-dot" />
           LIVE
         </div>
       </header>
 
-      <div className="body">
-        <ChatPanel
-          messages={messages}
-          isLoading={isLoading}
-          onQuery={handleQuery}
-        />
-        <OutputPanel result={currentResult} isLoading={isLoading} />
-      </div>
+      <ChatView
+        messages={messages}
+        isLoading={isLoading}
+        onQuery={handleQuery}
+        onClear={handleClear}
+      />
     </div>
   )
 }

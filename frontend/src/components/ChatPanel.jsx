@@ -14,7 +14,7 @@ const METRICS = [
   'volts_l_n_avg', 'apparent_power_total', 'power_demand', 'reactive_power_total',
 ]
 
-export default function ChatPanel({ messages, isLoading, onQuery, onClear }) {
+export default function ChatPanel({ messages, isLoading, onQuery, onClear, className }) {
   const [input, setInput]           = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const messagesEndRef  = useRef(null)
@@ -87,7 +87,7 @@ export default function ChatPanel({ messages, isLoading, onQuery, onClear }) {
   }
 
   return (
-    <div className="chat-panel">
+    <div className={`chat-panel${className ? ' ' + className : ''}`}>
 
       {/* Instruction banner */}
       <div className="instruction-banner">

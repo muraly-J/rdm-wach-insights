@@ -28,12 +28,13 @@
   <!-- ── Command to run ─────────────────────────────────────────────────── -->
   <key>ProgramArguments</key>
   <array>
-    <!-- Full path to gunicorn inside your venv -->
-    <string>/Users/rdmasia/Documents/JINENDRA/rdm-wach-insights/venv/bin/gunicorn</string>
-    <string>-c</string>
-    <string>gunicorn.conf.py</string>
-    <string>backend.main:app</string>
+    <string>/bin/bash</string>
+    <string>/Users/rdmasia/Documents/JINENDRA/rdm-wach-insights/launchd_start.sh</string>
   </array>
+  
+  <!-- ── Throttle Interval ─────────────────────────────────────────────────── -->
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
 
   <!-- ── Working directory (project root) ──────────────────────────────── -->
   <key>WorkingDirectory</key>

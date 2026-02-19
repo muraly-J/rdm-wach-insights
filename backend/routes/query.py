@@ -1,122 +1,173 @@
 """
-routes/query.py
-───────────────
-The single POST /api/query endpoint that orchestrates:
-  LLM translation → middleware validation → InfluxDB → chart builder → summarizer
+POST /api/query — main endpoint with security hardening:
+- Input length cap
+- Prompt injection pattern detection
+- Per-IP rate limiting (in-memory, 20 req/min)
+- Session ID validation
 """
-
+import re
+import time
 import uuid
+from collections import defaultdict
 from typing import Optional
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 
-from llm.translator import translate_query
-from influx_client import fetch_time_series, fetch_ranking
-from charts import build_line_chart, build_bar_chart
-from summarizer import generate_summary
-from middleware.query_logger import log_query
-from models.schemas import QueryType
+from fastapi import APIRouter, Request, HTTPException
+from pydantic import BaseModel, validator
+
+from backend.llm.translator import translate_query
+from backend.middleware.validator import validate_structured_query
+from backend.middleware.query_logger import log_query
+from backend.influx_client import fetch_time_series, fetch_ranking
+from backend.charts import build_chart
+from backend.summarizer import summarize
 
 router = APIRouter()
 
+# ── Rate limiter (in-memory, per IP) ────────────────────────────────────────
+_rate_store: dict = defaultdict(list)
+RATE_LIMIT        = 20   # requests
+RATE_WINDOW       = 60   # seconds
+
+def _check_rate_limit(ip: str) -> None:
+    now  = time.time()
+    hits = [t for t in _rate_store[ip] if now - t < RATE_WINDOW]
+    hits.append(now)
+    _rate_store[ip] = hits
+    if len(hits) > RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail={"error": "Too many requests. Please wait a moment before trying again."}
+        )
+
+# ── Injection & abuse patterns ───────────────────────────────────────────────
+_INJECTION_PATTERNS = [
+    # Prompt injection classics
+    r"ignore\s+(all\s+)?(previous|prior|above)",
+    r"disregard\s+(all\s+)?(previous|prior|above)",
+    r"forget\s+(all\s+)?(previous|prior|above)",
+    r"new\s+(role|persona|instruction|task|system)",
+    r"you\s+are\s+now",
+    r"act\s+as\s+(?!an?\s+ahu)",   # allow "act as an AHU monitor" but not "act as DAN"
+    r"pretend\s+to\s+be",
+    r"(system|assistant|user)\s*:",  # role injection
+    r"<\s*/?(?:system|prompt|instruction)",
+    r"\[\s*INST\s*\]",
+    r"###\s*(instruction|system|prompt)",
+    # SQL/NoSQL injection (belt and braces)
+    r";\s*(drop|delete|insert|update|truncate|alter)\s",
+    r"union\s+select",
+    r"--\s+",
+    # Script injection
+    r"<script",
+    r"javascript:",
+    r"on\w+\s*=",
+]
+_INJECTION_RE = re.compile(
+    "|".join(_INJECTION_PATTERNS),
+    re.IGNORECASE | re.DOTALL,
+)
+
+def _check_injection(text: str) -> None:
+    if _INJECTION_RE.search(text):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Your query contains patterns that aren't allowed. "
+                         "Please ask a plain question about AHU performance.",
+                "suggestion": "Try: 'Show e0101 power last 7 days' or 'Rank top 10 devices by energy this month'."
+            }
+        )
+
+# ── Request schema ────────────────────────────────────────────────────────────
 
 class QueryRequest(BaseModel):
     user_query: str
     session_id: Optional[str] = None
 
+    @validator('user_query')
+    def validate_query(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError('Query cannot be empty.')
+        if len(v) > 400:
+            raise ValueError('Query is too long. Please keep it under 400 characters.')
+        # Strip null bytes and control characters (except newlines/tabs)
+        v = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', v)
+        return v
 
-@router.post("/query")
-async def handle_query(request: QueryRequest):
-    session_id = request.session_id or str(uuid.uuid4())
-    user_query = request.user_query.strip()
+    @validator('session_id')
+    def validate_session(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return str(uuid.uuid4())
+        # Must look like a UUID
+        try:
+            uuid.UUID(str(v))
+        except ValueError:
+            return str(uuid.uuid4())
+        return v
 
-    if not user_query:
-        return JSONResponse(status_code=400, content={"error": "Query cannot be empty."})
+# ── Endpoint ──────────────────────────────────────────────────────────────────
 
-    # ── Step 1: LLM translation + validation ──────────────────────────────────
-    structured_query, error = translate_query(user_query)
+@router.post('/api/query')
+async def handle_query(request: Request, body: QueryRequest):
+    client_ip = request.client.host or 'unknown'
 
-    if error or structured_query is None:
-        log_query(
-            session_id=session_id,
-            user_query=user_query,
-            structured_query=None,
-            execution_status="parse_error",
-            error_detail=error,
+    # 1. Rate limit
+    _check_rate_limit(client_ip)
+
+    # 2. Injection detection
+    _check_injection(body.user_query)
+
+    session_id = body.session_id or str(uuid.uuid4())
+
+    # 3. LLM translation
+    structured = await translate_query(body.user_query)
+
+    if structured is None:
+        log_query(session_id, body.user_query, None, 'rejected_llm_parse', False)
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "I couldn't understand that query.",
+                "suggestion": "Try: 'Show e0101 power last 7 days' or 'Rank top 5 by energy this month'."
+            }
         )
-        return JSONResponse(status_code=422, content={
-            "error": error or "Could not interpret your query.",
-            "suggestion": "Try asking about a specific device (e.g. 'Show e0101 power for last 7 days') or ranking devices (e.g. 'Top 10 devices by energy this month')."
-        })
 
-    query_dict = structured_query.model_dump()
+    # 4. Middleware validation
+    validation_error = validate_structured_query(structured)
+    if validation_error:
+        log_query(session_id, body.user_query, structured, 'rejected_validation', False)
+        raise HTTPException(status_code=422, detail={"error": validation_error})
 
-    # ── Step 2: Fetch from InfluxDB ───────────────────────────────────────────
+    # 5. Fetch data
     try:
-        if structured_query.query_type == QueryType.time_series:
+        if structured['query_type'] == 'time_series':
             df = fetch_time_series(
-                device_ids=structured_query.device_ids,
-                metric=structured_query.metric,
-                time_range=structured_query.time_range,
-            )
-            chart_payload = build_line_chart(
-                df,
-                metric=structured_query.metric,
-                time_range=structured_query.time_range,
+                device_ids=structured['device_ids'],
+                metric=structured['metric'],
+                time_range=structured['time_range'],
             )
         else:
             df = fetch_ranking(
-                metric=structured_query.metric,
-                time_range=structured_query.time_range,
-                device_ids=structured_query.device_ids,
-                top_n=structured_query.top_n or 10,
+                metric=structured['metric'],
+                time_range=structured['time_range'],
             )
-            chart_payload = build_bar_chart(
-                df,
-                metric=structured_query.metric,
-                time_range=structured_query.time_range,
-                top_n=structured_query.top_n or 10,
-            )
-
     except Exception as e:
-        log_query(
-            session_id=session_id,
-            user_query=user_query,
-            structured_query=query_dict,
-            execution_status="influx_error",
-            error_detail=str(e),
+        log_query(session_id, body.user_query, structured, 'error_influx', False)
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "Could not retrieve data. Please try again in a moment."}
         )
-        return JSONResponse(status_code=500, content={
-            "error": "Failed to retrieve data from the database. Please try again."
-        })
 
-    # ── Step 3: Generate summary ──────────────────────────────────────────────
-    summary = generate_summary(
-        chart_payload=chart_payload,
-        query_type=structured_query.query_type.value,
-        device_ids=structured_query.device_ids,
-        metric=structured_query.metric,
-        time_range=structured_query.time_range,
-    )
+    # 6. Build chart + summary
+    chart   = build_chart(df, structured)
+    summary = await summarize(df, structured)
 
-    # ── Step 4: Log success ───────────────────────────────────────────────────
-    log_query(
-        session_id=session_id,
-        user_query=user_query,
-        structured_query=query_dict,
-        execution_status="success",
-    )
+    log_query(session_id, body.user_query, structured, 'success', False)
 
-    # ── Step 5: Return response ───────────────────────────────────────────────
     return {
-        "session_id":       session_id,
-        "query_type":       structured_query.query_type.value,
-        "metric":           structured_query.metric,
-        "time_range":       structured_query.time_range,
-        "device_ids":       structured_query.device_ids,
-        "structured_query": query_dict,
-        "chart":            chart_payload,
-        "summary":          summary,
-        "csv_available":    bool(chart_payload.get("csv")),
+        **structured,
+        'chart':         chart,
+        'summary':       summary,
+        'csv_available': bool(chart.get('csv')),
     }
