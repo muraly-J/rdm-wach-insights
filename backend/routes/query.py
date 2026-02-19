@@ -4,6 +4,7 @@ POST /api/query — main endpoint with security hardening:
 - Prompt injection pattern detection
 - Per-IP rate limiting (in-memory, 20 req/min)
 - Session ID validation
+- LLM output allowlist validation (prevents injection via structured output)
 """
 import re
 import time
@@ -53,7 +54,7 @@ _INJECTION_PATTERNS = [
     r"<\s*/?(?:system|prompt|instruction)",
     r"\[\s*INST\s*\]",
     r"###\s*(instruction|system|prompt)",
-    # SQL/NoSQL injection (belt and braces)
+    # SQL/NoSQL injection
     r";\s*(drop|delete|insert|update|truncate|alter)\s",
     r"union\s+select",
     r"--\s+",
@@ -78,6 +79,90 @@ def _check_injection(text: str) -> None:
             }
         )
 
+# ── LLM output allowlists ─────────────────────────────────────────────────────
+# These are the ONLY values the LLM is permitted to produce.
+# If the model is manipulated into returning anything else, the request is
+# rejected here — before it ever reaches InfluxDB.
+
+ALLOWED_QUERY_TYPES = {"time_series", "ranking"}
+
+ALLOWED_METRICS = {
+    "power",
+    "energy",
+    "current",
+    "voltage",
+    "power_factor",
+    "frequency",
+}
+
+ALLOWED_AGGREGATIONS = {
+    "mean",
+    "max",
+    "min",
+    "sum",
+    "count",
+    "last",
+}
+
+# Device IDs must match your naming convention — adjust the pattern if needed.
+# e.g. e0101, e0202, ahu-01, etc.
+_DEVICE_ID_RE = re.compile(r'^[a-zA-Z0-9_\-]{1,32}$')
+
+# Time range strings — allow relative ranges like "7d", "30d", "1h", "24h",
+# or absolute ISO pairs. Adjust if your schema uses a different format.
+_TIME_RANGE_RE = re.compile(r'^\d+[smhdwMy]$|^\d{4}-\d{2}-\d{2}')
+
+
+def _validate_llm_output(structured) -> None:
+    """
+    Allowlist-validate every field the LLM returns before it touches InfluxDB.
+    Raises HTTPException(400) on any violation.
+    This is the primary defence against prompt injection via structured output.
+    """
+    errors = []
+
+    # query_type
+    if structured.query_type not in ALLOWED_QUERY_TYPES:
+        errors.append(f"Invalid query_type: '{structured.query_type}'")
+
+    # metric
+    if structured.metric not in ALLOWED_METRICS:
+        errors.append(f"Invalid metric: '{structured.metric}'")
+
+    # aggregation (may be None for some query types)
+    if structured.aggregation is not None:
+        if structured.aggregation not in ALLOWED_AGGREGATIONS:
+            errors.append(f"Invalid aggregation: '{structured.aggregation}'")
+
+    # device_ids — each must be a safe alphanumeric identifier
+    if structured.device_ids:
+        for did in structured.device_ids:
+            if not _DEVICE_ID_RE.match(str(did)):
+                errors.append(f"Invalid device_id: '{did}'")
+        if len(structured.device_ids) > 50:
+            errors.append("Too many device_ids requested (max 50).")
+
+    # top_n — must be a small positive integer
+    if structured.top_n is not None:
+        if not isinstance(structured.top_n, int) or not (1 <= structured.top_n <= 100):
+            errors.append(f"Invalid top_n: '{structured.top_n}' (must be 1–100)")
+
+    # time_range — basic sanity check
+    if structured.time_range is not None:
+        tr = str(structured.time_range)
+        if not _TIME_RANGE_RE.match(tr):
+            errors.append(f"Invalid time_range format: '{tr}'")
+
+    if errors:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "The query could not be processed safely.",
+                "detail": errors,
+            }
+        )
+
+
 # ── Request schema ────────────────────────────────────────────────────────────
 
 class QueryRequest(BaseModel):
@@ -99,12 +184,12 @@ class QueryRequest(BaseModel):
     def validate_session(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return str(uuid.uuid4())
-        # Must look like a UUID
         try:
             uuid.UUID(str(v))
         except ValueError:
             return str(uuid.uuid4())
         return v
+
 
 # ── Endpoint ──────────────────────────────────────────────────────────────────
 
@@ -115,7 +200,7 @@ async def handle_query(request: Request, body: QueryRequest):
     # 1. Rate limit
     _check_rate_limit(client_ip)
 
-    # 2. Injection detection
+    # 2. Input injection detection
     _check_injection(body.user_query)
 
     session_id = body.session_id or str(uuid.uuid4())
@@ -139,7 +224,10 @@ async def handle_query(request: Request, body: QueryRequest):
             }
         )
 
-    # 4. Middleware validation
+    # 4. Allowlist validation on LLM output (before anything touches InfluxDB)
+    _validate_llm_output(structured)
+
+    # 5. Middleware schema validation
     validation_error = validate_structured_query(structured)
     if validation_error:
         log_query(
@@ -151,7 +239,7 @@ async def handle_query(request: Request, body: QueryRequest):
         )
         raise HTTPException(status_code=422, detail={"error": validation_error})
 
-    # 5. Fetch data
+    # 6. Fetch data from InfluxDB
     try:
         if structured.query_type == 'time_series':
             df = fetch_time_series(
@@ -179,7 +267,7 @@ async def handle_query(request: Request, body: QueryRequest):
             detail={"error": "Could not retrieve data. Please try again in a moment."}
         )
 
-    # 6. Build chart + summary
+    # 7. Build chart + summary
     chart   = build_chart(df, structured)
     summary = await summarize(df, structured)
 
