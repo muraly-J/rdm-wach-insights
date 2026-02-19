@@ -20,9 +20,9 @@ from typing import Optional, Union
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from llm.prompts import SYSTEM_PROMPT
-from middleware.validator import validate_raw_dict
-from models.schemas import StructuredQuery
+from backend.llm.prompts import SYSTEM_PROMPT
+from backend.middleware.validator import validate_raw_dict
+from backend.models.schemas import StructuredQuery
 
 load_dotenv()
 
