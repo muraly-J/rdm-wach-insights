@@ -28,8 +28,8 @@
   <!-- ── Command to run ─────────────────────────────────────────────────── -->
   <key>ProgramArguments</key>
   <array>
-    <string>/bin/bash</string>
-    <string>/Users/rdmasia/Documents/JINENDRA/rdm-wach-insights/launchd_start.sh</string>
+      <string>/bin/bash</string>
+      <string>/Users/rdmasia/Documents/JINENDRA/rdm-wach-insights/launchd_start.sh</string>
   </array>
   
   <!-- ── Throttle Interval ─────────────────────────────────────────────────── -->

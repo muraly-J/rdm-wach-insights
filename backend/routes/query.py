@@ -21,6 +21,7 @@ from backend.middleware.query_logger import log_query
 from backend.influx_client import fetch_time_series, fetch_ranking
 from backend.charts import build_chart
 from backend.summarizer import summarize
+from backend.models.schemas import ALLOWED_METRICS, ALLOWED_DEVICES, QueryType
 
 router = APIRouter()
 
@@ -75,83 +76,62 @@ def _check_injection(text: str) -> None:
             detail={
                 "error": "Your query contains patterns that aren't allowed. "
                          "Please ask a plain question about AHU performance.",
-                "suggestion": "Try: 'Show e0101 power last 7 days' or 'Rank top 10 devices by energy this month'."
+                "suggestion": "Try: 'Show e0101 power last 7 days' or "
+                              "'Rank top 10 devices by energy this month'."
             }
         )
 
 # ── LLM output allowlists ─────────────────────────────────────────────────────
-# These are the ONLY values the LLM is permitted to produce.
-# If the model is manipulated into returning anything else, the request is
-# rejected here — before it ever reaches InfluxDB.
+# Derived from schemas.py — single source of truth.
+# If the LLM is manipulated into returning anything outside these sets,
+# the request is rejected before it ever reaches InfluxDB.
 
-ALLOWED_QUERY_TYPES = {"time_series", "ranking"}
+_ALLOWED_QUERY_TYPES = {qt.value for qt in QueryType}  # {"time_series", "ranking"}
 
-ALLOWED_METRICS = {
-    "power",
-    "energy",
-    "current",
-    "voltage",
-    "power_factor",
-    "frequency",
-}
+_ALLOWED_TIME_RANGES = {"last_24h", "last_7d", "last_30d", "all_time"}
 
-ALLOWED_AGGREGATIONS = {
-    "mean",
-    "max",
-    "min",
-    "sum",
-    "count",
-    "last",
-}
-
-# Device IDs must match your naming convention — adjust the pattern if needed.
-# e.g. e0101, e0202, ahu-01, etc.
-_DEVICE_ID_RE = re.compile(r'^[a-zA-Z0-9_\-]{1,32}$')
-
-# Time range strings — allow relative ranges like "7d", "30d", "1h", "24h",
-# or absolute ISO pairs. Adjust if your schema uses a different format.
-_TIME_RANGE_RE = re.compile(r'^\d+[smhdwMy]$|^\d{4}-\d{2}-\d{2}')
+# Device IDs are e0101 → e1108 — enforce the pattern strictly
+_DEVICE_ID_RE = re.compile(r'^e\d{4}$')
 
 
 def _validate_llm_output(structured) -> None:
     """
     Allowlist-validate every field the LLM returns before it touches InfluxDB.
     Raises HTTPException(400) on any violation.
-    This is the primary defence against prompt injection via structured output.
+
+    Note: metric and device_ids are also validated by Pydantic field_validators
+    on StructuredQuery, but we check here too as defence-in-depth in case the
+    object was constructed in an unexpected way.
     """
     errors = []
 
     # query_type
-    if structured.query_type not in ALLOWED_QUERY_TYPES:
+    if structured.query_type not in _ALLOWED_QUERY_TYPES:
         errors.append(f"Invalid query_type: '{structured.query_type}'")
 
-    # metric
+    # metric — ALLOWED_METRICS imported from schemas.py
     if structured.metric not in ALLOWED_METRICS:
         errors.append(f"Invalid metric: '{structured.metric}'")
 
-    # aggregation (may be None for some query types)
-    if structured.aggregation is not None:
-        if structured.aggregation not in ALLOWED_AGGREGATIONS:
-            errors.append(f"Invalid aggregation: '{structured.aggregation}'")
+    # time_range
+    if structured.time_range not in _ALLOWED_TIME_RANGES:
+        errors.append(f"Invalid time_range: '{structured.time_range}'")
 
-    # device_ids — each must be a safe alphanumeric identifier
-    if structured.device_ids:
-        for did in structured.device_ids:
-            if not _DEVICE_ID_RE.match(str(did)):
-                errors.append(f"Invalid device_id: '{did}'")
-        if len(structured.device_ids) > 50:
-            errors.append("Too many device_ids requested (max 50).")
+    # device_ids — pattern check + membership check against ALLOWED_DEVICES
+    for did in structured.device_ids:
+        did_str = str(did)
+        if not _DEVICE_ID_RE.match(did_str):
+            errors.append(f"Invalid device_id format: '{did_str}'")
+        elif did_str not in ALLOWED_DEVICES:
+            errors.append(f"Unrecognised device: '{did_str}'")
 
-    # top_n — must be a small positive integer
+    if len(structured.device_ids) > 50:
+        errors.append("Too many device_ids requested (max 50).")
+
+    # top_n — only relevant for ranking queries, must be a small positive int
     if structured.top_n is not None:
         if not isinstance(structured.top_n, int) or not (1 <= structured.top_n <= 100):
-            errors.append(f"Invalid top_n: '{structured.top_n}' (must be 1–100)")
-
-    # time_range — basic sanity check
-    if structured.time_range is not None:
-        tr = str(structured.time_range)
-        if not _TIME_RANGE_RE.match(tr):
-            errors.append(f"Invalid time_range format: '{tr}'")
+            errors.append(f"Invalid top_n: '{structured.top_n}' (must be integer 1–100)")
 
     if errors:
         raise HTTPException(
@@ -220,7 +200,8 @@ async def handle_query(request: Request, body: QueryRequest):
             status_code=422,
             detail={
                 "error": error or "I couldn't understand that query.",
-                "suggestion": "Try: 'Show e0101 power last 7 days' or 'Rank top 5 by energy this month'."
+                "suggestion": "Try: 'Show e0101 power last 7 days' or "
+                              "'Rank top 5 by energy this month'."
             }
         )
 

@@ -26,7 +26,7 @@ echo "      ✅ Frontend built → frontend/dist/"
 echo ""
 echo "[2/2] Starting Gunicorn..."
 cd "$PROJECT_DIR"
-source "$VENV/bin/activate"
+source /Users/rdmasia/wach-insight/venv/bin/activate
 
 exec gunicorn \
   -c gunicorn.conf.py \
