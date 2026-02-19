@@ -16,7 +16,7 @@ import pandas as pd
 from influxdb_client import InfluxDBClient
 from dotenv import load_dotenv
 
-from models.schemas import ALLOWED_TIME_RANGES
+from backend.models.schemas import ALLOWED_TIME_RANGES
 
 warnings.filterwarnings("ignore")
 load_dotenv()

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import api from '../api.js'
+
 import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -16,24 +16,24 @@ const EXAMPLE_QUERIES = [
 ]
 
 const METRIC_UNITS = {
-  power_total:          'kW',
-  energy_import:        'kWh',
-  power_factor_avg:     'PF',
-  current_avg:          'A',
-  volts_l_n_avg:        'V',
+  power_total: 'kW',
+  energy_import: 'kWh',
+  power_factor_avg: 'PF',
+  current_avg: 'A',
+  volts_l_n_avg: 'V',
   apparent_power_total: 'kVA',
-  power_demand:         'kW',
+  power_demand: 'kW',
   reactive_power_total: 'kVAr',
 }
 
 const METRIC_LABELS = {
-  power_total:          'Total Active Power',
-  energy_import:        'Imported Energy',
-  power_factor_avg:     'Avg Power Factor',
-  current_avg:          'Average Current',
-  volts_l_n_avg:        'Avg Voltage (L-N)',
+  power_total: 'Total Active Power',
+  energy_import: 'Imported Energy',
+  power_factor_avg: 'Avg Power Factor',
+  current_avg: 'Average Current',
+  volts_l_n_avg: 'Avg Voltage (L-N)',
   apparent_power_total: 'Total Apparent Power',
-  power_demand:         'Power Demand',
+  power_demand: 'Power Demand',
   reactive_power_total: 'Total Reactive Power',
 }
 
@@ -50,9 +50,9 @@ const TOOLTIP_STYLE = {
 
 function downloadCSV(csv, filename) {
   const blob = new Blob([csv], { type: 'text/csv' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href     = url
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
   a.download = filename
   a.click()
   URL.revokeObjectURL(url)
@@ -69,8 +69,8 @@ function TickLabel({ x, y, payload }) {
 
 function ResultCard({ result }) {
   const { chart, summary, metric, time_range, device_ids } = result
-  const unit       = METRIC_UNITS[metric] || ''
-  const label      = METRIC_LABELS[metric] || metric
+  const unit = METRIC_UNITS[metric] || ''
+  const label = METRIC_LABELS[metric] || metric
   const rangeLabel = time_range.replace(/_/g, ' ')
   const csvFilename = `wach_${metric}_${time_range}_${Date.now()}.csv`
 
@@ -98,9 +98,9 @@ function ResultCard({ result }) {
           {chart.csv && (
             <button className="csv-btn" onClick={() => downloadCSV(chart.csv, csvFilename)}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
               Export CSV
             </button>
@@ -109,7 +109,7 @@ function ResultCard({ result }) {
         <div className="chart-body">
           {chart.chart_type === 'line'
             ? <LineChartView data={chart.data} deviceIds={chart.device_ids} unit={unit} />
-            : <BarChartView  data={chart.data} unit={unit} />
+            : <BarChartView data={chart.data} unit={unit} />
           }
         </div>
       </div>
@@ -128,9 +128,9 @@ function SkeletonResult() {
   return (
     <div className="result-card">
       <div className="query-meta">
-        <div className="skeleton" style={{ width: 80,  height: 22, borderRadius: 3 }} />
+        <div className="skeleton" style={{ width: 80, height: 22, borderRadius: 3 }} />
         <div className="skeleton" style={{ width: 120, height: 22, borderRadius: 3 }} />
-        <div className="skeleton" style={{ width: 80,  height: 22, borderRadius: 3 }} />
+        <div className="skeleton" style={{ width: 80, height: 22, borderRadius: 3 }} />
       </div>
       <div className="chart-card">
         <div className="chart-card-header">
@@ -151,10 +151,10 @@ function SkeletonResult() {
 }
 
 export default function ChatView({ messages, isLoading, onQuery, onClear }) {
-  const [input, setInput]             = useState('')
+  const [input, setInput] = useState('')
   const [isRecording, setIsRecording] = useState(false)
-  const threadEndRef   = useRef(null)
-  const textareaRef    = useRef(null)
+  const threadEndRef = useRef(null)
+  const textareaRef = useRef(null)
   const recognitionRef = useRef(null)
 
   useEffect(() => { textareaRef.current?.focus() }, [])
@@ -188,7 +188,7 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
       return
     }
     if (isRecording) { recognitionRef.current?.stop(); setIsRecording(false); return }
-    const SR  = window.SpeechRecognition || window.webkitSpeechRecognition
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     const rec = new SR()
     rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1
     rec.onresult = (e) => {
@@ -270,16 +270,16 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
             <button className={`mic-btn${isRecording ? ' recording' : ''}`} onClick={toggleVoice}
               title={isRecording ? 'Stop recording' : 'Voice input'}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="23"/>
-                <line x1="8" y1="23" x2="16" y2="23"/>
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
               </svg>
             </button>
             <button className="send-btn" onClick={submit} disabled={isLoading || !input.trim()} title="Send">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"/>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
               </svg>
             </button>
           </div>
@@ -287,9 +287,9 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
             <p className="input-hint">Enter to send · Shift+Enter for new line · Click a past query to re-run</p>
             <button className="clear-btn" onClick={onClear}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4h6v2" />
               </svg>
               Clear
             </button>

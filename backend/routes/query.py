@@ -121,14 +121,20 @@ async def handle_query(request: Request, body: QueryRequest):
     session_id = body.session_id or str(uuid.uuid4())
 
     # 3. LLM translation
-    structured = await translate_query(body.user_query)
+    structured, error = await translate_query(body.user_query)
 
     if structured is None:
-        log_query(session_id, body.user_query, None, 'rejected_llm_parse', False)
+        log_query(
+            session_id=session_id,
+            user_query=body.user_query,
+            structured_query=None,
+            execution_status='parse_error',
+            error_detail=error
+        )
         raise HTTPException(
             status_code=422,
             detail={
-                "error": "I couldn't understand that query.",
+                "error": error or "I couldn't understand that query.",
                 "suggestion": "Try: 'Show e0101 power last 7 days' or 'Rank top 5 by energy this month'."
             }
         )
@@ -136,24 +142,38 @@ async def handle_query(request: Request, body: QueryRequest):
     # 4. Middleware validation
     validation_error = validate_structured_query(structured)
     if validation_error:
-        log_query(session_id, body.user_query, structured, 'rejected_validation', False)
+        log_query(
+            session_id=session_id,
+            user_query=body.user_query,
+            structured_query=structured.model_dump(),
+            execution_status='validation_error',
+            error_detail=validation_error
+        )
         raise HTTPException(status_code=422, detail={"error": validation_error})
 
     # 5. Fetch data
     try:
-        if structured['query_type'] == 'time_series':
+        if structured.query_type == 'time_series':
             df = fetch_time_series(
-                device_ids=structured['device_ids'],
-                metric=structured['metric'],
-                time_range=structured['time_range'],
+                device_ids=structured.device_ids,
+                metric=structured.metric,
+                time_range=structured.time_range,
             )
         else:
             df = fetch_ranking(
-                metric=structured['metric'],
-                time_range=structured['time_range'],
+                metric=structured.metric,
+                time_range=structured.time_range,
+                device_ids=structured.device_ids,
+                top_n=structured.top_n or 10,
             )
     except Exception as e:
-        log_query(session_id, body.user_query, structured, 'error_influx', False)
+        log_query(
+            session_id=session_id,
+            user_query=body.user_query,
+            structured_query=structured.model_dump(),
+            execution_status='influx_error',
+            error_detail=str(e)
+        )
         raise HTTPException(
             status_code=502,
             detail={"error": "Could not retrieve data. Please try again in a moment."}
@@ -163,10 +183,15 @@ async def handle_query(request: Request, body: QueryRequest):
     chart   = build_chart(df, structured)
     summary = await summarize(df, structured)
 
-    log_query(session_id, body.user_query, structured, 'success', False)
+    log_query(
+        session_id=session_id,
+        user_query=body.user_query,
+        structured_query=structured.model_dump(),
+        execution_status='success'
+    )
 
     return {
-        **structured,
+        **structured.model_dump(),
         'chart':         chart,
         'summary':       summary,
         'csv_available': bool(chart.get('csv')),

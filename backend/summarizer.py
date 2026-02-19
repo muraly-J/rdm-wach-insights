@@ -12,7 +12,7 @@ import os
 import re
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 load_dotenv()
 
@@ -39,7 +39,7 @@ _RANGE_LABELS = {
 }
 
 
-def generate_summary(
+async def generate_summary(
     chart_payload: Dict[str, Any],
     query_type: str,
     device_ids: list,
@@ -68,8 +68,8 @@ def generate_summary(
         context = _build_ranking_context(data, metric_label, range_label)
 
     try:
-        client = OpenAI(base_url=_LMS_BASE_URL, api_key=_LMS_API_KEY)
-        response = client.chat.completions.create(
+        client = AsyncOpenAI(base_url=_LMS_BASE_URL, api_key=_LMS_API_KEY)
+        response = await client.chat.completions.create(
             model=_LMS_MODEL,
             messages=[
                 {
@@ -169,3 +169,54 @@ def _fallback_summary(
             f"{len(data)} data points were returned. "
             f"Review the chart for trends and peak consumption periods."
         )
+
+
+# ── Unified entry point ───────────────────────────────────────────────────────
+
+async def summarize(df: Any, structured: Dict[str, Any]) -> str:
+
+    """
+    Dispatcher: takes a DataFrame (or chart payload) and StructuredQuery,
+    extracts bits, and calls generate_summary.
+    """
+    # handle both dict and object (pydantic)
+    if hasattr(structured, 'query_type'):
+        qtype      = getattr(structured, 'query_type')
+        metric     = getattr(structured, 'metric')
+        time_range = getattr(structured, 'time_range')
+        device_ids = getattr(structured, 'device_ids', [])
+    else:
+        qtype      = structured.get('query_type')
+        metric     = structured.get('metric')
+        time_range = structured.get('time_range')
+        device_ids = structured.get('device_ids', [])
+
+    # The generate_summary function expects the chart payload (with 'data' key)
+    # But query.py passes 'df'. We need to make sure we pass what it expects.
+    # Actually, build_chart was just called, but its result is NOT passed to summarize in query.py.
+    # query.py: summary = await summarize(df, structured)
+    # So we need to convert df to a records list if it's a DataFrame.
+
+    data = []
+    if hasattr(df, 'to_dict'):
+        # For ranking, it's a simple list of records
+        # For time_series, we need to format it like build_line_chart does
+        if qtype == 'time_series':
+            for ts, row in df.iterrows():
+                entry = {"time": ts.strftime("%b %d %H:%M")}
+                for d in device_ids:
+                    if d in row:
+                        entry[d] = row[d]
+                data.append(entry)
+        else:
+            data = df.to_dict(orient='records')
+    
+    chart_payload = {"data": data}
+
+    return await generate_summary(
+        chart_payload=chart_payload,
+        query_type=qtype,
+        device_ids=device_ids,
+        metric=metric,
+        time_range=time_range
+    )

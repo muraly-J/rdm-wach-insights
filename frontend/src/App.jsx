@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import axios from 'axios'
+import api from './api.js'
 import ChatView from './components/ChatView.jsx'
 
 const SESSION_ID = crypto.randomUUID()
@@ -36,7 +36,7 @@ export default function App() {
     setIsLoading(true)
 
     try {
-      const response = await axios.post('/api/query', {
+      const response = await api.post('/api/query', {
         user_query: query,
         session_id: SESSION_ID,
       })
@@ -79,7 +79,7 @@ export default function App() {
         <div className="header-logo">
           <div className="header-logo-mark">
             <svg viewBox="0 0 16 16" fill="none">
-              <path d="M2 8h3l2-5 2 10 2-5h3" stroke="#0a0e1a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M2 8h3l2-5 2 10 2-5h3" stroke="#0a0e1a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <div>
