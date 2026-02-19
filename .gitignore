@@ -228,3 +228,8 @@ raw_data/
 secrets.json
 *.pem
 *.key
+
+# =========================
+# Startup
+# =========================
+documentation/startup.md
