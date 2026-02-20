@@ -173,7 +173,7 @@ class QueryRequest(BaseModel):
 
 # ── Endpoint ──────────────────────────────────────────────────────────────────
 
-@router.post('/api/query')
+@router.post('/query')
 async def handle_query(request: Request, body: QueryRequest):
     client_ip = request.client.host or 'unknown'
 
