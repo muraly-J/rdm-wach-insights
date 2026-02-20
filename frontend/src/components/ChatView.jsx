@@ -111,17 +111,17 @@ const NEXT_TIME_RANGE = {
 }
 
 function buildFollowUps(result) {
-  const { query_type, metric, time_range, device_ids, chart } = result
+  const { query_type, metric, time_range, device_ids, chart } = result || {}
   const suggestions = []
-  const rangeLabel = TIME_RANGE_LABELS[time_range] || time_range
+  const rangeLabel = TIME_RANGE_LABELS[time_range] || time_range || ''
   if (query_type === 'ranking') {
     const topDevices = chart?.data?.slice(0, 2).map(r => r.device_id) || []
-    if (topDevices.length >= 2) suggestions.push(`Compare ${topDevices[0]} vs ${topDevices[1]} ${metric.replace(/_/g, ' ')} ${rangeLabel}`)
-    if (topDevices.length >= 1) suggestions.push(`Show ${topDevices[0]} ${metric.replace(/_/g, ' ')} ${rangeLabel}`)
+    if (topDevices.length >= 2) suggestions.push(`Compare ${topDevices[0]} vs ${topDevices[1]} ${metric?.replace(/_/g, ' ') || ''} ${rangeLabel}`)
+    if (topDevices.length >= 1) suggestions.push(`Show ${topDevices[0]} ${metric?.replace(/_/g, ' ') || ''} ${rangeLabel}`)
     const diagFn = DIAGNOSTIC_FOLLOWUPS[metric]
     if (diagFn && topDevices.length >= 1) suggestions.push(diagFn(topDevices[0]))
     const nextRange = NEXT_TIME_RANGE[time_range]
-    if (nextRange) suggestions.push(`Rank top 10 by ${metric.replace(/_/g, ' ')} ${nextRange.label}`)
+    if (nextRange) suggestions.push(`Rank top 10 by ${metric?.replace(/_/g, ' ') || ''} ${nextRange.label}`)
   } else {
     const deviceStr = device_ids?.join(' and ') || 'this device'
     const firstDevice = device_ids?.[0]
@@ -130,8 +130,8 @@ function buildFollowUps(result) {
     const diagFn = DIAGNOSTIC_FOLLOWUPS[metric]
     if (diagFn && firstDevice) suggestions.push(diagFn(firstDevice))
     const nextRange = NEXT_TIME_RANGE[time_range]
-    if (nextRange) suggestions.push(`Show ${deviceStr} ${metric.replace(/_/g, ' ')} ${nextRange.label}`)
-    if (device_ids?.length === 1) suggestions.push(`Rank top 10 devices by ${metric.replace(/_/g, ' ')} ${rangeLabel}`)
+    if (nextRange) suggestions.push(`Show ${deviceStr} ${metric?.replace(/_/g, ' ') || ''} ${nextRange.label}`)
+    if (device_ids?.length === 1) suggestions.push(`Rank top 10 devices by ${metric?.replace(/_/g, ' ') || ''} ${rangeLabel}`)
   }
   return [...new Set(suggestions)].slice(0, 4)
 }
@@ -267,49 +267,61 @@ function DeviceTag({ deviceId }) {
 
 // ── Forecast card ─────────────────────────────────────────────────────────────
 function ForecastCard({ result, onQuery, onForecast, isLoading }) {
-  const { device_id, history, forecast, summary, recent_avg, generated_at } = result
+  try {
+    const { device_id, history, forecast, summary, recent_avg, generated_at } = result || {}
 
-  // Downsample history to last 7 days at ~30-min granularity for performance
-  // then append forecast. Each point has { time, history, forecast }
-  const downsample = (arr, step) =>
-    arr.filter((_, i) => i % step === 0 || i === arr.length - 1)
+    // Downsample history to last 7 days at ~30-min granularity for performance
+    // then append forecast. Each point has { time, history, forecast }
+    const downsample = (arr, step) =>
+      arr.filter((_, i) => i % step === 0 || i === arr.length - 1)
 
-  const histStep    = Math.max(1, Math.floor(history.length / 336)) // ~7d × 2/hr
-  const histSampled = downsample(history, histStep)
+    // Handle missing data gracefully
+    if (!history?.length || !forecast?.length) {
+      return (
+        <div className="result-card">
+          <p>No forecast data available for this device.</p>
+        </div>
+      )
+    }
 
-  // Format time labels
-  const fmt = (iso) => {
-    try {
-      const d = new Date(iso)
-      return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-    } catch { return iso }
-  }
+    const histStep = Math.max(1, Math.floor(history.length / 336))
+    const histSampled = downsample(history, histStep)
 
-  const chartData = [
-    ...histSampled.map(p => ({ time: fmt(p.time), history: p.value, forecast: null })),
-    // Bridge point — last history value also starts the forecast line
-    { time: fmt(histSampled[histSampled.length - 1]?.time), history: histSampled[histSampled.length - 1]?.value, forecast: histSampled[histSampled.length - 1]?.value },
-    ...forecast.map(p => ({ time: fmt(p.time), history: null, forecast: p.value })),
-  ]
+    // Format time labels
+    const fmt = (iso) => {
+      try {
+        const d = new Date(iso)
+        return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+      } catch { return iso }
+    }
 
-  const nowLabel  = fmt(histSampled[histSampled.length - 1]?.time)
-  const hasAlert  = summary.includes('⚠️') || summary.includes('ℹ️')
-  const deviceLabel = getDeviceLabel(device_id)
-  const genTime   = generated_at ? new Date(generated_at).toLocaleString() : ''
+    const chartData = [
+      ...histSampled.map(p => ({ time: fmt(p.time), history: p.value, forecast: null })),
+      // Bridge point — last history value also starts the forecast line
+      { time: fmt(histSampled[histSampled.length - 1]?.time), history: histSampled[histSampled.length - 1]?.value, forecast: histSampled[histSampled.length - 1]?.value },
+      ...forecast.map(p => ({ time: fmt(p.time), history: null, forecast: p.value })),
+    ]
 
-  // CSV download for forecast
-  const handleDownload = () => {
-    const rows = ['time,type,power_total_kw']
-    histSampled.forEach(p => rows.push(`${p.time},historical,${p.value}`))
-    forecast.forEach(p => rows.push(`${p.time},forecast,${p.value}`))
-    const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href = url; a.download = `wach_forecast_${device_id}_${Date.now()}.csv`; a.click()
-    URL.revokeObjectURL(url)
-  }
+    const nowLabel = fmt(histSampled[histSampled.length - 1]?.time)
+    // summary is a string for forecast queries
+    const safeSummary = Array.isArray(summary) ? summary[0] : (summary || '')
+    const hasAlert = safeSummary.includes('⚠️') || safeSummary.includes('ℹ️')
+    const deviceLabel = getDeviceLabel(device_id)
+    const genTime = generated_at ? new Date(generated_at).toLocaleString() : ''
 
-  return (
+    // CSV download for forecast
+    const handleDownload = () => {
+      const rows = ['time,type,power_total_kw']
+      histSampled.forEach(p => rows.push(`${p.time},historical,${p.value}`))
+      forecast.forEach(p => rows.push(`${p.time},forecast,${p.value}`))
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = `wach_forecast_${device_id}_${Date.now()}.csv`; a.click()
+      URL.revokeObjectURL(url)
+    }
+
+    return (
     <div className="result-card">
       <div className="query-meta">
         <span className="meta-tag type-forecast">Forecast</span>
@@ -406,64 +418,83 @@ function ForecastCard({ result, onQuery, onForecast, isLoading }) {
         </div>
       </div>
     </div>
-  )
+  )} catch (err) {
+    return (
+      <div className="result-card">
+        <p>Failed to load forecast.</p>
+        {process.env.NODE_ENV === 'development' && <pre>{String(err)}</pre>}
+      </div>
+    )
+  }
 }
 
 // ── Standard result card ──────────────────────────────────────────────────────
 function ResultCard({ result, onQuery, onForecast, isLoading }) {
-  const { chart, summary, metric, time_range, device_ids } = result
-  const unit = METRIC_UNITS[metric] || ''
-  const label = METRIC_LABELS[metric] || metric
-  const rangeLabel = time_range.replace(/_/g, ' ')
-  const csvFilename = `wach_${metric}_${time_range}_${Date.now()}.csv`
+  try {
+    const { chart, summary, metric, time_range, device_ids } = result || {}
 
-  return (
-    <div className="result-card">
-      <div className="query-meta">
-        <span className={`meta-tag ${chart.chart_type === 'line' ? 'type-line' : 'type-bar'}`}>
-          {chart.chart_type === 'line' ? 'Time Series' : 'Ranking'}
-        </span>
-        <span className="meta-tag metric">{label}</span>
-        <span className="meta-tag range">{rangeLabel}</span>
-        {device_ids?.map(d => <DeviceTag key={d} deviceId={d} />)}
-      </div>
-      <div className="chart-card">
-        <div className="chart-card-header">
-          <span className="chart-card-title">
-            {chart.chart_type === 'line'
-              ? device_ids?.length > 1
-                ? `${device_ids.join(' vs ')} · ${label} · ${rangeLabel}`
-                : `${label} over ${rangeLabel}`
-              : `Top ${chart.data?.length} devices by ${label} · ${rangeLabel}`
-            }
+    // Safely get values with defaults
+    const safeChart = chart || {}
+    const safeSummary = Array.isArray(summary) ? summary[0] : (summary || '')
+    const unit = METRIC_UNITS[metric] || ''
+    const label = METRIC_LABELS[metric] || metric
+    const rangeLabel = time_range ? time_range.replace(/_/g, ' ') : ''
+
+    return (
+      <div className="result-card">
+        <div className="query-meta">
+          <span className={`meta-tag ${safeChart.chart_type === 'line' ? 'type-line' : 'type-bar'}`}>
+            {safeChart.chart_type === 'line' ? 'Time Series' : 'Ranking'}
           </span>
-          {chart.csv && (
-            <button className="csv-btn" onClick={() => downloadCSV(chart.csv, csvFilename)}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Export CSV
-            </button>
-          )}
+          <span className="meta-tag metric">{label}</span>
+          <span className="meta-tag range">{rangeLabel}</span>
+          {device_ids?.map(d => <DeviceTag key={d} deviceId={d} />)}
         </div>
-        <div className="chart-body">
-          {chart.chart_type === 'line'
-            ? <LineChartView data={chart.data} deviceIds={chart.device_ids} unit={unit} />
-            : <BarChartView data={chart.data} unit={unit} />
-          }
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <span className="chart-card-title">
+              {safeChart.chart_type === 'line'
+                ? device_ids?.length > 1
+                  ? `${device_ids.join(' vs ')} · ${label} · ${rangeLabel}`
+                  : `${label} over ${rangeLabel}`
+                : `Top ${safeChart.data?.length || 0} devices by ${label} · ${rangeLabel}`
+              }
+            </span>
+            {safeChart.csv && (
+              <button className="csv-btn" onClick={() => downloadCSV(safeChart.csv, `wach_${metric}_${time_range || ''}_${Date.now()}.csv`)}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Export CSV
+              </button>
+            )}
+          </div>
+          <div className="chart-body">
+            {safeChart.chart_type === 'line'
+              ? <LineChartView data={safeChart.data} deviceIds={device_ids} unit={unit} />
+              : <BarChartView data={safeChart.data} unit={unit} />
+            }
+          </div>
         </div>
+        {safeSummary && (
+          <div className="summary-card">
+            <div className="summary-label">Analysis</div>
+            <p className="summary-text">{safeSummary}</p>
+          </div>
+        )}
+        <SuggestedFollowUps result={result} onQuery={onQuery} isLoading={isLoading} />
       </div>
-      {summary && (
-        <div className="summary-card">
-          <div className="summary-label">Analysis</div>
-          <p className="summary-text">{summary}</p>
-        </div>
-      )}
-      <SuggestedFollowUps result={result} onQuery={onQuery} isLoading={isLoading} />
-    </div>
-  )
+    )
+  } catch (err) {
+    return (
+      <div className="result-card">
+        <p>Failed to load results.</p>
+        {process.env.NODE_ENV === 'development' && <pre>{String(err)}</pre>}
+      </div>
+    )
+  }
 }
 
 function SkeletonResult() {

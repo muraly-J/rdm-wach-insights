@@ -29,9 +29,9 @@ export default function App() {
       const data = response.data
       setMessages(prev => prev.map(m => m.id === assistantId ? {
         ...m,
-        text: data.query_type === 'time_series'
+        text: (data?.query_type === 'time_series' && Array.isArray(data.device_ids))
           ? `${data.device_ids.join(', ')} · ${data.metric} · ${data.time_range.replace(/_/g, ' ')}`
-          : `Top ${data.chart?.data?.length ?? '?'} devices · ${data.metric} · ${data.time_range.replace(/_/g, ' ')}`,
+          : `Top ${data?.chart?.data?.length ?? '?'} devices · ${data.metric} · ${data.time_range.replace(/_/g, ' ')}`,
         result: data,
       } : m))
     } catch (err) {
