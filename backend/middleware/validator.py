@@ -13,7 +13,7 @@ Responsibilities:
 
 from dataclasses import dataclass, field
 from typing import Union
-from models.schemas import (
+from backend.models.schemas import (
     StructuredQuery,
     ALLOWED_METRICS,
     ALLOWED_TIME_RANGES,
@@ -114,3 +114,10 @@ def validate_raw_dict(raw: dict) -> tuple[Union[StructuredQuery, None], Validati
 
     result = validate_query(query)
     return query, result
+
+def validate_structured_query(query: StructuredQuery) -> Union[str, None]:
+    """
+    FastAPI route helper: takes a StructuredQuery, returns error string or None.
+    """
+    result = validate_query(query)
+    return None if result.is_valid else result.user_message

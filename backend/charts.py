@@ -131,3 +131,28 @@ def _empty_payload(chart_type: str, metric: str, time_range: str) -> Dict[str, A
         "csv":         "",
         "empty":       True,
     }
+
+# ── Unified entry point ───────────────────────────────────────────────────────
+
+def build_chart(df: pd.DataFrame, structured: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Dispatcher: takes a DataFrame and the StructuredQuery dict/object,
+    calls the appropriate builder, and returns the Recharts-ready payload.
+    """
+    # handle both dict and object (pydantic)
+    if hasattr(structured, 'query_type'):
+        qtype      = getattr(structured, 'query_type')
+        metric     = getattr(structured, 'metric')
+        time_range = getattr(structured, 'time_range')
+        top_n      = getattr(structured, 'top_n', 10)
+    else:
+        qtype      = structured.get('query_type')
+        metric     = structured.get('metric')
+        time_range = structured.get('time_range')
+        top_n      = structured.get('top_n', 10)
+
+    if qtype == 'time_series':
+        return build_line_chart(df, metric, time_range)
+    else:
+        return build_bar_chart(df, metric, time_range, top_n)
+

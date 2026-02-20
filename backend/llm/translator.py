@@ -18,11 +18,11 @@ import json
 import re
 from typing import Optional, Union
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import AsyncOpenAI
 
-from llm.prompts import SYSTEM_PROMPT
-from middleware.validator import validate_raw_dict
-from models.schemas import StructuredQuery
+from backend.llm.prompts import SYSTEM_PROMPT
+from backend.middleware.validator import validate_raw_dict
+from backend.models.schemas import StructuredQuery
 
 load_dotenv()
 
@@ -31,8 +31,8 @@ _LMS_MODEL    = os.getenv("LMS_MODEL", "qwen/qwen3-coder-next")
 _LMS_API_KEY  = "lm-studio"   # LM Studio ignores this but the SDK requires something
 
 
-def _get_client() -> OpenAI:
-    return OpenAI(base_url=_LMS_BASE_URL, api_key=_LMS_API_KEY)
+def _get_client() -> AsyncOpenAI:
+    return AsyncOpenAI(base_url=_LMS_BASE_URL, api_key=_LMS_API_KEY)
 
 
 def _extract_json(text: str) -> Optional[dict]:
@@ -68,7 +68,7 @@ def _extract_json(text: str) -> Optional[dict]:
     return None
 
 
-def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None], Union[str, None]]:
+async def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None], Union[str, None]]:
     """
     Main entry point. Converts a natural language string to a validated StructuredQuery.
 
@@ -79,7 +79,7 @@ def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None], Unio
     client = _get_client()
 
     try:
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=_LMS_MODEL,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},

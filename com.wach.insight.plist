@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.wach.insight.plist
+  ──────────────────────
+  macOS LaunchAgent — auto-starts WACH Insight Gunicorn server on login.
+
+  INSTALL:
+    1. Edit the two paths below if your username or project location differs
+    2. Copy to: ~/Library/LaunchAgents/com.wach.insight.plist
+    3. Load it:  launchctl load ~/Library/LaunchAgents/com.wach.insight.plist
+
+  USEFUL COMMANDS:
+    Start:   launchctl start com.wach.insight
+    Stop:    launchctl stop com.wach.insight
+    Reload:  launchctl unload ~/Library/LaunchAgents/com.wach.insight.plist
+             launchctl load   ~/Library/LaunchAgents/com.wach.insight.plist
+    Logs:    tail -f /tmp/wach-insight.log
+             tail -f /tmp/wach-insight-error.log
+-->
+<plist version="1.0">
+<dict>
+
+  <key>Label</key>
+  <string>com.wach.insight</string>
+
+  <!-- ── Command to run ─────────────────────────────────────────────────── -->
+  <key>ProgramArguments</key>
+  <array>
+      <string>/bin/bash</string>
+      <string>/Users/rdmasia/Documents/JINENDRA/rdm-wach-insights/launchd_start.sh</string>
+  </array>
+  
+  <!-- ── Throttle Interval ─────────────────────────────────────────────────── -->
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <!-- ── Working directory (project root) ──────────────────────────────── -->
+  <key>WorkingDirectory</key>
+  <string>/Users/rdmasia/Documents/JINENDRA/rdm-wach-insights</string>
+
+  <!-- ── Environment ───────────────────────────────────────────────────── -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/rdmasia/Documents/JINENDRA/rdm-wach-insights/venv/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <!-- ── Logging ────────────────────────────────────────────────────────── -->
+  <key>StandardOutPath</key>
+  <string>/tmp/wach-insight.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/wach-insight-error.log</string>
+
+  <!-- ── Auto-restart if it crashes ────────────────────────────────────── -->
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- ── Start on login ────────────────────────────────────────────────── -->
+  <key>RunAtLoad</key>
+  <true/>
+
+</dict>
+</plist>

@@ -9,8 +9,8 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.insert(0, os.path.dirname(__file__))
 
-from middleware.validator import validate_raw_dict
-from middleware.query_logger import init_db, log_query, get_rejected_queries
+from backend.middleware.validator import validate_raw_dict
+from backend.middleware.query_logger import init_db, log_query, get_rejected_queries
 
 print("\n" + "="*55)
 print(" WACH INSIGHT - MIDDLEWARE TEST ".center(55, "="))

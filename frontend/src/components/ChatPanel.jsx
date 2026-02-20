@@ -3,10 +3,15 @@ import { useState, useRef, useEffect } from 'react'
 const EXAMPLE_QUERIES = [
   'Rank top 10 by power this month',
   'Show e0101 energy last 7 days',
+  'Compare e0101 vs e0206 power today',
+  'e0405 and e0410 and e0411 power last 7 days',
   'Show e0206 voltage today',
   'Top 5 by reactive power all time',
+<<<<<<< HEAD
   'Which AHU uses most energy this week?',
   'Show e0405 power demand last 30 days',
+=======
+>>>>>>> dev
 ]
 
 const METRICS = [
@@ -14,7 +19,11 @@ const METRICS = [
   'volts_l_n_avg', 'apparent_power_total', 'power_demand', 'reactive_power_total',
 ]
 
+<<<<<<< HEAD
 export default function ChatPanel({ messages, isLoading, onQuery, onClear }) {
+=======
+export default function ChatPanel({ messages, isLoading, onQuery, onClear, className }) {
+>>>>>>> dev
   const [input, setInput]           = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const messagesEndRef  = useRef(null)
@@ -87,7 +96,11 @@ export default function ChatPanel({ messages, isLoading, onQuery, onClear }) {
   }
 
   return (
+<<<<<<< HEAD
     <div className="chat-panel">
+=======
+    <div className={`chat-panel${className ? ' ' + className : ''}`}>
+>>>>>>> dev
 
       {/* Instruction banner */}
       <div className="instruction-banner">

@@ -199,7 +199,6 @@ coverage/
 # =========================
 # LM Studio / Local LLM Models
 # =========================
-models/
 *.gguf
 *.bin
 *.pt
@@ -228,3 +227,8 @@ raw_data/
 secrets.json
 *.pem
 *.key
+
+# =========================
+# Startup
+# =========================
+documentation/startup.md

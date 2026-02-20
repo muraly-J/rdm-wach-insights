@@ -131,8 +131,10 @@ export default function OutputPanel({ result, isLoading }) {
           <div className="chart-card-header">
             <span className="chart-card-title">
               {chart.chart_type === 'line'
-                ? `${label} over ${rangeLabel}`
-                : `Top ${chart.data?.length} devices by ${label}`
+                ? device_ids?.length > 1
+                  ? `${device_ids.join(' vs ')} · ${label} · ${rangeLabel}`
+                  : `${label} over ${rangeLabel}`
+                : `Top ${chart.data?.length} devices by ${label} · ${rangeLabel}`
               }
             </span>
             {chart.csv && (
@@ -198,7 +200,7 @@ function LineChartView({ data, deviceIds, unit }) {
           labelStyle={{ color: '#7a90b0', marginBottom: 4 }}
           formatter={(val, name) => [`${Number(val).toFixed(3)} ${unit}`, name]}
         />
-        {deviceIds?.length > 1 && <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'DM Mono, monospace', color: '#7a90b0' }} />}
+        {deviceIds?.length > 1 && <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'DM Mono, monospace', color: '#7a90b0', paddingTop: 8 }} />}
         {(deviceIds || []).map((id, i) => (
           <Line
             key={id}
