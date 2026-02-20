@@ -30,20 +30,24 @@ load_dotenv()
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: callable) -> Response:
         response = await call_next(request)
-        response.headers['X-Content-Type-Options']    = 'nosniff'
-        response.headers['X-Frame-Options']           = 'DENY'
-        response.headers['X-XSS-Protection']          = '1; mode=block'
-        response.headers['Referrer-Policy']           = 'strict-origin-when-cross-origin'
-        response.headers['Permissions-Policy']        = 'camera=(), microphone=(), geolocation=()'
-        response.headers['Content-Security-Policy'] = (
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        
+        # --- THE FIX: Updated CSP ---
+        # Added your Cloudflare and Vercel domains to 'connect-src'
+        # Added 'https://*.trycloudflare.com' to allow dynamic tunnel URLs
+        csp = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline'; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
-            "connect-src 'self'; "
+            f"connect-src 'self' https://rdm-wach-insights.vercel.app https://*.trycloudflare.com; "
             "img-src 'self' data:; "
             "frame-ancestors 'none';"
         )
+        response.headers['Content-Security-Policy'] = csp
         return response
 
 
@@ -66,7 +70,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS — allow both localhost and network access
 # Support both CORS_ORIGINS (comma-separated) and CORS_ORIGIN (single value)
-_cors_origins_raw = os.getenv("CORS_ORIGINS") or os.getenv("CORS_ORIGIN", "http://localhost:5173")
+_cors_origins_raw = os.getenv("CORS_ORIGINS") or "http://localhost:5173,https://rdm-wach-insights.vercel.app"
 _cors_origins = [origin.strip() for origin in _cors_origins_raw.split(",")]
 
 app.add_middleware(
