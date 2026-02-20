@@ -72,10 +72,7 @@ def validate_query(query: StructuredQuery) -> ValidationResult:
 
     # ── 4. Query-type consistency checks ──────────────────────────────────────
     if query.query_type == QueryType.time_series:
-        if len(query.device_ids) == 0:
-            errors.append(
-                "A time-series query requires at least one device ID."
-            )
+        # Allow empty device_ids for ward/floor grouping (resolved server-side)
         if len(query.device_ids) > 5:
             warnings.append(
                 f"Querying {len(query.device_ids)} devices at once may be slow. "
@@ -83,6 +80,7 @@ def validate_query(query: StructuredQuery) -> ValidationResult:
             )
 
     if query.query_type == QueryType.ranking:
+        # For ranking, empty device_ids means "all devices" (valid)
         if query.top_n is None:
             # Default silently — not an error
             warnings.append("top_n not specified; defaulting to 10.")

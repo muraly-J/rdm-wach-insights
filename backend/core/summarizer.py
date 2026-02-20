@@ -11,11 +11,12 @@ Task 2 additions:
 - Threshold context injected into ranking summaries to flag problem devices
 
 Public function:
-  summarize() → str
+  summarize() → tuple[str, dict]
 """
 
 import os
 import re
+import pandas as pd
 from typing import Dict, Any, Optional
 
 from backend.config import get_lms_base_url, get_lms_model, get_lms_api_key
@@ -338,12 +339,97 @@ def _fallback_summary(
         )
 
 
+# ── Anomaly detection for chart callouts ───────────────────────────────────────
+
+
+def _detect_anomalies(df: Any, structured: Any) -> dict:
+    """
+    Scan chart data for threshold breaches and return anomaly records
+    suitable for visual callouts on the chart.
+    
+    Returns: {
+        "metric": str,
+        "anomalies": [
+            {"device_id": "e0101", "time": "...", "value": 123.4, 
+             "threshold": 5.0, "direction": "above", "alert": "..."},
+            ...
+        ]
+    }
+    """
+    if hasattr(structured, 'query_type'):
+        metric = getattr(structured, 'metric')
+        device_ids = getattr(structured, 'device_ids', [])
+    else:
+        metric = structured.get('metric')
+        device_ids = structured.get('device_ids', [])
+    
+    if not metric or metric not in _THRESHOLDS:
+        return {"metric": metric, "anomalies": []}
+    
+    threshold, direction, standard, action = _THRESHOLDS[metric]
+    anomalies = []
+    
+    if hasattr(df, 'iterrows'):
+        # Time series DataFrame
+        for ts, row in df.iterrows():
+            for d_id in device_ids:
+                if d_id in row:
+                    val = row[d_id]
+                    if pd.notna(val):
+                        breached = (direction == "below" and val < threshold) or \
+                                   (direction == "above" and val > threshold)
+                        if breached:
+                            severity = "critically high" if (direction == "above" and val > threshold * 1.5) else \
+                                       "critically low" if (direction == "below" and val < threshold * 0.88) else \
+                                       "above" if direction == "above" else "below"
+                            anomalies.append({
+                                "device_id": d_id,
+                                "time": ts.strftime("%b %d %H:%M"),
+                                "value": round(float(val), 3),
+                                "threshold": threshold,
+                                "direction": direction,
+                                "severity": severity,
+                                "metric": metric,
+                            })
+    elif hasattr(df, 'to_dict'):
+        # Ranking DataFrame with columns ['device_id', 'value']
+        records = df.to_dict('records')
+        for row in records:
+            d_id = row.get('device_id')
+            val = row.get('value', 0)
+            if d_id and isinstance(val, (int, float)):
+                breached = (direction == "below" and val < threshold) or \
+                           (direction == "above" and val > threshold)
+                if breached:
+                    severity = "critically high" if (direction == "above" and val > threshold * 1.5) else \
+                               "critically low" if (direction == "below" and val < threshold * 0.88) else \
+                               "above" if direction == "above" else "below"
+                    anomalies.append({
+                        "device_id": d_id,
+                        "value": round(float(val), 3),
+                        "threshold": threshold,
+                        "direction": direction,
+                        "severity": severity,
+                        "metric": metric,
+                    })
+    
+    return {"metric": metric, "anomalies": anomalies}
+
+
 # ── Unified entry point ───────────────────────────────────────────────────────
 
-async def summarize(df: Any, structured: Any) -> str:
+async def summarize(df: Any, structured: Any) -> tuple[str, dict]:
     """
     Dispatcher: takes a DataFrame and StructuredQuery,
-    extracts fields, and calls generate_summary.
+    extracts fields, calls generate_summary, and returns anomaly data.
+    
+    Returns: (summary_text, anomalies_dict)
+      anomalies_dict: {
+        "metric": str,
+        "anomalies": [
+          {"device_id": "e0101", "time": "...", "value": 123.4, "metric": "volts_l1_thd", ...}
+        ]
+      }
     """
     if hasattr(structured, 'query_type'):
         qtype      = getattr(structured, 'query_type')
@@ -370,10 +456,15 @@ async def summarize(df: Any, structured: Any) -> str:
 
     chart_payload = {"data": data}
 
-    return await generate_summary(
+    summary = await generate_summary(
         chart_payload=chart_payload,
         query_type=qtype,
         device_ids=device_ids,
         metric=metric,
         time_range=time_range,
     )
+    
+    # Detect anomalies for chart callouts
+    anomalies = _detect_anomalies(df, structured)
+    
+    return summary, anomalies

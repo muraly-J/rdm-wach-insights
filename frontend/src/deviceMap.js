@@ -154,3 +154,58 @@ export function getDeviceDetail(deviceId) {
 export function isMapped(deviceId) {
   return !!DEVICE_MAP[deviceId];
 }
+
+// Get all unique floors levels
+export function getFloors() {
+  const levels = new Set();
+  Object.values(DEVICE_MAP).forEach(d => {
+    if (d.level) levels.add(d.level);
+  });
+  return Array.from(levels).sort();
+}
+
+// Get all unique wards/departments
+export function getWards() {
+  const wards = new Set();
+  Object.values(DEVICE_MAP).forEach(d => {
+    if (d.dept) wards.add(d.dept);
+  });
+  return Array.from(wards).sort();
+}
+
+// Get devices filtered by floor/level
+export function getDevicesByFloor(floor) {
+  return Object.keys(DEVICE_MAP).filter(id => DEVICE_MAP[id].level === floor);
+}
+
+// Get devices filtered by ward/department
+export function getDevicesByWard(ward) {
+  return Object.keys(DEVICE_MAP).filter(id => DEVICE_MAP[id].dept === ward);
+}
+
+// Get a floor label from level (e.g., "L03" -> "Level 3")
+export function getFloorLabel(level) {
+  if (!level || !level.startsWith('L')) return level;
+  const num = level.substring(1);
+  return `Level ${parseInt(num, 10)}`;
+}
+
+// Group devices by floor for summary queries
+export function groupDevicesByFloor() {
+  const groups = {};
+  Object.entries(DEVICE_MAP).forEach(([id, data]) => {
+    if (!groups[data.level]) groups[data.level] = [];
+    groups[data.level].push(id);
+  });
+  return groups;
+}
+
+// Group devices by ward/department
+export function groupDevicesByWard() {
+  const groups = {};
+  Object.entries(DEVICE_MAP).forEach(([id, data]) => {
+    if (!groups[data.dept]) groups[data.dept] = [];
+    groups[data.dept].push(id);
+  });
+  return groups;
+}

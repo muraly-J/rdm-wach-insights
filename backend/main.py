@@ -65,11 +65,9 @@ app = FastAPI(
 app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS — allow both localhost and network access
-_cors_origins = [
-    os.getenv("CORS_ORIGIN", "http://localhost:5173"),
-    "http://127.0.0.1:5173",
-    "http://10.1.128.106:5173", "https://rdm-wach-insights.vercel.app",
-]
+# Support both CORS_ORIGINS (comma-separated) and CORS_ORIGIN (single value)
+_cors_origins_raw = os.getenv("CORS_ORIGINS") or os.getenv("CORS_ORIGIN", "http://localhost:5173")
+_cors_origins = [origin.strip() for origin in _cors_origins_raw.split(",")]
 
 app.add_middleware(
     CORSMiddleware,

@@ -475,11 +475,18 @@ html, body, #root {
   .input-hint { display: none; }
   .chart-card-header { flex-wrap: wrap; padding: 10px 14px; }
   .chart-card-title { font-size: 10px; white-space: normal; }
-  .chart-body { padding: 10px 4px 6px; }
+  .chart-body { padding: 10px 4px 6px; min-height: 280px; }
   .summary-card { padding: 12px 14px; }
   .summary-text { font-size: 12.5px; }
   .query-meta { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
   .meta-tag { font-size: 8.5px; padding: 2px 8px; }
+  /* Responsive charts for mobile */
+  .recharts-wrapper { width: 100% !important; transform: scale(1); }
+  .recharts-responsive-container { width: 100% !important; }
+  .recharts-tooltip-wrapper { font-size: 11px !important; }
+  .rechartsLegend-item { font-size: 9px !important; padding-left: 6px !important; }
+  .recharts-text { font-size: 9px !important; }
+  .recharts-area, .recharts-line { stroke-width: 1.5 !important; }
 }
 
 /* ── Example category tabs ─────────────────────────────────────────────── */

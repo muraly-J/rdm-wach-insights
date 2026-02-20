@@ -23,6 +23,7 @@ from backend.llm.prompts import SYSTEM_PROMPT
 from backend.middleware.validator import validate_raw_dict
 from backend.models.schemas import StructuredQuery
 from backend.config import get_lms_base_url, get_lms_model, get_lms_api_key
+from backend.core.floor_ward_map import resolve_floor_ids, resolve_ward_ids
 
 _LMS_BASE_URL = get_lms_base_url()
 _LMS_MODEL    = get_lms_model()
@@ -108,5 +109,9 @@ async def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None]
 
     if not validation_result.is_valid:
         return None, validation_result.user_message
+
+    # Resolve floor/ward names to device IDs if needed
+    from backend.core.floor_ward_map import resolve_floor_or_ward
+    query.device_ids = resolve_floor_or_ward(query_text, query.device_ids)
 
     return query, None
