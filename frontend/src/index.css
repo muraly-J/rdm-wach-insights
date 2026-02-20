@@ -139,13 +139,13 @@ html, body, #root {
   position: relative; z-index: 1;
 }
 
-<<<<<<< HEAD
+
 .instruction-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
 }
-=======
+
 .thread-inner {
   max-width: var(--thread-max); width: 100%; margin: 0 auto;
   padding: 32px 28px 24px;
@@ -153,7 +153,7 @@ html, body, #root {
 }
 
 /* ── Turns ───────────────────────────────────────────────────────────────── */
->>>>>>> dev
+
 
 .turn {
   display: flex; flex-direction: column; gap: 12px;
@@ -491,7 +491,7 @@ html, body, #root {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-<<<<<<< HEAD
+
   font-family: var(--mono);
   font-size: 11px;
   padding: 5px 12px;
@@ -589,8 +589,7 @@ html, body, #root {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--teal);
-=======
->>>>>>> dev
+
   margin-bottom: 10px;
 }
 
@@ -679,3 +678,20 @@ html, body, #root {
   font-family: 'DM Mono', monospace; font-size: 10px;
   cursor: default;
 }
+
+/* ── Forecast ───────────────────────────────────────────────────────────── */
+.meta-tag.type-forecast { background: #f5a62315; color: #f5a623; border-color: #f5a62340; }
+.forecast-tab { border-color: #f5a62340 !important; }
+.forecast-tab.active { background: #f5a62315 !important; border-color: #f5a623 !important; color: #f5a623 !important; }
+.forecast-chip { border-color: #f5a62340; color: #f5a623; }
+.forecast-chip:hover:not(:disabled) { border-color: #f5a623; background: #f5a62310; }
+
+.forecast-legend { display: flex; gap: 16px; align-items: center; padding: 0 4px 10px; flex-wrap: wrap; }
+.forecast-legend-item { display: flex; align-items: center; gap: 6px; font-family: 'DM Mono', monospace; font-size: 11px; color: #7a90b0; }
+.forecast-legend-dot { width: 20px; height: 2px; border-radius: 2px; }
+.forecast-legend-dot.history { background: #00c9b1; }
+.forecast-legend-dot.prediction { background: #f5a623; border-top: 2px dashed #f5a623; height: 0; }
+.forecast-legend-item.muted { color: #3d526e; }
+
+.summary-alert { border-color: #f5a62340; background: #f5a6230a; }
+.summary-generated { font-family: 'DM Mono', monospace; font-size: 10px; color: #3d526e; margin-top: 8px; margin-bottom: 0; }

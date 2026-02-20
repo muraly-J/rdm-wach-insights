@@ -1,13 +1,22 @@
 import { useState, useRef, useEffect } from 'react'
 import {
-  LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
+  ComposedChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  LineChart, BarChart, Bar,
 } from 'recharts'
 import { getDeviceLabel, getDeviceDetail, isMapped } from '../deviceMap.js'
 
 // ── Categorised example queries ───────────────────────────────────────────────
 const EXAMPLE_CATEGORIES = [
+  {
+    label: '🔮 Predictions',
+    type: 'forecast',
+    queries: [
+      { label: 'Forecast e0202 — Child Development Centre (L02)', deviceId: 'e0202' },
+      { label: 'Forecast e0207 — Medical Social Services (L02)',  deviceId: 'e0207' },
+      { label: 'Forecast e0211 — Post Graduate Medical Centre (L03)', deviceId: 'e0211' },
+    ],
+  },
   {
     label: '⚡ Power',
     queries: [
@@ -87,45 +96,28 @@ const DIAGNOSTIC_FOLLOWUPS = {
   volts_l_n_avg:        (d) => `Show ${d} voltage unbalance last 30 days`,
   volts_l_l_avg:        (d) => `Show ${d} voltage unbalance last 30 days`,
 }
-
 const RELATED_METRICS = {
-  power_total:          'energy import',
-  energy_import:        'power demand',
-  power_demand:         'max power demand',
-  power_factor_avg:     'reactive power',
-  reactive_power_total: 'power factor',
-  current_avg:          'current unbalance',
-  current_unbalance:    'voltage unbalance',
-  volts_l_n_avg:        'voltage unbalance',
-  volts_unbalance:      'current unbalance',
-  volts_l1_thd:         'current THD',
-  current_l1_thd:       'voltage THD',
-  apparent_power_total: 'power factor',
+  power_total: 'energy import', energy_import: 'power demand',
+  power_demand: 'max power demand', power_factor_avg: 'reactive power',
+  reactive_power_total: 'power factor', current_avg: 'current unbalance',
+  current_unbalance: 'voltage unbalance', volts_l_n_avg: 'voltage unbalance',
+  volts_unbalance: 'current unbalance', volts_l1_thd: 'current THD',
+  current_l1_thd: 'voltage THD', apparent_power_total: 'power factor',
 }
-
-const TIME_RANGE_LABELS = {
-  last_24h: 'today', last_7d: 'last 7 days',
-  last_30d: 'last 30 days', all_time: 'all time',
-}
-
+const TIME_RANGE_LABELS = { last_24h: 'today', last_7d: 'last 7 days', last_30d: 'last 30 days', all_time: 'all time' }
 const NEXT_TIME_RANGE = {
-  last_24h: { label: 'last 7 days' },
-  last_7d:  { label: 'last 30 days' },
-  last_30d: { label: 'all time' },
-  all_time: { label: 'last 30 days' },
+  last_24h: { label: 'last 7 days' }, last_7d: { label: 'last 30 days' },
+  last_30d: { label: 'all time' }, all_time: { label: 'last 30 days' },
 }
 
 function buildFollowUps(result) {
   const { query_type, metric, time_range, device_ids, chart } = result
   const suggestions = []
   const rangeLabel = TIME_RANGE_LABELS[time_range] || time_range
-
   if (query_type === 'ranking') {
     const topDevices = chart?.data?.slice(0, 2).map(r => r.device_id) || []
-    if (topDevices.length >= 2)
-      suggestions.push(`Compare ${topDevices[0]} vs ${topDevices[1]} ${metric.replace(/_/g, ' ')} ${rangeLabel}`)
-    if (topDevices.length >= 1)
-      suggestions.push(`Show ${topDevices[0]} ${metric.replace(/_/g, ' ')} ${rangeLabel}`)
+    if (topDevices.length >= 2) suggestions.push(`Compare ${topDevices[0]} vs ${topDevices[1]} ${metric.replace(/_/g, ' ')} ${rangeLabel}`)
+    if (topDevices.length >= 1) suggestions.push(`Show ${topDevices[0]} ${metric.replace(/_/g, ' ')} ${rangeLabel}`)
     const diagFn = DIAGNOSTIC_FOLLOWUPS[metric]
     if (diagFn && topDevices.length >= 1) suggestions.push(diagFn(topDevices[0]))
     const nextRange = NEXT_TIME_RANGE[time_range]
@@ -139,8 +131,7 @@ function buildFollowUps(result) {
     if (diagFn && firstDevice) suggestions.push(diagFn(firstDevice))
     const nextRange = NEXT_TIME_RANGE[time_range]
     if (nextRange) suggestions.push(`Show ${deviceStr} ${metric.replace(/_/g, ' ')} ${nextRange.label}`)
-    if (device_ids?.length === 1)
-      suggestions.push(`Rank top 10 devices by ${metric.replace(/_/g, ' ')} ${rangeLabel}`)
+    if (device_ids?.length === 1) suggestions.push(`Rank top 10 devices by ${metric.replace(/_/g, ' ')} ${rangeLabel}`)
   }
   return [...new Set(suggestions)].slice(0, 4)
 }
@@ -148,8 +139,7 @@ function buildFollowUps(result) {
 // ── Metric display maps ───────────────────────────────────────────────────────
 const METRIC_UNITS = {
   power_total: 'kW', power_l1: 'kW', power_l2: 'kW', power_l3: 'kW',
-  power_demand: 'kW', max_power_demand: 'kW',
-  energy_import: 'kWh', energy_export: 'kWh',
+  power_demand: 'kW', max_power_demand: 'kW', energy_import: 'kWh', energy_export: 'kWh',
   reactive_energy_import: 'kVArh', reactive_energy_export: 'kVArh',
   apparent_power_total: 'kVA', apparent_power_l1: 'kVA', apparent_power_l2: 'kVA',
   apparent_power_l3: 'kVA', apparent_power_demand: 'kVA', apparent_energy: 'kVAh',
@@ -157,17 +147,14 @@ const METRIC_UNITS = {
   reactive_power_l3: 'kVAr', reactive_power_demand: 'kVAr',
   current_avg: 'A', current_l1: 'A', current_l2: 'A', current_l3: 'A',
   current_l1_thd: '%', current_l3_thd: '%', current_unbalance: '%',
-  volts_l_n_avg: 'V', volts_l_l_avg: 'V',
-  volts_l1_n: 'V', volts_l2_n: 'V', volts_l3_n: 'V',
+  volts_l_n_avg: 'V', volts_l_l_avg: 'V', volts_l1_n: 'V', volts_l2_n: 'V', volts_l3_n: 'V',
   volts_l1_l2: 'V', volts_l2_l3: 'V', volts_l3_l1: 'V',
   volts_l1_thd: '%', volts_l2_thd: '%', volts_l3_thd: '%', volts_unbalance: '%',
-  power_factor_avg: '', power_factor_l1: '', power_factor_l2: '', power_factor_l3: '',
-  freq: 'Hz',
+  power_factor_avg: '', power_factor_l1: '', power_factor_l2: '', power_factor_l3: '', freq: 'Hz',
 }
-
 const METRIC_LABELS = {
-  power_total: 'Total Active Power', power_l1: 'L1 Power', power_l2: 'L2 Power',
-  power_l3: 'L3 Power', power_demand: 'Power Demand', max_power_demand: 'Max Power Demand',
+  power_total: 'Total Active Power', power_l1: 'L1 Power', power_l2: 'L2 Power', power_l3: 'L3 Power',
+  power_demand: 'Power Demand', max_power_demand: 'Max Power Demand',
   energy_import: 'Imported Energy', energy_export: 'Exported Energy',
   reactive_energy_import: 'Reactive Energy Import', reactive_energy_export: 'Reactive Energy Export',
   apparent_power_total: 'Apparent Power', apparent_power_l1: 'L1 Apparent Power',
@@ -178,26 +165,19 @@ const METRIC_LABELS = {
   reactive_power_demand: 'Reactive Power Demand',
   current_avg: 'Average Current', current_l1: 'L1 Current', current_l2: 'L2 Current',
   current_l3: 'L3 Current', current_l1_thd: 'L1 Current THD', current_l3_thd: 'L3 Current THD',
-  current_unbalance: 'Current Unbalance',
-  volts_l_n_avg: 'Avg Voltage (L-N)', volts_l_l_avg: 'Avg Voltage (L-L)',
+  current_unbalance: 'Current Unbalance', volts_l_n_avg: 'Avg Voltage (L-N)', volts_l_l_avg: 'Avg Voltage (L-L)',
   volts_l1_n: 'L1-N Voltage', volts_l2_n: 'L2-N Voltage', volts_l3_n: 'L3-N Voltage',
   volts_l1_l2: 'L1-L2 Voltage', volts_l2_l3: 'L2-L3 Voltage', volts_l3_l1: 'L3-L1 Voltage',
   volts_l1_thd: 'L1 Voltage THD', volts_l2_thd: 'L2 Voltage THD', volts_l3_thd: 'L3 Voltage THD',
-  volts_unbalance: 'Voltage Unbalance',
-  power_factor_avg: 'Avg Power Factor', power_factor_l1: 'L1 Power Factor',
-  power_factor_l2: 'L2 Power Factor', power_factor_l3: 'L3 Power Factor',
-  freq: 'Frequency',
+  volts_unbalance: 'Voltage Unbalance', power_factor_avg: 'Avg Power Factor',
+  power_factor_l1: 'L1 Power Factor', power_factor_l2: 'L2 Power Factor',
+  power_factor_l3: 'L3 Power Factor', freq: 'Frequency',
 }
 
 const LINE_COLORS = ['#00c9b1', '#f5a623', '#7b7eff', '#ff6b8a', '#4ecdc4', '#ffe66d']
-
 const TOOLTIP_STYLE = {
-  backgroundColor: '#161d30',
-  border: '1px solid #1f2d45',
-  borderRadius: '6px',
-  fontFamily: 'DM Mono, monospace',
-  fontSize: '11px',
-  color: '#e8eef8',
+  backgroundColor: '#161d30', border: '1px solid #1f2d45', borderRadius: '6px',
+  fontFamily: 'DM Mono, monospace', fontSize: '11px', color: '#e8eef8',
 }
 
 function downloadCSV(csv, filename) {
@@ -218,23 +198,33 @@ function TickLabel({ x, y, payload }) {
 }
 
 // ── Example chips ─────────────────────────────────────────────────────────────
-function ExampleChips({ onQuery, isLoading }) {
+function ExampleChips({ onQuery, onForecast, isLoading }) {
   const [activeCategory, setActiveCategory] = useState(0)
+  const cat = EXAMPLE_CATEGORIES[activeCategory]
+
   return (
     <div className="example-section">
       <div className="example-category-tabs">
-        {EXAMPLE_CATEGORIES.map((cat, i) => (
-          <button key={cat.label}
-            className={`category-tab${activeCategory === i ? ' active' : ''}`}
+        {EXAMPLE_CATEGORIES.map((c, i) => (
+          <button key={c.label}
+            className={`category-tab${activeCategory === i ? ' active' : ''}${c.type === 'forecast' ? ' forecast-tab' : ''}`}
             onClick={() => setActiveCategory(i)}>
-            {cat.label}
+            {c.label}
           </button>
         ))}
       </div>
       <div className="example-chips">
-        {EXAMPLE_CATEGORIES[activeCategory].queries.map(q => (
-          <button key={q} className="chip" onClick={() => onQuery(q)} disabled={isLoading}>{q}</button>
-        ))}
+        {cat.type === 'forecast'
+          ? cat.queries.map(q => (
+              <button key={q.deviceId} className="chip forecast-chip"
+                onClick={() => onForecast(q.deviceId)} disabled={isLoading}>
+                {q.label}
+              </button>
+            ))
+          : cat.queries.map(q => (
+              <button key={q} className="chip" onClick={() => onQuery(q)} disabled={isLoading}>{q}</button>
+            ))
+        }
       </div>
     </div>
   )
@@ -250,9 +240,8 @@ function SuggestedFollowUps({ result, onQuery, isLoading }) {
       <div className="followup-chips">
         {suggestions.map(q => (
           <button key={q} className="followup-chip" onClick={() => onQuery(q)} disabled={isLoading}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-              style={{ marginRight: 5, flexShrink: 0 }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5, flexShrink: 0 }}>
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
             {q}
@@ -263,24 +252,165 @@ function SuggestedFollowUps({ result, onQuery, isLoading }) {
   )
 }
 
-// ── Device tag with name ──────────────────────────────────────────────────────
+// ── Device tag ────────────────────────────────────────────────────────────────
 function DeviceTag({ deviceId }) {
   const mapped = isMapped(deviceId)
-  const label = mapped ? getDeviceLabel(deviceId) : null
+  const label  = mapped ? getDeviceLabel(deviceId) : null
   const detail = mapped ? getDeviceDetail(deviceId) : `Device ${deviceId} — location not confirmed`
   return (
-    <span
-      className={`meta-tag device-tag${!mapped ? ' device-tag-unknown' : ''}`}
-      title={detail}
-    >
+    <span className={`meta-tag device-tag${!mapped ? ' device-tag-unknown' : ''}`} title={detail}>
       {deviceId}
       {label && <span className="device-tag-name">· {label}</span>}
     </span>
   )
 }
 
-// ── Result card ───────────────────────────────────────────────────────────────
-function ResultCard({ result, onQuery, isLoading }) {
+// ── Forecast card ─────────────────────────────────────────────────────────────
+function ForecastCard({ result, onQuery, onForecast, isLoading }) {
+  const { device_id, history, forecast, summary, recent_avg, generated_at } = result
+
+  // Downsample history to last 7 days at ~30-min granularity for performance
+  // then append forecast. Each point has { time, history, forecast }
+  const downsample = (arr, step) =>
+    arr.filter((_, i) => i % step === 0 || i === arr.length - 1)
+
+  const histStep    = Math.max(1, Math.floor(history.length / 336)) // ~7d × 2/hr
+  const histSampled = downsample(history, histStep)
+
+  // Format time labels
+  const fmt = (iso) => {
+    try {
+      const d = new Date(iso)
+      return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    } catch { return iso }
+  }
+
+  const chartData = [
+    ...histSampled.map(p => ({ time: fmt(p.time), history: p.value, forecast: null })),
+    // Bridge point — last history value also starts the forecast line
+    { time: fmt(histSampled[histSampled.length - 1]?.time), history: histSampled[histSampled.length - 1]?.value, forecast: histSampled[histSampled.length - 1]?.value },
+    ...forecast.map(p => ({ time: fmt(p.time), history: null, forecast: p.value })),
+  ]
+
+  const nowLabel  = fmt(histSampled[histSampled.length - 1]?.time)
+  const hasAlert  = summary.includes('⚠️') || summary.includes('ℹ️')
+  const deviceLabel = getDeviceLabel(device_id)
+  const genTime   = generated_at ? new Date(generated_at).toLocaleString() : ''
+
+  // CSV download for forecast
+  const handleDownload = () => {
+    const rows = ['time,type,power_total_kw']
+    histSampled.forEach(p => rows.push(`${p.time},historical,${p.value}`))
+    forecast.forEach(p => rows.push(`${p.time},forecast,${p.value}`))
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url; a.download = `wach_forecast_${device_id}_${Date.now()}.csv`; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div className="result-card">
+      <div className="query-meta">
+        <span className="meta-tag type-forecast">Forecast</span>
+        <span className="meta-tag metric">Power Total (kW)</span>
+        <span className="meta-tag range">7d history + 24h ahead</span>
+        <DeviceTag deviceId={device_id} />
+      </div>
+
+      <div className="chart-card">
+        <div className="chart-card-header">
+          <span className="chart-card-title">
+            {device_id}{deviceLabel !== device_id ? ` · ${deviceLabel}` : ''} · Power Forecast
+          </span>
+          <button className="csv-btn" onClick={handleDownload}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export CSV
+          </button>
+        </div>
+
+        <div className="forecast-legend">
+          <span className="forecast-legend-item">
+            <span className="forecast-legend-dot history" />
+            Historical (7 days)
+          </span>
+          <span className="forecast-legend-item">
+            <span className="forecast-legend-dot prediction" />
+            Forecast (24 hours)
+          </span>
+          <span className="forecast-legend-item muted">
+            Avg: {recent_avg?.toFixed(2)} kW
+          </span>
+        </div>
+
+        <div className="chart-body">
+          <ResponsiveContainer width="100%" height={280}>
+            <ComposedChart data={chartData} margin={{ top: 4, right: 20, left: 0, bottom: 0 }}>
+              <CartesianGrid stroke="#1f2d45" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="time" tick={<TickLabel />} axisLine={false} tickLine={false}
+                interval={Math.floor(chartData.length / 8)} />
+              <YAxis tick={{ fill: '#7a90b0', fontSize: 10, fontFamily: 'DM Mono, monospace' }}
+                axisLine={false} tickLine={false} width={52} unit=" kW" />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                labelStyle={{ color: '#7a90b0', marginBottom: 4 }}
+                formatter={(val, name) => [
+                  val !== null ? `${Number(val).toFixed(3)} kW` : '—',
+                  name === 'history' ? 'Historical' : 'Forecast',
+                ]}
+              />
+              {/* "Now" vertical line */}
+              <ReferenceLine x={nowLabel} stroke="#3d526e" strokeDasharray="4 4"
+                label={{ value: 'NOW', position: 'top', fill: '#3d526e', fontSize: 9, fontFamily: 'DM Mono, monospace' }} />
+              <Line type="monotone" dataKey="history"
+                stroke="#00c9b1" strokeWidth={1.6} dot={false}
+                connectNulls={false} activeDot={{ r: 3, fill: '#00c9b1' }} />
+              <Line type="monotone" dataKey="forecast"
+                stroke="#f5a623" strokeWidth={1.8} dot={false} strokeDasharray="5 3"
+                connectNulls={false} activeDot={{ r: 4, fill: '#f5a623' }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {summary && (
+        <div className={`summary-card${hasAlert ? ' summary-alert' : ''}`}>
+          <div className="summary-label">Forecast Analysis</div>
+          <p className="summary-text">{summary}</p>
+          {genTime && <p className="summary-generated">Generated {genTime}</p>}
+        </div>
+      )}
+
+      {/* Follow-up: view actual recent data or run another device */}
+      <div className="followup-section">
+        <div className="followup-label">Explore further</div>
+        <div className="followup-chips">
+          <button className="followup-chip" onClick={() => onQuery(`Show ${device_id} total power last 7 days`)} disabled={isLoading}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}>
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            View actual 7-day history for {device_id}
+          </button>
+          <button className="followup-chip" onClick={() => onQuery(`Show ${device_id} power factor last 7 days`)} disabled={isLoading}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}>
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            Check power factor for {device_id}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Standard result card ──────────────────────────────────────────────────────
+function ResultCard({ result, onQuery, onForecast, isLoading }) {
   const { chart, summary, metric, time_range, device_ids } = result
   const unit = METRIC_UNITS[metric] || ''
   const label = METRIC_LABELS[metric] || metric
@@ -297,7 +427,6 @@ function ResultCard({ result, onQuery, isLoading }) {
         <span className="meta-tag range">{rangeLabel}</span>
         {device_ids?.map(d => <DeviceTag key={d} deviceId={d} />)}
       </div>
-
       <div className="chart-card">
         <div className="chart-card-header">
           <span className="chart-card-title">
@@ -326,14 +455,12 @@ function ResultCard({ result, onQuery, isLoading }) {
           }
         </div>
       </div>
-
       {summary && (
         <div className="summary-card">
           <div className="summary-label">Analysis</div>
           <p className="summary-text">{summary}</p>
         </div>
       )}
-
       <SuggestedFollowUps result={result} onQuery={onQuery} isLoading={isLoading} />
     </div>
   )
@@ -352,7 +479,7 @@ function SkeletonResult() {
           <div className="skeleton" style={{ width: 200, height: 14, borderRadius: 3 }} />
         </div>
         <div className="chart-body">
-          <div className="skeleton" style={{ width: '100%', height: 260, borderRadius: 6 }} />
+          <div className="skeleton" style={{ width: '100%', height: 280, borderRadius: 6 }} />
         </div>
       </div>
       <div className="summary-card">
@@ -366,11 +493,11 @@ function SkeletonResult() {
 }
 
 // ── Main chat view ────────────────────────────────────────────────────────────
-export default function ChatView({ messages, isLoading, onQuery, onClear }) {
+export default function ChatView({ messages, isLoading, onQuery, onForecast, onClear }) {
   const [input, setInput] = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const threadEndRef = useRef(null)
-  const textareaRef = useRef(null)
+  const textareaRef  = useRef(null)
   const recognitionRef = useRef(null)
 
   useEffect(() => { textareaRef.current?.focus() }, [])
@@ -385,14 +512,12 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
   function handleKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() }
   }
-
   function submit() {
     const q = input.trim()
     if (!q || isLoading) return
     onQuery(q); setInput('')
     if (textareaRef.current) textareaRef.current.style.height = '44px'
   }
-
   function toggleVoice() {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
       alert('Voice input is not supported in this browser. Try Chrome.'); return
@@ -436,10 +561,15 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
                         style={{ whiteSpace: 'pre-wrap' }}>
                         {msg.text}
                       </div>
-                      {msg.result && <ResultCard result={msg.result} onQuery={onQuery} isLoading={isLoading} />}
+                      {msg.result && msg.result.query_type === 'forecast'
+                        ? <ForecastCard result={msg.result} onQuery={onQuery} onForecast={onForecast} isLoading={isLoading} />
+                        : msg.result
+                          ? <ResultCard result={msg.result} onQuery={onQuery} onForecast={onForecast} isLoading={isLoading} />
+                          : null
+                      }
                     </>
                   )}
-                  {i === 0 && <ExampleChips onQuery={onQuery} isLoading={isLoading} />}
+                  {i === 0 && <ExampleChips onQuery={onQuery} onForecast={onForecast} isLoading={isLoading} />}
                 </>
               )}
             </div>
@@ -486,12 +616,12 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
   )
 }
 
-// ── Custom bar tooltip with device name ───────────────────────────────────────
+// ── Bar tooltip ───────────────────────────────────────────────────────────────
 function BarTooltipContent({ active, payload, unit }) {
   if (!active || !payload?.length) return null
   const deviceId = payload[0]?.payload?.device_id
-  const value = payload[0]?.value
-  const detail = deviceId ? getDeviceDetail(deviceId) : null
+  const value    = payload[0]?.value
+  const detail   = deviceId ? getDeviceDetail(deviceId) : null
   return (
     <div style={TOOLTIP_STYLE}>
       <div style={{ color: '#7a90b0', marginBottom: 4, fontSize: 10 }}>{deviceId}</div>
@@ -511,14 +641,11 @@ function LineChartView({ data, deviceIds, unit }) {
         <XAxis dataKey="time" tick={<TickLabel />} axisLine={false} tickLine={false} interval="preserveStartEnd" />
         <YAxis tick={{ fill: '#7a90b0', fontSize: 10, fontFamily: 'DM Mono, monospace' }}
           axisLine={false} tickLine={false} width={52} unit={unit ? ` ${unit}` : ''} />
-        <Tooltip
-          contentStyle={TOOLTIP_STYLE}
-          labelStyle={{ color: '#7a90b0', marginBottom: 4 }}
+        <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: '#7a90b0', marginBottom: 4 }}
           formatter={(val, name) => [
             `${Number(val).toFixed(3)}${unit ? ` ${unit}` : ''}`,
             getDeviceLabel(name) !== name ? `${name} · ${getDeviceLabel(name)}` : name,
-          ]}
-        />
+          ]} />
         {deviceIds?.length > 1 && (
           <Legend
             formatter={(v) => { const l = getDeviceLabel(v); return l !== v ? `${v} · ${l}` : v }}
