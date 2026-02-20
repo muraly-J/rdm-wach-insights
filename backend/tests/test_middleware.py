@@ -1,13 +1,13 @@
 """
 Test script for Stage 2 — Middleware & Safety Layer
-Run from the backend/ directory: python3 middleware_test.py
+Run from the project root: python3 backend/tests/test_middleware.py
 """
 
 import sys
 import os
-# Add the project root to sys.path so 'models' can be found
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-sys.path.insert(0, os.path.dirname(__file__))
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from backend.middleware.validator import validate_raw_dict
 from backend.middleware.query_logger import init_db, log_query, get_rejected_queries

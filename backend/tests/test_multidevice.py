@@ -1,11 +1,12 @@
 """
 Test script for Task A — Multi-device comparison
-Run from the project root: python3 backend/multidevice_test.py
+Run from the project root: python3 backend/tests/test_multidevice.py
 """
 
 import sys, os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import asyncio
 from backend.llm.translator import translate_query

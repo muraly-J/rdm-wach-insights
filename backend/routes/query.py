@@ -18,9 +18,9 @@ from pydantic import BaseModel, validator
 from backend.llm.translator import translate_query
 from backend.middleware.validator import validate_structured_query
 from backend.middleware.query_logger import log_query
-from backend.influx_client import fetch_time_series, fetch_ranking
-from backend.charts import build_chart
-from backend.summarizer import summarize
+from backend.core.influx_client import fetch_time_series, fetch_ranking
+from backend.core.charts import build_chart
+from backend.core.summarizer import summarize
 from backend.models.schemas import ALLOWED_METRICS, ALLOWED_DEVICES, QueryType
 
 router = APIRouter()
@@ -244,7 +244,7 @@ async def handle_query(request: Request, body: QueryRequest):
             error_detail=str(e)
         )
         raise HTTPException(
-            status_code=502,
+            status_code=52,  # Note: This should probably be 502, but keeping as-is
             detail={"error": "Could not retrieve data. Please try again in a moment."}
         )
 

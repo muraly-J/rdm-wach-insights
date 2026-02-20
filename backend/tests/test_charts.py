@@ -1,19 +1,20 @@
 """
 Test script for Stage 4 — Visualization & CSV Engine
-Run from the project root: python3 backend/chart_test.py
+Run from the project root: python3 backend/tests/test_charts.py
 
 Hits real InfluxDB so you can see actual chart payloads and summaries.
 """
 
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import asyncio
-from backend.influx_client import fetch_time_series, fetch_ranking
-from backend.charts import build_line_chart, build_bar_chart
-from backend.summarizer import generate_summary
+from backend.core.influx_client import fetch_time_series, fetch_ranking
+from backend.core.charts import build_line_chart, build_bar_chart
+from backend.core.summarizer import generate_summary
 
 async def run_tests():
     print("\n" + "="*60)

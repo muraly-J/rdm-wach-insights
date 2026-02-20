@@ -17,14 +17,13 @@ Public function:
 import os
 import re
 from typing import Dict, Any, Optional
-from dotenv import load_dotenv
+
+from backend.config import get_lms_base_url, get_lms_model, get_lms_api_key
 from openai import AsyncOpenAI
 
-load_dotenv()
-
-_LMS_BASE_URL = os.getenv("LMS_BASE_URL", "http://localhost:1234/v1")
-_LMS_MODEL    = os.getenv("LMS_MODEL", "qwen/qwen3-coder-next")
-_LMS_API_KEY  = "lm-studio"
+_LMS_BASE_URL = get_lms_base_url()
+_LMS_MODEL    = get_lms_model()
+_LMS_API_KEY  = get_lms_api_key()
 
 # ── Metric labels ─────────────────────────────────────────────────────────────
 _METRIC_LABELS = {

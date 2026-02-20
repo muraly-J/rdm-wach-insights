@@ -17,18 +17,16 @@ import os
 import json
 import re
 from typing import Optional, Union
-from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
 from backend.llm.prompts import SYSTEM_PROMPT
 from backend.middleware.validator import validate_raw_dict
 from backend.models.schemas import StructuredQuery
+from backend.config import get_lms_base_url, get_lms_model, get_lms_api_key
 
-load_dotenv()
-
-_LMS_BASE_URL = os.getenv("LMS_BASE_URL", "http://localhost:1234/v1")
-_LMS_MODEL    = os.getenv("LMS_MODEL", "qwen/qwen3-coder-next")
-_LMS_API_KEY  = "lm-studio"   # LM Studio ignores this but the SDK requires something
+_LMS_BASE_URL = get_lms_base_url()
+_LMS_MODEL    = get_lms_model()
+_LMS_API_KEY  = get_lms_api_key()   # LM Studio ignores this but the SDK requires something
 
 
 def _get_client() -> AsyncOpenAI:

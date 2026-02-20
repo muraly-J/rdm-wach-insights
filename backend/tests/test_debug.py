@@ -1,6 +1,18 @@
+"""
+Debug script for quick queries
+Run from the project root: python3 backend/tests/test_debug.py
+
+Requires LM Studio to be running with a model loaded.
+"""
+
+import sys, os
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
 import asyncio
 from backend.llm.translator import translate_query
-from backend.influx_client import fetch_time_series
+from backend.core.influx_client import fetch_time_series
 
 async def main():
     query = "compare e0101 vs e0206 power total for the past 30 days"

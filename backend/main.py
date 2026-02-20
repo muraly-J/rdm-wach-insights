@@ -5,28 +5,54 @@ FastAPI app entry point.
 - Static file serving for production build
 """
 import os
-<<<<<<< HEAD
 import sys
 from contextlib import asynccontextmanager
-sys.path.insert(0, os.path.dirname(__file__))
 
-=======
->>>>>>> dev
+sys.path.insert(0, os.path.dirname(__file__))
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-<<<<<<< HEAD
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
+
 from dotenv import load_dotenv
 from middleware.query_logger import init_db
 from routes.query import router as query_router
 
 load_dotenv()
 
+
+# ── Security headers middleware ───────────────────────────────────────────────
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: callable) -> Response:
+        response = await call_next(request)
+        response.headers['X-Content-Type-Options']    = 'nosniff'
+        response.headers['X-Frame-Options']           = 'DENY'
+        response.headers['X-XSS-Protection']          = '1; mode=block'
+        response.headers['Referrer-Policy']           = 'strict-origin-when-cross-origin'
+        response.headers['Permissions-Policy']        = 'camera=(), microphone=(), geolocation=()'
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "connect-src 'self'; "
+            "img-src 'self' data:; "
+            "frame-ancestors 'none';"
+        )
+        return response
+
+
+# ── App setup ─────────────────────────────────────────────────────────────────
+
 @asynccontextmanager
 async def lifespan(app):
     init_db()
     yield
+
 
 app = FastAPI(
     title="WACH Insight API",
@@ -34,6 +60,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS — allow both localhost and network access
 _cors_origins = [
@@ -51,65 +79,6 @@ app.add_middleware(
 )
 
 app.include_router(query_router, prefix="/api")
-=======
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
-
-from backend.routes.query import router
-
-# ── Security headers middleware ───────────────────────────────────────────────
-
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next) -> Response:
-        response = await call_next(request)
-        response.headers['X-Content-Type-Options']    = 'nosniff'
-        response.headers['X-Frame-Options']           = 'DENY'
-        response.headers['X-XSS-Protection']          = '1; mode=block'
-        response.headers['Referrer-Policy']           = 'strict-origin-when-cross-origin'
-        response.headers['Permissions-Policy']        = 'camera=(), microphone=(), geolocation=()'
-        response.headers['Content-Security-Policy'] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "      # Vite needs this
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "font-src 'self' https://fonts.gstatic.com; "
-            "connect-src 'self'; "
-            "img-src 'self' data:; "
-            "frame-ancestors 'none';"
-        )
-        return response
-
-# ── App setup ─────────────────────────────────────────────────────────────────
-
-app = FastAPI(
-    title='WACH Insight API',
-    docs_url=None,     # disable Swagger UI in production
-    redoc_url=None,    # disable ReDoc in production
-    openapi_url=None,  # disable OpenAPI schema in production
-)
-
-app.add_middleware(SecurityHeadersMiddleware)
-
-# ── CORS ──────────────────────────────────────────────────────────────────────
-# Add your Vercel URL to CORS_ORIGINS in .env when deploying.
-# Multiple origins separated by commas:
-# CORS_ORIGINS=https://wach-insight.vercel.app,http://localhost:5173
-
-_raw_origins = os.getenv('CORS_ORIGINS', 'http://localhost:5173')
-ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(',') if o.strip()]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=False,
-    allow_methods=['POST', 'GET'],
-    allow_headers=['Content-Type', 'X-Requested-With'],
-)
-
-# ── Routes ────────────────────────────────────────────────────────────────────
-
-app.include_router(router)
->>>>>>> dev
 
 @app.get('/health')
 async def health():

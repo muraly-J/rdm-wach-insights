@@ -1,14 +1,15 @@
 """
 Test script for Stage 3 — LLM Query Translation Engine
-Run from the project root: python backend/llm_test.py
+Run from the project root: python3 backend/tests/test_llm.py
 
 Requires LM Studio to be running with a model loaded.
 """
 
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import asyncio
 from backend.llm.translator import translate_query
