@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import api from './api.js'
 import ChatView from './components/ChatView.jsx'
+import { MAPPED_COUNT } from './deviceMap.js'
 
 const SESSION_ID = crypto.randomUUID()
 
@@ -17,7 +18,6 @@ export default function App() {
 
   const handleQuery = useCallback(async (query) => {
     if (!query.trim() || isLoading) return
-
     const userMsg = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -31,17 +31,14 @@ export default function App() {
       text: null,
       result: null,
     }
-
     setMessages(prev => [...prev, userMsg, pendingMsg])
     setIsLoading(true)
-
     try {
       const response = await api.post('/api/query', {
         user_query: query,
         session_id: SESSION_ID,
       })
       const data = response.data
-
       setMessages(prev => prev.map(m => m.id === assistantId ? {
         ...m,
         text: data.query_type === 'time_series'
@@ -49,7 +46,6 @@ export default function App() {
           : `Top ${data.chart?.data?.length ?? '?'} devices · ${data.metric} · ${data.time_range.replace(/_/g, ' ')}`,
         result: data,
       } : m))
-
     } catch (err) {
       const msg = err.response?.data?.error || 'Something went wrong. Please try again.'
       const suggestion = err.response?.data?.suggestion
@@ -87,12 +83,25 @@ export default function App() {
             <div className="header-subtitle">Women &amp; Child Ward · Hospital KL · AHU Analytics</div>
           </div>
         </div>
-        <div className="header-status">
-          <div className="status-dot" />
-          LIVE
+
+        <div className="header-right">
+          <div
+            className="unmapped-badge"
+            title={`${MAPPED_COUNT} of ~150 device IDs have confirmed location records. Some devices in the database could not be matched to a department — their IDs will still appear in results but without a location name.`}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            Some devices unidentified
+          </div>
+          <div className="header-status">
+            <div className="status-dot" />
+            LIVE
+          </div>
         </div>
       </header>
-
       <ChatView
         messages={messages}
         isLoading={isLoading}

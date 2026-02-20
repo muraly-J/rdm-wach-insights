@@ -553,3 +553,21 @@ html, body, #root {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* ── Device tags with names ─────────────────────────────────────────────── */
+.device-tag { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+.device-tag-name { color: #7a90b0; margin-left: 4px; font-size: 10px; }
+.device-tag-unknown { border-color: #ff6b8a44; color: #ff6b8a; }
+
+/* ── Header right group ─────────────────────────────────────────────────── */
+.header-right { display: flex; align-items: center; gap: 12px; }
+
+/* ── Unmapped device disclaimer badge ──────────────────────────────────── */
+.unmapped-badge {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  border: 1px solid #ff6b8a55;
+  color: #ff6b8a; background: #ff6b8a0a;
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  cursor: default;
+}

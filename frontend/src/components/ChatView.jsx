@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-
 import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from 'recharts'
+import { getDeviceLabel, getDeviceDetail, isMapped } from '../deviceMap.js'
 
 // ── Categorised example queries ───────────────────────────────────────────────
 const EXAMPLE_CATEGORIES = [
@@ -77,8 +77,6 @@ const EXAMPLE_CATEGORIES = [
 ]
 
 // ── Follow-up suggestion logic ────────────────────────────────────────────────
-
-// For each consumption metric, suggest a diagnostic follow-up
 const DIAGNOSTIC_FOLLOWUPS = {
   power_total:          (d) => `Show ${d} power factor last 30 days`,
   energy_import:        (d) => `Show ${d} power factor last 30 days`,
@@ -90,7 +88,6 @@ const DIAGNOSTIC_FOLLOWUPS = {
   volts_l_l_avg:        (d) => `Show ${d} voltage unbalance last 30 days`,
 }
 
-// For each metric, suggest a related metric to compare
 const RELATED_METRICS = {
   power_total:          'energy import',
   energy_import:        'power demand',
@@ -107,17 +104,15 @@ const RELATED_METRICS = {
 }
 
 const TIME_RANGE_LABELS = {
-  last_24h: 'today',
-  last_7d:  'last 7 days',
-  last_30d: 'last 30 days',
-  all_time: 'all time',
+  last_24h: 'today', last_7d: 'last 7 days',
+  last_30d: 'last 30 days', all_time: 'all time',
 }
 
 const NEXT_TIME_RANGE = {
-  last_24h: { key: 'last_7d',  label: 'last 7 days' },
-  last_7d:  { key: 'last_30d', label: 'last 30 days' },
-  last_30d: { key: 'all_time', label: 'all time' },
-  all_time: { key: 'last_30d', label: 'last 30 days' },
+  last_24h: { label: 'last 7 days' },
+  last_7d:  { label: 'last 30 days' },
+  last_30d: { label: 'all time' },
+  all_time: { label: 'last 30 days' },
 }
 
 function buildFollowUps(result) {
@@ -126,65 +121,27 @@ function buildFollowUps(result) {
   const rangeLabel = TIME_RANGE_LABELS[time_range] || time_range
 
   if (query_type === 'ranking') {
-    // Drill into top 2 devices as time series
     const topDevices = chart?.data?.slice(0, 2).map(r => r.device_id) || []
-    if (topDevices.length >= 2) {
-      suggestions.push(
-        `Compare ${topDevices[0]} vs ${topDevices[1]} ${metric.replace(/_/g, ' ')} ${rangeLabel}`
-      )
-    }
-    if (topDevices.length >= 1) {
-      suggestions.push(
-        `Show ${topDevices[0]} ${metric.replace(/_/g, ' ')} ${rangeLabel}`
-      )
-    }
-    // Suggest a diagnostic for top device
+    if (topDevices.length >= 2)
+      suggestions.push(`Compare ${topDevices[0]} vs ${topDevices[1]} ${metric.replace(/_/g, ' ')} ${rangeLabel}`)
+    if (topDevices.length >= 1)
+      suggestions.push(`Show ${topDevices[0]} ${metric.replace(/_/g, ' ')} ${rangeLabel}`)
     const diagFn = DIAGNOSTIC_FOLLOWUPS[metric]
-    if (diagFn && topDevices.length >= 1) {
-      suggestions.push(diagFn(topDevices[0]))
-    }
-    // Suggest zooming into a different time range
+    if (diagFn && topDevices.length >= 1) suggestions.push(diagFn(topDevices[0]))
     const nextRange = NEXT_TIME_RANGE[time_range]
-    if (nextRange) {
-      suggestions.push(
-        `Rank top 10 by ${metric.replace(/_/g, ' ')} ${nextRange.label}`
-      )
-    }
-
+    if (nextRange) suggestions.push(`Rank top 10 by ${metric.replace(/_/g, ' ')} ${nextRange.label}`)
   } else {
-    // time_series
     const deviceStr = device_ids?.join(' and ') || 'this device'
     const firstDevice = device_ids?.[0]
-
-    // Suggest related metric
     const related = RELATED_METRICS[metric]
-    if (related) {
-      suggestions.push(`Show ${deviceStr} ${related} ${rangeLabel}`)
-    }
-
-    // Suggest diagnostic follow-up
+    if (related) suggestions.push(`Show ${deviceStr} ${related} ${rangeLabel}`)
     const diagFn = DIAGNOSTIC_FOLLOWUPS[metric]
-    if (diagFn && firstDevice) {
-      suggestions.push(diagFn(firstDevice))
-    }
-
-    // Suggest a wider/narrower time range
+    if (diagFn && firstDevice) suggestions.push(diagFn(firstDevice))
     const nextRange = NEXT_TIME_RANGE[time_range]
-    if (nextRange) {
-      suggestions.push(
-        `Show ${deviceStr} ${metric.replace(/_/g, ' ')} ${nextRange.label}`
-      )
-    }
-
-    // If single device, suggest ranking to see how it compares
-    if (device_ids?.length === 1) {
-      suggestions.push(
-        `Rank top 10 devices by ${metric.replace(/_/g, ' ')} ${rangeLabel}`
-      )
-    }
+    if (nextRange) suggestions.push(`Show ${deviceStr} ${metric.replace(/_/g, ' ')} ${nextRange.label}`)
+    if (device_ids?.length === 1)
+      suggestions.push(`Rank top 10 devices by ${metric.replace(/_/g, ' ')} ${rangeLabel}`)
   }
-
-  // Deduplicate and cap at 4
   return [...new Set(suggestions)].slice(0, 4)
 }
 
@@ -247,9 +204,7 @@ function downloadCSV(csv, filename) {
   const blob = new Blob([csv], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
+  a.href = url; a.download = filename; a.click()
   URL.revokeObjectURL(url)
 }
 
@@ -262,18 +217,16 @@ function TickLabel({ x, y, payload }) {
   )
 }
 
-// ── Example chips with category tabs ─────────────────────────────────────────
+// ── Example chips ─────────────────────────────────────────────────────────────
 function ExampleChips({ onQuery, isLoading }) {
   const [activeCategory, setActiveCategory] = useState(0)
   return (
     <div className="example-section">
       <div className="example-category-tabs">
         {EXAMPLE_CATEGORIES.map((cat, i) => (
-          <button
-            key={cat.label}
+          <button key={cat.label}
             className={`category-tab${activeCategory === i ? ' active' : ''}`}
-            onClick={() => setActiveCategory(i)}
-          >
+            onClick={() => setActiveCategory(i)}>
             {cat.label}
           </button>
         ))}
@@ -291,29 +244,38 @@ function ExampleChips({ onQuery, isLoading }) {
 function SuggestedFollowUps({ result, onQuery, isLoading }) {
   const suggestions = buildFollowUps(result)
   if (!suggestions.length) return null
-
   return (
     <div className="followup-section">
       <div className="followup-label">Explore further</div>
       <div className="followup-chips">
         {suggestions.map(q => (
-          <button
-            key={q}
-            className="followup-chip"
-            onClick={() => onQuery(q)}
-            disabled={isLoading}
-          >
+          <button key={q} className="followup-chip" onClick={() => onQuery(q)} disabled={isLoading}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
               style={{ marginRight: 5, flexShrink: 0 }}>
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
             {q}
           </button>
         ))}
       </div>
     </div>
+  )
+}
+
+// ── Device tag with name ──────────────────────────────────────────────────────
+function DeviceTag({ deviceId }) {
+  const mapped = isMapped(deviceId)
+  const label = mapped ? getDeviceLabel(deviceId) : null
+  const detail = mapped ? getDeviceDetail(deviceId) : `Device ${deviceId} — location not confirmed`
+  return (
+    <span
+      className={`meta-tag device-tag${!mapped ? ' device-tag-unknown' : ''}`}
+      title={detail}
+    >
+      {deviceId}
+      {label && <span className="device-tag-name">· {label}</span>}
+    </span>
   )
 }
 
@@ -333,7 +295,7 @@ function ResultCard({ result, onQuery, isLoading }) {
         </span>
         <span className="meta-tag metric">{label}</span>
         <span className="meta-tag range">{rangeLabel}</span>
-        {device_ids?.map(d => <span key={d} className="meta-tag metric">{d}</span>)}
+        {device_ids?.map(d => <DeviceTag key={d} deviceId={d} />)}
       </div>
 
       <div className="chart-card">
@@ -412,11 +374,7 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
   const recognitionRef = useRef(null)
 
   useEffect(() => { textareaRef.current?.focus() }, [])
-
-  useEffect(() => {
-    threadEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
+  useEffect(() => { threadEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
   useEffect(() => {
     const ta = textareaRef.current
     if (!ta) return
@@ -431,29 +389,22 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
   function submit() {
     const q = input.trim()
     if (!q || isLoading) return
-    onQuery(q)
-    setInput('')
+    onQuery(q); setInput('')
     if (textareaRef.current) textareaRef.current.style.height = '44px'
   }
 
   function toggleVoice() {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      alert('Voice input is not supported in this browser. Try Chrome.')
-      return
+      alert('Voice input is not supported in this browser. Try Chrome.'); return
     }
     if (isRecording) { recognitionRef.current?.stop(); setIsRecording(false); return }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     const rec = new SR()
     rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1
-    rec.onresult = (e) => {
-      const t = e.results[0][0].transcript
-      setInput(prev => prev ? `${prev} ${t}` : t)
-    }
+    rec.onresult = (e) => { const t = e.results[0][0].transcript; setInput(prev => prev ? `${prev} ${t}` : t) }
     rec.onend = () => setIsRecording(false)
     rec.onerror = () => setIsRecording(false)
-    rec.start()
-    recognitionRef.current = rec
-    setIsRecording(true)
+    rec.start(); recognitionRef.current = rec; setIsRecording(true)
   }
 
   return (
@@ -462,17 +413,12 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
         <div className="thread-inner">
           {messages.map((msg, i) => (
             <div key={msg.id} className={`turn turn-${msg.role}`}>
-
               {msg.role === 'user' && (
-                <div
-                  className={`user-bubble${!isLoading ? ' clickable' : ''}`}
-                  onClick={() => !isLoading && onQuery(msg.text)}
-                  title="Click to re-run"
-                >
+                <div className={`user-bubble${!isLoading ? ' clickable' : ''}`}
+                  onClick={() => !isLoading && onQuery(msg.text)} title="Click to re-run">
                   {msg.text}
                 </div>
               )}
-
               {(msg.role === 'assistant' || msg.role === 'error') && (
                 <>
                   {msg.text === null && (
@@ -490,18 +436,10 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
                         style={{ whiteSpace: 'pre-wrap' }}>
                         {msg.text}
                       </div>
-                      {msg.result && (
-                        <ResultCard
-                          result={msg.result}
-                          onQuery={onQuery}
-                          isLoading={isLoading}
-                        />
-                      )}
+                      {msg.result && <ResultCard result={msg.result} onQuery={onQuery} isLoading={isLoading} />}
                     </>
                   )}
-                  {i === 0 && (
-                    <ExampleChips onQuery={onQuery} isLoading={isLoading} />
-                  )}
+                  {i === 0 && <ExampleChips onQuery={onQuery} isLoading={isLoading} />}
                 </>
               )}
             </div>
@@ -513,23 +451,15 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
       <div className="input-bar">
         <div className="input-bar-inner">
           <div className="input-row">
-            <textarea
-              ref={textareaRef}
-              className="chat-input"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about AHU energy performance..."
-              rows={1}
-              disabled={isLoading}
-            />
+            <textarea ref={textareaRef} className="chat-input" value={input}
+              onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
+              placeholder="Ask about AHU energy performance..." rows={1} disabled={isLoading} />
             <button className={`mic-btn${isRecording ? ' recording' : ''}`} onClick={toggleVoice}
               title={isRecording ? 'Stop recording' : 'Voice input'}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
+                <line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
               </svg>
             </button>
             <button className="send-btn" onClick={submit} disabled={isLoading || !input.trim()} title="Send">
@@ -556,6 +486,21 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
   )
 }
 
+// ── Custom bar tooltip with device name ───────────────────────────────────────
+function BarTooltipContent({ active, payload, unit }) {
+  if (!active || !payload?.length) return null
+  const deviceId = payload[0]?.payload?.device_id
+  const value = payload[0]?.value
+  const detail = deviceId ? getDeviceDetail(deviceId) : null
+  return (
+    <div style={TOOLTIP_STYLE}>
+      <div style={{ color: '#7a90b0', marginBottom: 4, fontSize: 10 }}>{deviceId}</div>
+      {detail && <div style={{ color: '#a0b4cc', marginBottom: 6, fontSize: 10 }}>{detail}</div>}
+      <div style={{ color: '#00c9b1' }}>{Number(value).toFixed(3)}{unit ? ` ${unit}` : ''}</div>
+    </div>
+  )
+}
+
 // ── Chart components ──────────────────────────────────────────────────────────
 function LineChartView({ data, deviceIds, unit }) {
   if (!data?.length) return <EmptyChart />
@@ -566,9 +511,20 @@ function LineChartView({ data, deviceIds, unit }) {
         <XAxis dataKey="time" tick={<TickLabel />} axisLine={false} tickLine={false} interval="preserveStartEnd" />
         <YAxis tick={{ fill: '#7a90b0', fontSize: 10, fontFamily: 'DM Mono, monospace' }}
           axisLine={false} tickLine={false} width={52} unit={unit ? ` ${unit}` : ''} />
-        <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: '#7a90b0', marginBottom: 4 }}
-          formatter={(val, name) => [`${Number(val).toFixed(3)}${unit ? ` ${unit}` : ''}`, name]} />
-        {deviceIds?.length > 1 && <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'DM Mono, monospace', color: '#7a90b0', paddingTop: 8 }} />}
+        <Tooltip
+          contentStyle={TOOLTIP_STYLE}
+          labelStyle={{ color: '#7a90b0', marginBottom: 4 }}
+          formatter={(val, name) => [
+            `${Number(val).toFixed(3)}${unit ? ` ${unit}` : ''}`,
+            getDeviceLabel(name) !== name ? `${name} · ${getDeviceLabel(name)}` : name,
+          ]}
+        />
+        {deviceIds?.length > 1 && (
+          <Legend
+            formatter={(v) => { const l = getDeviceLabel(v); return l !== v ? `${v} · ${l}` : v }}
+            wrapperStyle={{ fontSize: 11, fontFamily: 'DM Mono, monospace', color: '#7a90b0', paddingTop: 8 }}
+          />
+        )}
         {(deviceIds || []).map((id, i) => (
           <Line key={id} type="monotone" dataKey={id}
             stroke={LINE_COLORS[i % LINE_COLORS.length]} strokeWidth={1.8}
@@ -590,9 +546,7 @@ function BarChartView({ data, unit }) {
         <YAxis type="category" dataKey="device_id"
           tick={{ fill: '#7a90b0', fontSize: 10, fontFamily: 'DM Mono, monospace' }}
           axisLine={false} tickLine={false} width={52} />
-        <Tooltip contentStyle={TOOLTIP_STYLE}
-          formatter={(val) => [`${Number(val).toFixed(3)}${unit ? ` ${unit}` : ''}`, 'avg value']}
-          cursor={{ fill: '#00c9b108' }} />
+        <Tooltip content={<BarTooltipContent unit={unit} />} cursor={{ fill: '#00c9b108' }} />
         <Bar dataKey="value" fill="#00c9b1" radius={[0, 3, 3, 0]} maxBarSize={24} />
       </BarChart>
     </ResponsiveContainer>
