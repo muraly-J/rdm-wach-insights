@@ -112,6 +112,6 @@ async def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None]
 
     # Resolve floor/ward names to device IDs if needed
     from backend.core.floor_ward_map import resolve_floor_or_ward
-    query.device_ids = resolve_floor_or_ward(query_text, query.device_ids)
+    query.device_ids = resolve_floor_or_ward(user_query, query.device_ids)
 
     return query, None

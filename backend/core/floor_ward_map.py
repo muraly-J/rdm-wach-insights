@@ -8,6 +8,8 @@ Used to translate natural language queries like "Level 3" or "O&G Specialist Cli
 into device_id lists for InfluxDB queries.
 """
 
+import re
+
 # Floor to device ID mapping
 FLOOR_MAP = {
     'L01': ['e0101', 'e0102', 'e0103', 'e0104', 'e0105', 'e0106', 'e0107', 'e0108', 
@@ -159,36 +161,37 @@ def resolve_floor_or_ward(query_text: str, device_ids: list[str]) -> list[str]:
     """
     If device_ids is empty but query_text mentions a floor/ward,
     resolve it to actual device IDs.
-    
+
     Examples:
-        "how is level 3 performing?" -> []
-        After resolution: ['e0210', 'e0211', ...]
+        "how is level 3 performing?" -> ['e0210', 'e0211', ...]
+        "show power for level 1 last week" -> ['e0101', 'e0102', ...]
     """
     if device_ids:
         # Already has specific devices
         return device_ids
-    
-    # Try to extract floor name from query
-    for level_num in range(1, 12):
-        level_patterns = [
-            f'level {level_num}',
-            f'floor {level_num}',
-            f'L{level_num:02d}',
-        ]
-        for pattern in level_patterns:
-            if pattern in query_text.lower():
-                resolved = resolve_floor_ids(f'Level {level_num}')
-                if resolved:
-                    return resolved
-                break
-    
-    # Try to extract ward name from query
-    for ward_name in WARD_MAP:
-        if ward_name.lower() in query_text.lower():
-            resolved = resolve_ward_ids(ward_name)
+
+    # Extract floors from query text
+    extracted_floors = extract_floor_from_text(query_text)
+    if extracted_floors:
+        all_devices = []
+        for floor in extracted_floors:
+            resolved = resolve_floor_ids(floor)
             if resolved:
-                return resolved
-    
+                all_devices.extend(resolved)
+        if all_devices:
+            return list(dict.fromkeys(all_devices))  # deduplicate while preserving order
+
+    # Extract wards from query text
+    extracted_wards = extract_ward_from_text(query_text)
+    if extracted_wards:
+        all_devices = []
+        for ward in extracted_wards:
+            resolved = resolve_ward_ids(ward)
+            if resolved:
+                all_devices.extend(resolved)
+        if all_devices:
+            return list(dict.fromkeys(all_devices))  # deduplicate while preserving order
+
     return []
 
 
@@ -211,3 +214,65 @@ def get_floor_label(level_code: str) -> str:
         return f'Level {num}'
     except ValueError:
         return level_code
+
+
+def extract_floor_from_text(query: str) -> list[str]:
+    """
+    Extract floor level mentions from a natural language query.
+    
+    Examples:
+        "Level 1 power" -> ['L01']
+        "show me floor 3 devices" -> ['L03']
+        "Level 10 and Level 11" -> ['L10', 'L11']
+        "show devices on floor 5" -> ['L05']
+    
+    Returns list of level codes (e.g., ['L01', 'L03']).
+    """
+    floors_found = []
+    
+    # Pattern 1: "Level X" (with word boundary to avoid matching "wheeleD")
+    level_matches = re.findall(r'\blevel\s+(\d+)\b', query, re.IGNORECASE)
+    for match in level_matches:
+        level_num = int(match)
+        if 1 <= level_num <= 11:
+            code = f'L{level_num:02d}'
+            if code not in floors_found:
+                floors_found.append(code)
+    
+    # Pattern 2: "Floor X" or "the floor X"
+    floor_matches = re.findall(r'\b(?:floor|level\s+)\s*(\d+)\b', query, re.IGNORECASE)
+    for match in floor_matches:
+        level_num = int(match)
+        if 1 <= level_num <= 11:
+            code = f'L{level_num:02d}'
+            if code not in floors_found:
+                floors_found.append(code)
+    
+    # Pattern 3: Direct "L01" style mentions
+    direct_matches = re.findall(r'\b(L\d{2})\b', query)
+    for match in direct_matches:
+        if match not in floors_found:
+            floors_found.append(match)
+    
+    return sorted(floors_found)
+
+
+def extract_ward_from_text(query: str) -> list[str]:
+    """
+    Extract ward/department names from a natural language query.
+    
+    Examples:
+        "O&G Specialist Clinic" -> ['O&G Specialist Clinic']
+        "show me devices in the Emergency Department" -> ['Emergency Department']
+    
+    Returns list of ward names that match exactly.
+    """
+    wards_found = []
+    query_lower = query.lower()
+    
+    for ward_name in WARD_MAP:
+        if ward_name.lower() in query_lower:
+            if ward_name not in wards_found:
+                wards_found.append(ward_name)
+    
+    return wards_found
