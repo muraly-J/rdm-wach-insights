@@ -199,7 +199,6 @@ coverage/
 # =========================
 # LM Studio / Local LLM Models
 # =========================
-models/
 *.gguf
 *.bin
 *.pt
