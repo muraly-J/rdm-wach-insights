@@ -6,35 +6,118 @@ import {
   ResponsiveContainer, Legend,
 } from 'recharts'
 
-const EXAMPLE_QUERIES = [
-  'Rank top 10 by power this month',
-  'Show e0101 energy last 7 days',
-  'Compare e0101 vs e0206 power today',
-  'e0405 and e0410 and e0411 power last 7 days',
-  'Show e0206 voltage today',
-  'Top 5 by reactive power all time',
+// ── Categorised example queries ───────────────────────────────────────────────
+const EXAMPLE_CATEGORIES = [
+  {
+    label: '⚡ Power',
+    queries: [
+      'Rank top 10 devices by total power this month',
+      'Show e0101 total power last 7 days',
+      'Compare e0101 vs e0206 power today',
+      'Top 5 devices by power demand all time',
+      'Show e0305 power demand last 30 days',
+      'Rank top 10 by max power demand this week',
+    ],
+  },
+  {
+    label: '🔋 Energy',
+    queries: [
+      'Rank top 10 devices by energy import this month',
+      'Show e0101 energy import last 30 days',
+      'Top 5 devices by reactive energy import all time',
+      'Show e0206 apparent energy last 7 days',
+      'Rank top 10 by energy import today',
+      'Compare e0101 vs e0305 energy import this month',
+    ],
+  },
+  {
+    label: '📊 Efficiency',
+    queries: [
+      'Which 10 devices have the worst power factor this month?',
+      'Show e0101 power factor last 30 days',
+      'Rank top 10 devices by average power factor all time',
+      'Compare e0101 vs e0206 power factor last 7 days',
+      'Show e0305 power factor L1 last 30 days',
+      'Which 5 devices have the lowest power factor today?',
+    ],
+  },
+  {
+    label: '🔌 Current & Voltage',
+    queries: [
+      'Show e0101 average current last 7 days',
+      'Rank top 10 devices by average current this month',
+      'Show e0206 voltage today',
+      'Compare e0101 vs e0305 current last 7 days',
+      'Rank top 10 by average voltage all time',
+      'Show e0101 phase L1 current last 30 days',
+    ],
+  },
+  {
+    label: '⚠️ Diagnostics',
+    queries: [
+      'Which 10 devices have the worst voltage unbalance this month?',
+      'Show e0101 current unbalance last 30 days',
+      'Rank top 10 devices by voltage THD this month',
+      'Show e0206 voltage harmonic distortion last 7 days',
+      'Which devices have the highest current THD today?',
+      'Show e0305 current unbalance last 7 days',
+    ],
+  },
+  {
+    label: '🔄 Reactive Power',
+    queries: [
+      'Top 5 devices by reactive power all time',
+      'Show e0101 reactive power last 7 days',
+      'Rank top 10 by reactive power demand this month',
+      'Compare e0101 vs e0206 reactive power last 30 days',
+      'Show e0305 reactive power L1 last 7 days',
+      'Top 10 devices by reactive energy import this month',
+    ],
+  },
 ]
 
+// ── Metric display maps ───────────────────────────────────────────────────────
 const METRIC_UNITS = {
-  power_total: 'kW',
-  energy_import: 'kWh',
-  power_factor_avg: 'PF',
-  current_avg: 'A',
-  volts_l_n_avg: 'V',
-  apparent_power_total: 'kVA',
-  power_demand: 'kW',
-  reactive_power_total: 'kVAr',
+  power_total: 'kW', power_l1: 'kW', power_l2: 'kW', power_l3: 'kW',
+  power_demand: 'kW', max_power_demand: 'kW',
+  energy_import: 'kWh', energy_export: 'kWh',
+  reactive_energy_import: 'kVArh', reactive_energy_export: 'kVArh',
+  apparent_power_total: 'kVA', apparent_power_l1: 'kVA', apparent_power_l2: 'kVA',
+  apparent_power_l3: 'kVA', apparent_power_demand: 'kVA', apparent_energy: 'kVAh',
+  reactive_power_total: 'kVAr', reactive_power_l1: 'kVAr', reactive_power_l2: 'kVAr',
+  reactive_power_l3: 'kVAr', reactive_power_demand: 'kVAr',
+  current_avg: 'A', current_l1: 'A', current_l2: 'A', current_l3: 'A',
+  current_l1_thd: '%', current_l3_thd: '%', current_unbalance: '%',
+  volts_l_n_avg: 'V', volts_l_l_avg: 'V',
+  volts_l1_n: 'V', volts_l2_n: 'V', volts_l3_n: 'V',
+  volts_l1_l2: 'V', volts_l2_l3: 'V', volts_l3_l1: 'V',
+  volts_l1_thd: '%', volts_l2_thd: '%', volts_l3_thd: '%', volts_unbalance: '%',
+  power_factor_avg: '', power_factor_l1: '', power_factor_l2: '', power_factor_l3: '',
+  freq: 'Hz',
 }
 
 const METRIC_LABELS = {
-  power_total: 'Total Active Power',
-  energy_import: 'Imported Energy',
-  power_factor_avg: 'Avg Power Factor',
-  current_avg: 'Average Current',
-  volts_l_n_avg: 'Avg Voltage (L-N)',
-  apparent_power_total: 'Total Apparent Power',
-  power_demand: 'Power Demand',
-  reactive_power_total: 'Total Reactive Power',
+  power_total: 'Total Active Power', power_l1: 'L1 Power', power_l2: 'L2 Power',
+  power_l3: 'L3 Power', power_demand: 'Power Demand', max_power_demand: 'Max Power Demand',
+  energy_import: 'Imported Energy', energy_export: 'Exported Energy',
+  reactive_energy_import: 'Reactive Energy Import', reactive_energy_export: 'Reactive Energy Export',
+  apparent_power_total: 'Apparent Power', apparent_power_l1: 'L1 Apparent Power',
+  apparent_power_l2: 'L2 Apparent Power', apparent_power_l3: 'L3 Apparent Power',
+  apparent_power_demand: 'Apparent Power Demand', apparent_energy: 'Apparent Energy',
+  reactive_power_total: 'Reactive Power', reactive_power_l1: 'L1 Reactive Power',
+  reactive_power_l2: 'L2 Reactive Power', reactive_power_l3: 'L3 Reactive Power',
+  reactive_power_demand: 'Reactive Power Demand',
+  current_avg: 'Average Current', current_l1: 'L1 Current', current_l2: 'L2 Current',
+  current_l3: 'L3 Current', current_l1_thd: 'L1 Current THD', current_l3_thd: 'L3 Current THD',
+  current_unbalance: 'Current Unbalance',
+  volts_l_n_avg: 'Avg Voltage (L-N)', volts_l_l_avg: 'Avg Voltage (L-L)',
+  volts_l1_n: 'L1-N Voltage', volts_l2_n: 'L2-N Voltage', volts_l3_n: 'L3-N Voltage',
+  volts_l1_l2: 'L1-L2 Voltage', volts_l2_l3: 'L2-L3 Voltage', volts_l3_l1: 'L3-L1 Voltage',
+  volts_l1_thd: 'L1 Voltage THD', volts_l2_thd: 'L2 Voltage THD', volts_l3_thd: 'L3 Voltage THD',
+  volts_unbalance: 'Voltage Unbalance',
+  power_factor_avg: 'Avg Power Factor', power_factor_l1: 'L1 Power Factor',
+  power_factor_l2: 'L2 Power Factor', power_factor_l3: 'L3 Power Factor',
+  freq: 'Frequency',
 }
 
 const LINE_COLORS = ['#00c9b1', '#f5a623', '#7b7eff', '#ff6b8a', '#4ecdc4', '#ffe66d']
@@ -67,6 +150,40 @@ function TickLabel({ x, y, payload }) {
   )
 }
 
+// ── Example chips with category tabs ─────────────────────────────────────────
+function ExampleChips({ onQuery, isLoading }) {
+  const [activeCategory, setActiveCategory] = useState(0)
+
+  return (
+    <div className="example-section">
+      <div className="example-category-tabs">
+        {EXAMPLE_CATEGORIES.map((cat, i) => (
+          <button
+            key={cat.label}
+            className={`category-tab${activeCategory === i ? ' active' : ''}`}
+            onClick={() => setActiveCategory(i)}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+      <div className="example-chips">
+        {EXAMPLE_CATEGORIES[activeCategory].queries.map(q => (
+          <button
+            key={q}
+            className="chip"
+            onClick={() => onQuery(q)}
+            disabled={isLoading}
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Result card ───────────────────────────────────────────────────────────────
 function ResultCard({ result }) {
   const { chart, summary, metric, time_range, device_ids } = result
   const unit = METRIC_UNITS[metric] || ''
@@ -150,6 +267,7 @@ function SkeletonResult() {
   )
 }
 
+// ── Main chat view ────────────────────────────────────────────────────────────
 export default function ChatView({ messages, isLoading, onQuery, onClear }) {
   const [input, setInput] = useState('')
   const [isRecording, setIsRecording] = useState(false)
@@ -240,11 +358,7 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
                     </>
                   )}
                   {i === 0 && (
-                    <div className="example-chips">
-                      {EXAMPLE_QUERIES.map(q => (
-                        <button key={q} className="chip" onClick={() => onQuery(q)} disabled={isLoading}>{q}</button>
-                      ))}
-                    </div>
+                    <ExampleChips onQuery={onQuery} isLoading={isLoading} />
                   )}
                 </>
               )}
@@ -300,6 +414,7 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
   )
 }
 
+// ── Chart components ──────────────────────────────────────────────────────────
 function LineChartView({ data, deviceIds, unit }) {
   if (!data?.length) return <EmptyChart />
   return (
@@ -308,9 +423,9 @@ function LineChartView({ data, deviceIds, unit }) {
         <CartesianGrid stroke="#1f2d45" strokeDasharray="3 3" vertical={false} />
         <XAxis dataKey="time" tick={<TickLabel />} axisLine={false} tickLine={false} interval="preserveStartEnd" />
         <YAxis tick={{ fill: '#7a90b0', fontSize: 10, fontFamily: 'DM Mono, monospace' }}
-          axisLine={false} tickLine={false} width={52} unit={` ${unit}`} />
+          axisLine={false} tickLine={false} width={52} unit={unit ? ` ${unit}` : ''} />
         <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: '#7a90b0', marginBottom: 4 }}
-          formatter={(val, name) => [`${Number(val).toFixed(3)} ${unit}`, name]} />
+          formatter={(val, name) => [`${Number(val).toFixed(3)}${unit ? ` ${unit}` : ''}`, name]} />
         {deviceIds?.length > 1 && <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'DM Mono, monospace', color: '#7a90b0', paddingTop: 8 }} />}
         {(deviceIds || []).map((id, i) => (
           <Line key={id} type="monotone" dataKey={id}
@@ -329,11 +444,13 @@ function BarChartView({ data, unit }) {
       <BarChart data={data} margin={{ top: 4, right: 20, left: 0, bottom: 0 }} layout="vertical">
         <CartesianGrid stroke="#1f2d45" strokeDasharray="3 3" horizontal={false} />
         <XAxis type="number" tick={{ fill: '#7a90b0', fontSize: 10, fontFamily: 'DM Mono, monospace' }}
-          axisLine={false} tickLine={false} unit={` ${unit}`} />
+          axisLine={false} tickLine={false} unit={unit ? ` ${unit}` : ''} />
         <YAxis type="category" dataKey="device_id"
           tick={{ fill: '#7a90b0', fontSize: 10, fontFamily: 'DM Mono, monospace' }}
           axisLine={false} tickLine={false} width={52} />
-        <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(val) => [`${Number(val).toFixed(3)} ${unit}`, 'avg value']} cursor={{ fill: '#00c9b108' }} />
+        <Tooltip contentStyle={TOOLTIP_STYLE}
+          formatter={(val) => [`${Number(val).toFixed(3)}${unit ? ` ${unit}` : ''}`, 'avg value']}
+          cursor={{ fill: '#00c9b108' }} />
         <Bar dataKey="value" fill="#00c9b1" radius={[0, 3, 3, 0]} maxBarSize={24} />
       </BarChart>
     </ResponsiveContainer>

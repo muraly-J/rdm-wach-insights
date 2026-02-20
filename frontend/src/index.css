@@ -473,3 +473,38 @@ html, body, #root {
   .query-meta { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
   .meta-tag { font-size: 8.5px; padding: 2px 8px; }
 }
+
+/* ── Example category tabs ─────────────────────────────────────────────── */
+.example-section {
+  margin-top: 12px;
+}
+
+.example-category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.category-tab {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid #1f2d45;
+  background: transparent;
+  color: #7a90b0;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.category-tab:hover {
+  border-color: #00c9b1;
+  color: #00c9b1;
+}
+
+.category-tab.active {
+  background: #00c9b115;
+  border-color: #00c9b1;
+  color: #00c9b1;
+}
