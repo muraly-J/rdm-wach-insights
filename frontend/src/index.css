@@ -508,3 +508,48 @@ html, body, #root {
   border-color: #00c9b1;
   color: #00c9b1;
 }
+
+/* ── Follow-up suggestions ─────────────────────────────────────────────── */
+.followup-section {
+  margin-top: 14px;
+}
+
+.followup-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: #3d526e;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.followup-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.followup-chip {
+  display: flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid #1f2d45;
+  background: transparent;
+  color: #7a90b0;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.followup-chip:hover:not(:disabled) {
+  border-color: #f5a623;
+  color: #f5a623;
+}
+
+.followup-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

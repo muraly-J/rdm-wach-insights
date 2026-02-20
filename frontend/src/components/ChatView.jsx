@@ -76,6 +76,118 @@ const EXAMPLE_CATEGORIES = [
   },
 ]
 
+// ── Follow-up suggestion logic ────────────────────────────────────────────────
+
+// For each consumption metric, suggest a diagnostic follow-up
+const DIAGNOSTIC_FOLLOWUPS = {
+  power_total:          (d) => `Show ${d} power factor last 30 days`,
+  energy_import:        (d) => `Show ${d} power factor last 30 days`,
+  apparent_power_total: (d) => `Show ${d} power factor last 30 days`,
+  power_demand:         (d) => `Show ${d} max power demand last 30 days`,
+  reactive_power_total: (d) => `Show ${d} power factor last 30 days`,
+  current_avg:          (d) => `Show ${d} current unbalance last 30 days`,
+  volts_l_n_avg:        (d) => `Show ${d} voltage unbalance last 30 days`,
+  volts_l_l_avg:        (d) => `Show ${d} voltage unbalance last 30 days`,
+}
+
+// For each metric, suggest a related metric to compare
+const RELATED_METRICS = {
+  power_total:          'energy import',
+  energy_import:        'power demand',
+  power_demand:         'max power demand',
+  power_factor_avg:     'reactive power',
+  reactive_power_total: 'power factor',
+  current_avg:          'current unbalance',
+  current_unbalance:    'voltage unbalance',
+  volts_l_n_avg:        'voltage unbalance',
+  volts_unbalance:      'current unbalance',
+  volts_l1_thd:         'current THD',
+  current_l1_thd:       'voltage THD',
+  apparent_power_total: 'power factor',
+}
+
+const TIME_RANGE_LABELS = {
+  last_24h: 'today',
+  last_7d:  'last 7 days',
+  last_30d: 'last 30 days',
+  all_time: 'all time',
+}
+
+const NEXT_TIME_RANGE = {
+  last_24h: { key: 'last_7d',  label: 'last 7 days' },
+  last_7d:  { key: 'last_30d', label: 'last 30 days' },
+  last_30d: { key: 'all_time', label: 'all time' },
+  all_time: { key: 'last_30d', label: 'last 30 days' },
+}
+
+function buildFollowUps(result) {
+  const { query_type, metric, time_range, device_ids, chart } = result
+  const suggestions = []
+  const rangeLabel = TIME_RANGE_LABELS[time_range] || time_range
+
+  if (query_type === 'ranking') {
+    // Drill into top 2 devices as time series
+    const topDevices = chart?.data?.slice(0, 2).map(r => r.device_id) || []
+    if (topDevices.length >= 2) {
+      suggestions.push(
+        `Compare ${topDevices[0]} vs ${topDevices[1]} ${metric.replace(/_/g, ' ')} ${rangeLabel}`
+      )
+    }
+    if (topDevices.length >= 1) {
+      suggestions.push(
+        `Show ${topDevices[0]} ${metric.replace(/_/g, ' ')} ${rangeLabel}`
+      )
+    }
+    // Suggest a diagnostic for top device
+    const diagFn = DIAGNOSTIC_FOLLOWUPS[metric]
+    if (diagFn && topDevices.length >= 1) {
+      suggestions.push(diagFn(topDevices[0]))
+    }
+    // Suggest zooming into a different time range
+    const nextRange = NEXT_TIME_RANGE[time_range]
+    if (nextRange) {
+      suggestions.push(
+        `Rank top 10 by ${metric.replace(/_/g, ' ')} ${nextRange.label}`
+      )
+    }
+
+  } else {
+    // time_series
+    const deviceStr = device_ids?.join(' and ') || 'this device'
+    const firstDevice = device_ids?.[0]
+
+    // Suggest related metric
+    const related = RELATED_METRICS[metric]
+    if (related) {
+      suggestions.push(`Show ${deviceStr} ${related} ${rangeLabel}`)
+    }
+
+    // Suggest diagnostic follow-up
+    const diagFn = DIAGNOSTIC_FOLLOWUPS[metric]
+    if (diagFn && firstDevice) {
+      suggestions.push(diagFn(firstDevice))
+    }
+
+    // Suggest a wider/narrower time range
+    const nextRange = NEXT_TIME_RANGE[time_range]
+    if (nextRange) {
+      suggestions.push(
+        `Show ${deviceStr} ${metric.replace(/_/g, ' ')} ${nextRange.label}`
+      )
+    }
+
+    // If single device, suggest ranking to see how it compares
+    if (device_ids?.length === 1) {
+      suggestions.push(
+        `Rank top 10 devices by ${metric.replace(/_/g, ' ')} ${rangeLabel}`
+      )
+    }
+  }
+
+  // Deduplicate and cap at 4
+  return [...new Set(suggestions)].slice(0, 4)
+}
+
 // ── Metric display maps ───────────────────────────────────────────────────────
 const METRIC_UNITS = {
   power_total: 'kW', power_l1: 'kW', power_l2: 'kW', power_l3: 'kW',
@@ -153,7 +265,6 @@ function TickLabel({ x, y, payload }) {
 // ── Example chips with category tabs ─────────────────────────────────────────
 function ExampleChips({ onQuery, isLoading }) {
   const [activeCategory, setActiveCategory] = useState(0)
-
   return (
     <div className="example-section">
       <div className="example-category-tabs">
@@ -169,12 +280,35 @@ function ExampleChips({ onQuery, isLoading }) {
       </div>
       <div className="example-chips">
         {EXAMPLE_CATEGORIES[activeCategory].queries.map(q => (
+          <button key={q} className="chip" onClick={() => onQuery(q)} disabled={isLoading}>{q}</button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Follow-up suggestions ─────────────────────────────────────────────────────
+function SuggestedFollowUps({ result, onQuery, isLoading }) {
+  const suggestions = buildFollowUps(result)
+  if (!suggestions.length) return null
+
+  return (
+    <div className="followup-section">
+      <div className="followup-label">Explore further</div>
+      <div className="followup-chips">
+        {suggestions.map(q => (
           <button
             key={q}
-            className="chip"
+            className="followup-chip"
             onClick={() => onQuery(q)}
             disabled={isLoading}
           >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ marginRight: 5, flexShrink: 0 }}>
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
             {q}
           </button>
         ))}
@@ -184,7 +318,7 @@ function ExampleChips({ onQuery, isLoading }) {
 }
 
 // ── Result card ───────────────────────────────────────────────────────────────
-function ResultCard({ result }) {
+function ResultCard({ result, onQuery, isLoading }) {
   const { chart, summary, metric, time_range, device_ids } = result
   const unit = METRIC_UNITS[metric] || ''
   const label = METRIC_LABELS[metric] || metric
@@ -237,6 +371,8 @@ function ResultCard({ result }) {
           <p className="summary-text">{summary}</p>
         </div>
       )}
+
+      <SuggestedFollowUps result={result} onQuery={onQuery} isLoading={isLoading} />
     </div>
   )
 }
@@ -354,7 +490,13 @@ export default function ChatView({ messages, isLoading, onQuery, onClear }) {
                         style={{ whiteSpace: 'pre-wrap' }}>
                         {msg.text}
                       </div>
-                      {msg.result && <ResultCard result={msg.result} />}
+                      {msg.result && (
+                        <ResultCard
+                          result={msg.result}
+                          onQuery={onQuery}
+                          isLoading={isLoading}
+                        />
+                      )}
                     </>
                   )}
                   {i === 0 && (
