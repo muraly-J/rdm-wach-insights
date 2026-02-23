@@ -84,7 +84,7 @@ def get_app_env() -> str:
 
 def get_cors_origins() -> list[str]:
     """Get allowed CORS origins as a list."""
-    raw = os.getenv("CORS_ORIGINS", "http://localhost:5173")
+    raw = os.getenv("CORS_ORIGINS", "http://localhost:5173,https://rdm-wach-insights.vercel.app")
     return [o.strip() for o in raw.split(",") if o.strip()]
 
 

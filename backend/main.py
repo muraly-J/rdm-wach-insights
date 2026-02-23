@@ -68,10 +68,11 @@ app = FastAPI(
 
 app.add_middleware(SecurityHeadersMiddleware)
 
-# CORS — allow both localhost and network access
-# Support both CORS_ORIGINS (comma-separated) and CORS_ORIGIN (single value)
-_cors_origins_raw = os.getenv("CORS_ORIGINS") or "http://localhost:5173,https://rdm-wach-insights.vercel.app"
-_cors_origins = [origin.strip() for origin in _cors_origins_raw.split(",")]
+# CORS — restrict to production and localhost only (security best practice)
+# Production domain: rdm-wach-insights.vercel.app
+# Local development: http://localhost:5173 (Vite default)
+_cors_origins_raw = os.getenv("CORS_ORIGINS", "http://localhost:5173,https://rdm-wach-insights.vercel.app")
+_cors_origins = [origin.strip() for origin in _cors_origins_raw.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
