@@ -17,7 +17,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://larger-adjusted-murray-surname.trycloudflare.com/api/$1"
+      "destination": "https://necessary-bent-sol-geology.trycloudflare.com/api/$1"
     },
     {
       "source": "/(.*)",

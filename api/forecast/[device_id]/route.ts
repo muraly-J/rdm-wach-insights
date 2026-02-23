@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const TUNNEL_URL = 'https://church-inch-mailman-entire.trycloudflare.com'
+const TUNNEL_URL = 'https://necessary-bent-sol-geology.trycloudflare.com'
 
 export async function GET(request: NextRequest, { params }: { params: { device_id: string } }) {
   try {
