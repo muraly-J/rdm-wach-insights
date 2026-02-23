@@ -36,15 +36,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers['X-XSS-Protection']          = '1; mode=block'
         response.headers['Referrer-Policy']           = 'strict-origin-when-cross-origin'
         response.headers['Permissions-Policy']        = 'camera=(), microphone=(), geolocation=()'
-        response.headers['Content-Security-Policy'] = (
+        
+        # --- THE FIX: Updated CSP ---
+        # Added your Cloudflare and Vercel domains to 'connect-src'
+        # Added 'https://*.trycloudflare.com' to allow dynamic tunnel URLs
+        csp = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline'; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
-            "connect-src 'self'; "
+            f"connect-src 'self' https://rdm-wach-insights.vercel.app https://*.vercel.app https://*.trycloudflare.com; "
             "img-src 'self' data:; "
             "frame-ancestors 'none';"
         )
+        response.headers['Content-Security-Policy'] = csp
         return response
 
 
@@ -97,3 +102,8 @@ DIST_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
 
 if os.path.isdir(DIST_DIR):
     app.mount('/assets', StaticFiles(directory=os.path.join(DIST_DIR, 'assets')), name='assets')
+
+    @app.get('/{full_path:path}')
+    async def serve_spa(full_path: str):
+        index = os.path.join(DIST_DIR, 'index.html')
+        return FileResponse(index)
