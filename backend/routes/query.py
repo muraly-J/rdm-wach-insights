@@ -9,11 +9,14 @@ POST /api/query — main endpoint with security hardening:
 import re
 import time
 import uuid
+import logging
 from collections import defaultdict
 from typing import Optional
 
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel, validator
+
+logger = logging.getLogger(__name__)
 
 from backend.llm.translator import translate_query
 from backend.middleware.validator import validate_structured_query
@@ -22,6 +25,7 @@ from backend.core.influx_client import fetch_time_series, fetch_ranking
 from backend.core.charts import build_chart
 from backend.core.summarizer import summarize
 from backend.models.schemas import ALLOWED_METRICS, ALLOWED_DEVICES, QueryType
+from backend.utils.error_handler import handle_query_error, handle_llm_error
 
 router = APIRouter()
 
@@ -186,8 +190,20 @@ async def handle_query(request: Request, body: QueryRequest):
     session_id = body.session_id or str(uuid.uuid4())
 
     # 3. LLM translation
-    structured, error = await translate_query(body.user_query)
-
+    try:
+        structured, error = await translate_query(body.user_query)
+    except Exception as e:
+        # Catch any unexpected errors during translation
+        error = "Could not reach the server. Please try again in a moment."
+        log_query(
+            session_id=session_id,
+            user_query=body.user_query,
+            structured_query=None,
+            execution_status='translate_error',
+            error_detail=str(e)
+        )
+        logger.error(f"Translation error for session {session_id}: {e}")
+    
     if structured is None:
         log_query(
             session_id=session_id,
@@ -243,14 +259,21 @@ async def handle_query(request: Request, body: QueryRequest):
             execution_status='influx_error',
             error_detail=str(e)
         )
-        raise HTTPException(
-            status_code=52,  # Note: This should probably be 502, but keeping as-is
-            detail={"error": "Could not retrieve data. Please try again in a moment."}
-        )
+        raise handle_query_error(e, session_id)
 
     # 7. Build chart + summary
-    chart   = build_chart(df, structured)
-    summary = await summarize(df, structured)
+    try:
+        chart   = build_chart(df, structured)
+        summary = await summarize(df, structured)
+    except Exception as e:
+        log_query(
+            session_id=session_id,
+            user_query=body.user_query,
+            structured_query=structured.model_dump(),
+            execution_status='processing_error',
+            error_detail=str(e)
+        )
+        raise handle_query_error(e, session_id)
 
     log_query(
         session_id=session_id,

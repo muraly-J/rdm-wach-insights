@@ -32,6 +32,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+from backend.utils.error_handler import handle_forecast_error
+
 router = APIRouter()
 
 _URL    = os.getenv("INFLUX_URL")
@@ -258,20 +260,39 @@ async def get_forecast(device_id: str):
 
     model_path = FORECAST_DEVICES[device_id]
     if not os.path.exists(model_path):
+        logger.error(f"Forecast model file not found for device {device_id}: {model_path}")
         raise HTTPException(
             status_code=500,
-            detail={"error": f"Model file not found: {model_path}"}
+            detail={
+                "error": "Forecast service is temporarily unavailable. Please try again later."
+            }
         )
 
     # 1. Load model
     try:
         model = joblib.load(model_path)
     except Exception as e:
-        raise HTTPException(status_code=500, detail={"error": f"Failed to load model: {e}"})
+        logger.error(f"Failed to load forecast model for {device_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Failed to load forecast model. Please try again later."
+            }
+        )
 
     # 2. Fetch 7 days of history for chart
-    history_7d = _fetch_power_history(device_id, hours=168)
+    try:
+        history_7d = _fetch_power_history(device_id, hours=168)
+    except Exception as e:
+        logger.error(f"Failed to fetch history for {device_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Could not retrieve historical data. Please try again in a moment."
+            }
+        )
     if history_7d.empty or len(history_7d) < 97:
+        logger.warning(f"Not enough historical data for {device_id}: {len(history_7d)} points")
         raise HTTPException(
             status_code=500,
             detail={
@@ -282,17 +303,39 @@ async def get_forecast(device_id: str):
         )
 
     # 3. Fetch latest electrical measurements
-    electrical = _fetch_latest_electrical(device_id)
+    try:
+        electrical = _fetch_latest_electrical(device_id)
+    except Exception as e:
+        logger.error(f"Failed to fetch electrical data for {device_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Could not retrieve latest measurements. Please try again in a moment."
+            }
+        )
 
     # 4. Generate forecast
     try:
         forecast = _build_forecast(device_id, model, history_7d, electrical)
     except ValueError as e:
+        logger.error(f"Forecast generation failed for {device_id}: {e}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
+    except Exception as e:
+        logger.error(f"Unexpected forecast error for {device_id}: {e}")
+        raise handle_forecast_error(e, device_id)
 
     # 5. Build summary
-    recent_avg = float(history_7d.tail(96).mean())  # last 24h average
-    summary = _build_summary(device_id, forecast, recent_avg)
+    try:
+        recent_avg = float(history_7d.tail(96).mean())  # last 24h average
+        summary = _build_summary(device_id, forecast, recent_avg)
+    except Exception as e:
+        logger.error(f"Failed to build summary for {device_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Could not generate summary. Please try again in a moment."
+            }
+        )
 
     # 6. Format history for chart — downsample to max 672 points (7d × 4/hr × 24)
     history_data = [

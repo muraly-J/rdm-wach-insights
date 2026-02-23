@@ -16,6 +16,7 @@ Flow:
 import os
 import json
 import re
+import logging
 from typing import Optional, Union
 from openai import AsyncOpenAI
 
@@ -24,6 +25,9 @@ from backend.middleware.validator import validate_raw_dict
 from backend.models.schemas import StructuredQuery
 from backend.config import get_lms_base_url, get_lms_model, get_lms_api_key
 from backend.core.floor_ward_map import resolve_floor_ids, resolve_ward_ids
+from backend.utils.error_handler import handle_llm_error
+
+logger = logging.getLogger(__name__)
 
 _LMS_BASE_URL = get_lms_base_url()
 _LMS_MODEL    = get_lms_model()
@@ -88,7 +92,7 @@ async def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None]
             max_tokens=256,      # JSON output is small; this keeps responses fast
         )
     except Exception as e:
-        return None, f"Could not reach the LM Studio server. Is it running? ({e})"
+        return handle_llm_error(e)
 
     raw_text = response.choices[0].message.content or ""
 
