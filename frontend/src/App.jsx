@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react'
 import api from './api.js'
 import ChatView from './components/ChatView.jsx'
+import ElectricalRiskView from './components/ElectricalRiskView.jsx'
 import { MAPPED_COUNT } from './deviceMap.js'
 
 const SESSION_ID = crypto.randomUUID()
 
 export default function App() {
+  const [showRiskCheck, setShowRiskCheck] = useState(false)
   const [messages, setMessages] = useState([
     {
       id: '0',
@@ -100,6 +102,12 @@ export default function App() {
           </div>
         </div>
         <div className="header-right">
+          <button 
+            onClick={() => setShowRiskCheck(!showRiskCheck)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mr-4"
+          >
+            {showRiskCheck ? 'Back to Chat' : 'Electrical Risk Check'}
+          </button>
           <div className="unmapped-badge"
             title={`${MAPPED_COUNT} of ~150 device IDs have confirmed location records. Some devices could not be matched to a department.`}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -115,13 +123,17 @@ export default function App() {
           </div>
         </div>
       </header>
-      <ChatView
-        messages={messages}
-        isLoading={isLoading}
-        onQuery={handleQuery}
-        onForecast={handleForecast}
-        onClear={handleClear}
-      />
+      {showRiskCheck ? (
+        <ElectricalRiskView />
+      ) : (
+        <ChatView
+          messages={messages}
+          isLoading={isLoading}
+          onQuery={handleQuery}
+          onForecast={handleForecast}
+          onClear={handleClear}
+        />
+      )}
     </div>
   )
 }
