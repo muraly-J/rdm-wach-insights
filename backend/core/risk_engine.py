@@ -446,7 +446,7 @@ async def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[s
     }
     
     # Fetch time series data
-    df = await fetch_time_series(
+    df = fetch_time_series(
         device_ids=[ahu_id],
         metric="power_total",
         time_range=time_range
@@ -462,7 +462,7 @@ async def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[s
     power_total = float(latest[ahu_id]) if latest is not None and ahu_id in latest.index else None
     
     # Get energy (from same df if available)
-    energy_df = await fetch_time_series(
+    energy_df = fetch_time_series(
         device_ids=[ahu_id],
         metric="energy_import",
         time_range=time_range
@@ -471,7 +471,7 @@ async def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[s
     energy_value = float(energy_df.iloc[-1][ahu_id]) if not energy_df.empty else None
     
     # Get power factor
-    pf_df = await fetch_time_series(
+    pf_df = fetch_time_series(
         device_ids=[ahu_id],
         metric="power_factor_avg",
         time_range=time_range
@@ -479,7 +479,7 @@ async def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[s
     pf_value = float(pf_df.iloc[-1][ahu_id]) if not pf_df.empty else None
     
     # Get current unbalance
-    unbalance_df = await fetch_time_series(
+    unbalance_df = fetch_time_series(
         device_ids=[ahu_id],
         metric="current_unbalance",
         time_range=time_range
@@ -487,14 +487,14 @@ async def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[s
     unbalance_value = float(unbalance_df.iloc[-1][ahu_id]) if not unbalance_df.empty else None
     
     # Get THD metrics
-    thd_l1_df = await fetch_time_series(
+    thd_l1_df = fetch_time_series(
         device_ids=[ahu_id],
         metric="current_l1_thd",
         time_range=time_range
     )
     thd_l1_value = float(thd_l1_df.iloc[-1][ahu_id]) if not thd_l1_df.empty else None
     
-    thd_l3_df = await fetch_time_series(
+    thd_l3_df = fetch_time_series(
         device_ids=[ahu_id],
         metric="current_l3_thd",
         time_range=time_range
@@ -509,8 +509,8 @@ async def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[s
     
     # Energy-based metrics
     if energy_df is not None and not energy_df.empty:
-        hourly_energy = df["power_total"].mean() * 1  # approximate hourly kWh from power
-        energy_values = df["power_total"].dropna()
+        hourly_energy = df[ahu_id].mean() * 1  # approximate hourly kWh from power
+        energy_values = df[ahu_id].dropna()
         
         # Historical same-weekday-same-hour median would need more complex logic
         # For MVP, use overall mean as baseline
@@ -519,29 +519,29 @@ async def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[s
         historical_energy_median = None
     
     # PF metrics
-    pf_values = pf_df["power_factor_avg"].dropna() if not pf_df.empty else pd.Series()
+    pf_values = pf_df[ahu_id].dropna() if not pf_df.empty else pd.Series()
     historical_pf_mean = pf_values.mean() if len(pf_values) > 0 else None
-    pf_slope = calculate_7d_slope(pf_df, "power_factor_avg") if len(pf_df) > 0 else 0
+    pf_slope = calculate_7d_slope(pf_df, ahu_id) if len(pf_df) > 0 else 0
     
     # Power metrics
-    power_values = df["power_total"].dropna()
+    power_values = df[ahu_id].dropna()
     historical_power_max = power_values.quantile(0.99) if len(power_values) > 0 else None
-    current_power = float(df.iloc[-1]["power_total"]) if not df.empty else None
+    current_power = float(df.iloc[-1][ahu_id]) if not df.empty else None
     
     # Power ratio (current / P99)
     max_demand_ratio = current_power / historical_power_max if (current_power and historical_power_max and historical_power_max > 0) else 0
     
     # Power slope
-    power_slope = calculate_7d_slope(df, "power_total") if len(df) > 0 else 0
+    power_slope = calculate_7d_slope(df, ahu_id) if len(df) > 0 else 0
     
     # Imbalance metrics
-    unbalance_values = unbalance_df["current_unbalance"].dropna() if not unbalance_df.empty else pd.Series()
+    unbalance_values = unbalance_df[ahu_id].dropna() if not unbalance_df.empty else pd.Series()
     historical_unbalance_mean = unbalance_values.mean() if len(unbalance_values) > 0 else None
-    unbalance_slope = calculate_7d_slope(unbalance_df, "current_unbalance") if len(unbalance_df) > 0 else 0
+    unbalance_slope = calculate_7d_slope(unbalance_df, ahu_id) if len(unbalance_df) > 0 else 0
     
     # Data quality
     total_points = len(df)
-    missing_points = df["power_total"].isna().sum() if not df.empty else 0
+    missing_points = df[ahu_id].isna().sum() if not df.empty else 0
     missing_pct = (missing_points / total_points * 100) if total_points > 0 else 0
     
     metrics.update({
@@ -549,7 +549,7 @@ async def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[s
             "current": current_power,
             "historical_p99": historical_power_max,
             "power_ratio": current_power / historical_power_max if (current_power and historical_power_max) else None,
-            "power_slope_7d": power_slope,
+            "slope_7d": power_slope,
         },
         "energy": {
             "current": energy_value,
