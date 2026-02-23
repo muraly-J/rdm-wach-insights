@@ -24,6 +24,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 _URL    = os.getenv("INFLUX_URL")
@@ -71,7 +79,7 @@ def _fetch_power_history(device_id: str, hours: int) -> pd.Series:
         df = df.resample("15min").mean().ffill()
         return df
     except Exception as e:
-        print(f"[forecast] _fetch_power_history failed: {e}")
+        logger.error(f"_fetch_power_history failed: {e}")
         return pd.Series(dtype=float)
     finally:
         client.close()
@@ -108,7 +116,7 @@ def _fetch_latest_electrical(device_id: str) -> dict:
                     if val is not None and not math.isnan(float(val)):
                         metrics[metric] = float(val)
     except Exception as e:
-        print(f"[forecast] _fetch_latest_electrical failed: {e}")
+        logger.error(f"_fetch_latest_electrical failed: {e}")
     finally:
         client.close()
 

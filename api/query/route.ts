@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const TUNNEL_URL = 'https://necessary-bent-sol-geology.trycloudflare.com'
 
+// Create a simple logging function for Next.js API routes
+const logError = (message: string, error?: unknown) => {
+  const timestamp = new Date().toISOString()
+  const errorMsg = error instanceof Error ? error.message : String(error)
+  console.error(`[API] ${timestamp} | Proxy error: ${message}`, errorMsg)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -19,7 +26,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(data, { status: response.status })
   } catch (error) {
-    console.error('Proxy error:', error)
+    logError('POST request failed', error)
     return NextResponse.json(
       { error: 'Could not reach backend' },
       { status: 502 }
@@ -38,7 +45,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(data, { status: response.status })
   } catch (error) {
-    console.error('Proxy error:', error)
+    logError('GET request failed', error)
     return NextResponse.json(
       { error: 'Could not reach backend' },
       { status: 502 }

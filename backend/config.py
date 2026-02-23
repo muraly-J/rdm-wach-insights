@@ -11,6 +11,9 @@ This module handles:
 
 import os
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ── Base paths ────────────────────────────────────────────────────────────────
@@ -31,7 +34,7 @@ def load_env_files():
     for env_path in env_locations:
         if env_path.exists():
             load_dotenv(env_path)
-            print(f"[config] Loaded environment from {env_path}")
+            logger.info(f"Loaded environment from {env_path}")
 
 
 # ── InfluxDB Configuration ────────────────────────────────────────────────────
@@ -126,7 +129,7 @@ def init_config():
     except ValueError as e:
         if get_app_env() == "production":
             raise
-        print(f"[config] Warning: {e}")
+        logger.warning(str(e))
     
     # Ensure directories exist
     get_data_dir().mkdir(parents=True, exist_ok=True)

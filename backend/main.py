@@ -6,7 +6,15 @@ FastAPI app entry point.
 """
 import os
 import sys
+import logging
 from contextlib import asynccontextmanager
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.dirname(__file__))
 from fastapi import FastAPI

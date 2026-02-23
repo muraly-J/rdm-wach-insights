@@ -25,6 +25,10 @@ _TOKEN  = get_influx_token()
 _ORG    = get_influx_org()
 _BUCKET = get_influx_bucket()
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # Resample granularity per time range — keeps charts readable
 _RESAMPLE_MAP = {
     "last_24h":  "5min",
@@ -131,7 +135,7 @@ def fetch_ranking(
         return df
 
     except Exception as e:
-        print(f"[influx_client] fetch_ranking failed: {e}")
+        logger.error(f"fetch_ranking failed: {e}")
         return pd.DataFrame(columns=["device_id", "value"])
     finally:
         client.close()
@@ -194,7 +198,7 @@ def _execute_and_clean(
         return df
 
     except Exception as e:
-        print(f"[influx_client] query failed: {e}")
+        logger.error(f"query failed: {e}")
         return pd.DataFrame()
     finally:
         client.close()
