@@ -102,12 +102,18 @@ export default function App() {
           </div>
         </div>
         <div className="header-right">
-          <button 
+          <div
             onClick={() => setShowRiskCheck(!showRiskCheck)}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mr-4"
+            className="unmapped-badge"
+            style={{ cursor: 'pointer', border: '1px solid #3b82f655', color: '#3b82f6', background: '#3b82f60a' }}
           >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
             {showRiskCheck ? 'Back to Chat' : 'Electrical Risk Check'}
-          </button>
+          </div>
           <div className="unmapped-badge"
             title={`${MAPPED_COUNT} of ~150 device IDs have confirmed location records. Some devices could not be matched to a department.`}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
