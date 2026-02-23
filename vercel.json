@@ -2,7 +2,7 @@
   "headers": [
     {
       "source": "/api/(.*)",
-      "headers": [{
+      "headers": [
         {"key": "Access-Control-Allow-Origin", "value": "https://rdm-wach-insights.vercel.app"},
         {"key": "Access-Control-Allow-Credentials", "value": "true"}
       ]
