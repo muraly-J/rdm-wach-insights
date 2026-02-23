@@ -1,1 +1,21 @@
-{"version": 2, "builds": [{"src": "frontend/package.json", "use": "@vercel/static"}, {"src": "backend/main.py", "use": "@vercel/python"}], "routes": [{"src": "/api/(.*)", "dest": "backend/main.py"}, {"src": "/(.*)", "dest": "frontend/dist/$1"}]}
+{
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [{
+        {"key": "Access-Control-Allow-Origin", "value": "https://rdm-wach-insights.vercel.app"},
+        {"key": "Access-Control-Allow-Credentials", "value": "true"}
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://necessary-bent-sol-geology.trycloudflare.com/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
