@@ -82,13 +82,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(forecast_router)
-
-app.include_router(query_router, prefix="/api")
-
-@app.get('/health')
+# Health endpoint MUST be before routers to avoid SPA fallback
+@app.get('/api/health')
 async def health():
     return {'status': 'ok'}
+
+app.include_router(forecast_router)
+app.include_router(query_router, prefix="/api")
 
 # ── Static files (production: serves built React frontend) ───────────────────
 

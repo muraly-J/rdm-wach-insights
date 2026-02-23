@@ -1,12 +1,27 @@
 {
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://rdm-wach-insights.vercel.app"
+        },
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": true
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://electronic-protocol-louisiana-arts.trycloudflare.com/api/:path*"
+      "source": "/api/(.*)",
+      "destination": "https://larger-adjusted-murray-surname.trycloudflare.com/api/$1"
     },
     {
       "source": "/(.*)",
-      "destination": "/$1"
+      "destination": "/index.html"
     }
   ]
 }
