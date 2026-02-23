@@ -33,7 +33,7 @@ export default function ElectricalRiskView() {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await api.get(`/api/electrical-risk?time_range=${range}`)
+      const response = await api.get(`/electrical-risk?time_range=${range}`)
       setAssessments(response.data.assessments || [])
       setFleetSummary(response.data.fleet_summary || {})
     } catch (err) {
@@ -47,7 +47,7 @@ export default function ElectricalRiskView() {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await api.get(`/api/electrical-risk/${ahuId}`)
+      const response = await api.get(`/electrical-risk/${ahuId}`)
       setDetails(response.data)
       setSelectedAhuId(ahuId)
     } catch (err) {

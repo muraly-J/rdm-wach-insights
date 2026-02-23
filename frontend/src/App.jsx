@@ -27,7 +27,7 @@ export default function App() {
     setMessages(prev => [...prev, userMsg, pendingMsg])
     setIsLoading(true)
     try {
-      const response = await api.post('/api/query', { user_query: query, session_id: SESSION_ID })
+      const response = await api.post('/query', { user_query: query, session_id: SESSION_ID })
       const data = response.data
       setMessages(prev => prev.map(m => m.id === assistantId ? {
         ...m,
@@ -58,7 +58,7 @@ export default function App() {
     setMessages(prev => [...prev, userMsg, pendingMsg])
     setIsLoading(true)
     try {
-      const response = await api.get(`/api/forecast/${deviceId}`)
+      const response = await api.get(`/forecast/${deviceId}`)
       const data = response.data
       setMessages(prev => prev.map(m => m.id === assistantId ? {
         ...m,
