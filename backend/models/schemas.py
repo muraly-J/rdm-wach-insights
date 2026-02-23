@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator
-from typing import Literal, Optional
+from typing import Literal, Optional, Dict, Any, List
 from enum import Enum
 
 
@@ -99,3 +99,158 @@ class QueryResponse(BaseModel):
     chart_data:       dict           # Recharts-ready payload
     summary:          str
     csv_available:    bool = True
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ELECTRICAL RISK CHECK SCHEMAS (Stage 2B)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class RiskScore(BaseModel):
+    """Single risk score with severity and signal."""
+    score: float
+    severity: str
+    confidence: str
+    signal: str
+
+
+class PFRiskScore(RiskScore):
+    """Power factor risk score with additional context."""
+    confidence: str = "High"
+
+
+class PhaseImbalanceRiskScore(RiskScore):
+    """Phase imbalance risk score with root cause uncertainty flag."""
+    confidence: str = "Moderate"
+    root_cause_uncertainty: Optional[str] = None
+
+
+class THDRiskScore(RiskScore):
+    """THD drift risk score."""
+    confidence: str = "High"
+
+
+class OverloadRiskScore(RiskScore):
+    """Overload risk score with seasonal caveat."""
+    confidence: str = "Moderate"
+    seasonal_caveat: Optional[str] = None
+
+
+class EnergyAssessment(BaseModel):
+    """Energy anomaly assessment."""
+    forecast_24h_kwh: Optional[float] = None
+    normal_range_kwh: Optional[List[float]] = None
+    deviation_probability_pct: Optional[float] = None
+    trend_7d: str = "stable"
+
+
+class DataQuality(BaseModel):
+    """Data quality metrics."""
+    missing_data_pct: float
+    days_since_last_valid_reading: int
+    model_source: str
+    model_confidence_flag: str
+
+
+class HealthTierResponse(BaseModel):
+    """Health tier classification."""
+    tier: str
+    description: str
+
+
+# ── Individual AHU Risk Assessment ────────────────────────────────────────────
+
+class SingleAHURiskAssessment(BaseModel):
+    """
+    Risk assessment for a single AHU.
+    
+    Example output:
+    {
+      "ahu_id": "wach_e0101",
+      "timestamp": "2026-02-23T14:00:00+08:00",
+      "health_index": 84,
+      "health_tier": "Healthy",
+      "energy": {...},
+      "risk_scores": {...},
+      "data_quality": {...}
+    }
+    """
+    ahu_id: str
+    timestamp: str
+    health_index: float
+    health_tier: str
+    
+    energy: EnergyAssessment
+    risk_scores: Dict[str, Any]
+    data_quality: DataQuality
+
+
+class FleetRiskAssessment(BaseModel):
+    """
+    Fleet-wide risk assessment.
+    
+    Includes:
+    - generated_at timestamp
+    - time_range analyzed
+    - total AHUs assessed
+    - fleet_summary with tier distribution
+    - assessments list (sorted by health_index)
+    """
+    generated_at: str
+    time_range: str
+    total_ahus: int
+    fleet_summary: Dict[str, Any]
+    assessments: List[SingleAHURiskAssessment]
+
+
+# ── Fleet Summary (Aggregated) ───────────────────────────────────────────────
+
+class FleetTierDistribution(BaseModel):
+    """Distribution of AHUs across health tiers."""
+    Healthy: int = 0
+    Monitor: int = 0
+    MaintenanceSoon: int = 0
+    Critical: int = 0
+
+
+class TopUnitsItem(BaseModel):
+    """Top N units item with health index."""
+    ahu_id: str
+    health_index: float
+
+
+class TopUnitsByRisk(BaseModel):
+    """Top N units item with overload score."""
+    ahu_id: str
+    overload_score: float
+
+
+class FleetSummary(BaseModel):
+    """
+    Aggregated fleet summary for the Electrical Risk Check.
+    
+    Returns:
+        - Tier distribution (counts by tier)
+        - Top 5 units by lowest health index
+        - Top 5 with rising risk trends
+        - Top 5 that have improved most
+        - Data quality issues count
+    """
+    tier_distribution: FleetTierDistribution
+    top_5_lowest_health_index: List[TopUnitsItem]
+    top_5_rising_risk: List[TopUnitsByRisk]
+    top_5_improved: List[TopUnitsItem]
+    data_quality_issues_count: int
+
+
+# ── API Request Models ───────────────────────────────────────────────────────
+
+class ElectricalRiskRequest(BaseModel):
+    """Request parameters for electrical risk assessment."""
+    time_range: Literal["last_24h", "last_7d", "last_30d", "all_time"] = "last_30d"
+    cluster_by_level: bool = True
+
+
+class RiskSummaryRequest(BaseModel):
+    """Request parameters for fleet summary."""
+    time_range: Literal["last_24h", "last_7d", "last_30d", "all_time"] = "last_30d"

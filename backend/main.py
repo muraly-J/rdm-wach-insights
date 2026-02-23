@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.routes.forecast import router as forecast_router
+from backend.routes.electrical_risk import router as electrical_risk_router
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -82,6 +83,9 @@ app.add_middleware(
 app.include_router(forecast_router)
 
 app.include_router(query_router, prefix="/api")
+
+# Electrical Risk Check routes
+app.include_router(electrical_risk_router)
 
 @app.get('/health')
 async def health():

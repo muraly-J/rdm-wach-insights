@@ -1,0 +1,9 @@
+{
+  "name": "wach-insight",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "dev": "cd backend && python -m uvicorn main:app --reload"
+  },
+  "private": true
+}
