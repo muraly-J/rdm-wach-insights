@@ -9,7 +9,7 @@ import sys
 from contextlib import asynccontextmanager
 
 sys.path.insert(0, os.path.dirname(__file__))
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -97,8 +97,3 @@ DIST_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
 
 if os.path.isdir(DIST_DIR):
     app.mount('/assets', StaticFiles(directory=os.path.join(DIST_DIR, 'assets')), name='assets')
-
-    @app.get('/{full_path:path}')
-    async def serve_spa(full_path: str):
-        index = os.path.join(DIST_DIR, 'index.html')
-        return FileResponse(index)
