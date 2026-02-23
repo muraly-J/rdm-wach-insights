@@ -3,13 +3,14 @@ import api from '../api.js'
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Electrical Risk Check Component (Stage 2B - Rule-Based Baseline)
-// ──────────────────────────────────────────────────────────────
+// Matches ChatView style and design system
+// ──────────────────────────────────────────────────────────────────────────────
 
 const HEALTH_TIERS = {
-  Healthy: { color: '#10b981', label: 'Healthy', min: 80 },
-  Monitor: { color: '#f59e0b', label: 'Monitor', min: 60 },
-  MaintenanceSoon: { color: '#f97316', label: 'Maintenance Soon', min: 40 },
-  Critical: { color: '#ef4444', label: 'Critical', min: 0 },
+  Healthy: { color: '#00c9b1', label: 'Healthy', min: 80 },
+  Monitor: { color: '#f5a623', label: 'Monitor', min: 60 },
+  MaintenanceSoon: { color: '#f5734e', label: 'Maintenance Soon', min: 40 },
+  Critical: { color: '#ff4d6d', label: 'Critical', min: 0 },
 }
 
 const TIERS_ORDER = ['Healthy', 'Monitor', 'MaintenanceSoon', 'Critical']
@@ -62,7 +63,7 @@ export default function ElectricalRiskView() {
   }, [])
 
   // Sort assessments by health index (lowest first for critical priority)
-  const sortedAssessments = [...assessments].sort((a, b) => 
+  const sortedAssessments = [...assessments].sort((a, b) =>
     (a.health_index || 0) - (b.health_index || 0)
   )
 
@@ -78,10 +79,10 @@ export default function ElectricalRiskView() {
 
   // Get risk score with severity color
   const getRiskColor = (score) => {
-    if (score >= 0.8) return 'text-red-600'
-    if (score >= 0.6) return 'text-orange-500'
-    if (score >= 0.4) return 'text-yellow-600'
-    return 'text-green-600'
+    if (score >= 0.8) return 'text-red-500'
+    if (score >= 0.6) return 'text-orange-400'
+    if (score >= 0.4) return 'text-yellow-400'
+    return 'text-emerald-500'
   }
 
   const getRiskBadge = (score) => {
@@ -94,27 +95,26 @@ export default function ElectricalRiskView() {
   // Health tier badge
   const getHealthTierColor = (tier) => {
     const colors = {
-      Healthy: 'bg-emerald-100 text-emerald-800',
-      Monitor: 'bg-amber-100 text-amber-800',
-      MaintenanceSoon: 'bg-orange-100 text-orange-800',
-      Critical: 'bg-red-100 text-red-800',
+      Healthy: 'bg-teal-500/15 text-teal-400 border-teal-500/20',
+      Monitor: 'bg-orange-500/15 text-orange-400 border-orange-500/20',
+      MaintenanceSoon: 'bg-red-500/15 text-red-400 border-red-500/20',
+      Critical: 'bg-red-600/20 text-red-500 border-red-600/30',
     }
-    return colors[tier] || 'bg-gray-100 text-gray-800'
+    return colors[tier] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'
   }
 
   // Health index progress bar
   const HealthBar = ({ value }) => {
     let colorClass, bgClass
-    if (value >= 80) { colorClass = 'text-emerald-600'; bgClass = 'bg-emerald-500' }
-    else if (value >= 60) { colorClass = 'text-amber-500'; bgClass = 'bg-amber-500'
-    }
+    if (value >= 80) { colorClass = 'text-emerald-500'; bgClass = 'bg-emerald-500' }
+    else if (value >= 60) { colorClass = 'text-amber-500'; bgClass = 'bg-amber-500' }
     else if (value >= 40) { colorClass = 'text-orange-500'; bgClass = 'bg-orange-500' }
     else { colorClass = 'text-red-600'; bgClass = 'bg-red-500' }
 
     return (
-      <div className="w-full bg-gray-200 rounded-full h-3">
+      <div className="w-full bg-[#131c2e] rounded-full h-2">
         <div
-          className={`h-3 rounded-full ${bgClass} transition-all duration-500`}
+          className={`h-2 rounded-full ${bgClass} transition-all duration-500`}
           style={{ width: `${value}%` }}
         />
       </div>
@@ -123,7 +123,12 @@ export default function ElectricalRiskView() {
 
   // Risk score badge
   const RiskBadge = ({ score }) => (
-    <div className={`px-2 py-1 rounded text-xs font-bold ${score >= 0.8 ? 'bg-red-100 text-red-700' : score >= 0.6 ? 'bg-orange-100 text-orange-700' : score >= 0.4 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+    <div className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
+      score >= 0.8 ? 'bg-red-500/15 text-red-400 border border-red-500/20' :
+      score >= 0.6 ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20' :
+      score >= 0.4 ? 'bg-yellow-500/15 text-yellow-500 border border-yellow-500/20' :
+      'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+    }`}>
       {((1 - score) * 100).toFixed(0)}% Safe
     </div>
   )
@@ -132,7 +137,7 @@ export default function ElectricalRiskView() {
   if (isLoading && !assessments.length) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
       </div>
     )
   }
@@ -140,101 +145,173 @@ export default function ElectricalRiskView() {
   // Error state
   if (error) {
     return (
-      <div className="p-6 text-center">
-        <div className="text-red-600 font-medium">{error}</div>
-        <button
-          onClick={() => loadFleetAssessment(timeRange)}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Try Again
-        </button>
+      <div className="chat-view" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="thread" style={{ flex: 1, overflowY: 'auto', padding: '40px 32px 24px' }}>
+          <div className="thread-inner">
+            <div className="turn turn-error" style={{ alignItems: 'flex-start' }}>
+              <div className="assistant-bubble error-bubble" style={{ maxWidth: '100%' }}>
+                <div className="mb-3">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4d6d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                </div>
+                <p className="font-medium mb-2">Error</p>
+                <p style={{ whiteSpace: 'pre-wrap' }}>{error}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="input-bar">
+          <div className="input-bar-inner" style={{ maxWidth: '820px', margin: '0 auto' }}>
+            <div className="input-row">
+              <button
+                onClick={() => loadFleetAssessment(timeRange)}
+                className="send-btn"
+                style={{ width: 'auto', height: '46px', padding: '0 24px', fontSize: '13px' }}
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
   // Detail view modal
   if (details && selectedAhuId) {
+    const { health_index, health_tier, risk_scores, energy, data_quality } = details
+
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={closeDetails}>
-        <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold">Electrical Risk Assessment</h2>
-            <div className="flex justify-between items-center mt-2">
-              <span className="font-mono text-lg">{selectedAhuId}</span>
-              <button onClick={closeDetails} className="text-gray-500 hover:text-gray-700">✕</button>
-            </div>
-          </div>
+      <div className="chat-view" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="thread" style={{ flex: 1, overflowY: 'auto', padding: '40px 32px 24px' }}>
+          <div className="thread-inner" style={{ maxWidth: '700px' }}>
+            {/* Modal Header */}
+            <div className="turn turn-assistant" style={{ alignItems: 'flex-start' }}>
+              <div className="assistant-bubble" style={{ maxWidth: '100%', position: 'relative' }}>
+                <div className="banner-header">
+                  <h3>Electrical Risk Assessment</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="device-tag" style={{ fontFamily: "'DM Mono', monospace", fontSize: '12px' }}>
+                      {selectedAhuId}
+                    </span>
+                    <button
+                      onClick={closeDetails}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: '#7a90b0', fontSize: '20px', padding: '4px'
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
 
-          <div className="p-6 space-y-6">
-            {/* Health Index */}
-            <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
-              <div>
-                <span className="text-sm text-gray-500">Health Index</span>
-                <div className="flex items-baseline space-x-2">
-                  <span className={`text-3xl font-bold ${details.health_index >= 80 ? 'text-emerald-600' : details.health_index >= 60 ? 'text-amber-500' : 'text-red-600'}`}>
-                    {details.health_index.toFixed(1)}
+                {/* Health Index */}
+                <div className="banner-header" style={{ marginTop: '16px', marginBottom: '16px' }}>
+                  <div>
+                    <span className="device-tag" style={{ color: '#7a90b0', fontSize: '12px' }}>
+                      Health Index
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span className={`font-bold ${health_index >= 80 ? 'text-teal-400' : health_index >= 60 ? 'text-orange-400' : 'text-red-500'}`} style={{ fontSize: '18px', fontFamily: "'DM Mono', monospace" }}>
+                      {health_index.toFixed(1)}
+                    </span>
+                    <span style={{ color: '#3d526e', fontSize: '10px' }}>/ 100</span>
+                  </div>
+                </div>
+
+                {/* Health Tier Badge */}
+                <div className="input-hint" style={{ marginBottom: '16px' }}>
+                  <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase border ${getHealthTierColor(health_tier)}`}>
+                    {health_tier}
                   </span>
-                  <span className="text-gray-400">/ 100</span>
                 </div>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getHealthTierColor(details.health_tier)}`}>
-                {details.health_tier}
-              </span>
-            </div>
 
-            {/* Risk Scores */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-700">Risk Scores</h3>
-              
-              {Object.entries(details.risk_scores).map(([name, scoreData]) => (
-                <div key={name} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium capitalize">{name.replace('_', ' ')}</span>
-                    <RiskBadge score={scoreData.score} />
-                  </div>
-                  <HealthBar value={(1 - scoreData.score) * 100} />
-                  
-                  <div className="mt-3 space-y-2">
-                    <p className="text-sm text-gray-600"><strong>Signal:</strong> {scoreData.signal}</p>
-                    <p className="text-sm text-gray-500"><strong>Severity:</strong> {scoreData.severity}</p>
-                    <p className="text-sm text-gray-500"><strong>Confidence:</strong> {scoreData.confidence}</p>
-                    {scoreData.root_cause_uncertainty && (
-                      <p className="text-sm text-amber-600"><strong>Root Cause:</strong> {scoreData.root_cause_uncertainty}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                {/* Risk Scores */}
+                <h3 style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#7a90b0', marginBottom: '12px' }}>
+                  Risk Scores
+                </h3>
 
-            {/* Energy Assessment */}
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold text-gray-700 mb-3">Energy Assessment</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-500">Forecast 24h (kWh)</span>
-                  <div className="font-medium">{details.energy.forecast_24h_kwh ?? 'N/A'}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {Object.entries(risk_scores).map(([name, scoreData]) => (
+                    <div key={name} style={{ background: '#0d1424', border: '1px solid #1c2b42', borderRadius: '8px', padding: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 500, textTransform: 'capitalize' }}>
+                          {name.replace('_', ' ')}
+                        </span>
+                        <RiskBadge score={scoreData.score} />
+                      </div>
+                      <HealthBar value={(1 - scoreData.score) * 100} />
+
+                      <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ fontSize: '10px', color: '#7a90b0' }}>
+                          <span style={{ color: '#3d526e', marginRight: '4px' }}>Signal:</span>
+                          <span>{scoreData.signal}</span>
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#3d526e' }}>
+                          <span style={{ marginRight: '4px' }}>Severity:</span>
+                          {scoreData.severity}
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#3d526e' }}>
+                          <span style={{ marginRight: '4px' }}>Confidence:</span>
+                          {scoreData.confidence}
+                        </div>
+                        {scoreData.root_cause_uncertainty && (
+                          <div style={{ fontSize: '10px', color: '#f5a623' }}>
+                            <span style={{ marginRight: '4px' }}>Root Cause:</span>
+                            {scoreData.root_cause_uncertainty}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <span className="text-gray-500">Deviation Probability</span>
-                  <div className={`font-medium ${details.energy.deviation_probability_pct > 10 ? 'text-red-500' : 'text-gray-700'}`}>
-                    {details.energy.deviation_probability_pct != null ? `${details.energy.deviation_probability_pct}%` : 'N/A'}
+
+                {/* Energy Assessment */}
+                <h3 style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#7a90b0', marginTop: '16px', marginBottom: '12px' }}>
+                  Energy Assessment
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ background: '#0d1424', border: '1px solid #1c2b42', borderRadius: '8px', padding: '10px' }}>
+                    <span style={{ display: 'block', fontSize: '9px', color: '#3d526e', marginBottom: '4px' }}>Forecast 24h (kWh)</span>
+                    <div style={{ fontSize: '13px', fontWeight: 500, fontFamily: "'DM Mono', monospace" }}>
+                      {energy.forecast_24h_kwh ?? 'N/A'}
+                    </div>
+                  </div>
+                  <div style={{ background: '#0d1424', border: '1px solid #1c2b42', borderRadius: '8px', padding: '10px' }}>
+                    <span style={{ display: 'block', fontSize: '9px', color: '#3d526e', marginBottom: '4px' }}>Deviation Probability</span>
+                    <div className={energy.deviation_probability_pct > 10 ? 'text-red-500' : 'text-gray-300'} style={{ fontSize: '13px', fontWeight: 500, fontFamily: "'DM Mono', monospace" }}>
+                      {energy.deviation_probability_pct != null ? `${energy.deviation_probability_pct}%` : 'N/A'}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Data Quality */}
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <h3 className="font-semibold text-gray-700 mb-2">Data Quality</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-500">Missing Data</span>
-                  <div className="font-medium">{details.data_quality.missing_data_pct}%</div>
+                {/* Data Quality */}
+                <h3 style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#7a90b0', marginTop: '16px', marginBottom: '12px' }}>
+                  Data Quality
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ background: '#0d1424', border: '1px solid #1c2b42', borderRadius: '8px', padding: '10px' }}>
+                    <span style={{ display: 'block', fontSize: '9px', color: '#3d526e', marginBottom: '4px' }}>Missing Data</span>
+                    <div style={{ fontSize: '13px', fontWeight: 500, fontFamily: "'DM Mono', monospace" }}>
+                      {data_quality.missing_data_pct ?? 'N/A'}%
+                    </div>
+                  </div>
+                  <div style={{ background: '#0d1424', border: '1px solid #1c2b42', borderRadius: '8px', padding: '10px' }}>
+                    <span style={{ display: 'block', fontSize: '9px', color: '#3d526e', marginBottom: '4px' }}>Model Source</span>
+                    <div style={{ fontSize: '12px', fontFamily: "'DM Mono', monospace" }}>
+                      {data_quality.model_source ?? 'N/A'}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-500">Model Source</span>
-                  <div className="font-medium font-mono">{details.data_quality.model_source}</div>
-                </div>
+
               </div>
             </div>
           </div>
@@ -245,77 +322,102 @@ export default function ElectricalRiskView() {
 
   // Main fleet view
   return (
-    <div className="flex flex-col h-full">
+    <div className="chat-view">
       {/* Header */}
-      <div className="pb-4 border-b mb-4">
-        <h1 className="text-2xl font-bold">Electrical Risk Check</h1>
-        <p className="text-gray-500 mt-1">
+      <div style={{ padding: '40px 32px 24px' }}>
+        <div className="banner-header">
+          <h3>Electrical Risk Check</h3>
+        </div>
+        <p style={{ color: '#7a90b0', fontSize: '12px', lineHeight: 1.6 }}>
           Stage 2B - Rule-based baseline system. Scanning all AHUs for electrical risk factors.
         </p>
       </div>
 
       {/* Time Range Selector */}
-      <div className="mb-6 flex items-center space-x-4">
-        <span className="text-sm font-medium">Time Range:</span>
-        {['last_24h', 'last_7d', 'last_30d', 'all_time'].map(range => (
-          <button
-            key={range}
-            onClick={() => setTimeRange(range)}
-            className={`px-3 py-1 rounded text-sm ${
-              timeRange === range
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {range.replace('_', ' ').toUpperCase()}
-          </button>
-        ))}
+      <div style={{ padding: '0 32px 16px' }}>
+        <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#3d526e' }}>
+          Time Range:
+        </span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+          {['last_24h', 'last_7d', 'last_30d', 'all_time'].map(range => (
+            <button
+              key={range}
+              onClick={() => setTimeRange(range)}
+              className={`category-tab ${timeRange === range ? 'active' : ''}`}
+            >
+              {range.replace('_', ' ').toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tier Distribution Summary */}
       {fleetSummary && (
-        <div className="grid grid-cols-4 gap-3 mb-6">
-          {[
-            { tier: 'Healthy', label: 'Healthy', color: 'bg-emerald-500' },
-            { tier: 'Monitor', label: 'Monitor', color: 'bg-amber-500' },
-            { tier: 'MaintenanceSoon', label: 'Maintenance Soon', color: 'bg-orange-500' },
-            { tier: 'Critical', label: 'Critical', color: 'bg-red-500' },
-          ].map((item) => (
-            <div key={item.tier} className={`p-4 rounded-lg ${item.color} text-white`}>
-              <div className="text-sm opacity-90">{item.label}</div>
-              <div className="text-2xl font-bold">
-                {tierCounts[item.tier] ?? 0}
+        <div style={{ padding: '0 32px' }}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
+            {[
+              { tier: 'Healthy', label: 'Healthy', color: '#00c9b1' },
+              { tier: 'Monitor', label: 'Monitor', color: '#f5a623' },
+              { tier: 'MaintenanceSoon', label: 'Maintenance Soon', color: '#f5734e' },
+              { tier: 'Critical', label: 'Critical', color: '#ff4d6d' },
+            ].map((item) => (
+              <div key={item.tier} style={{
+                background: 'linear-gradient(135deg, #0d1424, #131c2e)',
+                border: '1px solid #1c2b42',
+                borderRadius: '8px',
+                padding: '16px',
+                flex: 1,
+              }}>
+                <div style={{ fontSize: '9px', color: item.color, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '6px' }}>
+                  {item.label}
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: 700, color: '#eaf0fb' }}>
+                  {tierCounts[item.tier] ?? 0}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
       {/* Top Critical Units */}
       {fleetSummary?.top_5_lowest_health_index && fleetSummary.top_5_lowest_health_index.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">⚠️ Units Requiring Immediate Attention</h2>
-          <div className="space-y-3">
+        <div style={{ padding: '0 32px' }}>
+          <h3 className="banner-header" style={{ marginBottom: '12px', marginTop: '0' }}>
+            <span>⚠️ Units Requiring Immediate Attention</span>
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {fleetSummary.top_5_lowest_health_index.slice(0, 5).map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition">
-                <div className="flex items-center space-x-3">
-                  <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                    idx === 0 ? 'bg-red-500 text-white' :
-                    idx === 1 ? 'bg-orange-500 text-white' :
-                    idx === 2 ? 'bg-yellow-500 text-black' : 'bg-gray-200'
-                  }`}>
+              <div key={idx} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '14px', background: '#0d1424', border: '1px solid #1c2b42',
+                borderRadius: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{
+                    width: '30px', height: '30px', borderRadius: '8px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700,
+                    backgroundColor: idx === 0 ? '#ff4d6d' : idx === 1 ? '#f5734e' : idx === 2 ? '#f5a623' : '#1c2b42',
+                    color: idx === 0 ? 'white' : idx === 1 ? 'white' : idx === 2 ? '#080c18' : '#7a90b0',
+                  }}>
                     {idx + 1}
                   </span>
                   <div>
-                    <div className="font-mono font-semibold">{item.ahu_id}</div>
-                    <div className="text-sm text-gray-500">
+                    <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 500, color: '#eaf0fb' }}>
+                      {item.ahu_id}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#7a90b0' }}>
                       Health Index: {item.health_index.toFixed(1)}
                     </div>
                   </div>
                 </div>
                 <button
                   onClick={() => loadAhuDetails(item.ahu_id)}
-                  className="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                  style={{
+                    padding: '8px 16px', background: '#00c9b115', border: '1px solid #00c9b135',
+                    borderRadius: '6px', color: '#00c9b1', fontWeight: 500, cursor: 'pointer',
+                    fontSize: '12px', transition: 'all 0.18s'
+                  }}
                 >
                   View Details
                 </button>
@@ -327,17 +429,27 @@ export default function ElectricalRiskView() {
 
       {/* Rising Risk Units */}
       {fleetSummary?.top_5_rising_risk && fleetSummary.top_5_rising_risk.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">📈 Units with Rising Risk</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div style={{ padding: '0 32px' }}>
+          <h3 className="banner-header" style={{ marginBottom: '12px', marginTop: '0' }}>
+            <span>📈 Units with Rising Risk</span>
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
             {fleetSummary.top_5_rising_risk.map((item, idx) => (
-              <div key={idx} className="p-4 border rounded-lg bg-orange-50">
-                <div className="flex justify-between items-start">
-                  <span className="font-mono">{item.ahu_id}</span>
-                  <span className="text-xs bg-orange-200 text-orange-700 px-2 py-1 rounded">High Load</span>
+              <div key={idx} style={{
+                padding: '14px', background: '#0d1424', border: '1px solid #f5734e20',
+                borderRadius: '8px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>{item.ahu_id}</span>
+                  <span style={{
+                    fontSize: '9px', background: '#f5734e20', color: '#f5734e',
+                    padding: '3px 8px', borderRadius: '12px'
+                  }}>
+                    High Load
+                  </span>
                 </div>
-                <div className="mt-2 text-sm">
-                  Overload Score: <span className="font-bold">{item.overload_score.toFixed(3)}</span>
+                <div style={{ marginTop: '10px', fontSize: '12px' }}>
+                  Overload Score: <span style={{ fontWeight: 700, color: '#eaf0fb' }}>{item.overload_score.toFixed(3)}</span>
                 </div>
               </div>
             ))}
@@ -347,10 +459,15 @@ export default function ElectricalRiskView() {
 
       {/* Data Quality Issues */}
       {fleetSummary?.data_quality_issues_count > 0 && (
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">📋 Data Quality Warnings</h2>
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-yellow-800">
+        <div style={{ padding: '0 32px' }}>
+          <h3 className="banner-header" style={{ marginBottom: '12px', marginTop: '0' }}>
+            <span>📋 Data Quality Warnings</span>
+          </h3>
+          <div style={{
+            padding: '14px', background: '#f5a62308', border: '1px solid #f5a62330',
+            borderRadius: '8px', color: '#f5a623'
+          }}>
+            <p style={{ fontSize: '12px', margin: 0, lineHeight: 1.6 }}>
               {fleetSummary.data_quality_issues_count} AHUs have missing data that may affect risk scores.
             </p>
           </div>
@@ -358,51 +475,60 @@ export default function ElectricalRiskView() {
       )}
 
       {/* Full Assessment Table */}
-      <div className="flex-1 overflow-y-auto">
-        <h2 className="text-lg font-semibold mb-3"> fleet Assessment</h2>
-        
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 32px 40px' }}>
+        <h3 className="banner-header" style={{ marginBottom: '12px', marginTop: '0' }}>
+          <span>Fleet Assessment</span>
+        </h3>
+
         {sortedAssessments.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#7a90b0' }}>
             No assessments available for selected time range.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div style={{ background: '#0d1424', border: '1px solid #1c2b42', borderRadius: '8px', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
               <thead>
-                <tr className="bg-gray-50 border-b">
-                  <th className="p-3 font-semibold text-sm">AHU ID</th>
-                  <th className="p-3 font-semibold text-sm">Health Index</th>
-                  <th className="p-3 font-semibold text-sm">PF Risk</th>
-                  <th className="p-3 font-semibold text-sm">Imbalance Risk</th>
-                  <th className="p-3 font-semibold text-sm">THD Risk</th>
-                  <th className="p-3 font-semibold text-sm">Overload Risk</th>
+                <tr style={{ background: '#131c2e', borderBottom: '1px solid #1c2b42' }}>
+                  <th style={{ padding: '10px 12px', fontWeight: 600, color: '#7a90b0', textAlign: 'left' }}>AHU ID</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600, color: '#7a90b0', textAlign: 'left' }}>Health Index</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600, color: '#7a90b0', textAlign: 'left' }}>PF Risk</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600, color: '#7a90b0', textAlign: 'left' }}>Imbalance Risk</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600, color: '#7a90b0', textAlign: 'left' }}>THD Risk</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600, color: '#7a90b0', textAlign: 'left' }}>Overload Risk</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody style={{ borderLeft: '1px solid #1c2b42', borderRight: '1px solid #1c2b42' }}>
                 {sortedAssessments.slice(0, 50).map((assessment) => (
-                  <tr 
-                    key={assessment.ahu_id} 
-                    className="hover:bg-gray-50 cursor-pointer"
+                  <tr
+                    key={assessment.ahu_id}
+                    style={{
+                      borderBottom: '1px solid #1c2b42',
+                      cursor: 'pointer', transition: 'background-color 0.15s'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#0f1a2e' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                     onClick={() => loadAhuDetails(assessment.ahu_id)}
                   >
-                    <td className="p-3 font-mono">{assessment.ahu_id}</td>
-                    <td className="p-3">
-                      <div className="flex items-center space-x-2">
-                        <span className={`font-bold ${assessment.health_index >= 80 ? 'text-emerald-600' : assessment.health_index >= 40 ? 'text-amber-500' : 'text-red-600'}`}>
+                    <td style={{ padding: '10px 12px', fontFamily: "'DM Mono', monospace" }}>
+                      {assessment.ahu_id}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span className={`font-bold ${assessment.health_index >= 80 ? 'text-teal-400' : assessment.health_index >= 40 ? 'text-orange-400' : 'text-red-500'}`}>
                           {assessment.health_index.toFixed(1)}
                         </span>
                       </div>
                     </td>
-                    <td className="p-3">
+                    <td style={{ padding: '10px 12px' }}>
                       <RiskBadge score={assessment.risk_scores.power_factor.score} />
                     </td>
-                    <td className="p-3">
+                    <td style={{ padding: '10px 12px' }}>
                       <RiskBadge score={assessment.risk_scores.phase_imbalance.score} />
                     </td>
-                    <td className="p-3">
+                    <td style={{ padding: '10px 12px' }}>
                       <RiskBadge score={assessment.risk_scores.thd_drift.score} />
                     </td>
-                    <td className="p-3">
+                    <td style={{ padding: '10px 12px' }}>
                       <RiskBadge score={assessment.risk_scores.overload.score} />
                     </td>
                   </tr>
