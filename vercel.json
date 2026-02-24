@@ -1,5 +1,6 @@
 {
   "outputDirectory": "frontend/dist",
+  "installCommand": "cd frontend && npm install && cd ..",
   "rewrites": [
     {
       "source": "/api/(.*)",
