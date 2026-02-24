@@ -1,17 +1,1 @@
-{
-  "outputDirectory": "frontend/dist",
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.py"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/frontend/dist/assets/"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ]
-}
+{"vercel": 2}
