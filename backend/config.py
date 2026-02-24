@@ -42,12 +42,7 @@ def get_influx_url() -> str:
 
 def get_influx_token() -> str:
     """Get InfluxDB API token."""
-    token = os.getenv("INFLUX_TOKEN")
-    if not token:
-        raise ValueError(
-            "INFLUX_TOKEN is required. Set it in your .env file or environment."
-        )
-    return token
+    return os.getenv("INFLUX_TOKEN", "")
 
 
 def get_influx_org() -> str:
@@ -119,15 +114,7 @@ def get_exports_dir() -> Path:
 def init_config():
     """Initialize configuration and validate requirements."""
     load_env_files()
-    
-    # Validate required settings
-    try:
-        get_influx_token()
-    except ValueError as e:
-        if get_app_env() == "production":
-            raise
-        print(f"[config] Warning: {e}")
-    
+
     # Ensure directories exist
     get_data_dir().mkdir(parents=True, exist_ok=True)
     get_exports_dir().mkdir(parents=True, exist_ok=True)
