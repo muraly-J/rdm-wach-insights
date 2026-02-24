@@ -125,8 +125,8 @@ def _validate_llm_output(structured) -> None:
         elif did_str not in ALLOWED_DEVICES:
             errors.append(f"Unrecognised device: '{did_str}'")
 
-    if len(structured.device_ids) > 50:
-        errors.append("Too many device_ids requested (max 50).")
+    if len(structured.device_ids) > 100:
+        errors.append("Too many device_ids requested (max 100).")
 
     # top_n — only relevant for ranking queries, must be a small positive int
     if structured.top_n is not None:
@@ -233,7 +233,7 @@ async def handle_query(request: Request, body: QueryRequest):
                 metric=structured.metric,
                 time_range=structured.time_range,
                 device_ids=structured.device_ids,
-                top_n=structured.top_n or 10,
+                top_n=structured.top_n,  # Pass through None for all devices
             )
     except Exception as e:
         log_query(

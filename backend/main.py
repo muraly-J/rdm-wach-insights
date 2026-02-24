@@ -13,15 +13,15 @@ import sys
 IN_VERCEL = os.getenv("VERCEL") == "1"
 
 sys.path.insert(0, os.path.dirname(__file__))
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.routes.forecast import router as forecast_router
 from backend.routes.electrical_risk import router as electrical_risk_router
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
 
 from dotenv import load_dotenv
 from middleware.query_logger import init_db, log_query
@@ -62,7 +62,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 def get_cors_origins():
     """Get CORS origins from env or use defaults."""
-    raw = os.getenv("CORS_ORIGIN", "http://localhost:5173")
+    raw = os.getenv("CORS_ORIGIN", "http://localhost:3000")
     origins = [o.strip() for o in raw.split(",") if o.strip()]
     # Always add Vercel production URL
     if "https://rdm-wach-insights.vercel.app" not in origins:
@@ -107,13 +107,7 @@ def create_app():
         if os.path.isdir(DIST_DIR):
             app.mount('/assets', StaticFiles(directory=os.path.join(DIST_DIR, 'assets')), name='assets')
 
-            @app.get('/{full_path:path}')
-            async def serve_spa(full_path: str):
-                index = os.path.join(DIST_DIR, 'index.html')
-                return FileResponse(index)
-
     return app
-
 
 # ── Create the app instance ───────────────────────────────────────────────────
 

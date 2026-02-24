@@ -95,18 +95,39 @@ def fetch_ranking(
     # If no device filter → match all WACH devices with a broad regex
     if device_ids:
         devices_regex = "|".join(device_ids)
+        # When explicit device_ids are provided, respect top_n if specified
+        if top_n is not None:
+            query_limit = min(top_n, len(device_ids))
+            use_limit = True
+        else:
+            query_limit = None
+            use_limit = False  # Return all devices when no top_n specified
     else:
         devices_regex = r"e\d{4}"   # matches e0101 … e9999
+        # When fetching ALL devices without filter, use a reasonable max
+        query_limit = 50 if top_n is None else min(top_n, 50)
+        use_limit = True
 
-    flux_query = f'''
-    from(bucket: "{_BUCKET}")
-      |> range(start: {influx_start})
-      |> filter(fn: (r) => r._measurement =~ /^wach_({devices_regex})_{metric}$/)
-      |> mean()
-      |> group()
-      |> sort(columns: ["_value"], desc: true)
-      |> limit(n: {top_n})
-    '''
+    # Build Flux query
+    if not use_limit:
+        flux_query = f'''
+        from(bucket: "{_BUCKET}")
+          |> range(start: {influx_start})
+          |> filter(fn: (r) => r._measurement =~ /^wach_({devices_regex})_{metric}$/)
+          |> mean()
+          |> group()
+          |> sort(columns: ["_value"], desc: true)
+        '''
+    else:
+        flux_query = f'''
+        from(bucket: "{_BUCKET}")
+          |> range(start: {influx_start})
+          |> filter(fn: (r) => r._measurement =~ /^wach_({devices_regex})_{metric}$/)
+          |> mean()
+          |> group()
+          |> sort(columns: ["_value"], desc: true)
+          |> limit(n: {query_limit})
+        '''
 
     client = _get_client()
     try:
@@ -128,7 +149,11 @@ def fetch_ranking(
         df = pd.DataFrame(rows)
         df["value"] = pd.to_numeric(df["value"], errors="coerce")
         df = df.dropna(subset=["value"])
-        df = df.sort_values("value", ascending=False).head(top_n).reset_index(drop=True)
+        df = df.sort_values("value", ascending=False)
+        # Only apply head() if top_n is specified, otherwise return all results
+        if top_n is not None:
+            df = df.head(top_n)
+        df = df.reset_index(drop=True)
         return df
 
     except Exception as e:
@@ -197,5 +222,52 @@ def _execute_and_clean(
     except Exception as e:
         print(f"[influx_client] query failed: {e}")
         return pd.DataFrame()
+    finally:
+        client.close()
+
+
+def get_available_devices(time_range: str = "last_30d") -> list[str]:
+    """
+    Get list of devices that have data in the specified time range.
+    
+    This is used by electrical-risk to avoid querying devices that don't exist
+    or don't have data, which would cause timeouts.
+    
+    Args:
+        time_range: Data period to check (last_24h, last_7d, last_30d, all_time)
+        
+    Returns:
+        List of device IDs that have power_total data
+    """
+    influx_start = ALLOWED_TIME_RANGES[time_range]
+    
+    # Query for any device with power_total data
+    flux_query = f'''
+    from(bucket: "{_BUCKET}")
+      |> range(start: {influx_start})
+      |> filter(fn: (r) => r._measurement =~ /^wach_e\\d{{4}}_power_total$/)
+      |> distinct(column: "_measurement")
+      |> keep(columns: ["_value"])
+    '''
+    
+    client = _get_client()
+    try:
+        tables = client.query_api().query(flux_query)
+        
+        devices = set()
+        for table in tables:
+            for record in table.records:
+                measurement = record.get_value()
+                # Extract device_id from measurement like "wach_e0101_power_total"
+                if measurement and measurement.startswith("wach_"):
+                    parts = measurement.split("_")
+                    if len(parts) >= 2:
+                        devices.add(parts[1])  # Already contains 'e0101'
+        
+        return sorted(list(devices))
+    
+    except Exception as e:
+        print(f"[influx_client] get_available_devices failed: {e}")
+        return []
     finally:
         client.close()

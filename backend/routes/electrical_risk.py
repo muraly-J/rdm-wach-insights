@@ -23,6 +23,7 @@ from backend.core.risk_engine import (
     get_electrical_risk_check,
     get_ahu_risk_details,
 )
+from backend.core.influx_client import get_available_devices
 
 router = APIRouter(prefix="/api/electrical-risk", tags=["Electrical Risk"])
 
@@ -53,7 +54,92 @@ async def fleet_risk_assessment(
             time_range=time_range,
             cluster_by_level=cluster_by_level
         )
+        
+        # Check if any devices were found with data
+        assessments = result.get("assessments", [])
+        if not assessments:
+            raise HTTPException(status_code=404, detail="No devices with electrical data found for the specified time range")
+        
         return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/level/{level}")
+async def level_risk_assessment(
+    level: str,
+    time_range: str = Query(default="last_30d", description="Time period to analyze")
+):
+    """
+    Electrical risk assessment for a specific building level.
+
+    Returns comprehensive risk scores for all AHUs in the specified level,
+    grouped and compared against peers in the same level.
+
+    Parameters:
+        level: Building level (1-11)
+        time_range: last_24h, last_7d, last_30d, or all_time
+
+    Example:
+        GET /api/electrical-risk/level/5
+    """
+    try:
+        # Get devices for this level
+        from backend.models.schemas import get_devices_by_level
+        
+        available_devices = get_available_devices(time_range)
+        level_prefix = f"e{level.zfill(2)}"
+        
+        # Filter devices by level prefix
+        level_devices = [d for d in available_devices if d.startswith(level_prefix)]
+        
+        if not level_devices:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No devices found for level {level}. Available levels: 1-11"
+            )
+        
+        # Run assessment for this level
+        result = await get_electrical_risk_check(
+            time_range=time_range,
+            cluster_by_level=True
+        )
+        
+        # Filter assessments to only include devices from this level
+        assessments = result.get("assessments", [])
+        level_assessments = [a for a in assessments if a.get("level") == f"Level {level}"]
+        
+        # Build level-specific summary
+        tier_distribution = {}
+        top_5_lowest = []
+        
+        for a in level_assessments:
+            tier = a.get("health_tier", "Unknown")
+            tier_distribution[tier] = tier_distribution.get(tier, 0) + 1
+        
+        # Sort by health index ascending for lowest
+        sorted_by_health = sorted(level_assessments, key=lambda x: x.get("health_index", 0))
+        top_5_lowest = [
+            {"ahu_id": a["ahu_id"], "health_index": a["health_index"]}
+            for a in sorted_by_health[:5]
+        ]
+        
+        return {
+            "level": level,
+            "device_count": len(level_assessments),
+            "assessments": level_assessments,
+            "fleet_summary": {
+                "tier_distribution": tier_distribution,
+                "top_5_lowest_health_index": top_5_lowest,
+                "top_5_rising_risk": [],
+                "top_5_improved": [],
+                "data_quality_issues_count": 0,
+            }
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -21,8 +21,8 @@ echo ""
 echo "NOTE: This script is for LOCAL DEVELOPMENT only."
 echo "For production deployment, see DEPLOYMENT.md"
 echo ""
-echo "Starting tunnel → http://127.0.0.1:8000"
+echo "Starting tunnel → http://127.0.0.1:8081"
 echo "Your public URL will appear below..."
 echo ""
 
-cloudflared tunnel --url http://127.0.0.1:8000
+cloudflared tunnel --url http://127.0.0.1:8081

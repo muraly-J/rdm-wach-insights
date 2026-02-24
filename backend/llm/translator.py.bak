@@ -173,18 +173,19 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
 
     # Extract Level keywords and expand to all device IDs for that level
     # Pattern: "Level X" or "Level 0X" where X is 1-11
-    # Capture everything after 'levels?' until 'for' or end of string
-    level_pattern = r'levels?\s+(.+?)(?:\bfor\b|$)'
+    level_pattern = r'level\s+(0?[1-9]|1[01])\b'
     level_matches = re.findall(level_pattern, query_lower)
-
+    
     # Convert to zero-padded level (e.g., "1" -> "01", "7" -> "07")
     levels_expanded = []
     for match in level_matches:
-        # Extract all level numbers from the captured text
-        for level_str in re.findall(r'\b(0?[1-9]|1[01])\b', match):
-            level_num = int(level_str)
-            if 1 <= level_num <= 11:
-                levels_expanded.append(f"{level_num:02d}")
+        if match.startswith('0'):
+            level_num = int(match)
+        else:
+            level_num = int(match)
+        if 1 <= level_num <= 11:
+            levels_expanded.append(f"{level_num:02d}")
+    
     # Extract metric keywords
     metric_map = {
         'power': 'power_total',
@@ -214,11 +215,7 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
         default_time_range = "all_time"
 
     # Determine query type
-    # Check for ranking keywords - queries that rank/compare devices
-    is_ranking = any(word in query_lower for word in [
-        'rank', 'top', 'compare', 'worst', 'lowest', 'highest', 
-        'devices have', 'comparison', 'comparing'
-    ])
+    is_ranking = any(word in query_lower for word in ['rank', 'top', 'compare'])
     query_type = QueryType.ranking if is_ranking else QueryType.time_series
 
     # Determine top_n for ranking queries
@@ -242,63 +239,35 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
 
     # Build structured query
     try:
-        device_ids = []  # Initialize to avoid undefined variable error
-
-        # Check if query asks for "all levels" or "across all levels"
-        # In that case, device_ids should be empty (meaning ALL devices for ranking)
-        if is_ranking:
-            has_all_levels = any(phrase in query_lower for phrase in [
-                'all levels', 'across all', 'all ahus', 'all devices',
-                'every level', 'entire building', 'building-wide'
-            ])
-            if has_all_levels and not levels_expanded:
-                # For ranking queries with "all" language, use empty device_ids to mean ALL devices
-                device_ids = []
-            elif levels_expanded and not devices:
-                # Get all device IDs for the specified level(s) (convert to int keys)
-                for level_str in levels_expanded:
-                    level_int = int(level_str)
-                    if level_int in AHU_LEVEL_CONFIG:
-                        device_ids.extend(AHU_LEVEL_CONFIG[level_int]['device_ids'])
-                # Remove duplicates (don't limit here - let top_n handle it)
-                device_ids = list(dict.fromkeys(device_ids))
-        elif levels_expanded and not devices:
-            # For non-ranking queries with specific levels
+        device_ids = []  # Initialize to avoid undefined variable error        # If Level is mentioned but no specific device IDs, get all devices for that level
+        if levels_expanded and not devices:
+            # Get all device IDs for the specified level(s) (convert to int keys)
+            device_ids = []
             for level_str in levels_expanded:
                 level_int = int(level_str)
                 if level_int in AHU_LEVEL_CONFIG:
                     device_ids.extend(AHU_LEVEL_CONFIG[level_int]['device_ids'])
-            # Remove duplicates
-            device_ids = list(dict.fromkeys(device_ids))
-
+            # Remove duplicates and limit
+            device_ids = list(dict.fromkeys(device_ids))[:50]
+        
         if not devices and not levels_expanded:
             # Default to first device if no level or specific device mentioned
             devices = ["e0101"]
-
-        # Check if query asks for "all levels" or "across all levels"
-        # In that case, device_ids should be empty (meaning ALL devices for ranking)
-        if is_ranking and not levels_expanded:
-            has_all_levels = any(phrase in query_lower for phrase in [
-                'all levels', 'across all', 'all ahus', 'all devices',
-                'every level', 'entire building', 'building-wide'
-            ])
-            if has_all_levels:
-                # For ranking queries with "all" language, use empty device_ids to mean ALL devices
-                device_ids = []
-            else:
-                # Combine any level-based device IDs with explicitly mentioned devices
-                if levels_expanded and devices:
-                    # Both level and specific devices - keep both
-                    pass  # Keep as is
-                if not device_ids:
-                    device_ids = devices if devices else ["e0101"]
-        else:
-            # Combine any level-based device IDs with explicitly mentioned devices
-            if levels_expanded and devices:
-                # Both level and specific devices - keep both
-                pass  # Keep as is
-            if not device_ids:
-                device_ids = devices if devices else ["e0101"]
+        
+        # Remove duplicates from devices list
+        if devices:
+            devices = list(dict.fromkeys(devices))
+        
+        # Combine any level-based device IDs with explicitly mentioned devices
+        if levels_expanded and devices:
+            # Both level and specific devices - keep both
+            pass  # Keep as is
+        
+        if not device_ids:
+            device_ids = devices if devices else ["e0101"]
+        
+        if len(device_ids) > 50:
+            device_ids = device_ids[:50]
 
         structured_query = StructuredQuery(
             query_type=query_type,

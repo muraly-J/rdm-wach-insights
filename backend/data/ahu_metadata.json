@@ -1,0 +1,1198 @@
+{
+  "levels": {
+    "L01": {
+      "level_number": 1,
+      "department_name": "Emergency Department",
+      "area_name": "Emergency Department 10 - Paediatric Emergency Unit (Day Care)"
+    },
+    "L02": {
+      "level_number": 2,
+      "department_name": "O&G Specialist Clinic",
+      "area_name": "O&G Specialist Clinic"
+    },
+    "L03": {
+      "level_number": 3,
+      "department_name": "Biophysiological Department",
+      "area_name": "Biophysiological Department"
+    },
+    "L04": {
+      "level_number": 4,
+      "department_name": "Shared Facilities 4",
+      "area_name": "Shared Facilities 4 - 1 - General"
+    },
+    "L05": {
+      "level_number": 5,
+      "department_name": "Main Operation Theatre Complex",
+      "area_name": "Main Operation Theatre Complex (OTC)"
+    },
+    "L06": {
+      "level_number": 6,
+      "department_name": "Central Sterile Supply Unit",
+      "area_name": "Central Sterile Supply Unit (CSSD)"
+    },
+    "L07": {
+      "level_number": 7,
+      "department_name": "Inpatient Wards - Obstetric 2",
+      "area_name": "Inpatient Wards - Obstetric 2"
+    },
+    "L08": {
+      "level_number": 8,
+      "department_name": "Inpatient Wards - Gynaecology 2",
+      "area_name": "Inpatient Wards - Gynaecology 2"
+    },
+    "L09": {
+      "level_number": 9,
+      "department_name": "Neonatology Wards 2",
+      "area_name": "Neonatology Wards 2"
+    },
+    "L10": {
+      "level_number": 10,
+      "department_name": "Inpatient Wards - Paediatric Medical Ward 2",
+      "area_name": "Inpatient Wards - Paediatric Medical Ward 2"
+    },
+    "L11": {
+      "level_number": 11,
+      "department_name": "Inpatient Wards - Paediatric Surgical Ward 3",
+      "area_name": "Inpatient Wards - Paediatric Surgical Ward 3"
+    }
+  },
+  "level_to_devices": {
+    "L01": [
+      "e0101",
+      "e0102",
+      "e0103",
+      "e0104",
+      "e0105",
+      "e0106",
+      "e0107",
+      "e0108",
+      "e0109",
+      "e0110",
+      "e0111",
+      "e0112",
+      "e0113",
+      "e0114",
+      "e0115",
+      "e0116",
+      "e0117",
+      "e0118",
+      "e0120",
+      "e0121",
+      "e0212"
+    ],
+    "L02": [
+      "e0201",
+      "e0202",
+      "e0203",
+      "e0204",
+      "e0205",
+      "e0206",
+      "e0207",
+      "e0208",
+      "e0209",
+      "e0213",
+      "e0214",
+      "e0215",
+      "e0216",
+      "e0217",
+      "e0218"
+    ],
+    "L03": [
+      "e0210",
+      "e0211",
+      "e0301",
+      "e0303",
+      "e0304",
+      "e0306",
+      "e0307",
+      "e0308",
+      "e0311",
+      "e0312",
+      "e0313",
+      "e0314",
+      "e0315",
+      "e0401",
+      "e0402",
+      "e0423"
+    ],
+    "L04": [
+      "e0403",
+      "e0404",
+      "e0406",
+      "e0407",
+      "e0408",
+      "e0409",
+      "e0411",
+      "e0412",
+      "e0413",
+      "e0414",
+      "e0415",
+      "e0416",
+      "e0419"
+    ],
+    "L05": [
+      "e0501",
+      "e0502",
+      "e0503",
+      "e0504",
+      "e0505",
+      "e0506",
+      "e0507",
+      "e0508",
+      "e0509",
+      "e0510",
+      "e0511",
+      "e0622"
+    ],
+    "L06": [
+      "e0602",
+      "e0603",
+      "e0604",
+      "e0605",
+      "e0606",
+      "e0607",
+      "e0611",
+      "e0625",
+      "e0626",
+      "e0627",
+      "e0628"
+    ],
+    "L07": [
+      "e0701",
+      "e0702",
+      "e0703",
+      "e0704"
+    ],
+    "L08": [
+      "e0801",
+      "e0802",
+      "e0803",
+      "e0804",
+      "e0805"
+    ],
+    "L09": [
+      "e0901",
+      "e0902",
+      "e0903",
+      "e0904",
+      "e0905",
+      "e0906",
+      "e0907",
+      "e0908"
+    ],
+    "L10": [
+      "e1001",
+      "e1002",
+      "e1003",
+      "e1004",
+      "e1005",
+      "e1006",
+      "e1007",
+      "e1008"
+    ],
+    "L11": [
+      "e1101",
+      "e1102",
+      "e1103",
+      "e1104",
+      "e1105",
+      "e1106",
+      "e1107",
+      "e1108"
+    ]
+  },
+  "device_to_level": {
+    "e0101": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Enginering Services",
+      "area_name": "Engineering Services"
+    },
+    "e0102": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Biomedical Engineering Services Unit",
+      "area_name": "Biomedical Engineering Services Unit"
+    },
+    "e0103": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Mortuary Services",
+      "area_name": "Mortuary Services"
+    },
+    "e0104": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Housekeeping Services",
+      "area_name": "Housekeeping Services"
+    },
+    "e0105": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Catering & Dietitics Department",
+      "area_name": "Catering - Dietitics Department\u00a01 - Main Kitchen"
+    },
+    "e0106": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Catering & Dietitics Department",
+      "area_name": "Catering - Dietitics Department\u00a01 - Main Kitchen"
+    },
+    "e0107": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Medical Store",
+      "area_name": "Medical Store"
+    },
+    "e0108": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Medical Store",
+      "area_name": "Medical Store"
+    },
+    "e0109": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Security Services",
+      "area_name": "Security Services"
+    },
+    "e0110": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Emergency Department",
+      "area_name": "Emergency Department 9 - Labour and Delivery (PAC)"
+    },
+    "e0111": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Emergency Department",
+      "area_name": "Emergency Department 6 - Obstetrics and Gynaecology (One Stop Crisis Centre)"
+    },
+    "e0112": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Emergency Department",
+      "area_name": "Emergency Department 1 - General Area"
+    },
+    "e0113": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Emergency Department",
+      "area_name": "Emergency Department 1 - General Area"
+    },
+    "e0114": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Emergency Department",
+      "area_name": "Emergency Department 1 - General Area"
+    },
+    "e0115": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Imaging Department",
+      "area_name": "Imaging Department"
+    },
+    "e0116": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Emergency Department",
+      "area_name": "Emergency Department 1 - General Area"
+    },
+    "e0117": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Shared Facilities 1",
+      "area_name": "Shared Facilities 1 - 1 - General"
+    },
+    "e0118": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Imaging Department",
+      "area_name": "Imaging Department"
+    },
+    "e0120": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Imaging Department",
+      "area_name": "Imaging Department"
+    },
+    "e0121": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Imaging Department",
+      "area_name": "Imaging Department"
+    },
+    "e0201": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "Child Development Centre",
+      "area_name": "Child Development Centre 2 - Physiotheraphy"
+    },
+    "e0202": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "Child Development Centre",
+      "area_name": "Child Development Centre 2 - Physiotheraphy"
+    },
+    "e0203": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "Child Development Centre",
+      "area_name": "Child Development Centre 2 - Physiotheraphy"
+    },
+    "e0204": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "Child Development Centre",
+      "area_name": "Child Development Centre 2 - Physiotheraphy"
+    },
+    "e0205": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "Child Development Centre",
+      "area_name": "Child Development Centre 2 - Physiotheraphy"
+    },
+    "e0206": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "Cafeteria",
+      "area_name": "Cafeteria"
+    },
+    "e0207": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "Medical Social Services",
+      "area_name": "Medical Social Services"
+    },
+    "e0208": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "Outpatient Pharmacy",
+      "area_name": "Outpatient Pharmacy"
+    },
+    "e0209": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "Admission Revenue",
+      "area_name": "Admission Revenue"
+    },
+    "e0210": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Post Graduate Medical Centre and Continuous Medical Education",
+      "area_name": "Post Graduate Medical Centre and Continuous Medical Education"
+    },
+    "e0211": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Post Graduate Medical Centre and Continuous Medical Education",
+      "area_name": "Post Graduate Medical Centre and Continuous Medical Education"
+    },
+    "e0212": {
+      "level": "L01",
+      "level_number": 1,
+      "department_name": "Emergency Department",
+      "area_name": "Emergency Department 10 - Paediatric Emergency Unit (Day Care)"
+    },
+    "e0213": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "Women Health Unit",
+      "area_name": "Women Health Unit"
+    },
+    "e0214": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "Women Health Unit",
+      "area_name": "Women Health Unit"
+    },
+    "e0215": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "O&G Specialist Clinic",
+      "area_name": "O&G Specialist Clinic"
+    },
+    "e0216": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "O&G Specialist Clinic",
+      "area_name": "O&G Specialist Clinic"
+    },
+    "e0217": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "O&G Specialist Clinic",
+      "area_name": "O&G Specialist Clinic"
+    },
+    "e0218": {
+      "level": "L02",
+      "level_number": 2,
+      "department_name": "O&G Specialist Clinic",
+      "area_name": "O&G Specialist Clinic"
+    },
+    "e0301": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Pathology Department",
+      "area_name": "Pathology Department 1 - Transfusion Medicine Laboratory (Blood Bank)"
+    },
+    "e0303": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Pathology Department",
+      "area_name": "Pathology Department 1 - Transfusion Medicine Laboratory (Blood Bank)"
+    },
+    "e0304": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "RQA Unit",
+      "area_name": "RQA Unit"
+    },
+    "e0306": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Dental Clinic",
+      "area_name": "Dental Clinic"
+    },
+    "e0307": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Shared Facilities 3",
+      "area_name": "Shared Facilities 3"
+    },
+    "e0308": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Paediatric Specialist Clinic",
+      "area_name": "Paediatric Specialist Clinic 1 - Main"
+    },
+    "e0311": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Paediatric Specialist Clinic",
+      "area_name": "Paediatric Specialist Clinic 1 - Main"
+    },
+    "e0312": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Paediatric Specialist Clinic",
+      "area_name": "Paediatric Specialist Clinic 1 - Main"
+    },
+    "e0313": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Dental Clinic",
+      "area_name": "Dental Clinic"
+    },
+    "e0314": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Paediatric Specialist Clinic",
+      "area_name": "Paediatric Specialist Clinic 1 - Main"
+    },
+    "e0315": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Dental Clinic",
+      "area_name": "Dental Clinic"
+    },
+    "e0401": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Pathology Department",
+      "area_name": "Pathology Department 5 - Administrative and Shared Facilities"
+    },
+    "e0402": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Pathology Department",
+      "area_name": "Pathology Department 5 - Administrative and Shared Facilities"
+    },
+    "e0403": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Milk Preparation 1",
+      "area_name": "Milk Preparation 1"
+    },
+    "e0404": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Inpatient Pharmacy Department",
+      "area_name": "Inpatient Pharmacy Department"
+    },
+    "e0406": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Inpatient Pharmacy Department",
+      "area_name": "Inpatient Pharmacy Department"
+    },
+    "e0407": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Inpatient Pharmacy Department",
+      "area_name": "Inpatient Pharmacy Department"
+    },
+    "e0408": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Bone Marrow Transplant Unit (Stem Cell Transplant)",
+      "area_name": "Bone Marrow Transplant Unit (Stem Cell Transplant)"
+    },
+    "e0409": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Bone Marrow Transplant Unit (Stem Cell Transplant)",
+      "area_name": "Bone Marrow Transplant Unit (Stem Cell Transplant)"
+    },
+    "e0411": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Bone Marrow Transplant Unit (Stem Cell Transplant)",
+      "area_name": "Bone Marrow Transplant Unit (Stem Cell Transplant)"
+    },
+    "e0412": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Obstetric High Risk Unit",
+      "area_name": "Obstetric High Risk Unit"
+    },
+    "e0413": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Maternity OT",
+      "area_name": "Maternity OT"
+    },
+    "e0414": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Maternity OT",
+      "area_name": "Maternity OT"
+    },
+    "e0415": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Maternity OT",
+      "area_name": "Maternity OT"
+    },
+    "e0416": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Maternity OT",
+      "area_name": "Maternity OT"
+    },
+    "e0419": {
+      "level": "L04",
+      "level_number": 4,
+      "department_name": "Shared Facilities 4",
+      "area_name": "Shared Facilities 4 - 1 - General"
+    },
+    "e0423": {
+      "level": "L03",
+      "level_number": 3,
+      "department_name": "Biophysiological Department",
+      "area_name": "Biophysiological Department"
+    },
+    "e0501": {
+      "level": "L05",
+      "level_number": 5,
+      "department_name": "Paediatric Intensive Care Unit",
+      "area_name": "Paediatric Intensive Care Unit (PICU)"
+    },
+    "e0502": {
+      "level": "L05",
+      "level_number": 5,
+      "department_name": "Paediatric High Dependency Unit (DWP)",
+      "area_name": "Paediatric High Dependency Unit (DWP)"
+    },
+    "e0503": {
+      "level": "L05",
+      "level_number": 5,
+      "department_name": "Anaesthesiology Department",
+      "area_name": "Anaesthesiology Department"
+    },
+    "e0504": {
+      "level": "L05",
+      "level_number": 5,
+      "department_name": "Respiratory and Haemodynamic Unit",
+      "area_name": "Respiratory and Haemodynamic Unit\u00a0 1 - General"
+    },
+    "e0505": {
+      "level": "L05",
+      "level_number": 5,
+      "department_name": "Adult Intensive Care Unit",
+      "area_name": "Adult Intensive Care Unit (AICU)"
+    },
+    "e0506": {
+      "level": "L05",
+      "level_number": 5,
+      "department_name": "Adult High Dependency Unit (DWA)",
+      "area_name": "Adult High Dependency Unit (DWA)"
+    },
+    "e0507": {
+      "level": "L05",
+      "level_number": 5,
+      "department_name": "Adult Intensive Care Unit",
+      "area_name": "Adult Intensive Care Unit (AICU)"
+    },
+    "e0508": {
+      "level": "L05",
+      "level_number": 5,
+      "department_name": "Shared Facilities 5",
+      "area_name": "Shared Facilities 5 - 1 - General"
+    },
+    "e0509": {
+      "level": "L05",
+      "level_number": 5,
+      "department_name": "Paediatric Burn Unit",
+      "area_name": "Paediatric Burn Unit"
+    },
+    "e0510": {
+      "level": "L05",
+      "level_number": 5,
+      "department_name": "Paediatric Intensive Care Unit",
+      "area_name": "Paediatric Intensive Care Unit (PICU)"
+    },
+    "e0511": {
+      "level": "L05",
+      "level_number": 5,
+      "department_name": "Paediatric Burn Unit",
+      "area_name": "Paediatric Burn Unit"
+    },
+    "e0602": {
+      "level": "L06",
+      "level_number": 6,
+      "department_name": "Library",
+      "area_name": "Library"
+    },
+    "e0603": {
+      "level": "L06",
+      "level_number": 6,
+      "department_name": "Administration Unit",
+      "area_name": "Administration Unit"
+    },
+    "e0604": {
+      "level": "L06",
+      "level_number": 6,
+      "department_name": "Administration Unit",
+      "area_name": "Administration Unit"
+    },
+    "e0605": {
+      "level": "L06",
+      "level_number": 6,
+      "department_name": "Central Sterile Supply Unit",
+      "area_name": "Central Sterile Supply Unit (CSSD)"
+    },
+    "e0606": {
+      "level": "L06",
+      "level_number": 6,
+      "department_name": "Central Sterile Supply Unit",
+      "area_name": "Central Sterile Supply Unit (CSSD)"
+    },
+    "e0607": {
+      "level": "L06",
+      "level_number": 6,
+      "department_name": "Specialist Office Complex",
+      "area_name": "Specialist Office Complex"
+    },
+    "e0611": {
+      "level": "L06",
+      "level_number": 6,
+      "department_name": "Information Technology Department",
+      "area_name": "Information Technology Department"
+    },
+    "e0622": {
+      "level": "L05",
+      "level_number": 5,
+      "department_name": "Main Operation Theatre Complex",
+      "area_name": "Main Operation Theatre Complex (OTC)"
+    },
+    "e0625": {
+      "level": "L06",
+      "level_number": 6,
+      "department_name": "Medical Record",
+      "area_name": "Medical Record"
+    },
+    "e0626": {
+      "level": "L06",
+      "level_number": 6,
+      "department_name": "Shared Facilities 6",
+      "area_name": "Shared Facilities 6"
+    },
+    "e0627": {
+      "level": "L06",
+      "level_number": 6,
+      "department_name": "Specialist Office Complex",
+      "area_name": "Specialist Office Complex"
+    },
+    "e0628": {
+      "level": "L06",
+      "level_number": 6,
+      "department_name": "Central Sterile Supply Unit",
+      "area_name": "Central Sterile Supply Unit (CSSD)"
+    },
+    "e0701": {
+      "level": "L07",
+      "level_number": 7,
+      "department_name": "Inpatient Wards - Obstetric 3",
+      "area_name": "Inpatient Wards - Obstetric 3"
+    },
+    "e0702": {
+      "level": "L07",
+      "level_number": 7,
+      "department_name": "Inpatient Wards - Obstetric 4",
+      "area_name": "Inpatient Wards - Obstetric 4"
+    },
+    "e0703": {
+      "level": "L07",
+      "level_number": 7,
+      "department_name": "Inpatient Wards - Obstetric 1",
+      "area_name": "Inpatient Wards - Obstetric 1"
+    },
+    "e0704": {
+      "level": "L07",
+      "level_number": 7,
+      "department_name": "Inpatient Wards - Obstetric 2",
+      "area_name": "Inpatient Wards - Obstetric 2"
+    },
+    "e0801": {
+      "level": "L08",
+      "level_number": 8,
+      "department_name": "1st Class Ward",
+      "area_name": "1st Class Ward"
+    },
+    "e0802": {
+      "level": "L08",
+      "level_number": 8,
+      "department_name": "1st Class Ward",
+      "area_name": "1st Class Ward"
+    },
+    "e0803": {
+      "level": "L08",
+      "level_number": 8,
+      "department_name": "On Call Complex",
+      "area_name": "On Call Complex"
+    },
+    "e0804": {
+      "level": "L08",
+      "level_number": 8,
+      "department_name": "Inpatient Wards - Gynaecology 1",
+      "area_name": "Inpatient Wards - Gynaecology 1"
+    },
+    "e0805": {
+      "level": "L08",
+      "level_number": 8,
+      "department_name": "Inpatient Wards - Gynaecology 2",
+      "area_name": "Inpatient Wards - Gynaecology 2"
+    },
+    "e0901": {
+      "level": "L09",
+      "level_number": 9,
+      "department_name": "Nephrology/ Dialysis Ward and Renal Treatment Centre",
+      "area_name": "Nephrology/ Dialysis Ward and Renal Treatment Centre"
+    },
+    "e0902": {
+      "level": "L09",
+      "level_number": 9,
+      "department_name": "Nephrology/ Dialysis Ward and Renal Treatment Centre",
+      "area_name": "Nephrology/ Dialysis Ward and Renal Treatment Centre"
+    },
+    "e0903": {
+      "level": "L09",
+      "level_number": 9,
+      "department_name": "Inpatient Wards - Paediatric Medical Ward 5",
+      "area_name": "Inpatient Wards - Paediatric Medical Ward 5"
+    },
+    "e0904": {
+      "level": "L09",
+      "level_number": 9,
+      "department_name": "Inpatient Wards - Paediatric Medical Ward 5",
+      "area_name": "Inpatient Wards - Paediatric Medical Ward 5"
+    },
+    "e0905": {
+      "level": "L09",
+      "level_number": 9,
+      "department_name": "Neonatology Wards 1",
+      "area_name": "Neonatology Wards 1"
+    },
+    "e0906": {
+      "level": "L09",
+      "level_number": 9,
+      "department_name": "Neonatology Wards 1",
+      "area_name": "Neonatology Wards 1"
+    },
+    "e0907": {
+      "level": "L09",
+      "level_number": 9,
+      "department_name": "Neonatology Wards 2",
+      "area_name": "Neonatology Wards 2"
+    },
+    "e0908": {
+      "level": "L09",
+      "level_number": 9,
+      "department_name": "Neonatology Wards 2",
+      "area_name": "Neonatology Wards 2"
+    },
+    "e1001": {
+      "level": "L10",
+      "level_number": 10,
+      "department_name": "Inpatient Wards - Paediatric Medical Ward 1",
+      "area_name": "Inpatient Wards - Paediatric Medical Ward 1"
+    },
+    "e1002": {
+      "level": "L10",
+      "level_number": 10,
+      "department_name": "Inpatient Wards - Paediatric Medical Ward 1",
+      "area_name": "Inpatient Wards - Paediatric Medical Ward 1"
+    },
+    "e1003": {
+      "level": "L10",
+      "level_number": 10,
+      "department_name": "Inpatient Wards - Paediatric Medical Ward 3",
+      "area_name": "Inpatient Wards - Paediatric Medical Ward 3"
+    },
+    "e1004": {
+      "level": "L10",
+      "level_number": 10,
+      "department_name": "Inpatient Wards - Paediatric Medical Ward 3",
+      "area_name": "Inpatient Wards - Paediatric Medical Ward 3"
+    },
+    "e1005": {
+      "level": "L10",
+      "level_number": 10,
+      "department_name": "Inpatient Wards - Paediatric Medical Ward 4",
+      "area_name": "Inpatient Wards - Paediatric Medical Ward 4"
+    },
+    "e1006": {
+      "level": "L10",
+      "level_number": 10,
+      "department_name": "Inpatient Wards - Paediatric Medical Ward 4",
+      "area_name": "Inpatient Wards - Paediatric Medical Ward 4"
+    },
+    "e1007": {
+      "level": "L10",
+      "level_number": 10,
+      "department_name": "Inpatient Wards - Paediatric Medical Ward 2",
+      "area_name": "Inpatient Wards - Paediatric Medical Ward 2"
+    },
+    "e1008": {
+      "level": "L10",
+      "level_number": 10,
+      "department_name": "Inpatient Wards - Paediatric Medical Ward 2",
+      "area_name": "Inpatient Wards - Paediatric Medical Ward 2"
+    },
+    "e1101": {
+      "level": "L11",
+      "level_number": 11,
+      "department_name": "Inpatient Wards - Paediatric Surgical Ward 1",
+      "area_name": "Inpatient Wards - Paediatric Surgical Ward 1"
+    },
+    "e1102": {
+      "level": "L11",
+      "level_number": 11,
+      "department_name": "Inpatient Wards - Paediatric Surgical Ward 1",
+      "area_name": "Inpatient Wards - Paediatric Surgical Ward 1"
+    },
+    "e1103": {
+      "level": "L11",
+      "level_number": 11,
+      "department_name": "Inpatient Wards - Paediatric Surgical Ward 2",
+      "area_name": "Inpatient Wards - Paediatric Surgical Ward 2"
+    },
+    "e1104": {
+      "level": "L11",
+      "level_number": 11,
+      "department_name": "Inpatient Wards - Paediatric Surgical Ward 2",
+      "area_name": "Inpatient Wards - Paediatric Surgical Ward 2"
+    },
+    "e1105": {
+      "level": "L11",
+      "level_number": 11,
+      "department_name": "Inpatient Wards - Paediatric Surgical Ward 4",
+      "area_name": "Inpatient Wards - Paediatric Surgical Ward 4"
+    },
+    "e1106": {
+      "level": "L11",
+      "level_number": 11,
+      "department_name": "Inpatient Wards - Paediatric Surgical Ward 4",
+      "area_name": "Inpatient Wards - Paediatric Surgical Ward 4"
+    },
+    "e1107": {
+      "level": "L11",
+      "level_number": 11,
+      "department_name": "Inpatient Wards - Paediatric Surgical Ward 3",
+      "area_name": "Inpatient Wards - Paediatric Surgical Ward 3"
+    },
+    "e1108": {
+      "level": "L11",
+      "level_number": 11,
+      "department_name": "Inpatient Wards - Paediatric Surgical Ward 3",
+      "area_name": "Inpatient Wards - Paediatric Surgical Ward 3"
+    }
+  },
+  "department_to_level": {
+    "Enginering Services": {
+      "level": "L01",
+      "level_number": 1
+    },
+    "Biomedical Engineering Services Unit": {
+      "level": "L01",
+      "level_number": 1
+    },
+    "Mortuary Services": {
+      "level": "L01",
+      "level_number": 1
+    },
+    "Housekeeping Services": {
+      "level": "L01",
+      "level_number": 1
+    },
+    "Catering & Dietitics Department": {
+      "level": "L01",
+      "level_number": 1
+    },
+    "Medical Store": {
+      "level": "L01",
+      "level_number": 1
+    },
+    "Security Services": {
+      "level": "L01",
+      "level_number": 1
+    },
+    "Emergency Department": {
+      "level": "L01",
+      "level_number": 1
+    },
+    "Imaging Department": {
+      "level": "L01",
+      "level_number": 1
+    },
+    "Shared Facilities 1": {
+      "level": "L01",
+      "level_number": 1
+    },
+    "Child Development Centre": {
+      "level": "L02",
+      "level_number": 2
+    },
+    "Cafeteria": {
+      "level": "L02",
+      "level_number": 2
+    },
+    "Medical Social Services": {
+      "level": "L02",
+      "level_number": 2
+    },
+    "Outpatient Pharmacy": {
+      "level": "L02",
+      "level_number": 2
+    },
+    "Admission Revenue": {
+      "level": "L02",
+      "level_number": 2
+    },
+    "Post Graduate Medical Centre and Continuous Medical Education": {
+      "level": "L03",
+      "level_number": 3
+    },
+    "Women Health Unit": {
+      "level": "L02",
+      "level_number": 2
+    },
+    "O&G Specialist Clinic": {
+      "level": "L02",
+      "level_number": 2
+    },
+    "Pathology Department": {
+      "level": "L03",
+      "level_number": 3
+    },
+    "RQA Unit": {
+      "level": "L03",
+      "level_number": 3
+    },
+    "Dental Clinic": {
+      "level": "L03",
+      "level_number": 3
+    },
+    "Shared Facilities 3": {
+      "level": "L03",
+      "level_number": 3
+    },
+    "Paediatric Specialist Clinic": {
+      "level": "L03",
+      "level_number": 3
+    },
+    "Milk Preparation 1": {
+      "level": "L04",
+      "level_number": 4
+    },
+    "Inpatient Pharmacy Department": {
+      "level": "L04",
+      "level_number": 4
+    },
+    "Bone Marrow Transplant Unit (Stem Cell Transplant)": {
+      "level": "L04",
+      "level_number": 4
+    },
+    "Obstetric High Risk Unit": {
+      "level": "L04",
+      "level_number": 4
+    },
+    "Maternity OT": {
+      "level": "L04",
+      "level_number": 4
+    },
+    "Shared Facilities 4": {
+      "level": "L04",
+      "level_number": 4
+    },
+    "Biophysiological Department": {
+      "level": "L03",
+      "level_number": 3
+    },
+    "Paediatric Intensive Care Unit": {
+      "level": "L05",
+      "level_number": 5
+    },
+    "Paediatric High Dependency Unit (DWP)": {
+      "level": "L05",
+      "level_number": 5
+    },
+    "Anaesthesiology Department": {
+      "level": "L05",
+      "level_number": 5
+    },
+    "Respiratory and Haemodynamic Unit": {
+      "level": "L05",
+      "level_number": 5
+    },
+    "Adult Intensive Care Unit": {
+      "level": "L05",
+      "level_number": 5
+    },
+    "Adult High Dependency Unit (DWA)": {
+      "level": "L05",
+      "level_number": 5
+    },
+    "Shared Facilities 5": {
+      "level": "L05",
+      "level_number": 5
+    },
+    "Paediatric Burn Unit": {
+      "level": "L05",
+      "level_number": 5
+    },
+    "Library": {
+      "level": "L06",
+      "level_number": 6
+    },
+    "Administration Unit": {
+      "level": "L06",
+      "level_number": 6
+    },
+    "Central Sterile Supply Unit": {
+      "level": "L06",
+      "level_number": 6
+    },
+    "Specialist Office Complex": {
+      "level": "L06",
+      "level_number": 6
+    },
+    "Information Technology Department": {
+      "level": "L06",
+      "level_number": 6
+    },
+    "Main Operation Theatre Complex": {
+      "level": "L05",
+      "level_number": 5
+    },
+    "Medical Record": {
+      "level": "L06",
+      "level_number": 6
+    },
+    "Shared Facilities 6": {
+      "level": "L06",
+      "level_number": 6
+    },
+    "Inpatient Wards - Obstetric 3": {
+      "level": "L07",
+      "level_number": 7
+    },
+    "Inpatient Wards - Obstetric 4": {
+      "level": "L07",
+      "level_number": 7
+    },
+    "Inpatient Wards - Obstetric 1": {
+      "level": "L07",
+      "level_number": 7
+    },
+    "Inpatient Wards - Obstetric 2": {
+      "level": "L07",
+      "level_number": 7
+    },
+    "1st Class Ward": {
+      "level": "L08",
+      "level_number": 8
+    },
+    "On Call Complex": {
+      "level": "L08",
+      "level_number": 8
+    },
+    "Inpatient Wards - Gynaecology 1": {
+      "level": "L08",
+      "level_number": 8
+    },
+    "Inpatient Wards - Gynaecology 2": {
+      "level": "L08",
+      "level_number": 8
+    },
+    "Nephrology/ Dialysis Ward and Renal Treatment Centre": {
+      "level": "L09",
+      "level_number": 9
+    },
+    "Inpatient Wards - Paediatric Medical Ward 5": {
+      "level": "L09",
+      "level_number": 9
+    },
+    "Neonatology Wards 1": {
+      "level": "L09",
+      "level_number": 9
+    },
+    "Neonatology Wards 2": {
+      "level": "L09",
+      "level_number": 9
+    },
+    "Inpatient Wards - Paediatric Medical Ward 1": {
+      "level": "L10",
+      "level_number": 10
+    },
+    "Inpatient Wards - Paediatric Medical Ward 3": {
+      "level": "L10",
+      "level_number": 10
+    },
+    "Inpatient Wards - Paediatric Medical Ward 4": {
+      "level": "L10",
+      "level_number": 10
+    },
+    "Inpatient Wards - Paediatric Medical Ward 2": {
+      "level": "L10",
+      "level_number": 10
+    },
+    "Inpatient Wards - Paediatric Surgical Ward 1": {
+      "level": "L11",
+      "level_number": 11
+    },
+    "Inpatient Wards - Paediatric Surgical Ward 2": {
+      "level": "L11",
+      "level_number": 11
+    },
+    "Inpatient Wards - Paediatric Surgical Ward 4": {
+      "level": "L11",
+      "level_number": 11
+    },
+    "Inpatient Wards - Paediatric Surgical Ward 3": {
+      "level": "L11",
+      "level_number": 11
+    }
+  }
+}

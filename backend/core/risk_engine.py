@@ -30,13 +30,14 @@ Cluster Grouping Strategy:
 Author: Rule-Based Baseline System (Stage 2B MVP)
 """
 
+import asyncio
 import math
 import pandas as pd
 from typing import Dict, List, Tuple, Optional, Any
 from datetime import datetime, timedelta
 
 from backend.config import get_data_dir
-from backend.core.influx_client import fetch_time_series, fetch_ranking
+from backend.core.influx_client import fetch_time_series, fetch_ranking, get_available_devices
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -426,7 +427,7 @@ def calculate_ahu_health_index(risk_scores: Dict[str, float]) -> Tuple[float, st
 # DATA FETCHING AND PROCESSING
 # ──────────────────────────────────────────────
 
-async def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, Any]:
+def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, Any]:
     """
     Fetch all required metrics for a single AHU.
     
@@ -578,7 +579,7 @@ async def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[s
     return metrics
 
 
-async def fetch_fleet_metrics(time_range: str = "last_30d") -> pd.DataFrame:
+def fetch_fleet_metrics(time_range: str = "last_30d") -> pd.DataFrame:
     """
     Fetch metrics for all AHUs in the fleet.
     
@@ -591,7 +592,7 @@ async def fetch_fleet_metrics(time_range: str = "last_30d") -> pd.DataFrame:
     fleet_data = []
     
     for ahu_id in sorted(ALLOWED_DEVICES):
-        metrics = await fetch_ahu_metrics(ahu_id, time_range)
+        metrics = fetch_ahu_metrics(ahu_id, time_range)
         
         if "error" in metrics:
             continue
@@ -612,9 +613,10 @@ async def fetch_fleet_metrics(time_range: str = "last_30d") -> pd.DataFrame:
     return pd.DataFrame(fleet_data)
 
 
-async def generate_fleet_risk_assessment(
+def generate_fleet_risk_assessment(
     time_range: str = "last_30d",
-    cluster_by_level: bool = True
+    cluster_by_level: bool = True,
+    devices_filter: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
     Generate risk assessment for entire fleet.
@@ -622,23 +624,28 @@ async def generate_fleet_risk_assessment(
     Args:
         time_range: Data period to analyze
         cluster_by_level: Group AHUs by building level for peer comparison
+        devices_filter: Optional list of device IDs to process (None = all devices)
     
     Returns:
         Dict with fleet summary and individual assessments
     """
     from backend.models.schemas import ALLOWED_DEVICES
     
-    # Fetch metrics for all AHUs
+    # Get only devices that have data in the specified time range
+    available_devices = get_available_devices(time_range)
+    
+    # Apply device filter if provided
+    if devices_filter:
+        available_devices = [d for d in available_devices if d in devices_filter]
+    
+    # Fetch metrics only for devices that have data
     assessments = []
     
-    for ahu_id in sorted(ALLOWED_DEVICES):
-        metrics = await fetch_ahu_metrics(ahu_id, time_range)
+    for ahu_id in available_devices:
+        metrics = fetch_ahu_metrics(ahu_id, time_range)
         
         if "error" in metrics:
-            assessments.append({
-                "ahu_id": ahu_id,
-                "error": metrics["error"],
-            })
+            # Device exists but has no data for this range, skip silently
             continue
         
         # Calculate individual risk scores
@@ -912,7 +919,8 @@ async def get_electrical_risk_check(
     Usage:
         GET /api/electrical-risk?time_range=last_30d
     """
-    return await generate_fleet_risk_assessment(
+    return await asyncio.to_thread(
+        generate_fleet_risk_assessment,
         time_range=time_range,
         cluster_by_level=cluster_by_level
     )
@@ -925,7 +933,7 @@ async def get_ahu_risk_details(ahu_id: str, time_range: str = "last_30d") -> Dic
     Usage:
         GET /api/electrical-risk/{ahu_id}
     """
-    metrics = await fetch_ahu_metrics(ahu_id, time_range)
+    metrics = fetch_ahu_metrics(ahu_id, time_range)
     
     if "error" in metrics:
         return {"error": metrics["error"]}

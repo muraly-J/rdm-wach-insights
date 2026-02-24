@@ -71,7 +71,7 @@ def build_bar_chart(
     df: pd.DataFrame,
     metric: str,
     time_range: str,
-    top_n: Optional[int] = 10,
+    top_n: Optional[int] = None,  # None means no limit (show all)
 ) -> Dict[str, Any]:
     """
     Input:  DataFrame with columns ['device_id', 'value'], sorted descending.
@@ -86,7 +86,14 @@ def build_bar_chart(
     if df.empty:
         return _empty_payload("bar", metric, time_range)
 
-    df = df.head(top_n or 10).copy()
+    # If top_n is None or 0, show all devices (or up to a reasonable max)
+    if top_n is None or top_n == 0:
+        # Limit to reasonable number for visualization
+        max_devices = 50
+        df = df.head(max_devices).copy()
+    else:
+        df = df.head(top_n).copy()
+    
     df["value"] = df["value"].round(3)
 
     records = df.to_dict(orient="records")
