@@ -24,7 +24,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from dotenv import load_dotenv
-from middleware.query_logger import init_db
+from middleware.query_logger import init_db, log_query
 from routes.query import router as query_router
 
 # Load env but don't fail if not found (production may use Vercel env vars)
@@ -41,7 +41,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers['X-XSS-Protection']          = '1; mode=block'
         response.headers['Referrer-Policy']           = 'strict-origin-when-cross-origin'
         response.headers['Permissions-Policy']        = 'camera=(), microphone=(), geolocation=()'
-        
+
         # --- THE FIX: Updated CSP ---
         # Added your Cloudflare and Vercel domains to 'connect-src'
         # Added 'https://*.trycloudflare.com' to allow dynamic tunnel URLs
@@ -69,6 +69,7 @@ def get_cors_origins():
         origins.append("https://rdm-wach-insights.vercel.app")
     return origins
 
+
 def create_app():
     """Create and configure the FastAPI app."""
     app = FastAPI(
@@ -76,12 +77,12 @@ def create_app():
         description="Conversational AHU energy analytics for the WACH ward.",
         version="1.0.0",
     )
-    
+
     app.add_middleware(SecurityHeadersMiddleware)
 
     # CORS — allow both localhost and network access
     _cors_origins = get_cors_origins()
-    
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_cors_origins,
@@ -98,20 +99,32 @@ def create_app():
     @app.get('/health')
     async def health():
         return {'status': 'ok'}
-    
+
     # Static files for local development (not needed in Vercel)
     if not IN_VERCEL:
         DIST_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
-        
+
         if os.path.isdir(DIST_DIR):
             app.mount('/assets', StaticFiles(directory=os.path.join(DIST_DIR, 'assets')), name='assets')
-            
+
             @app.get('/{full_path:path}')
             async def serve_spa(full_path: str):
                 index = os.path.join(DIST_DIR, 'index.html')
                 return FileResponse(index)
-    
+
     return app
 
-# Create the app
+
+# ── Create the app instance ───────────────────────────────────────────────────
+
 app = create_app()
+
+
+# ── Initialize database on startup (skip in Vercel) ───────────────────────────
+
+if not IN_VERCEL:
+    try:
+        init_db()
+        print("[Startup] Query logging initialized")
+    except Exception as e:
+        print(f"[Startup] Warning: Could not initialize query logger: {e}")

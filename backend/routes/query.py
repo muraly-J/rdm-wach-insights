@@ -244,7 +244,7 @@ async def handle_query(request: Request, body: QueryRequest):
             error_detail=str(e)
         )
         raise HTTPException(
-            status_code=52,  # Note: This should probably be 502, but keeping as-is
+            status_code=502,
             detail={"error": "Could not retrieve data. Please try again in a moment."}
         )
 

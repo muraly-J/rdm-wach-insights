@@ -18,6 +18,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from influxdb_client import InfluxDBClient
 from dotenv import load_dotenv
@@ -32,10 +33,32 @@ _ORG    = os.getenv("INFLUX_ORG")
 _BUCKET = os.getenv("INFLUX_BUCKET")
 
 # Supported devices and their model paths
+# Models are located in paraquet_data/models/saved/ at project root
+# Path resolution: backend/routes/forecast.py -> .. -> .. -> .. = project_root
+_FILE_PATH = Path(__file__).resolve()
+PROJECT_ROOT = _FILE_PATH.parent.parent.parent  # up 3 levels from backend/routes/forecast.py
+MODEL_DIR = PROJECT_ROOT / "paraquet_data" / "models" / "saved"
+
+# Try multiple locations for models (handles both local and Vercel deployments)
+MODEL_PATHS = [
+    MODEL_DIR,
+    Path("/var/paraquet_data/models/saved"),  # Vercel temp path fallback
+]
+
+MODEL_BASE_PATH = None
+for path in MODEL_PATHS:
+    if path.exists() and (path / "raw_data_e0202_model.pkl").exists():
+        MODEL_BASE_PATH = path
+        break
+
+if MODEL_BASE_PATH is None:
+    # Final fallback to model dir if nothing else works
+    MODEL_BASE_PATH = MODEL_DIR
+
 FORECAST_DEVICES = {
-    "e0202": "paraquet_data/models/saved/raw_data_e0202_model.pkl",
-    "e0207": "paraquet_data/models/saved/raw_data_e0207_model.pkl",
-    "e0211": "paraquet_data/models/saved/raw_data_e0211_model.pkl",
+    "e0202": str(MODEL_BASE_PATH / "raw_data_e0202_model.pkl"),
+    "e0207": str(MODEL_BASE_PATH / "raw_data_e0207_model.pkl"),
+    "e0211": str(MODEL_BASE_PATH / "raw_data_e0211_model.pkl"),
 }
 
 # Modal 'table' value observed across all training parquet files

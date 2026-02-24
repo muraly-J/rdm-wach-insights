@@ -20,10 +20,11 @@ from backend.config import get_influx_url, get_influx_token, get_influx_org, get
 
 warnings.filterwarnings("ignore")
 
+# Get config values - handle missing env vars gracefully
 _URL    = get_influx_url()
-_TOKEN  = get_influx_token()
-_ORG    = get_influx_org()
-_BUCKET = get_influx_bucket()
+_TOKEN  = get_influx_token() or ""  # Empty token will cause InfluxDB to fail, but we'll catch it
+_ORG    = get_influx_org() or "wach"
+_BUCKET = get_influx_bucket() or "wach_bucket_3"
 
 # Resample granularity per time range — keeps charts readable
 _RESAMPLE_MAP = {
