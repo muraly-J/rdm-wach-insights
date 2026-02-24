@@ -232,3 +232,4 @@ secrets.json
 # Startup
 # =========================
 documentation/startup.md
+.vercel
