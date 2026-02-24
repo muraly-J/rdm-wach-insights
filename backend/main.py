@@ -3,10 +3,14 @@ FastAPI app entry point.
 - CORS configured for Vercel frontend + local dev
 - Security headers on every response
 - Static file serving for production build
+
+For Vercel deployment, use: vercel-python with api/ directory
 """
 import os
 import sys
-from contextlib import asynccontextmanager
+
+# Only run startup code when not in serverless environment (or check for vercel)
+IN_VERCEL = os.getenv("VERCEL") == "1"
 
 sys.path.insert(0, os.path.dirname(__file__))
 from fastapi import FastAPI, HTTPException
@@ -23,6 +27,7 @@ from dotenv import load_dotenv
 from middleware.query_logger import init_db
 from routes.query import router as query_router
 
+# Load env but don't fail if not found (production may use Vercel env vars)
 load_dotenv()
 
 
@@ -55,55 +60,58 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
-@asynccontextmanager
-async def lifespan(app):
-    init_db()
-    yield
+def get_cors_origins():
+    """Get CORS origins from env or use defaults."""
+    raw = os.getenv("CORS_ORIGIN", "http://localhost:5173")
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
+    # Always add Vercel production URL
+    if "https://rdm-wach-insights.vercel.app" not in origins:
+        origins.append("https://rdm-wach-insights.vercel.app")
+    return origins
 
+def create_app():
+    """Create and configure the FastAPI app."""
+    app = FastAPI(
+        title="WACH Insight API",
+        description="Conversational AHU energy analytics for the WACH ward.",
+        version="1.0.0",
+    )
+    
+    app.add_middleware(SecurityHeadersMiddleware)
 
-app = FastAPI(
-    title="WACH Insight API",
-    description="Conversational AHU energy analytics for the WACH ward.",
-    version="1.0.0",
-    lifespan=lifespan,
-)
+    # CORS — allow both localhost and network access
+    _cors_origins = get_cors_origins()
+    
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-app.add_middleware(SecurityHeadersMiddleware)
+    # Include all routers with /api prefix for consistent routing
+    app.include_router(forecast_router, prefix="/api")
+    app.include_router(query_router, prefix="/api")
+    app.include_router(electrical_risk_router)
 
-# CORS — allow both localhost and network access
-_cors_origins = [
-    os.getenv("CORS_ORIGIN", "http://localhost:5173"),
-    "http://127.0.0.1:5173",
-    "http://10.1.128.106:5173", "https://rdm-wach-insights.vercel.app",
-]
+    @app.get('/health')
+    async def health():
+        return {'status': 'ok'}
+    
+    # Static files for local development (not needed in Vercel)
+    if not IN_VERCEL:
+        DIST_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
+        
+        if os.path.isdir(DIST_DIR):
+            app.mount('/assets', StaticFiles(directory=os.path.join(DIST_DIR, 'assets')), name='assets')
+            
+            @app.get('/{full_path:path}')
+            async def serve_spa(full_path: str):
+                index = os.path.join(DIST_DIR, 'index.html')
+                return FileResponse(index)
+    
+    return app
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.include_router(forecast_router)
-
-app.include_router(query_router, prefix="/api")
-
-# Electrical Risk Check routes
-app.include_router(electrical_risk_router)
-
-@app.get('/health')
-async def health():
-    return {'status': 'ok'}
-
-# ── Static files (production: serves built React frontend) ───────────────────
-
-DIST_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
-
-if os.path.isdir(DIST_DIR):
-    app.mount('/assets', StaticFiles(directory=os.path.join(DIST_DIR, 'assets')), name='assets')
-
-    @app.get('/{full_path:path}')
-    async def serve_spa(full_path: str):
-        index = os.path.join(DIST_DIR, 'index.html')
-        return FileResponse(index)
+# Create the app
+app = create_app()

@@ -234,7 +234,7 @@ def _build_summary(
     )
 
 
-@router.get("/api/forecast/{device_id}")
+@router.get("/forecast/{device_id}")
 async def get_forecast(device_id: str):
     """
     Returns 7-day historical power_total + 24-hour forecast for a supported device.
