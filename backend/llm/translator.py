@@ -186,16 +186,28 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
             if 1 <= level_num <= 11:
                 levels_expanded.append(f"{level_num:02d}")
     # Extract metric keywords
+    # Order matters! Check more specific patterns first to avoid ambiguous matches.
+    # For example, "apparent_power_total" contains both "apparent" and "power",
+    # so we must check "apparent power" before just "power".
+    # Also, "current_l1_thd" contains both "current" and "thd", so check specific patterns first.
+    # NOTE: The current implementation only supports current_l1_thd (not l3) due to keyword matching
+    # limitations. For more complex mappings, use the full metric name or LLM translation.
     metric_map = {
-        'power': 'power_total',
-        'energy': 'energy_import',
-        'reactive': 'reactive_power_total',
-        'apparent': 'apparent_power_total',
-        'current': 'current_avg',
-        'voltage': 'volts_l_n_avg',
-        'factor': 'power_factor_avg',
-        'unbalance': 'current_unbalance',
-        'thd': 'current_l1_thd',
+        # Full underscore names (matched first to avoid partial matches)
+        'apparent_power_total': 'apparent_power_total',
+        'power_factor_avg':   'power_factor_avg',
+        'reactive_power_total': 'reactive_power_total',
+        # Common space-based variations
+        'apparent power':     'apparent_power_total',
+        'power factor':       'power_factor_avg',
+        'reactive power':     'reactive_power_total',
+        # Base patterns
+        'power_total':        'power_total',
+        'energy_import':      'energy_import',
+        'current_avg':        'current_avg',
+        'volts_l_n_avg':      'volts_l_n_avg',
+        'unbalance':          'current_unbalance',
+        'thd':                'current_l1_thd',
     }
 
     for keyword, metric in metric_map.items():
@@ -204,11 +216,11 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
             break
 
     # Extract time range keywords
-    if 'today' in query_lower or '24' in query_lower:
+    if 'today' in query_lower or '24h' in query_lower:
         default_time_range = "last_24h"
-    elif 'week' in query_lower or '7 day' in query_lower:
+    elif 'week' in query_lower or '7d' in query_lower:
         default_time_range = "last_7d"
-    elif 'month' in query_lower or '30 day' in query_lower:
+    elif 'month' in query_lower or '30 days' in query_lower or 'past 30 days' in query_lower or 'last 30d' in query_lower:
         default_time_range = "last_30d"
     elif 'all time' in query_lower or 'entire' in query_lower:
         default_time_range = "all_time"

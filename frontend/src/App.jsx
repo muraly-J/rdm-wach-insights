@@ -2,12 +2,14 @@ import { useState, useCallback } from 'react'
 import api from './api.js'
 import ChatView from './components/ChatView.jsx'
 import ElectricalRiskView from './components/ElectricalRiskView.jsx'
+import AhuHealthTrendDashboard from './components/AhuHealthTrendDashboard.jsx'
 import { MAPPED_COUNT } from './deviceMap.js'
 
 const SESSION_ID = crypto.randomUUID()
 
 export default function App() {
   const [showRiskCheck, setShowRiskCheck] = useState(false)
+  const [showDashboard, setShowDashboard] = useState(false)
   const [messages, setMessages] = useState([
     {
       id: '0',
@@ -103,7 +105,7 @@ export default function App() {
         </div>
         <div className="header-right">
           <div
-            onClick={() => setShowRiskCheck(!showRiskCheck)}
+            onClick={() => setShowDashboard(false)}
             className="unmapped-badge"
             style={{ cursor: 'pointer', border: '1px solid #3b82f655', color: '#3b82f6', background: '#3b82f60a' }}
           >
@@ -112,8 +114,22 @@ export default function App() {
               <line x1="2" y1="12" x2="22" y2="12" />
               <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
             </svg>
-            {showRiskCheck ? 'Back to Chat' : 'Electrical Risk Check'}
+            {showRiskCheck ? 'Back to Chat' : showDashboard ? 'Back to Chat' : 'Electrical Risk Check'}
           </div>
+          <button
+            onClick={() => { setShowDashboard(!showDashboard); setShowRiskCheck(false); }}
+            className="unmapped-badge"
+            style={{ cursor: 'pointer', border: '1px solid #00c9b155', color: '#00c9b1', background: '#00c9b10a' }}
+            title="Fleet Dashboard"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+            Fleet Dashboard
+          </button>
           <div className="unmapped-badge"
             title={`${MAPPED_COUNT} of ~150 device IDs have confirmed location records. Some devices could not be matched to a department.`}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -131,6 +147,8 @@ export default function App() {
       </header>
       {showRiskCheck ? (
         <ElectricalRiskView />
+      ) : showDashboard ? (
+        <AhuHealthTrendDashboard onBack={() => setShowDashboard(false)} />
       ) : (
         <ChatView
           messages={messages}

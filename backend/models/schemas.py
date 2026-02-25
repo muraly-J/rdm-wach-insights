@@ -44,6 +44,9 @@ ALLOWED_METRICS_WITH_UNITS = {
     "current_l1": ("A", "Current Phase L1"),
     "current_l2": ("A", "Current Phase L2"),
     "current_l3": ("A", "Current Phase L3"),
+    # CURRENT THD (%)
+    "current_l1_thd": ("%", "Current THD Phase L1"),
+    "current_l3_thd": ("%", "Current THD Phase L3"),
     
     # VOLTAGE (V)
     "volts_l_n_avg": ("V", "Phase-to-neutral voltage average"),

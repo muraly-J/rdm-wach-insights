@@ -1,1 +1,0 @@
-{"version": 1, "routes": [{"src": "/api/(.*)", "dest": "$1"}, {"src": "/health", "dest": "/health"}]}

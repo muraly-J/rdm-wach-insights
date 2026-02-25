@@ -101,18 +101,6 @@ def sigmoid(x: float) -> float:
     return 1.0 / (1.0 + math.exp(-x))
 
 
-def sigmoid_score(raw: float) -> float:
-    """
-    Convert raw penalty score to [0, 1] where raw=0 gives score=0.
-    Uses sigmoid(raw) * 2 - 1 transformation.
-    
-    This ensures no penalty when all metrics are at baseline (raw=0).
-    """
-    raw = max(-500.0, min(500.0, float(raw)))
-    s = sigmoid(raw) * 2.0 - 1.0
-    return max(0.0, min(1.0, s))
-
-
 def normalize_to_01(value: float, min_val: float, max_val: float) -> float:
     """Normalize a value to [0, 1] range."""
     if max_val - min_val == 0:
@@ -199,274 +187,208 @@ def get_level_from_ahu_id(ahu_id: str) -> str:
 
 def energy_anomaly_score(
     current_energy: float,
-    ahu_mean_delta_kwh: float,
-    ahu_std_delta_kwh: float,
+    historical_median: float,
+    deviation_direction: str = "both"
 ) -> float:
     """
-    Calculate energy anomaly score using FAIR per-AHU baseline method.
-
-    Purely relative - compares current hourly energy consumption to THIS AHU's
-    own historical distribution. No absolute fleet comparison needed.
-
-    Uses z-score: how many SDs above own mean is current consumption?
-    This makes it inherently fair across differently-sized AHUs.
-
+    Calculate energy anomaly score based on deviation from historical median.
+    
     Args:
-        current_energy: Current delta_kwh (hourly energy consumption)
-        ahu_mean_delta_kwh: This AHU's mean hourly energy
-        ahu_std_delta_kwh: This AHU's hourly energy standard deviation
-
+        current_energy: Current hourly energy consumption (kWh)
+        historical_median: Historical same-weekday-same-hour median
+        deviation_direction: "high" (only high deviations), 
+                             "low" (only low deviations),
+                             "both" (both directions)
+    
     Returns:
         Energy anomaly score in [0, 1]
     """
-    # Handle missing/invalid data
-    if current_energy is None or ahu_mean_delta_kwh is None:
+    if historical_median == 0:
+        return 0.5  # Neutral score
+    
+    deviation_pct = (current_energy - historical_median) / historical_median
+    
+    if deviation_direction == "high":
+        if deviation_pct > 0:
+            # High is more concerning for overload
+            return sigmoid(5 * deviation_pct)
         return 0.0
-
-    # Minimum std to avoid division by zero
-    MIN_STD_POWER = 0.05
-    ahu_std_delta_kwh = max(ahu_std_delta_kwh, MIN_STD_POWER) if ahu_std_delta_kwh else MIN_STD_POWER
-
-    # Compute z-score: how many SDs above own mean?
-    z = (current_energy - ahu_mean_delta_kwh) / ahu_std_delta_kwh
-
-    # Reference formula: raw = 0.6 * |z| + 0.4 * max(0, z)
-    raw = 0.6 * abs(z) + 0.4 * max(0.0, z)
-
-    return sigmoid_score(raw)
+    elif deviation_direction == "low":
+        if deviation_pct < 0:
+            return sigmoid(-5 * deviation_pct)
+        return 0.0
+    else:  # both directions
+        # Both high and low are notable
+        if deviation_pct >= 0:
+            return sigmoid(5 * deviation_pct)
+        else:
+            return sigmoid(-5 * deviation_pct)
 
 
 def power_factor_risk_score(
     current_pf: float,
-    ahu_mean_pf: float,
-    ahu_std_pf: float,
-    fleet_median_pf: float,
-    fleet_p5_pf: float,
+    historical_mean_pf: float,
     pf_slope_7d_normalized: float,
-    power_ratio: float,
-    current_power: float = None,
-    ahu_mean_power: float = None,
+    power_ratio: float
 ) -> float:
     """
-    Calculate Power Factor risk score using FAIR per-AHU baseline method.
-
-    Uses blend of:
-      - RELATIVE: how many SDs below THIS AHU's own mean PF (uses std)
-      - ABSOLUTE: where this PF sits in fleet distribution
-      - LOAD DISCOUNT: if running below 60% of own mean power, discount PF concern
-
-    PF load discount: if running below 60% of own mean power,
-    discount PF penalty significantly (low PF at low load is normal).
-
+    Calculate Power Factor risk score.
+    
+    PF Rule (from requirements):
+    pf_risk_score = sigmoid(
+        5 * max(0, (0.87 - current_pf) / 0.87)    # how far below 0.87 the current PF is
+        + 10 * max(0, -pf_slope_7d_normalized)      # how fast PF is declining
+        - 3 * (1 - power_ratio)                     # discount if under light load (low PF is expected)
+    )
+    
     Args:
         current_pf: Current power factor (0-1)
-        ahu_mean_pf: This AHU's historical mean PF
-        ahu_std_pf: This AHU's PF standard deviation
-        fleet_median_pf: Fleet median PF
-        fleet_p5_pf: Fleet 5th percentile PF
+        historical_mean_pf: Historical mean PF for this AHU
         pf_slope_7d_normalized: 7-day PF slope (normalized)
-        power_ratio: Current power / historical p95
-        current_power: Current power reading for load discount
-        ahu_mean_power: AHU's mean power for load discount threshold
-
+        power_ratio: Current power / P95 rated power
+    
     Returns:
         PF risk score in [0, 1]
     """
-    # Minimum std to avoid division by zero
-    MIN_STD_PF = 0.005
-    ahu_std_pf = max(ahu_std_pf, MIN_STD_PF) if ahu_std_pf else MIN_STD_PF
-
-    # RELATIVE: how many SDs below own mean? (lower PF = worse)
-    if ahu_mean_pf:
-        z_score = (current_pf - ahu_mean_pf) / ahu_std_pf
-        # Flip: below mean = positive z = penalty
-        z_score = -z_score
-    else:
-        z_score = 0.0
-
-    # Raw score from z (use sensitivity of 2.5 like learn_from_this.py)
-    raw_relative = max(0, z_score * 2.5)
-
-    # ABSOLUTE: fleet-calibrated (uses actual fleet p5 and median)
-    # For PF, lower is worse, so use p5 as the "bad" threshold
-    denom = fleet_median_pf - fleet_p5_pf
-    if denom > 0:
-        raw_absolute = max(0, (fleet_median_pf - current_pf) / denom)
-    else:
-        raw_absolute = 0.0
-
-    # Blend relative (60%) and absolute (40%)
-    rel_score = sigmoid_score(raw_relative)
-    abs_score = raw_absolute  # Already in [0,1]
-    score = 0.60 * rel_score + 0.40 * abs_score
-
-    # LOAD DISCOUNT: if below 60% of own mean power, discount by 65%
-    PF_LOAD_DISCOUNT_THRESHOLD = 0.60
-    PF_LOAD_DISCOUNT_FACTOR = 0.65
-
-    if current_power is not None and ahu_mean_power is not None and ahu_mean_power > 0:
-        if current_power < PF_LOAD_DISCOUNT_THRESHOLD * ahu_mean_power:
-            score *= (1.0 - PF_LOAD_DISCOUNT_FACTOR)
-
-    return float(max(0.0, min(1.0, score)))
+    baseline = THRESHOLDS["pf_baseline"]
+    
+    # How far below 0.87 the current PF is
+    pf_deficit = max(0, (baseline - current_pf) / baseline)
+    
+    # How fast PF is declining (negative slope = bad)
+    pf_decline = max(0, -pf_slope_7d_normalized)
+    
+    # Discount if under light load (low PF is expected at low loads)
+    load_penalty = 3 * (1 - power_ratio)
+    
+    raw_score = (
+        SIGMOID_K["power_factor"] * pf_deficit
+        + 10 * pf_decline
+        - load_penalty
+    )
+    
+    return sigmoid(raw_score)
 
 
 def phase_imbalance_risk_score(
     current_unbalance: float,
-    ahu_mean_unbalance: float,
-    ahu_std_unbalance: float,
-    fleet_median_unbalance: float,
-    fleet_p95_unbalance: float,
-    unbalance_slope_7d_normalized: float = 0.0
+    unbalance_slope_7d_normalized: float
 ) -> float:
     """
-    Calculate Phase Imbalance risk score using FAIR per-AHU baseline method.
-
-    Uses blend of:
-      - RELATIVE: how many SDs above THIS AHU's own typical unbalance
-      - ABSOLUTE: where this sits in the fleet's unbalance distribution
-
-    This handles AHUs with chronic high unbalance fairly:
-      - They get HIGH absolute score (top of fleet distribution)
-      - But LOW relative score when stable
-      - Final: moderate unless deteriorating
-
+    Calculate Phase Imbalance risk score.
+    
+    NEMA MG1 thresholds: 2% = warning, 5% = critical
+    
+    Imbalance Rule (from requirements):
+    imbalance_risk_score = sigmoid(
+        4 * max(0, (current_unbalance - 2.0) / 3.0)   # above 2% NEMA warning
+        + 8 * max(0, unbalance_slope_7d_normalized)     # rising trend
+    )
+    
     Args:
-        current_unbalance: Current phase unbalance percentage
-        ahu_mean_unbalance: This AHU's historical mean unbalance
-        ahu_std_unbalance: This AHU's unbalance standard deviation
-        fleet_median_unbalance: Fleet median unbalance
-        fleet_p95_unbalance: Fleet 95th percentile unbalance
-        unbalance_slope_7d_normalized: 7-day slope (normalized)
-
+        current_unbalance: Current phase unbalance percentage (0-100)
+        unbalance_slope_7d_normalized: 7-day unbalance slope (normalized)
+    
     Returns:
         Phase imbalance risk score in [0, 1]
     """
-    # Minimum std to avoid division by zero
-    MIN_STD_UNBAL = 0.10
-    ahu_std_unbalance = max(ahu_std_unbalance, MIN_STD_UNBAL) if ahu_std_unbalance else MIN_STD_UNBAL
-
-    # RELATIVE: how many SDs above own mean?
-    z_score = (current_unbalance - ahu_mean_unbalance) / ahu_std_unbalance
-    raw_relative = z_score * 2.0
-
-    # ABSOLUTE: where does this sit in fleet distribution?
-    denom = fleet_p95_unbalance - fleet_median_unbalance
-    if denom > 0:
-        raw_absolute = max(0, (current_unbalance - fleet_median_unbalance) / denom)
-    else:
-        raw_absolute = 0.0
-
-    # Blend relative (60%) and absolute (40%)
-    score = 0.60 * sigmoid_score(raw_relative) + 0.40 * raw_absolute
-
-    return float(max(0.0, min(1.0, score)))
+    warn_threshold = THRESHOLDS["imbalance_warn"]
+    
+    # Above 2% NEMA warning threshold
+    above_warning = max(0, (current_unbalance - warn_threshold) / 3.0)
+    
+    # Rising trend
+    rising_trend = max(0, unbalance_slope_7d_normalized)
+    
+    raw_score = (
+        SIGMOID_K["phase_imbalance"] * above_warning
+        + 8 * rising_trend
+    )
+    
+    return sigmoid(raw_score)
 
 
 def thd_risk_score(
     composite_thd_24h_mean: float,
-    ahu_mean_thd: float,
-    ahu_std_thd: float,
-    fleet_median_thd: float,
-    fleet_p95_thd: float,
-    thd_slope_7d_normalized: float = 0.0
+    thd_slope_7d_l1_normalized: float,
+    voltage_thd: Optional[float] = None
 ) -> float:
     """
-    Calculate THD (Total Harmonic Distortion) risk score using FAIR method.
-
-    Uses blend of:
-      - RELATIVE: how many SDs above THIS AHU's own typical THD
-      - ABSOLUTE: where this sits in the fleet's THD distribution
-
-    Special case: AHUs without THD data should return 0.0 (handled by caller).
-
+    Calculate THD (Total Harmonic Distortion) risk score.
+    
+    IEEE 519 thresholds: baseline ~3.5%, limit ~5%
+    
+    THD Rule (from requirements):
+    thd_risk_score = sigmoid(
+        3 * max(0, (composite_thd_24h_mean - 3.5) / 1.5)   # above 3.5% baseline
+        + 6 * max(0, thd_slope_7d_l1_normalized)             # rising trend
+    )
+    
     Args:
         composite_thd_24h_mean: 24-hour rolling mean of max(THD_L1, THD_L3)
-        ahu_mean_thd: This AHU's historical mean composite THD
-        ahu_std_thd: This AHU's THD standard deviation
-        fleet_median_thd: Fleet median composite THD
-        fleet_p95_thd: Fleet 95th percentile composite THD
-        thd_slope_7d_normalized: 7-day THD slope (normalized)
-
+        thd_slope_7d_l1_normalized: 7-day THD slope (normalized)
+        voltage_thd: Optional voltage THD for origin diagnosis
+    
     Returns:
         THD risk score in [0, 1]
     """
-    # Minimum std to avoid division by zero
-    MIN_STD_THD = 0.10
-    ahu_std_thd = max(ahu_std_thd, MIN_STD_THD) if ahu_std_thd else MIN_STD_THD
-
-    # RELATIVE: how many SDs above own mean?
-    z_score = (composite_thd_24h_mean - ahu_mean_thd) / ahu_std_thd
-    raw_relative = z_score * 2.0
-
-    # ABSOLUTE: where does this sit in fleet distribution?
-    denom = fleet_p95_thd - fleet_median_thd
-    if denom > 0:
-        raw_absolute = max(0, (composite_thd_24h_mean - fleet_median_thd) / denom)
-    else:
-        raw_absolute = 0.0
-
-    # Blend relative (60%) and absolute (40%)
-    score = 0.60 * sigmoid_score(raw_relative) + 0.40 * raw_absolute
-
-    return float(max(0.0, min(1.0, score)))
+    baseline = THRESHOLDS["thd_baseline"]
+    
+    # Above 3.5% baseline
+    above_baseline = max(0, (composite_thd_24h_mean - baseline) / 1.5)
+    
+    # Rising trend
+    rising_trend = max(0, thd_slope_7d_l1_normalized)
+    
+    raw_score = (
+        SIGMOID_K["thd_drift"] * above_baseline
+        + 6 * rising_trend
+    )
+    
+    return sigmoid(raw_score)
 
 
 def overload_risk_score(
-    current_power: float,
-    ahu_p95_power: float,
-    ahu_mean_power: float,
-    fleet_median_delta_kwh: float,
-    fleet_p95_delta_kwh: float,
+    max_demand_ratio: float,
+    power_slope_7d_normalized: float,
+    imbalance_under_load_normalized: float
 ) -> float:
     """
-    Calculate Overload risk score using FAIR per-AHU baseline method.
-
-    Uses each AHU's OWN p95 as the ceiling reference (size-neutral):
-      - e0105 (35 kW mean) uses its own p95 as ceiling
-      - e0101 (0.67 kW mean) uses its own p95 as ceiling
-
-    Score starts accumulating above 85% of the AHU's own p95.
-    Also includes z-score of current power vs own mean.
-
+    Calculate Overload risk score.
+    
+    Overload Rule (from requirements):
+    overload_risk_score = sigmoid(
+        5 * max(0, max_demand_ratio - 0.85)          # approaching historical max
+        + 3 * max(0, power_slope_7d_normalized)       # rising trend
+        + 2 * imbalance_under_load_normalized         # stress interaction
+    )
+    
     Args:
-        current_power: Current power reading
-        ahu_p95_power: This AHU's 95th percentile power (ceiling reference)
-        ahu_mean_power: This AHU's mean power
-        fleet_median_delta_kwh: Fleet median energy consumption
-        fleet_p95_delta_kwh: Fleet 95th percentile energy
-
+        max_demand_ratio: Current power / historical p99 (0-1)
+        power_slope_7d_normalized: 7-day power slope (normalized)
+        imbalance_under_load_normalized: Phase unbalance under high load
+    
     Returns:
         Overload risk score in [0, 1]
     """
-    # Minimum std to avoid division by zero
-    MIN_STD_POWER = 0.05
-
-    if ahu_p95_power is None or ahu_p95_power <= 0:
-        return 0.0
-
-    # Relative: how far above own p95 ceiling?
-    power_ratio = current_power / ahu_p95_power
-    demand_term = max(0.0, power_ratio - 0.85)
-    rel_score = sigmoid_score(demand_term * 8.0)
-
-    # Also include z-score of current power vs own mean
-    if ahu_mean_power is not None:
-        std = max(abs(ahu_mean_power) * 0.15, MIN_STD_POWER)  # approximate std
-        z_pwr = (current_power - ahu_mean_power) / std if std > 0 else 0
-        rel_score = float(max(0.0, min(1.0, 0.7 * rel_score + 0.3 * sigmoid_score(z_pwr * 1.5))))
-
-    # Absolute: fleet context (use delta_kwh fleet stats)
-    denom = fleet_p95_delta_kwh - fleet_median_delta_kwh
-    if denom > 0:
-        abs_score = max(0, (current_power - fleet_median_delta_kwh) / denom)
-    else:
-        abs_score = 0.0
-
-    # Blend relative (60%) and absolute (40%)
-    score = 0.60 * rel_score + 0.40 * abs_score
-
-    return float(max(0.0, min(1.0, score)))
+    baseline = THRESHOLDS["overload_baseline"]
+    
+    # Approaching historical max
+    approaching_max = max(0, max_demand_ratio - baseline)
+    
+    # Rising trend
+    rising_trend = max(0, power_slope_7d_normalized)
+    
+    # Stress interaction
+    stress_interaction = imbalance_under_load_normalized
+    
+    raw_score = (
+        SIGMOID_K["overload"] * approaching_max
+        + 3 * rising_trend
+        + 2 * stress_interaction
+    )
+    
+    return sigmoid(raw_score)
 
 
 def calculate_ahu_health_index(risk_scores: Dict[str, float]) -> Tuple[float, str]:
@@ -564,6 +486,21 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, An
         except (IndexError, TypeError):
             delta_kwh = None
 
+    # Compute delta_kwh (hourly energy consumption) from cumulative meter
+    delta_kwh = None
+    if not energy_df.empty and len(energy_df) >= 2:
+        try:
+            # Sort by time to ensure correct order
+            energy_df_sorted = energy_df.sort_index()
+            current_energy = float(energy_df_sorted.iloc[-1][ahu_id])
+            prev_energy = float(energy_df_sorted.iloc[-2][ahu_id])
+            delta_kwh = current_energy - prev_energy
+            # Handle meter reset (negative delta)
+            if delta_kwh < 0:
+                delta_kwh = None
+        except (IndexError, TypeError):
+            delta_kwh = None
+    
     # Get power factor
     pf_df = fetch_time_series(
         device_ids=[ahu_id],
@@ -604,17 +541,11 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, An
     # Energy-based metrics
     if energy_df is not None and not energy_df.empty:
         hourly_energy = df[ahu_id].mean() * 1  # approximate hourly kWh from power
-        energy_values = energy_df[ahu_id].dropna()
+        energy_values = df[ahu_id].dropna()
         
         # Historical same-weekday-same-hour median would need more complex logic
         # For MVP, use overall mean as baseline
-        # Compute delta_kwh (hourly consumption) from cumulative energy for comparison
-        if len(energy_df) >= 2:
-            energy_df_sorted = energy_df.sort_index()
-            delta_kwh_series = energy_df_sorted[ahu_id].diff().dropna()
-            historical_energy_median = delta_kwh_series.median() if len(delta_kwh_series) > 0 else None
-        else:
-            historical_energy_median = energy_values.median() if len(energy_values) > 0 else None
+        historical_energy_median = energy_values.median() if len(energy_values) > 0 else None
     else:
         historical_energy_median = None
     
@@ -781,7 +712,7 @@ def generate_fleet_risk_assessment(
             energy_anomaly = energy_anomaly_score(
                 current_energy=energy_current,
                 historical_median=energy_median,
-                delta_kwh=metrics["energy"]["delta_kwh"]
+                delta_kwh=delta_kwh
             )
         else:
             energy_anomaly = 0.5
@@ -817,7 +748,6 @@ def generate_fleet_risk_assessment(
                             "decreasing" if (metrics["power"]["slope_7d"] and metrics["power"]["slope_7d"] < -0.1) else "stable",
             },
             "risk_scores": {
-                "energy_anomaly": round(energy_anomaly, 3),
                 "power_factor": {
                     "score": round(pf_risk, 3),
                     "severity": get_severity(pf_risk, "power_factor"),
@@ -1071,7 +1001,7 @@ async def get_ahu_risk_details(ahu_id: str, time_range: str = "last_30d") -> Dic
     energy_anomaly = energy_anomaly_score(
         current_energy=energy_current or 0,
         historical_median=energy_median or 1,
-        delta_kwh=metrics["energy"]["delta_kwh"]
+        delta_kwh=delta_kwh
     ) if energy_median else 0.5
     
     risk_scores = {
