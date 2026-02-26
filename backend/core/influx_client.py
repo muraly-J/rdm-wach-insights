@@ -15,8 +15,8 @@ import warnings
 import pandas as pd
 from influxdb_client import InfluxDBClient
 
-from backend.models.schemas import ALLOWED_TIME_RANGES
-from backend.config import get_influx_url, get_influx_token, get_influx_org, get_influx_bucket
+from models.schemas import ALLOWED_TIME_RANGES
+from config import get_influx_url, get_influx_token, get_influx_org, get_influx_bucket
 
 warnings.filterwarnings("ignore")
 

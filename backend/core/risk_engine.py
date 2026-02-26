@@ -36,8 +36,8 @@ import pandas as pd
 from typing import Dict, List, Tuple, Optional, Any
 from datetime import datetime, timedelta
 
-from backend.config import get_data_dir
-from backend.core.influx_client import fetch_time_series, fetch_ranking, get_available_devices
+from config import get_data_dir
+from core.influx_client import fetch_time_series, fetch_ranking, get_available_devices
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -86,10 +86,70 @@ THRESHOLDS = {
     "overload_baseline": 0.85,  # 85% of historical max is concerning
 }
 
+# ──────────────────────────────────────────────────────────────────────────────
+# ROBUST STATISTICS CONFIGURATION
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Minimum robust-std values (prevents division by near-zero)
+MIN_RSTD = {
+    "delta_kwh":          0.05,
+    "power_factor_avg":   0.008,
+    "current_unbalance":  0.15,
+    "composite_thd_24h":  0.15,
+    "power_total":        0.05,
+}
+
+# Sensitivity factors for each score
+SENSITIVITY = {
+    "energy_anomaly":  2.0,
+    "pf_degradation":  2.5,
+    "phase_imbalance": 2.0,
+    "thd_drift":       2.0,
+    "overload":        2.0,
+}
+
+# Level vs trend blend
+LEVEL_WEIGHT = 0.70   # "is it bad right now?"
+TREND_WEIGHT = 0.30   # "is it getting worse?"
+
+# Slope sensitivity (after normalising slope by own robust-std)
+SLOPE_SENS = 3.0
+
+# PF load discount
+PF_DISCOUNT_THRESHOLD = 0.60   # below 60% of own median power
+PF_DISCOUNT_FACTOR    = 0.35   # reduce score to 35% of computed value
+
+# THD uses 24h rolling mean to filter transient spikes
+THD_ROLLING_H = 24
+
+# Slope computed over this many hours of history
+TREND_WINDOW_H = 168   # 7 days
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # HELPER FUNCTIONS
 # ──────────────────────────────────────────────────────
+
+def robust_params(values):
+    """
+    Compute robust location (median) and scale (1.4826 × MAD).
+    
+    1.4826 × MAD equals std for a normal distribution.
+    For heavy-tailed or bimodal distributions it is far more stable.
+    
+    Returns (median, rstd) where rstd >= MIN_RSTD.
+    """
+    import numpy as np
+    
+    v = values[~np.isnan(values)]
+    if len(v) < 3:
+        median = float(np.nanmedian(values)) if len(values) > 0 else 0.0
+        return median, MIN_RSTD.get('default', 0.01)
+    
+    med = float(np.median(v))
+    mad = float(np.median(np.abs(v - med)))
+    rstd = max(1.4826 * mad, MIN_RSTD.get('default', 0.01))
+    return med, rstd
 
 def sigmoid(x: float) -> float:
     """
@@ -191,6 +251,303 @@ def get_level_from_ahu_id(ahu_id: str) -> str:
         except ValueError:
             pass
     return "Unknown"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# RISK SCORING FUNCTIONS (THE CORE RULE ENGINE)
+# ──────────────────────────────────────
+
+def sigmoid_score(raw: float) -> float:
+    """
+    Map raw penalty to [0, 1] where raw=0 gives score=0.
+    
+    Standard sigmoid gives 0.5 at raw=0. We shift and rescale:
+        score = clip(sigmoid(raw) * 2 - 1, 0, 1)
+    
+    Behaviour:
+        raw = 0  → 0.00   (exactly at own baseline, no concern)
+        raw = 1  → 0.46   (1 std above/below)
+        raw = 2  → 0.76   (2 std)
+        raw = 3  → 0.91   (3 std)
+    """
+    raw = max(-500.0, min(500.0, float(raw)))
+    s = 1.0 / (1.0 + math.exp(-raw))
+    return float(np.clip(s * 2.0 - 1.0, 0.0, 1.0))
+
+
+def ols_slope(values):
+    """
+    OLS slope β through equally-spaced points (0, y_0), (1, y_1), …, (n-1, y_{n-1}).
+    Returns slope in metric-units per hour.
+    
+    Closed-form (O(n), no matrix ops):
+        β = [n·Σ(i·y) − Σ(i)·Σ(y)] / [n·Σ(i²) − (Σ(i))²]
+    """
+    import numpy as np
+    v = np.asarray(values, dtype=float)
+    v = v[~np.isnan(v)]
+    n = len(v)
+    if n < 3:
+        return 0.0
+    i     = np.arange(n, dtype=float)
+    num   = n * np.dot(i, v) - i.sum() * v.sum()
+    denom = n * np.dot(i, i) - i.sum() ** 2
+    return float(num / denom) if denom != 0 else 0.0
+
+
+def clamp01(x: float) -> float:
+    """Clamp value to [0, 1]."""
+    return float(np.clip(x, 0.0, 1.0))
+
+
+def new_energy_anomaly_score(
+    delta_kwh: float,
+    ahu_median_delta: float,
+    ahu_rstd_delta: float,
+    hist_delta_series,
+) -> float:
+    """
+    Score 1 · Energy Anomaly  (weight 15%)
+    
+    Is this AHU consuming an unusual amount of energy this hour compared
+    to what IT normally consumes.
+    
+    Level term (70%):
+        z = (delta_kwh − own_median) / own_rstd
+        raw = 0.6 × |z| + 0.4 × max(0, z)
+    
+    Trend term (30%):
+        Rising energy over 7 days = worsening.
+        
+    Returns score ∈ [0,1]
+    """
+    import numpy as np
+    
+    if delta_kwh is None or np.isnan(delta_kwh) or delta_kwh < 0:
+        return 0.0
+    
+    if ahu_median_delta is None or np.isnan(ahu_median_delta):
+        return 0.0
+    
+    # Use robust std
+    rstd = max(ahu_rstd_delta, MIN_RSTD.get("delta_kwh", 0.05))
+    if rstd <= 0:
+        return 0.0
+    
+    z = (delta_kwh - ahu_median_delta) / rstd
+    raw = 0.6 * abs(z) + 0.4 * max(0.0, z)
+    lv = sigmoid_score(raw * SENSITIVITY["energy_anomaly"])
+    
+    # Trend term
+    slope_n = float(np.clip(ols_slope(hist_delta_series) / rstd, -10, 10))
+    tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
+    
+    return clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+
+
+def new_power_factor_risk_score(
+    pf: float,
+    power: float,
+    ahu_median_pf: float,
+    ahu_rstd_pf: float,
+    hist_pf_series,
+) -> float:
+    """
+    Score 2 · PF Degradation  (weight 25%)
+    
+    Is this AHU's power factor lower than its own established normal,
+    and is it trending downward.
+    
+    Level term (70%):
+        z = (own_median_PF − current_PF) / own_rstd_PF
+        Positive z = PF below own median = penalty.
+    
+    Trend term (30%):
+        Declining slope = PF getting worse over 7 days.
+    
+    Load discount:
+        If power < 60% of own median power, scale score × 0.35.
+        Motors naturally have poor PF at light load — this is not degradation.
+        
+    Returns score ∈ [0,1]
+    """
+    import numpy as np
+    
+    if pf is None or np.isnan(pf):
+        return 0.0
+    
+    if ahu_median_pf is None or np.isnan(ahu_median_pf):
+        return 0.0
+    
+    rstd = max(ahu_rstd_pf, MIN_RSTD.get("power_factor_avg", 0.008))
+    if rstd <= 0:
+        return 0.0
+    
+    z = (ahu_median_pf - pf) / rstd   # positive = below own normal = bad
+    lv = sigmoid_score(z * SENSITIVITY["pf_degradation"])
+    
+    slope_n = float(np.clip(ols_slope(hist_pf_series) / rstd, -10, 10))
+    tr = sigmoid_score(max(0.0, -slope_n) * SLOPE_SENS)
+    
+    score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    
+    # Load discount
+    if (power is not None and not np.isnan(power) 
+        and ahu_median_pf > 0
+        and power < PF_DISCOUNT_THRESHOLD * ahu_median_pf):
+        score *= PF_DISCOUNT_FACTOR
+    
+    return clamp01(score)
+
+
+def new_phase_imbalance_score(
+    unbal: float,
+    ahu_median_unbal: float,
+    ahu_rstd_unbal: float,
+    hist_unbal_series,
+) -> float:
+    """
+    Score 3 · Phase Imbalance  (weight 25%)
+    
+    Is this AHU's current unbalance higher than its own established normal,
+    and is it trending upward.
+    
+    Level term (70%):
+        z = (current − own_median) / own_rstd
+        Higher unbalance = worse.
+    
+    Trend term (30%):
+        Rising slope over 7 days = worsening.
+        
+    Returns score ∈ [0,1]
+    """
+    import numpy as np
+    
+    if unbal is None or np.isnan(unbal):
+        return 0.0
+    
+    if ahu_median_unbal is None or np.isnan(ahu_median_unbal):
+        return 0.0
+    
+    rstd = max(ahu_rstd_unbal, MIN_RSTD.get("current_unbalance", 0.15))
+    if rstd <= 0:
+        return 0.0
+    
+    z = (unbal - ahu_median_unbal) / rstd
+    lv = sigmoid_score(z * SENSITIVITY["phase_imbalance"])
+    
+    slope_n = float(np.clip(ols_slope(hist_unbal_series) / rstd, -10, 10))
+    tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
+    
+    return clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+
+
+def new_thd_drift_score(
+    thd_24h: float,
+    ahu_median_thd: float,
+    ahu_rstd_thd: float,
+    hist_thd_24h_series,
+) -> float:
+    """
+    Score 4 · THD Drift  (weight 15%)
+    
+    Is this AHU's harmonic distortion elevated above its own normal trend,
+    and is it drifting upward.
+    
+    Input is the 24-hour rolling mean of composite THD (max of L1, L3).
+    Using the rolling mean filters transient spikes from motor starts,
+    lift operations, nearby equipment, etc.
+    
+    Baseline is also computed on the 24h-mean series (not instantaneous).
+    This is critical — both sides of comparison must be on same time-scale.
+    
+    Returns (0.0, nan) if no THD data available for this AHU.
+    Returns score ∈ [0,1]
+    """
+    import numpy as np
+    
+    if thd_24h is None or np.isnan(thd_24h):
+        return 0.0
+    
+    if ahu_median_thd is None or np.isnan(ahu_median_thd):
+        return 0.0
+    
+    rstd = max(ahu_rstd_thd, MIN_RSTD.get("composite_thd_24h", 0.15))
+    if rstd <= 0:
+        return 0.0
+    
+    z = (thd_24h - ahu_median_thd) / rstd
+    lv = sigmoid_score(z * SENSITIVITY["thd_drift"])
+    
+    slope_n = float(np.clip(ols_slope(hist_thd_24h_series) / rstd, -10, 10))
+    tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
+    
+    return clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+
+
+def new_overload_score(
+    power: float,
+    ahu_median_power: float,
+    ahu_rstd_power: float,
+    ahu_p95_power: float,
+    hist_power_series,
+) -> float:
+    """
+    Score 5 · Overload  (weight 20%)
+    
+    Is this AHU approaching or exceeding its own historical power ceiling,
+    and is load trending upward.
+    
+    Three sub-components, all relative to this AHU's own history:
+    
+    A. Ceiling term (50%):
+        power_ratio = current_power / own_p95_power
+        demand = max(0, power_ratio − 0.85)
+        score_A = sigmoid_score(demand × 8)
+    
+    B. Z-score term (30%):
+        z = (current − own_median) / own_rstd
+        score_B = sigmoid_score(z × 1.5)
+    
+    C. Trend term (20%):
+        Rising load over 7 days = worsening.
+    
+    Final = 0.50 × score_A + 0.30 × score_B + 0.20 × score_C
+    
+    Size-neutral: e0105 (35 kW) and e0101 (0.67 kW) each judged
+    against their own ceilings. Running at 95% of own p95 is concerning
+    for both, regardless of absolute wattage.
+    
+    Returns score ∈ [0,1]
+    """
+    import numpy as np
+    
+    if power is None or np.isnan(power):
+        return 0.0
+    
+    if ahu_median_power is None or np.isnan(ahu_median_power):
+        return 0.0
+    
+    if ahu_p95_power is None or np.isnan(ahu_p95_power) or ahu_p95_power <= 0:
+        return 0.0
+    
+    rstd = max(ahu_rstd_power, MIN_RSTD.get("power_total", 0.05))
+    
+    # A: ceiling proximity
+    power_ratio = power / ahu_p95_power
+    demand = max(0.0, power_ratio - 0.85)
+    score_A = sigmoid_score(demand * 8.0)
+    
+    # B: z-score vs own mean
+    z = (power - ahu_median_power) / rstd
+    score_B = sigmoid_score(z * 1.5)
+    
+    # C: trend
+    slope_n = float(np.clip(ols_slope(hist_power_series) / rstd, -10, 10))
+    score_C = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
+    
+    score = 0.50 * score_A + 0.30 * score_B + 0.20 * score_C
+    return clamp01(score)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -500,6 +857,38 @@ def calculate_ahu_health_index(risk_scores: Dict[str, float]) -> Tuple[float, st
     
     return round(health_index, 1), health_tier
 
+def calculate_ahu_health_index_fair(risk_scores: Dict[str, float]) -> Tuple[float, str]:
+    """
+    Calculate unified AHU Health Index from individual risk scores (FAIR method).
+    
+    Same formula as calculate_ahu_health_index but explicit about weights.
+    health_index = 100 - penalty × 100
+    where penalty = Σ weight_i × score_i
+    
+    All scores at 0 (exactly at own baseline) → index = 100
+    All scores at 1 (maximum deviation on all metrics) → index = 0
+    
+    Args:
+        risk_scores: Dict with keys: energy_anomaly, power_factor,
+                     phase_imbalance, thd_drift, overload
+    
+    Returns:
+        Tuple of (health_index: float, health_tier: str)
+    """
+    penalty = 0.0
+    for metric, score in risk_scores.items():
+        weight = HEALTH_INDEX_WEIGHTS.get(metric, 0)
+        penalty += score * weight
+    
+    health_index = 100 - (penalty * 100)
+    health_index = max(0, min(100, health_index))  # Clamp to [0, 100]
+    
+    health_tier = get_health_tier(health_index)
+    return round(health_index, 1), health_tier
+
+
+    return round(health_index, 1), health_tier
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # DATA FETCHING AND PROCESSING
@@ -598,6 +987,22 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, An
     # Composite THD (max of L1 and L3)
     composite_thd = max(thd_l1_value or 0, thd_l3_value or 0)
     
+    # Calculate THD statistics from time series data
+    thd_combined_df = pd.DataFrame()
+    if not thd_l1_df.empty:
+        thd_combined_df['l1'] = thd_l1_df[ahu_id]
+    if not thd_l3_df.empty:
+        thd_combined_df['l3'] = thd_l3_df[ahu_id]
+    
+    # Calculate composite THD time series for stats
+    if not thd_combined_df.empty:
+        composite_thd_series = thd_combined_df.max(axis=1)
+        historical_thd_mean = composite_thd_series.mean()
+        historical_thd_std = composite_thd_series.std()
+    else:
+        historical_thd_mean = None
+        historical_thd_std = None
+    
     # Calculate metrics from the full time range
     days_data = len(df)
     
@@ -621,11 +1026,13 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, An
     # PF metrics
     pf_values = pf_df[ahu_id].dropna() if not pf_df.empty else pd.Series()
     historical_pf_mean = pf_values.mean() if len(pf_values) > 0 else None
+    historical_pf_std = pf_values.std() if len(pf_values) > 0 else None
     pf_slope = calculate_7d_slope(pf_df, ahu_id) if len(pf_df) > 0 else 0
     
     # Power metrics
     power_values = df[ahu_id].dropna()
     historical_power_max = power_values.quantile(0.99) if len(power_values) > 0 else None
+    historical_power_mean = power_values.mean() if len(power_values) > 0 else None
     current_power = float(df.iloc[-1][ahu_id]) if not df.empty else None
     
     # Power ratio (current / P99)
@@ -648,6 +1055,7 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, An
         "power": {
             "current": current_power,
             "historical_p99": historical_power_max,
+            "mean_power": historical_power_mean,
             "power_ratio": current_power / historical_power_max if (current_power and historical_power_max) else None,
             "slope_7d": power_slope,
         },
@@ -659,15 +1067,20 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, An
         "power_factor": {
             "current": pf_value,
             "historical_mean": historical_pf_mean,
+            "historical_std": historical_pf_std,
             "slope_7d_normalized": pf_slope,
         },
         "phase_imbalance": {
             "current": unbalance_value,
+            "historical_mean": historical_unbalance_mean,
+            "historical_std": unbalance_values.std() if len(unbalance_values) > 0 else None,
             "slope_7d_normalized": unbalance_slope,
         },
         "thd": {
             "composite_24h_mean": composite_thd,
-            "slope_7d_l1_normalized": calculate_7d_slope(thd_l1_df, ahu_id) if not thd_l1_df.empty else 0,
+            "ahu_mean_thd": historical_thd_mean,
+            "ahu_std_thd": historical_thd_std,
+            "slope_7d_normalized": calculate_7d_slope(thd_l1_df, ahu_id) if not thd_l1_df.empty else 0,
             "voltage_thd": None,  # Can add if needed
         },
         "data_quality": {
@@ -687,7 +1100,7 @@ def fetch_fleet_metrics(time_range: str = "last_30d") -> pd.DataFrame:
     - ahu_id, power_current, energy_current, pf_current, unbalance_current,
       thd_composite, pf_slope, unbalance_slope, power_slope
     """
-    from backend.models.schemas import ALLOWED_DEVICES
+    from models.schemas import ALLOWED_DEVICES
     
     fleet_data = []
     
@@ -729,7 +1142,7 @@ def generate_fleet_risk_assessment(
     Returns:
         Dict with fleet summary and individual assessments
     """
-    from backend.models.schemas import ALLOWED_DEVICES
+    from models.schemas import ALLOWED_DEVICES
     
     # Get only devices that have data in the specified time range
     available_devices = get_available_devices(time_range)
@@ -751,25 +1164,40 @@ def generate_fleet_risk_assessment(
         # Calculate individual risk scores
         pf_risk = power_factor_risk_score(
             current_pf=metrics["power_factor"]["current"] or 0.8,
-            historical_mean_pf=metrics["power_factor"]["historical_mean"] or 0.9,
+            ahu_mean_pf=metrics["power_factor"]["historical_mean"] or 0.9,
+            ahu_std_pf=metrics["power_factor"]["historical_std"] or 0.01,
+            fleet_median_pf=0.9,
+            fleet_p5_pf=0.85,
             pf_slope_7d_normalized=metrics["power_factor"]["slope_7d_normalized"] or 0,
-            power_ratio=metrics["power"]["power_ratio"] or 0.5
+            power_ratio=metrics["power"]["power_ratio"] or 0.5,
+            current_power=metrics["power"]["current"],
+            ahu_mean_power=metrics["power"]["mean_power"]
         )
         
         imbalance_risk = phase_imbalance_risk_score(
             current_unbalance=metrics["phase_imbalance"]["current"] or 2.0,
+            ahu_mean_unbalance=metrics["phase_imbalance"].get("historical_mean", 2.0),
+            ahu_std_unbalance=metrics["phase_imbalance"].get("historical_std", 0.5),
+            fleet_median_unbalance=3.0,
+            fleet_p95_unbalance=5.0,
             unbalance_slope_7d_normalized=metrics["phase_imbalance"]["slope_7d_normalized"] or 0
         )
         
         thd_risk = thd_risk_score(
-            composite_thd_24h_mean=metrics["thd"]["composite_24h_mean"] or 3.0,
-            thd_slope_7d_l1_normalized=metrics["thd"]["slope_7d_l1_normalized"] or 0
+            composite_thd_24h_mean=float(metrics["thd"]["composite_24h_mean"] or 3.0),
+            ahu_mean_thd=float(metrics["thd"].get("ahu_mean_thd") or 2.5),
+            ahu_std_thd=float(metrics["thd"].get("ahu_std_thd") or 0.5),
+            fleet_median_thd=2.5,
+            fleet_p95_thd=4.0,
+            thd_slope_7d_normalized=float(metrics["thd"].get("slope_7d_normalized") or 0)
         )
         
         overload_risk = overload_risk_score(
-            max_demand_ratio=metrics["power"]["power_ratio"] or 0.5,
-            power_slope_7d_normalized=metrics["power"]["slope_7d"] or 0,
-            imbalance_under_load_normalized=metrics["phase_imbalance"]["current"] / 10 if metrics["phase_imbalance"]["current"] else 0
+            current_power=metrics["power"]["current"],
+            ahu_p95_power=metrics["power"].get("historical_p95", metrics["power"]["historical_p99"]),
+            ahu_mean_power=metrics["power"].get("mean_power", metrics["power"]["current"]),
+            fleet_median_delta_kwh=0.5,
+            fleet_p95_delta_kwh=1.0
         )
         
         # Energy anomaly (simplified - compare to mean)
@@ -778,11 +1206,20 @@ def generate_fleet_risk_assessment(
         
         if energy_median and energy_current:
             # Use delta_kwh for hourly consumption comparison, fallback to current_energy
-            energy_anomaly = energy_anomaly_score(
-                current_energy=energy_current,
-                historical_median=energy_median,
-                delta_kwh=metrics["energy"]["delta_kwh"]
-            )
+            delta_kwh = metrics["energy"].get("delta_kwh")
+            energy_anomaly = 0.5
+            if delta_kwh is not None:
+                # Calculate mean and std from delta_kwh series if available
+                delta_kwh_series = pd.Series(delta_kwh) if not isinstance(delta_kwh, pd.Series) else delta_kwh
+                ahu_mean_delta = delta_kwh_series.mean() if len(delta_kwh_series) > 0 else 1.0
+                ahu_std_delta = delta_kwh_series.std() if len(delta_kwh_series) > 0 else 0.1
+                energy_anomaly = energy_anomaly_score(
+                    current_energy=energy_current,
+                    ahu_mean_delta_kwh=ahu_mean_delta,
+                    ahu_std_delta_kwh=ahu_std_delta
+                )
+            else:
+                energy_anomaly = 0.5
         else:
             energy_anomaly = 0.5
         
@@ -1044,35 +1481,59 @@ async def get_ahu_risk_details(ahu_id: str, time_range: str = "last_30d") -> Dic
     # Calculate all risk scores
     pf_risk = power_factor_risk_score(
         current_pf=metrics["power_factor"]["current"] or 0.8,
-        historical_mean_pf=metrics["power_factor"]["historical_mean"] or 0.9,
+        ahu_mean_pf=metrics["power_factor"]["historical_mean"] or 0.9,
+        ahu_std_pf=metrics["power_factor"]["historical_std"] or 0.01,
+        fleet_median_pf=0.9,
+        fleet_p5_pf=0.85,
         pf_slope_7d_normalized=metrics["power_factor"]["slope_7d_normalized"] or 0,
-        power_ratio=metrics["power"]["power_ratio"] or 0.5
+        power_ratio=metrics["power"]["power_ratio"] or 0.5,
+        current_power=metrics["power"]["current"],
+        ahu_mean_power=metrics["power"]["mean_power"]
     )
     
     imbalance_risk = phase_imbalance_risk_score(
         current_unbalance=metrics["phase_imbalance"]["current"] or 2.0,
+        ahu_mean_unbalance=metrics["phase_imbalance"].get("historical_mean", 2.0),
+        ahu_std_unbalance=metrics["phase_imbalance"].get("historical_std", 0.5),
+        fleet_median_unbalance=3.0,
+        fleet_p95_unbalance=5.0,
         unbalance_slope_7d_normalized=metrics["phase_imbalance"]["slope_7d_normalized"] or 0
     )
     
     thd_risk = thd_risk_score(
-        composite_thd_24h_mean=metrics["thd"]["composite_24h_mean"] or 3.0,
-        thd_slope_7d_l1_normalized=metrics["thd"]["slope_7d_l1_normalized"] or 0
+        composite_thd_24h_mean=float(metrics["thd"]["composite_24h_mean"] or 3.0),
+        ahu_mean_thd=float(metrics["thd"].get("ahu_mean_thd") or 2.5),
+        ahu_std_thd=float(metrics["thd"].get("ahu_std_thd") or 0.5),
+        fleet_median_thd=2.5,
+        fleet_p95_thd=4.0,
+        thd_slope_7d_normalized=float(metrics["thd"].get("slope_7d_normalized") or 0)
     )
     
     overload_risk = overload_risk_score(
-        max_demand_ratio=metrics["power"]["power_ratio"] or 0.5,
-        power_slope_7d_normalized=metrics["power"]["slope_7d"] or 0,
-        imbalance_under_load_normalized=metrics["phase_imbalance"]["current"] / 10 if metrics["phase_imbalance"]["current"] else 0
+        current_power=metrics["power"]["current"],
+        ahu_p95_power=metrics["power"].get("historical_p95", metrics["power"]["historical_p99"]),
+        ahu_mean_power=metrics["power"].get("mean_power", metrics["power"]["current"]),
+        fleet_median_delta_kwh=0.5,
+        fleet_p95_delta_kwh=1.0
     )
     
     energy_median = metrics["energy"]["historical_median"]
     energy_current = metrics["energy"]["current"]
     # Use delta_kwh if available for hourly consumption comparison
-    energy_anomaly = energy_anomaly_score(
-        current_energy=energy_current or 0,
-        historical_median=energy_median or 1,
-        delta_kwh=metrics["energy"]["delta_kwh"]
-    ) if energy_median else 0.5
+    delta_kwh = metrics["energy"].get("delta_kwh")
+    energy_anomaly = 0.5
+    if delta_kwh is not None and energy_median:
+        # Calculate mean and std from delta_kwh series if available
+        delta_kwh_series = pd.Series(delta_kwh) if not isinstance(delta_kwh, pd.Series) else delta_kwh
+        ahu_mean_delta = delta_kwh_series.mean() if len(delta_kwh_series) > 0 else 1.0
+        ahu_std_delta = delta_kwh_series.std() if len(delta_kwh_series) > 0 else 0.1
+        energy_anomaly = energy_anomaly_score(
+            current_energy=energy_current or 0,
+            ahu_mean_delta_kwh=ahu_mean_delta,
+            ahu_std_delta_kwh=ahu_std_delta
+        )
+    else:
+        energy_anomaly = 0.5 if energy_median else 0.5
     
     risk_scores = {
         "energy_anomaly": energy_anomaly,

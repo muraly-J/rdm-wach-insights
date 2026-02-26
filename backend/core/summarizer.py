@@ -18,7 +18,7 @@ import os
 import re
 from typing import Dict, Any, Optional
 
-from backend.config import get_lms_base_url, get_lms_model, get_lms_api_key
+from config import get_lms_base_url, get_lms_model, get_lms_api_key
 from openai import AsyncOpenAI
 
 _LMS_BASE_URL = get_lms_base_url()

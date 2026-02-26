@@ -19,11 +19,11 @@ Usage:
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional
 
-from backend.core.risk_engine import (
+from core.risk_engine import (
     get_electrical_risk_check,
     get_ahu_risk_details,
 )
-from backend.core.influx_client import get_available_devices
+from core.influx_client import get_available_devices
 
 router = APIRouter(prefix="/api/electrical-risk", tags=["Electrical Risk"])
 
@@ -87,7 +87,7 @@ async def level_risk_assessment(
     """
     try:
         # Get devices for this level
-        from backend.models.schemas import get_devices_by_level
+        from models.schemas import get_devices_by_level
         
         available_devices = get_available_devices(time_range)
         level_prefix = f"e{level.zfill(2)}"

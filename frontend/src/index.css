@@ -43,8 +43,7 @@ html, body, #root {
 .app {
   display: grid;
   grid-template-rows: var(--header-h) 1fr;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
 }
 
 /* ── Header ──────────────────────────────────────────────────────────────── */

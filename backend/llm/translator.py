@@ -32,10 +32,10 @@ if LLM_ENABLED and not IN_PRODUCTION:
     # Only import if in development with LLM enabled
     from openai import AsyncOpenAI
 
-from backend.llm.prompts import SYSTEM_PROMPT
-from backend.middleware.validator import validate_raw_dict
-from backend.models.schemas import StructuredQuery, QueryType, AHU_LEVEL_CONFIG, ALLOWED_DEVICES
-from backend.config import get_lms_base_url, get_lms_model, get_lms_api_key
+from llm.prompts import SYSTEM_PROMPT
+from middleware.validator import validate_raw_dict
+from models.schemas import StructuredQuery, QueryType, AHU_LEVEL_CONFIG, ALLOWED_DEVICES
+from config import get_lms_base_url, get_lms_model, get_lms_api_key
 
 _LMS_BASE_URL = None
 _LMS_MODEL = None
@@ -158,7 +158,7 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
     This is a fallback when the LLM server is not available in production.
     """
     import re
-    from backend.models.schemas import QueryType
+    from models.schemas import QueryType
 
     query_lower = user_query.lower().strip()
 

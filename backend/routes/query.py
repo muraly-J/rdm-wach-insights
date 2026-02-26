@@ -15,13 +15,13 @@ from typing import Optional
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel, validator
 
-from backend.llm.translator import translate_query
-from backend.middleware.validator import validate_structured_query
-from backend.middleware.query_logger import log_query
-from backend.core.influx_client import fetch_time_series, fetch_ranking
-from backend.core.charts import build_chart
-from backend.core.summarizer import summarize
-from backend.models.schemas import ALLOWED_METRICS, ALLOWED_DEVICES, QueryType
+from llm.translator import translate_query
+from middleware.validator import validate_structured_query
+from middleware.query_logger import log_query
+from core.influx_client import fetch_time_series, fetch_ranking
+from core.charts import build_chart
+from core.summarizer import summarize
+from models.schemas import ALLOWED_METRICS, ALLOWED_DEVICES, QueryType
 
 router = APIRouter()
 

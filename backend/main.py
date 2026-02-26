@@ -20,9 +20,9 @@ from starlette.responses import Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routes.forecast import router as forecast_router
-from backend.routes.electrical_risk import router as electrical_risk_router
-from backend.routes.dashboard import router as dashboard_router
+from routes.forecast import router as forecast_router
+from routes.electrical_risk import router as electrical_risk_router
+from routes.dashboard import router as dashboard_router
 
 from dotenv import load_dotenv
 from middleware.query_logger import init_db, log_query
