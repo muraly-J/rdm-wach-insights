@@ -448,66 +448,69 @@ export function buildThresholdEvents(metricKey, data, ahuId) {
   if (!data || data.length === 0) {
     return { label: `Threshold Events · ${ahuId}`, events: [] };
   }
-  
+
   const thresholds = THRESHOLDS[metricKey] || [];
   if (thresholds.length === 0) {
     return { label: `Threshold Events · ${ahuId}`, events: [] };
   }
-  
+
   // Get data for this AHU
   const ahuData = data.filter(row => row.ahu_id === ahuId);
-  
+
   if (ahuData.length < 2) {
     return { label: `Threshold Events · ${ahuId}`, events: [{ date: '-', type: 'info', message: 'Insufficient data for threshold analysis' }] };
   }
-  
-  // Sort by timestamp
+
+  // Sort by timestamp (ascending)
   const sortedData = [...ahuData].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-  
+
   // Detect crossings
   const events = [];
   for (let i = 1; i < sortedData.length; i++) {
     const prevRow = sortedData[i - 1];
     const currRow = sortedData[i];
-    
+
     const prevVal = parseFloat(prevRow[metricKey] || 0);
     const currVal = parseFloat(currRow[metricKey] || 0);
-    
+
     if (isNaN(prevVal) || isNaN(currVal)) continue;
-    
+
     thresholds.forEach(threshold => {
       const crossedUp = prevVal < threshold.value && currVal >= threshold.value;
       const crossedDown = prevVal >= threshold.value && currVal < threshold.value;
-      
+
       if (crossedUp) {
         events.push({
-          date: formatDate(prevRow.timestamp, '7d'),
+          timestamp: prevRow.timestamp,
           type: 'improving',
           message: `recovered above ${threshold.value}`,
         });
       } else if (crossedDown) {
         events.push({
-          date: formatDate(prevRow.timestamp, '7d'),
+          timestamp: prevRow.timestamp,
           type: 'worsening',
           message: `dropped below ${threshold.value}`,
         });
       }
     });
   }
-  
-  // Limit events
-  const maxEvents = 8;
-  const limitedEvents = events.slice(0, maxEvents);
-  
-  if (events.length > maxEvents) {
-    limitedEvents.push({
-      date: '+ more',
-      type: 'info',
-      message: `+${events.length - maxEvents} more events`,
-    });
-  }
-  
-  return { label: `Threshold Events · ${ahuId}`, events: limitedEvents };
+
+  // Sort by timestamp descending (latest first), take top 5
+  const latestEvents = events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 5);
+
+  // Format dates with full timestamp
+  const formattedEvents = latestEvents.map(evt => {
+    const date = new Date(evt.timestamp);
+    const dateString = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+    
+    return {
+      date: dateString,
+      type: evt.type,
+      message: evt.message,
+    };
+  });
+
+  return { label: `Threshold Events · ${ahuId}`, events: formattedEvents };
 }
 
 export default {
