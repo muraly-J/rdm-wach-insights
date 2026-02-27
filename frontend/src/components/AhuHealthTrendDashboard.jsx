@@ -280,7 +280,7 @@ function HealthChart({
       </div>
 
       {/* Chart Container */}
-      <ResponsiveContainer width="100%" height={400}>
+      <ResponsiveContainer width="100%" height={600}>
         {chartData.length > 0 && relevantAhuIds.length > 0 ? (
           <ComposedChart
             data={chartData}
@@ -302,7 +302,7 @@ function HealthChart({
                   value: line.label,
                   position: 'right',
                   fill: line.color,
-                  fontSize: 9,
+                  fontSize: 11,
                 }}
               />
             ))}
@@ -317,7 +317,7 @@ function HealthChart({
                   transform={`rotate(0, ${props.x}, ${props.y + 12})`}
                   textAnchor="middle"
                   fill="#7a90b0"
-                  fontSize={10}
+                  fontSize={12}
                 >
                   {formatXAxis(props.payload.value, timeRange)}
                 </text>
@@ -335,7 +335,7 @@ function HealthChart({
                   transform={`rotate(0, ${props.x + 12}, ${props.y})`}
                   textAnchor="start"
                   fill="#7a90b0"
-                  fontSize={10}
+                  fontSize={12}
                 >
                   {formatYAxisTick(props.payload.value, config)}
                 </text>
@@ -365,7 +365,7 @@ function HealthChart({
                     padding: '10px 14px',
                   }}>
                     <div style={{
-                      fontSize: '10px',
+                      fontSize: '12px',
                       color: '#3d526e',
                       marginBottom: '8px',
                     }}>
@@ -380,25 +380,25 @@ function HealthChart({
                         <div key={idx} style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '8px',
-                          marginBottom: '4px',
+                          gap: '10px',
+                          marginBottom: '6px',
                         }}>
                           <span style={{
-                            width: '8px',
-                            height: '8px',
+                            width: '10px',
+                            height: '10px',
                             borderRadius: '50%',
                             background: TIER_COLORS[tier] || '#7a90b0',
                             flexShrink: 0,
                           }} />
                           <span style={{
                             fontFamily: "'DM Mono', monospace",
-                            fontSize: '11px',
+                            fontSize: '13px',
                             color: '#eaf0fb',
                           }}>
                             {ahuId}
                           </span>
                           <span style={{
-                            fontSize: '11px',
+                            fontSize: '13px',
                             color: '#7a90b0',
                           }}>
                             {value}
@@ -414,7 +414,7 @@ function HealthChart({
             {/* Legend */}
             <Legend
               verticalAlign="bottom"
-              height={36}
+              height={48}
               formatter={(value) => {
                 const isHighlighted = highlightedAhu !== null
                 return (
@@ -422,7 +422,7 @@ function HealthChart({
                     onClick={() => onAhuClick(value)}
                     style={{
                       color: isHighlighted && value !== highlightedAhu ? '#7a90b066' : '#eaf0fb',
-                      fontSize: '10px',
+                      fontSize: '12px',
                       fontFamily: "'DM Mono', monospace",
                       cursor: 'pointer',
                       opacity: isHighlighted && value !== highlightedAhu ? 0.3 : 1,
@@ -735,7 +735,7 @@ export default function AhuHealthTrendDashboard({ onBack }) {
               padding: '6px 14px',
               color: '#7a90b0',
               fontFamily: "'DM Mono', monospace",
-              fontSize: '11px',
+              fontSize: '13px',
               fontWeight: 500,
               cursor: 'pointer',
               transition: 'all 0.18s',
@@ -767,7 +767,7 @@ export default function AhuHealthTrendDashboard({ onBack }) {
           {/* Level Selector */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <label style={{
-              fontSize: '10px',
+              fontSize: '12px',
               fontWeight: 700,
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
@@ -782,10 +782,10 @@ export default function AhuHealthTrendDashboard({ onBack }) {
                 background: '#0d1424',
                 border: '1px solid var(--border-bright)',
                 borderRadius: '8px',
-                padding: '6px 12px',
+                padding: '8px 14px',
                 color: '#eaf0fb',
                 fontFamily: "'DM Mono', monospace",
-                fontSize: '12px',
+                fontSize: '14px',
                 fontWeight: 500,
                 cursor: 'pointer',
                 outline: 'none',
@@ -799,24 +799,24 @@ export default function AhuHealthTrendDashboard({ onBack }) {
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
+            gap: '6px',
             background: '#0d1424',
             border: '1px solid var(--border)',
             borderRadius: '8px',
-            padding: '4px',
+            padding: '6px',
           }}>
             {['24h', '7d', '30d'].map((range) => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
                 style={{
-                  padding: '6px 14px',
+                  padding: '8px 16px',
                   border: 'none',
                   background: timeRange === range ? '#00c9b1' : 'transparent',
                   color: timeRange === range ? '#080c18' : '#7a90b0',
                   borderRadius: '6px',
                   fontFamily: "'DM Mono', monospace",
-                  fontSize: '10px',
+                  fontSize: '12px',
                   fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'all 0.18s',
@@ -833,11 +833,11 @@ export default function AhuHealthTrendDashboard({ onBack }) {
           marginTop: '24px',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: '10px',
           flexWrap: 'wrap',
         }}>
           <span style={{
-            fontSize: '10px',
+            fontSize: '12px',
             fontWeight: 700,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
@@ -867,14 +867,14 @@ export default function AhuHealthTrendDashboard({ onBack }) {
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
+                  gap: '8px',
+                  padding: '6px 12px',
                   background: bg,
                   border: border,
                   borderRadius: '16px',
                   color: color,
                   fontFamily: "'DM Mono', monospace",
-                  fontSize: '10px',
+                  fontSize: '12px',
                   fontWeight: highlightedAhu === ahuId ? 600 : 500,
                   cursor: 'pointer',
                   opacity: opacity,
@@ -883,8 +883,8 @@ export default function AhuHealthTrendDashboard({ onBack }) {
               >
                 <span 
                   style={{ 
-                    width: '6px', 
-                    height: '6px', 
+                    width: '8px', 
+                    height: '8px', 
                     borderRadius: '50%', 
                     background: ahuColor,
                   }} 
@@ -937,22 +937,22 @@ export default function AhuHealthTrendDashboard({ onBack }) {
               {/* Left Panel: Contextual Summary */}
               <div style={{
                 borderLeft: `3px solid ${metricColor}`,
-                paddingLeft: '8px',
+                paddingLeft: '12px',
               }}>
                 <div style={{
-                  fontSize: '10px',
+                  fontSize: '12px',
                   fontWeight: 700,
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
                   color: '#7a90b0',
-                  marginBottom: '8px',
+                  marginBottom: '10px',
                 }}>
                   {config.label}
                 </div>
                 <div style={{
-                  fontSize: '12px',
+                  fontSize: '14px',
                   color: '#eaf0fb',
-                  lineHeight: '1.6',
+                  lineHeight: '1.7',
                 }}>
                   {summaryText.split('<br/>').map((line, idx) => (
                     <div key={idx}>{line}</div>
@@ -980,12 +980,12 @@ export default function AhuHealthTrendDashboard({ onBack }) {
                   // Mode B: Single device focused - threshold events
                   <div>
                     <div style={{
-                      fontSize: '10px',
+                      fontSize: '12px',
                       fontWeight: 700,
                       letterSpacing: '0.1em',
                       textTransform: 'uppercase',
                       color: '#7a90b0',
-                      marginBottom: '8px',
+                      marginBottom: '10px',
                     }}>
                       Threshold Events
                     </div>
@@ -993,18 +993,18 @@ export default function AhuHealthTrendDashboard({ onBack }) {
                       const eventsResult = buildThresholdEvents(metricKey, allData, highlightedAhu)
                       return (
                         <div style={{
-                          fontSize: '12px',
+                          fontSize: '14px',
                           color: '#eaf0fb',
-                          lineHeight: '1.6',
+                          lineHeight: '1.7',
                         }}>
                           {eventsResult.events && eventsResult.events.length > 0 ? (
                             <ul style={{
                               margin: '0',
                               paddingLeft: '16px',
-                              fontSize: '12px',
+                              fontSize: '14px',
                             }}>
                               {eventsResult.events.map((evt, idx) => (
-                                <li key={idx} style={{ marginBottom: '4px' }}>
+                                <li key={idx} style={{ marginBottom: '6px' }}>
                                   {evt.type === 'worsening' ? (
                                     <span style={{ color: '#ff4d6d' }}>▼</span>
                                   ) : evt.type === 'improving' ? (
@@ -1027,17 +1027,17 @@ export default function AhuHealthTrendDashboard({ onBack }) {
                   // Mode A: Broad view - worst devices
                   <div>
                     <div style={{
-                      fontSize: '10px',
+                      fontSize: '12px',
                       fontWeight: 700,
                       letterSpacing: '0.1em',
                       textTransform: 'uppercase',
                       color: '#7a90b0',
-                      marginBottom: '8px',
+                      marginBottom: '10px',
                     }}>
                       {worstDevices ? worstDevices.label : 'Latest'}
                     </div>
                     <div style={{
-                      fontSize: '12px',
+                      fontSize: '14px',
                       fontFamily: "'DM Mono', monospace",
                       color: '#eaf0fb',
                     }}>
