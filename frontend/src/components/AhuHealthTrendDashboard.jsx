@@ -1040,7 +1040,6 @@ export default function AhuHealthTrendDashboard({ onBack }) {
                       fontSize: '12px',
                       fontFamily: "'DM Mono', monospace",
                       color: '#eaf0fb',
-                      whiteSpace: 'normal',
                     }}>
                       {worstDevices && worstDevices.devicesByTier && Object.keys(worstDevices.devicesByTier).length > 0 ? (
                         <div>
@@ -1066,13 +1065,14 @@ export default function AhuHealthTrendDashboard({ onBack }) {
                                   <span style={{ color: tierColor, fontWeight: 600 }}>
                                     {tierLabel}:
                                   </span>
-                                  <div style={{ marginTop: '2px' }}>
+                                  <div style={{ marginTop: '2px', wordBreak: 'break-word' }}>
                                     {devices.map((device, idx) => (
                                       <span
                                         key={device.ahuId}
                                         style={{
                                           marginRight: '8px',
                                           color: tierColor,
+                                          whiteSpace: 'nowrap',
                                         }}
                                       >
                                         {device.ahuId}
