@@ -117,6 +117,21 @@ function getAhuTier(value) {
   return 'Healthy'
 }
 
+function getTierInfo(metricKey, value) {
+  const isHealthIndex = metricKey === 'health_index';
+  
+  if (isHealthIndex) {
+    if (value < 40) return { tier: 'Critical', color: '#ff4d6d', label: 'Critical (0-39)' };
+    if (value < 60) return { tier: 'MaintenanceSoon', color: '#f5734e', label: 'Maintenance Soon (40-59)' };
+    if (value < 80) return { tier: 'Monitor', color: '#f5a623', label: 'Monitor (60-79)' };
+    return { tier: 'Healthy', color: '#00c9b1', label: 'Healthy (80-100)' };
+  } else {
+    if (value >= 0.6) return { tier: 'High', color: '#ff4d6d', label: 'High (≥0.6)' };
+    if (value >= 0.3) return { tier: 'Elevated', color: '#f5a623', label: 'Elevated (0.3-0.6)' };
+    return { tier: 'Normal', color: '#00c9b1', label: 'Normal (<0.3)' };
+  }
+}
+
 // Helper to get value for an AHU from data (long format: find by ahu_id, then get metric)
 function getAhuValue(row, ahuId, metricKey) {
   if (!row || !ahuId) return null
@@ -1009,26 +1024,39 @@ export default function AhuHealthTrendDashboard({ onBack }) {
                       color: '#7a90b0',
                       marginBottom: '8px',
                     }}>
-                      {worstDevices ? worstDevices.label : 'Needs Attention'}
+                      {worstDevices ? worstDevices.label : 'Latest'}
                     </div>
                     <div style={{
                       fontSize: '12px',
                       fontFamily: "'DM Mono', monospace",
                       color: '#eaf0fb',
                     }}>
-                      {worstDevices && worstDevices.devices.length > 0 ? (
+                      {worstDevices && worstDevices.devicesByTier && Object.keys(worstDevices.devicesByTier).length > 0 ? (
                         <div>
-                          {worstDevices.devices.map((device, idx) => (
-                            <span
-                              key={idx}
-                              style={{
-                                marginRight: '8px',
-                                color: device.value != null && (device.value >= 0.6 || device.value < 80) ? '#ff4d6d' : undefined,
-                              }}
-                            >
-                              {device.text || `${device.ahuId} (${device.value})`}
-                            </span>
-                          ))}
+                          {Object.entries(worstDevices.devicesByTier).map(([tier, devices]) => {
+                            const tierLabel = getTierInfo(metricKey, devices[0].value).label;
+                            const tierColor = getTierInfo(metricKey, devices[0].value).color;
+                            return (
+                              <div key={tier} style={{ marginBottom: '8px' }}>
+                                <span style={{ color: tierColor, fontWeight: 600 }}>
+                                  {tierLabel}:
+                                </span>
+                                <div style={{ marginTop: '2px' }}>
+                                  {devices.map((device, idx) => (
+                                    <span
+                                      key={device.ahuId}
+                                      style={{
+                                        marginRight: '8px',
+                                        color: tierColor,
+                                      }}
+                                    >
+                                      {device.ahuId}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       ) : (
                         <span style={{ color: '#00c9b1' }}>
