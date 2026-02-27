@@ -349,6 +349,14 @@ function HealthChart({
             <Tooltip
               content={(props) => {
                 if (!props.active || !props.payload || props.payload.length === 0) return null
+                
+                // Filter payload: if highlightedAhu is set, show only that device; otherwise show all
+                const displayPayload = highlightedAhu 
+                  ? props.payload.filter(entry => entry.name === highlightedAhu)
+                  : props.payload
+                
+                if (displayPayload.length === 0) return null
+                
                 return (
                   <div style={{
                     background: '#0d1424',
@@ -363,7 +371,7 @@ function HealthChart({
                     }}>
                       {new Date(props.label).toLocaleString()}
                     </div>
-                    {props.payload.map((entry, idx) => {
+                    {displayPayload.map((entry, idx) => {
                       const ahuId = entry.name
                       const value = entry.value
                       let tier = getAhuTier(value)
