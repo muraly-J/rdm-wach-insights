@@ -471,10 +471,12 @@ export default function AhuHealthTrendDashboard({ onBack }) {
         '7d': '/level1_hourly_health_7d.csv', 
         '30d': '/level1_hourly_health_30d.csv'
       }
-      const csvFile = csvFileMap[timeRange] || '/level1_health_data.csv'
+      const cacheBuster = Date.now()
+      const csvFileBase = csvFileMap[timeRange] || '/level1_health_data.csv'
+      const csvFile = `${csvFileBase}?t=${cacheBuster}`
       
       console.log('[Dashboard] Loading:', csvFile)
-      const response = await fetch(csvFile, { cache: 'no-cache' })
+      const response = await fetch(csvFile, { cache: 'no-store' })
       console.log('[Dashboard] Response status:', response.status, response.ok)
       
       if (response.ok) {
