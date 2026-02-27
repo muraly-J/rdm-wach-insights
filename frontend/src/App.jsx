@@ -103,18 +103,6 @@ export default function App() {
         </div>
         <div className="header-right">
           <button
-            onClick={() => setShowDashboard(false)}
-            className="unmapped-badge"
-            style={{ cursor: 'pointer', border: '1px solid #3b82f655', color: '#3b82f6', background: '#3b82f60a' }}
-          >
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="2" y1="12" x2="22" y2="12" />
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-            </svg>
-            Back to Chat
-          </button>
-          <button
             onClick={() => setShowDashboard(!showDashboard)}
             className="unmapped-badge"
             style={{ cursor: 'pointer', border: '1px solid #00c9b155', color: '#00c9b1', background: '#00c9b10a' }}
