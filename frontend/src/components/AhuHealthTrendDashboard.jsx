@@ -928,7 +928,7 @@ export default function AhuHealthTrendDashboard({ onBack }) {
               key={metricKey}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '180px 4fr 200px',
+                gridTemplateColumns: '200px 4fr 200px',
                 gap: '12px',
                 padding: '16px 0',
                 borderBottom: `1px solid #1c2b42`,
@@ -973,6 +973,8 @@ export default function AhuHealthTrendDashboard({ onBack }) {
               {/* Right Panel: Worst Devices or Threshold Events */}
               <div style={{
                 paddingLeft: '8px',
+                overflowWrap: 'break-word',
+                wordBreak: 'break-word',
               }}>
                 {highlightedAhu ? (
                   // Mode B: Single device focused - threshold events
@@ -1038,6 +1040,7 @@ export default function AhuHealthTrendDashboard({ onBack }) {
                       fontSize: '12px',
                       fontFamily: "'DM Mono', monospace",
                       color: '#eaf0fb',
+                      whiteSpace: 'normal',
                     }}>
                       {worstDevices && worstDevices.devicesByTier && Object.keys(worstDevices.devicesByTier).length > 0 ? (
                         <div>
