@@ -546,6 +546,14 @@ export default function AhuHealthTrendDashboard({ onBack }) {
     return () => clearTimeout(timer)
   }, [])
 
+  // Time range change - reload data
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadData()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [timeRange])
+
   // Get unique AHU IDs from data
   // Long format CSV: columns are timestamp, ahu_id, level, health_index, ...
   // Need to extract unique values from 'ahu_id' column
