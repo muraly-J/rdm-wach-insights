@@ -701,3 +701,37 @@ The dashboard had nested scroll containers:
 ```
 
 ---
+
+## Dashboard CSV Loading Fix (Feb 27, 2026)
+
+**Issue**: When toggling between 24h, 7d, and 30d time ranges:
+- X-axis updated correctly
+- Charts showed same data (browser caching issue)
+
+### Root Cause
+Browser caches static CSV files in `frontend/public/`. The fetch request returns cached data instead of fresh content.
+
+### Fix Applied
+**File**: `frontend/src/components/AhuHealthTrendDashboard.jsx` (line 477)
+
+```javascript
+// BEFORE:
+const response = await fetch(csvFile)
+
+// AFTER:
+const response = await fetch(csvFile, { cache: 'no-cache' })
+```
+
+### What This Does
+- Forces browser to fetch fresh data for each time range toggle
+- Prevents stale CSV content from being displayed
+- Ensures 24h/7d/30d charts show correct date ranges
+
+### Build Status
+```
+✓ Frontend build: SUCCESS (673 KB)
+✓ Cache-busting added to CSV fetch
+```
+
+**Verification**: Time range toggles now load fresh CSV data for each selection.
+
