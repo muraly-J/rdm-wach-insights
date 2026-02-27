@@ -1,14 +1,12 @@
 import { useState, useCallback } from 'react'
 import api from './api.js'
 import ChatView from './components/ChatView.jsx'
-import ElectricalRiskView from './components/ElectricalRiskView.jsx'
 import AhuHealthTrendDashboard from './components/AhuHealthTrendDashboard.jsx'
 import { MAPPED_COUNT } from './deviceMap.js'
 
 const SESSION_ID = crypto.randomUUID()
 
 export default function App() {
-  const [showRiskCheck, setShowRiskCheck] = useState(false)
   const [showDashboard, setShowDashboard] = useState(false)
   const [messages, setMessages] = useState([
     {
@@ -104,7 +102,7 @@ export default function App() {
           </div>
         </div>
         <div className="header-right">
-          <div
+          <button
             onClick={() => setShowDashboard(false)}
             className="unmapped-badge"
             style={{ cursor: 'pointer', border: '1px solid #3b82f655', color: '#3b82f6', background: '#3b82f60a' }}
@@ -114,10 +112,10 @@ export default function App() {
               <line x1="2" y1="12" x2="22" y2="12" />
               <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
             </svg>
-            {showRiskCheck ? 'Back to Chat' : showDashboard ? 'Back to Chat' : 'Electrical Risk Check'}
-          </div>
+            Back to Chat
+          </button>
           <button
-            onClick={() => { setShowDashboard(!showDashboard); setShowRiskCheck(false); }}
+            onClick={() => setShowDashboard(!showDashboard)}
             className="unmapped-badge"
             style={{ cursor: 'pointer', border: '1px solid #00c9b155', color: '#00c9b1', background: '#00c9b10a' }}
             title="Fleet Dashboard"
@@ -145,9 +143,7 @@ export default function App() {
           </div>
         </div>
       </header>
-      {showRiskCheck ? (
-        <ElectricalRiskView />
-      ) : showDashboard ? (
+      {showDashboard ? (
         <AhuHealthTrendDashboard onBack={() => setShowDashboard(false)} />
       ) : (
         <ChatView

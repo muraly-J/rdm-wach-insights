@@ -373,12 +373,6 @@ class FleetSummary(BaseModel):
 
 # ── API Request Models ───────────────────────────────────────────────────────
 
-class ElectricalRiskRequest(BaseModel):
-    """Request parameters for electrical risk assessment."""
-    time_range: Literal["last_24h", "last_7d", "last_30d", "all_time"] = "last_30d"
-    cluster_by_level: bool = True
-
-
 class RiskSummaryRequest(BaseModel):
     """Request parameters for fleet summary."""
     time_range: Literal["last_24h", "last_7d", "last_30d", "all_time"] = "last_30d"

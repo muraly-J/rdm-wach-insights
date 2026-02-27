@@ -21,7 +21,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from routes.forecast import router as forecast_router
-from routes.electrical_risk import router as electrical_risk_router
 from routes.dashboard import router as dashboard_router
 
 from dotenv import load_dotenv
@@ -95,7 +94,6 @@ def create_app():
     # Include all routers with /api prefix for consistent routing
     app.include_router(forecast_router, prefix="/api")
     app.include_router(query_router, prefix="/api")
-    app.include_router(electrical_risk_router)
     app.include_router(dashboard_router)
 
     @app.get('/health')
