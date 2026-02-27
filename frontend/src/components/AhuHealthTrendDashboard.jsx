@@ -280,7 +280,7 @@ function HealthChart({
       </div>
 
       {/* Chart Container */}
-      <ResponsiveContainer width="100%" height={200}>
+      <ResponsiveContainer width="100%" height={400}>
         {chartData.length > 0 && relevantAhuIds.length > 0 ? (
           <ComposedChart
             data={chartData}
