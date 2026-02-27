@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import api from '../api.js'
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from 'recharts'
+import { buildSummary, buildWorstDevicesList, buildThresholdEvents } from '../lib/summaryGenerator'
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Constants & Config
@@ -464,8 +465,16 @@ export default function AhuHealthTrendDashboard({ onBack }) {
     setError(null)
     try {
       console.log('[Dashboard] Loading CSV data...')
-      // Load CSV file directly from public folder
-      const response = await fetch('/level1_health_data.csv')
+      // Map timeRange to corresponding FAIR scoring CSV file
+      const csvFileMap = {
+        '24h': '/level1_hourly_health_24h.csv',
+        '7d': '/level1_hourly_health_7d.csv', 
+        '30d': '/level1_hourly_health_30d.csv'
+      }
+      const csvFile = csvFileMap[timeRange] || '/level1_health_data.csv'
+      
+      console.log('[Dashboard] Loading:', csvFile)
+      const response = await fetch(csvFile)
       console.log('[Dashboard] Response status:', response.status, response.ok)
       
       if (response.ok) {
@@ -552,6 +561,44 @@ export default function AhuHealthTrendDashboard({ onBack }) {
 
   // Map normalized column names back to original (no longer needed - columns match)
   const chartMetricKeyMap = {}
+
+  // Memoized summary generation
+  const summaries = useMemo(() => {
+    if (!allData || allData.length === 0 || !ahuIds || ahuIds.length === 0) {
+      return {}
+    }
+    
+    const result = {}
+    const metrics = ['health_index', 'energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload']
+    
+    for (const metricKey of metrics) {
+      result[metricKey] = buildSummary(
+        metricKey,
+        allData,
+        ahuIds,
+        highlightedAhu,
+        timeRange
+      )
+    }
+    
+    return result
+  }, [allData, ahuIds, highlightedAhu, timeRange])
+
+  // Memoized worst devices list
+  const worstDevicesLists = useMemo(() => {
+    if (!allData || allData.length === 0 || !ahuIds || ahuIds.length === 0) {
+      return {}
+    }
+    
+    const result = {}
+    const metrics = ['health_index', 'energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload']
+    
+    for (const metricKey of metrics) {
+      result[metricKey] = buildWorstDevicesList(metricKey, allData, ahuIds)
+    }
+    
+    return result
+  }, [allData, ahuIds])
 
   // Handle AHU click
   const handleAhuClick = useCallback((ahuId) => {
@@ -816,38 +863,173 @@ export default function AhuHealthTrendDashboard({ onBack }) {
         </div>
       </div>
 
-      {/* Charts Grid */}
+      {/* Charts Grid - 3 columns: Summary | Chart | Right Panel */}
       <div style={{
         padding: '24px 32px',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: '24px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
         overflowY: 'auto',
       }}>
-        {/* Health Index Chart */}
-        <div style={{ gridColumn: 'span 2' }}>
-          <HealthChart
-            data={allData}
-            ahuIds={ahuIds}
-            highlightedAhu={highlightedAhu}
-            metricKey="health_index"
-            timeRange={timeRange}
-            onAhuClick={handleAhuClick}
-          />
-        </div>
+        {/* Metrics Array for 3-column rows */}
+        {['health_index', 'energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload'].map((metricKey) => {
+          const config = COMPONENT_CONFIG[metricKey]
+          const summaryText = summaries[metricKey] || ''
+          const worstDevices = worstDevicesLists[metricKey]
+          
+          // Get metric-specific color for left panel accent
+          const getMetricColor = (key) => {
+            if (key === 'health_index') return '#00c9b1' // Teal
+            if (key === 'energy_anomaly') return '#ff6b6b' // Red
+            if (key === 'pf_degradation') return '#f5a623' // Orange
+            if (key === 'phase_imbalance') return '#ffd93d' // Yellow
+            if (key === 'thd_drift') return '#6bc7f5' // Light Blue
+            if (key === 'overload') return '#ff8e53' // Deep Orange
+            return '#7a90b0'
+          }
+          
+          const metricColor = getMetricColor(metricKey)
+          
+          return (
+            <div
+              key={metricKey}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '220px 1fr 240px',
+                gap: '16px',
+                padding: '16px 0',
+                borderBottom: `1px solid #1c2b42`,
+              }}
+            >
+              {/* Left Panel: Contextual Summary */}
+              <div style={{
+                borderLeft: `3px solid ${metricColor}`,
+                paddingLeft: '12px',
+              }}>
+                <div style={{
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: '#7a90b0',
+                  marginBottom: '8px',
+                }}>
+                  {config.label}
+                </div>
+                <div style={{
+                  fontSize: '12px',
+                  color: '#eaf0fb',
+                  lineHeight: '1.6',
+                }}>
+                  {summaryText}
+                </div>
+              </div>
 
-        {/* Component Score Charts */}
-        {['energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload'].map((key) => (
-          <HealthChart
-            key={key}
-            data={allData}
-            ahuIds={ahuIds}
-            highlightedAhu={highlightedAhu}
-            metricKey={chartMetricKeyMap[key] || key}
-            timeRange={timeRange}
-            onAhuClick={handleAhuClick}
-          />
-        ))}
+              {/* Center: Chart */}
+              <HealthChart
+                data={allData}
+                ahuIds={ahuIds}
+                highlightedAhu={highlightedAhu}
+                metricKey={chartMetricKeyMap[metricKey] || metricKey}
+                timeRange={timeRange}
+                onAhuClick={handleAhuClick}
+              />
+
+              {/* Right Panel: Worst Devices or Threshold Events */}
+              <div style={{
+                paddingLeft: '12px',
+              }}>
+                {highlightedAhu ? (
+                  // Mode B: Single device focused - threshold events
+                  <div>
+                    <div style={{
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: '#7a90b0',
+                      marginBottom: '8px',
+                    }}>
+                      Threshold Events
+                    </div>
+                    {(() => {
+                      const eventsResult = buildThresholdEvents(metricKey, allData, highlightedAhu)
+                      return (
+                        <div style={{
+                          fontSize: '12px',
+                          color: '#eaf0fb',
+                          lineHeight: '1.6',
+                        }}>
+                          {eventsResult.events && eventsResult.events.length > 0 ? (
+                            <ul style={{
+                              margin: '0',
+                              paddingLeft: '16px',
+                              fontSize: '12px',
+                            }}>
+                              {eventsResult.events.map((evt, idx) => (
+                                <li key={idx} style={{ marginBottom: '4px' }}>
+                                  {evt.type === 'worsening' ? (
+                                    <span style={{ color: '#ff4d6d' }}>▼</span>
+                                  ) : evt.type === 'improving' ? (
+                                    <span style={{ color: '#00c9b1' }}>▲</span>
+                                  ) : null}
+                                  {evt.date} — {evt.message}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <div style={{ color: '#7a90b0', fontStyle: 'italic' }}>
+                              No threshold crossings in this period
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                ) : (
+                  // Mode A: Broad view - worst devices
+                  <div>
+                    <div style={{
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: '#7a90b0',
+                      marginBottom: '8px',
+                    }}>
+                      {worstDevices ? worstDevices.label : 'Needs Attention'}
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      fontFamily: "'DM Mono', monospace",
+                      color: '#eaf0fb',
+                    }}>
+                      {worstDevices && worstDevices.devices.length > 0 ? (
+                        <div>
+                          {worstDevices.devices.map((device, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                marginRight: '8px',
+                                color: device.value != null && (device.value >= 0.6 || device.value < 80) ? '#ff4d6d' : undefined,
+                              }}
+                            >
+                              {device.text || `${device.ahuId} (${device.value})`}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={{ color: '#00c9b1' }}>
+                          All devices within normal range ✓
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

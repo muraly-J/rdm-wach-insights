@@ -23,6 +23,16 @@ from core.risk_engine import (
 from core.influx_client import get_available_devices
 import asyncio
 
+# FAIR scoring imports
+from core.fair_health_scoring import (
+    score_energy_anomaly,
+    score_power_factor,
+    score_phase_imbalance,
+    score_thd_drift,
+    score_overload,
+    calculate_health_index,
+)
+
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
 

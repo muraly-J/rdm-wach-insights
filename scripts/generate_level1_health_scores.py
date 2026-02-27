@@ -344,6 +344,7 @@ def compute_risk_scores(df):
             "power_median": power_median,
             "power_rstd": power_rstd,
             "power_p95": float(np.nanpercentile(power_vals, 95)) if len(power_vals) > 0 else None,
+            "power_p99": float(np.nanpercentile(power_vals, 99)) if len(power_vals) > 0 else None,
             "energy_median": delta_median,
             "energy_rstd": delta_rstd,
             "pf_median": pf_median,
@@ -354,6 +355,43 @@ def compute_risk_scores(df):
             "thd_rstd": thd_rstd,
         }
     
+# Compute safety flags for each AHU
+    print("  Computing static safety flags...")
+    
+    def compute_safety_flags(baseline, power_median, power_p95):
+        """Compute safety flags based on baseline thresholds."""
+        flags = []
+        
+        # THD_CHRONIC_HIGH: median 24h-THD > 15%
+        thd_med = baseline.get("thd_median")
+        if thd_med is not None and thd_med > 15.0:
+            flags.append("THD_CHRONIC_HIGH")
+        
+        # IMBALANCE_SEVERE: median unbalance > 30%
+        unbal_med = baseline.get("unbal_median")
+        if unbal_med is not None and unbal_med > 30.0:
+            flags.append("IMBALANCE_SEVERE")
+        
+        # PF_CHRONIC_LOW: median PF < 0.50
+        pf_med = baseline.get("pf_median")
+        if pf_med is not None and pf_med < 0.50:
+            flags.append("PF_CHRONIC_LOW")
+        
+        # OVERLOAD_CHRONIC: median power > 90% of own p95
+        if (power_median is not None and power_p95 is not None 
+                and power_p95 > 0 and power_median / power_p95 > 0.90):
+            flags.append("OVERLOAD_CHRONIC")
+        
+        return ",".join(flags) if flags else ""
+    
+    safety_flags = {}
+    for ahu_id in df['ahu_id'].unique():
+        baseline = ahu_baselines[ahu_id]
+        safety_flags[ahu_id] = compute_safety_flags(
+            baseline,
+            baseline.get("power_median"),
+            baseline.get("power_p95")
+        )
     # Process each AHU
     results = []
     ahu_ids = sorted(df['ahu_id'].unique())
@@ -452,7 +490,7 @@ def compute_risk_scores(df):
                 "thd_24h": round(thd_24h, 3) if thd_24h is not None else None,
                 "delta_kwh": round(delta_kwh, 3) if delta_kwh is not None else None,
                 "data_quality_flag": 0 if not np.isnan(thd_24h) else 1,
-                "safety_flags": "",
+                "safety_flags": safety_flags.get(ahu_id, ""),
                 "z_energy": round(z_energy, 3) if z_energy is not None else None,
                 "z_pf": round(z_pf, 3) if z_pf is not None else None,
                 "z_imbalance": round(z_unbal, 3) if z_unbal is not None else None,
