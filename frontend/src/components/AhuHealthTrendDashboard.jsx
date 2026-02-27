@@ -928,7 +928,7 @@ export default function AhuHealthTrendDashboard({ onBack }) {
               key={metricKey}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '180px 1fr 200px',
+                gridTemplateColumns: '180px 4fr 200px',
                 gap: '12px',
                 padding: '16px 0',
                 borderBottom: `1px solid #1c2b42`,
