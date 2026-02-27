@@ -931,7 +931,9 @@ export default function AhuHealthTrendDashboard({ onBack }) {
                   color: '#eaf0fb',
                   lineHeight: '1.6',
                 }}>
-                  {summaryText}
+                  {summaryText.split('<br/>').map((line, idx) => (
+                    <div key={idx}>{line}</div>
+                  ))}
                 </div>
               </div>
 
