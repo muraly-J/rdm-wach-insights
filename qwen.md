@@ -727,6 +727,36 @@ const response = await fetch(csvFile, { cache: 'no-cache' })
 - Prevents stale CSV content from being displayed
 - Ensures 24h/7d/30d charts show correct date ranges
 
+### Second Attempt Fix (Feb 27, 2026)
+
+**Issue**: Time range toggle STILL showing same data after first fix.
+
+**Root Cause**: 
+- Browser caching too aggressive even with `cache: 'no-cache'`
+- Vite dev server not configured to prevent caching of static assets
+
+**Final Fix Applied**:
+```javascript
+// Added timestamp query parameter for unique URLs
+const cacheBuster = Date.now()
+const csvFileBase = csvFileMap[timeRange] || '/level1_health_data.csv'
+const csvFile = `${csvFileBase}?t=${cacheBuster}`
+
+// Changed to no-store for strict caching control
+const response = await fetch(csvFile, { cache: 'no-store' })
+```
+
+**Vite Config Update**:
+```javascript
+server: {
+  headers: {
+    'Cache-Control': 'no-store, no-cache, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  }
+}
+```
+
 ### Build Status
 ```
 ✓ Frontend build: SUCCESS (673 KB)
