@@ -1033,30 +1033,44 @@ export default function AhuHealthTrendDashboard({ onBack }) {
                     }}>
                       {worstDevices && worstDevices.devicesByTier && Object.keys(worstDevices.devicesByTier).length > 0 ? (
                         <div>
-                          {Object.entries(worstDevices.devicesByTier).map(([tier, devices]) => {
-                            const tierLabel = getTierInfo(metricKey, devices[0].value).label;
-                            const tierColor = getTierInfo(metricKey, devices[0].value).color;
-                            return (
-                              <div key={tier} style={{ marginBottom: '8px' }}>
-                                <span style={{ color: tierColor, fontWeight: 600 }}>
-                                  {tierLabel}:
-                                </span>
-                                <div style={{ marginTop: '2px' }}>
-                                  {devices.map((device, idx) => (
-                                    <span
-                                      key={device.ahuId}
-                                      style={{
-                                        marginRight: '8px',
-                                        color: tierColor,
-                                      }}
-                                    >
-                                      {device.ahuId}
-                                    </span>
-                                  ))}
+                          {Object.entries(worstDevices.devicesByTier)
+                            .sort(([, devicesA], [, devicesB]) => {
+                              // Sort tiers in descending order of health
+                              const tierA = getTierInfo(metricKey, devicesA[0].value).tier;
+                              const tierB = getTierInfo(metricKey, devicesB[0].value).tier;
+                              
+                              // Health index order: Healthy > Monitor > MaintenanceSoon > Critical
+                              const tierOrder = { 'Healthy': 4, 'Monitor': 3, 'MaintenanceSoon': 2, 'Critical': 1 };
+                              // Component metrics order: Normal > Elevated > High
+                              const componentOrder = { 'Normal': 3, 'Elevated': 2, 'High': 1 };
+                              
+                              const order = metricKey === 'health_index' ? tierOrder : componentOrder;
+                              return (order[tierB] || 0) - (order[tierA] || 0);
+                            })
+                            .map(([tier, devices]) => {
+                              const tierLabel = getTierInfo(metricKey, devices[0].value).label;
+                              const tierColor = getTierInfo(metricKey, devices[0].value).color;
+                              return (
+                                <div key={tier} style={{ marginBottom: '8px' }}>
+                                  <span style={{ color: tierColor, fontWeight: 600 }}>
+                                    {tierLabel}:
+                                  </span>
+                                  <div style={{ marginTop: '2px' }}>
+                                    {devices.map((device, idx) => (
+                                      <span
+                                        key={device.ahuId}
+                                        style={{
+                                          marginRight: '8px',
+                                          color: tierColor,
+                                        }}
+                                      >
+                                        {device.ahuId}
+                                      </span>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
                         </div>
                       ) : (
                         <span style={{ color: '#00c9b1' }}>
