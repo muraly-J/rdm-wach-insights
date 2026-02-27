@@ -474,7 +474,7 @@ export default function AhuHealthTrendDashboard({ onBack }) {
       const csvFile = csvFileMap[timeRange] || '/level1_health_data.csv'
       
       console.log('[Dashboard] Loading:', csvFile)
-      const response = await fetch(csvFile)
+      const response = await fetch(csvFile, { cache: 'no-cache' })
       console.log('[Dashboard] Response status:', response.status, response.ok)
       
       if (response.ok) {
