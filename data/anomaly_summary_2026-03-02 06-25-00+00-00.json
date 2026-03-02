@@ -1,0 +1,76 @@
+{
+  "generated_at": "2026-03-02T14:27:27.392858",
+  "timestamp": "2026-03-02 06:25:00+00:00",
+  "total_ahus": 3,
+  "tier_distribution": {
+    "Critical": 0,
+    "Maintenance Soon": 1,
+    "Monitor": 2,
+    "Healthy": 0
+  },
+  "anomalies": [
+    {
+      "ahu_id": "e0101",
+      "level": "Level 1",
+      "health_index": 59.4,
+      "tier": "Maintenance Soon",
+      "current_values": {
+        "power_total": 0.93,
+        "power_factor": 0.25,
+        "unbalance_pct": 8.0,
+        "thd_24h": 5.16
+      },
+      "anomalies": [
+        {
+          "metric": "overload",
+          "score": 0.555,
+          "z_score": 11.655,
+          "severity": "Monitor"
+        }
+      ],
+      "safety_flags": [
+        "PF_CHRONIC_LOW"
+      ]
+    },
+    {
+      "ahu_id": "e0111",
+      "level": "Level 1",
+      "health_index": 62.2,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 1.06,
+        "power_factor": 0.65,
+        "unbalance_pct": 10.9,
+        "thd_24h": 18.8
+      },
+      "anomalies": [
+        {
+          "metric": "overload",
+          "score": 0.543,
+          "z_score": 0.385,
+          "severity": "Monitor"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0105",
+      "level": "Level 1",
+      "health_index": 75.9,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 47.93,
+        "power_factor": 0.75,
+        "unbalance_pct": 2.9,
+        "thd_24h": 5.43
+      },
+      "anomalies": [],
+      "safety_flags": [
+        "OVERLOAD_CHRONIC"
+      ]
+    }
+  ]
+}

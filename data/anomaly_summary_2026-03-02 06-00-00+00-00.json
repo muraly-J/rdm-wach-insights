@@ -1,0 +1,761 @@
+{
+  "generated_at": "2026-03-02T14:55:39.475106",
+  "timestamp": "2026-03-02 06:00:00+00:00",
+  "total_ahus": 33,
+  "tier_distribution": {
+    "Critical": 0,
+    "Maintenance Soon": 1,
+    "Monitor": 14,
+    "Healthy": 18
+  },
+  "anomalies": [
+    {
+      "ahu_id": "e0411",
+      "level": "Level 4",
+      "health_index": 59.4,
+      "tier": "Maintenance Soon",
+      "current_values": {
+        "power_total": 22.09,
+        "power_factor": 0.71,
+        "unbalance_pct": 1.17,
+        "thd_24h": 26.1
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.683,
+          "z_score": -3.693,
+          "severity": "Attention Required"
+        },
+        {
+          "metric": "overload",
+          "score": 0.0,
+          "z_score": -2.592,
+          "severity": "Normal"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0403",
+      "level": "Level 4",
+      "health_index": 64.6,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 1.82,
+        "power_factor": 0.603,
+        "unbalance_pct": 13.1,
+        "thd_24h": 6.23
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.694,
+          "z_score": -4.284,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0908",
+      "level": "Level 9",
+      "health_index": 65.2,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 4.02,
+        "power_factor": 0.905,
+        "unbalance_pct": 8.24,
+        "thd_24h": 57.86
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.699,
+          "z_score": -5.566,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0101",
+      "level": "Level 1",
+      "health_index": 68.4,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 0.93,
+        "power_factor": 0.25,
+        "unbalance_pct": 8.01,
+        "thd_24h": 6.58
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.696,
+          "z_score": 2.886,
+          "severity": "Attention Required"
+        },
+        {
+          "metric": "overload",
+          "score": 0.35,
+          "z_score": 3.721,
+          "severity": "Normal"
+        }
+      ],
+      "safety_flags": [
+        "PF_CHRONIC_LOW"
+      ]
+    },
+    {
+      "ahu_id": "e0111",
+      "level": "Level 1",
+      "health_index": 73.2,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 1.06,
+        "power_factor": 0.655,
+        "unbalance_pct": 10.81,
+        "thd_24h": 58.31
+      },
+      "anomalies": [],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH"
+      ]
+    },
+    {
+      "ahu_id": "e0213",
+      "level": "Level 2",
+      "health_index": 73.7,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 9.35,
+        "power_factor": 0.85,
+        "unbalance_pct": 7.29,
+        "thd_24h": 5.17
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.823,
+          "z_score": -9.421,
+          "severity": "Critical"
+        }
+      ],
+      "safety_flags": [
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0501",
+      "level": "Level 5",
+      "health_index": 74.2,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 4.47,
+        "power_factor": 0.673,
+        "unbalance_pct": 6.84,
+        "thd_24h": 4.8
+      },
+      "anomalies": [],
+      "safety_flags": [
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e1001",
+      "level": "Level 10",
+      "health_index": 75.9,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 3.25,
+        "power_factor": 0.95,
+        "unbalance_pct": 70.45,
+        "thd_24h": 40.28
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.684,
+          "z_score": -3.696,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "IMBALANCE_SEVERE",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0901",
+      "level": "Level 9",
+      "health_index": 76.7,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 5.63,
+        "power_factor": 0.752,
+        "unbalance_pct": 12.17,
+        "thd_24h": 5.18
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.692,
+          "z_score": -4.129,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0801",
+      "level": "Level 8",
+      "health_index": 77.2,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 4.83,
+        "power_factor": 0.87,
+        "unbalance_pct": 6.58,
+        "thd_24h": 71.75
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.665,
+          "z_score": -3.054,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0506",
+      "level": "Level 5",
+      "health_index": 77.6,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 1.58,
+        "power_factor": 0.2,
+        "unbalance_pct": 6.87,
+        "thd_24h": 5.38
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.631,
+          "z_score": -2.467,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "PF_CHRONIC_LOW"
+      ]
+    },
+    {
+      "ahu_id": "e0307",
+      "level": "Level 3",
+      "health_index": 78.1,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 9.47,
+        "power_factor": 0.782,
+        "unbalance_pct": 1.49,
+        "thd_24h": 6.78
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.701,
+          "z_score": -6.612,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0205",
+      "level": "Level 2",
+      "health_index": 78.8,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 2.18,
+        "power_factor": 0.901,
+        "unbalance_pct": 16.84,
+        "thd_24h": 58.61
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.569,
+          "z_score": -1.893,
+          "severity": "Monitor"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH"
+      ]
+    },
+    {
+      "ahu_id": "e0201",
+      "level": "Level 2",
+      "health_index": 79.5,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 3.45,
+        "power_factor": 0.727,
+        "unbalance_pct": 50.52,
+        "thd_24h": 39.71
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.684,
+          "z_score": -3.388,
+          "severity": "Attention Required"
+        },
+        {
+          "metric": "overload",
+          "score": 0.514,
+          "z_score": 1.351,
+          "severity": "Monitor"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "IMBALANCE_SEVERE",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0805",
+      "level": "Level 8",
+      "health_index": 79.5,
+      "tier": "Monitor",
+      "current_values": {
+        "power_total": 8.91,
+        "power_factor": 0.769,
+        "unbalance_pct": 8.78,
+        "thd_24h": 36.92
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.688,
+          "z_score": -3.934,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0803",
+      "level": "Level 8",
+      "health_index": 81.0,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 5.9,
+        "power_factor": 0.9,
+        "unbalance_pct": 18.18,
+        "thd_24h": 50.65
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.569,
+          "z_score": -1.862,
+          "severity": "Monitor"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0401",
+      "level": "Level 3",
+      "health_index": 82.2,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 3.26,
+        "power_factor": 0.437,
+        "unbalance_pct": 9.14,
+        "thd_24h": 5.73
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.699,
+          "z_score": -6.07,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "PF_CHRONIC_LOW",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0626",
+      "level": "Level 6",
+      "health_index": 82.2,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 6.58,
+        "power_factor": 0.78,
+        "unbalance_pct": 4.38,
+        "thd_24h": 5.41
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.61,
+          "z_score": -2.229,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0703",
+      "level": "Level 7",
+      "health_index": 82.4,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 8.09,
+        "power_factor": 0.88,
+        "unbalance_pct": 13.46,
+        "thd_24h": 43.66
+      },
+      "anomalies": [],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH"
+      ]
+    },
+    {
+      "ahu_id": "e1008",
+      "level": "Level 10",
+      "health_index": 82.5,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 6.57,
+        "power_factor": 0.958,
+        "unbalance_pct": 11.42,
+        "thd_24h": 38.59
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.699,
+          "z_score": -5.994,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0704",
+      "level": "Level 7",
+      "health_index": 83.5,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 5.77,
+        "power_factor": 0.92,
+        "unbalance_pct": 4.06,
+        "thd_24h": 51.42
+      },
+      "anomalies": [],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0904",
+      "level": "Level 9",
+      "health_index": 83.7,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 6.78,
+        "power_factor": 0.88,
+        "unbalance_pct": 4.48,
+        "thd_24h": 69.67
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.751,
+          "z_score": -5.044,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0611",
+      "level": "Level 6",
+      "health_index": 84.8,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 4.4,
+        "power_factor": 0.795,
+        "unbalance_pct": 6.23,
+        "thd_24h": 5.24
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.7,
+          "z_score": -6.795,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e1105",
+      "level": "Level 11",
+      "health_index": 84.9,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 2.57,
+        "power_factor": 0.868,
+        "unbalance_pct": 13.07,
+        "thd_24h": 77.07
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.699,
+          "z_score": -6.2,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e1101",
+      "level": "Level 11",
+      "health_index": 85.0,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": -6.22,
+        "power_factor": -0.94,
+        "unbalance_pct": 2.95,
+        "thd_24h": 49.04
+      },
+      "anomalies": [],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "PF_CHRONIC_LOW"
+      ]
+    },
+    {
+      "ahu_id": "e1108",
+      "level": "Level 11",
+      "health_index": 85.1,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 3.08,
+        "power_factor": 0.64,
+        "unbalance_pct": 14.92,
+        "thd_24h": 69.45
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.677,
+          "z_score": -3.4,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0603",
+      "level": "Level 6",
+      "health_index": 85.2,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 6.64,
+        "power_factor": 0.8,
+        "unbalance_pct": 1.02,
+        "thd_24h": 5.76
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.541,
+          "z_score": -1.707,
+          "severity": "Monitor"
+        }
+      ],
+      "safety_flags": [
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0301",
+      "level": "Level 3",
+      "health_index": 85.6,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 3.79,
+        "power_factor": 0.603,
+        "unbalance_pct": 6.81,
+        "thd_24h": 4.4
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.619,
+          "z_score": -2.33,
+          "severity": "Attention Required"
+        }
+      ],
+      "safety_flags": [
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e1004",
+      "level": "Level 10",
+      "health_index": 86.3,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 3.93,
+        "power_factor": 0.96,
+        "unbalance_pct": 3.64,
+        "thd_24h": 38.56
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.562,
+          "z_score": -1.846,
+          "severity": "Monitor"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH"
+      ]
+    },
+    {
+      "ahu_id": "e0701",
+      "level": "Level 7",
+      "health_index": 86.9,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 6.93,
+        "power_factor": 0.88,
+        "unbalance_pct": 16.86,
+        "thd_24h": 47.77
+      },
+      "anomalies": [
+        {
+          "metric": "overload",
+          "score": 0.148,
+          "z_score": -2.218,
+          "severity": "Normal"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0105",
+      "level": "Level 1",
+      "health_index": 87.9,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 47.62,
+        "power_factor": 0.743,
+        "unbalance_pct": 3.18,
+        "thd_24h": 6.79
+      },
+      "anomalies": [],
+      "safety_flags": [
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0622",
+      "level": "Level 5",
+      "health_index": 89.0,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 0.47,
+        "power_factor": 0.896,
+        "unbalance_pct": 7.0,
+        "thd_24h": 66.95
+      },
+      "anomalies": [],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "OVERLOAD_CHRONIC"
+      ]
+    },
+    {
+      "ahu_id": "e0419",
+      "level": "Level 4",
+      "health_index": 90.6,
+      "tier": "Healthy",
+      "current_values": {
+        "power_total": 1.02,
+        "power_factor": 0.98,
+        "unbalance_pct": 67.11,
+        "thd_24h": 19.42
+      },
+      "anomalies": [
+        {
+          "metric": "energy_anomaly",
+          "score": 0.582,
+          "z_score": -1.985,
+          "severity": "Monitor"
+        }
+      ],
+      "safety_flags": [
+        "THD_CHRONIC_HIGH",
+        "IMBALANCE_SEVERE",
+        "OVERLOAD_CHRONIC"
+      ]
+    }
+  ]
+}
