@@ -2,26 +2,15 @@
 
 Conversational AHU energy analytics for the WACH ward.
 
-## Quick Deploy to Vercel
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/rdmasia/wach-insight)
-
-After deploying:
-1. Set environment variables in Vercel: `INFLUX_URL`, `INFLUX_TOKEN`, `INFLUX_ORG`, `INFLUX_BUCKET`
-2. Verify `/health` endpoint returns `{"status": "ok"}`
-3. Try preset prompts - they should work without blank screens!
-
 ## Architecture
 
-### Before (Old)
+### Local Development
 ```
-Frontend (Vercel) --> Cloudflare Tunnel --> Local Backend
+Frontend (localhost:3000) --> Backend API (localhost:8081) --> InfluxDB Cloud
 ```
 
-### After (New)
-```
-Frontend + Backend (Vercel Serverless) --> InfluxDB Cloud
-```
+### Deployment
+For production deployment, run the backend on a server and update `CORS_ORIGIN` to allow requests from your domain.
 
 ## Features
 
@@ -34,8 +23,7 @@ Frontend + Backend (Vercel Serverless) --> InfluxDB Cloud
 
 ### Prerequisites
 - Python 3.10+
-- Node.js 18+ 
-- Vercel CLI (`npm i -g vercel`)
+- Node.js 18+
 
 ### Local Setup
 
@@ -50,7 +38,7 @@ cd frontend
 npm install
 ```
 
-### Run Locally (without tunnel)
+### Run Locally
 
 ```bash
 # Terminal 1: Start backend
@@ -62,35 +50,27 @@ cd frontend
 npm run dev
 ```
 
-### Build for Production
-
-```bash
-npm run build
-```
-
-Output: `frontend/dist/`
+Open http://localhost:3000 in your browser.
 
 ## Environment Variables
 
-Required for production deployment:
+### Required
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `INFLUX_URL` | InfluxDB cloud URL | (required) |
+| `INFLUX_TOKEN` | API token with read access | (required) |
+| `INFLUX_ORG` | Organization name | wach |
+| `INFLUX_BUCKET` | Bucket name | wach_bucket_3 |
 
-| Variable | Description |
-|----------|-------------|
-| `INFLUX_URL` | InfluxDB cloud URL |
-| `INFLUX_TOKEN` | API token with read access |
-| `INFLUX_ORG` | Organization name |
-| `INFLUX_BUCKET` | Bucket name |
-
-Optional:
-| Variable | Description |
-|----------|-------------|
-| `ENABLE_LLM` | Set to "true" for AI query translation |
-| `LMS_BASE_URL` | LM Studio URL (if ENABLE_LLM=true) |
+### Optional
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CORS_ORIGIN` | Allowed origins for CORS | http://localhost:3000 |
+| `ENABLE_LLM` | Set to "true" for AI query translation | false |
+| `LMS_BASE_URL` | LM Studio URL (if ENABLE_LLM=true) | http://localhost:1234/v1 |
 
 ## Files
 
 - `backend/main.py` - FastAPI backend
 - `frontend/` - React + Vite frontend
-- `api/index.py` - Vercel serverless function
 - `DEPLOYMENT.md` - Detailed deployment guide
-- `MIGRATION_SUMMARY.md` - Migration details

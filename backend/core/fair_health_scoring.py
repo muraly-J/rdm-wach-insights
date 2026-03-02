@@ -104,10 +104,10 @@ HEALTH_INDEX_WEIGHTS = {
 
 # Risk tier thresholds
 HEALTH_TIERS = {
-    "Critical":       (0, 39),
-    "MaintenanceSoon": (40, 59),
-    "Monitor":        (60, 79),
-    "Healthy":        (80, 100),
+    "Critical":        (0, 39),
+    "Maintenance Soon": (40, 59),
+    "Monitor":         (60, 79),
+    "Healthy":         (80, 100),
 }
 
 # Sensitivity factors for each score
@@ -989,7 +989,7 @@ def generate_fleet_summary(assessments: List[Dict]) -> Dict[str, Any]:
     valid_assessments = [a for a in assessments if "error" not in a]
     
     # Count by tier
-    tier_counts = {"Healthy": 0, "Monitor": 0, "MaintenanceSoon": 0, "Critical": 0}
+    tier_counts = {"Healthy": 0, "Monitor": 0, "Maintenance Soon": 0, "Critical": 0}
     for a in valid_assessments:
         tier = a.get("health_tier", "Unknown")
         if tier in tier_counts:

@@ -13,8 +13,9 @@ Flow:
   4. Return (StructuredQuery | None, error_message | None)
 
 Production notes:
-  - In Vercel, LLM is disabled by default (IN_PRODUCTION env var)
-  - Queries will use rule-based parsing instead of AI translation
+  - LLM is disabled by default for local development
+  - Set ENABLE_LLM=true to enable AI translation
+  - Queries will use rule-based parsing instead of AI translation when disabled
 """
 
 import os
@@ -22,10 +23,8 @@ import json
 import re
 from typing import Optional, Union
 
-# Detect production environment (Vercel sets VERCEL env var)
-IN_PRODUCTION = os.getenv("VERCEL") == "1" or os.getenv("APP_ENV") == "production"
-
-# Disable LLM in production if not explicitly enabled
+# Disable LLM by default for local development
+# Set ENABLE_LLM=true to enable AI translation via LM Studio
 LLM_ENABLED = os.getenv("ENABLE_LLM", "false").lower() == "true"
 
 if LLM_ENABLED and not IN_PRODUCTION:
@@ -97,16 +96,17 @@ async def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None]
     """
     Main entry point. Converts a natural language string to a validated StructuredQuery.
 
-    In production (Vercel), LLM translation is disabled by default and queries are parsed
-    using rule-based extraction from the structured query schemas.
-    
-    In development, LLM translation is enabled if ENABLE_LLM=true.
+    LLM translation is disabled by default for local development.
+    Set ENABLE_LLM=true to enable AI translation via LM Studio.
+
+    When LLM is disabled, queries are parsed using rule-based extraction
+    from the structured query schemas.
 
     Returns:
         (StructuredQuery, None)        — success
         (None, error_message: str)     — failure with user-friendly message
     """
-    # If LLM is disabled (production mode), try to parse the query using rules
+    # If LLM is disabled (default for local development), use rule-based parsing
     if not LLM_ENABLED:
         return _parse_query_rules(user_query)
 

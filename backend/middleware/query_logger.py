@@ -16,10 +16,6 @@ Table: query_logs
 
 The PRD commentary explicitly calls out logging rejected queries for iterative
 improvement — this table makes that easy to query later.
-
-Vercel Compatibility:
-- In Vercel's read-only environment, logging is disabled gracefully
-- Uses /tmp directory for writable storage when needed
 """
 
 import sqlite3
@@ -29,17 +25,9 @@ from typing import Optional
 from datetime import datetime, timezone
 from pathlib import Path
 
-
-# Detect Vercel environment (read-only filesystem)
-IN_VERCEL = os.getenv("VERCEL") == "1"
-
 # Determine DB path based on environment
-if IN_VERCEL:
-    # In Vercel, use /tmp which is writable
-    _DB_DIR = Path("/tmp/query_logger")
-else:
-    # In local/dev, use backend/data
-    _DB_DIR = Path(__file__).parent.parent / "data"
+# In local development, use backend/data directory
+_DB_DIR = Path(__file__).parent.parent / "data"
 
 _DB_PATH = _DB_DIR / "query_logs.db"
 
@@ -52,7 +40,6 @@ def _get_conn() -> Optional[sqlite3.Connection]:
         conn.row_factory = sqlite3.Row
         return conn
     except Exception as e:
-        # In Vercel, this may fail on initial deploy before /tmp is ready
         print(f"[query_logger] Warning: Could not connect to database: {e}")
         return None
 
@@ -60,7 +47,7 @@ def _get_conn() -> Optional[sqlite3.Connection]:
 def init_db() -> bool:
     """
     Create the query_logs table if it doesn't exist.
-    Returns True on success, False if database is not writable (Vercel).
+    Returns True on success, False if database is not writable.
     """
     try:
         conn = _get_conn()
@@ -97,16 +84,10 @@ def log_query(
 ) -> Optional[int]:
     """
     Insert one log row. Returns the new row id.
-    
-    In Vercel (read-only), this function silently fails and returns None.
-    
+
     execution_status should be one of:
       'success' | 'validation_error' | 'parse_error' | 'influx_error'
     """
-    # Don't log in Vercel if database is not writable
-    if IN_VERCEL:
-        return None
-    
     metric = structured_query.get("metric") if structured_query else None
     query_type = structured_query.get("query_type") if structured_query else None
 

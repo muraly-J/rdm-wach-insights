@@ -1,9 +1,9 @@
 import axios from 'axios'
 
-// In production (Vercel), use relative paths since frontend and backend are on same domain
-// In development, use VITE_API_BASE if set (for Cloudflare tunnel), otherwise default to localhost
+// Use relative paths for localhost development
+// Frontend (port 3000) communicates with backend (port 8081) via /api endpoints
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || '/api',
+  baseURL: '/api',
   timeout: 60000,   // 60s — LLM + InfluxDB can be slow
   headers: {
     'Content-Type': 'application/json',

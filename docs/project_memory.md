@@ -19,7 +19,7 @@ This is the **WACH Insight** project - an AHU (Air Handling Unit) analytics dash
 |-------|-----------|
 | Backend | FastAPI (Python), Uvicorn worker, Gunicorn |
 | Frontend | React + Vite |
-| Deployment | Cloudflare Tunnel + Vercel |
+| Deployment | Local Development & InfluxDB Cloud |
 | Database | InfluxDB (bucket: wach_bucket_3) |
 
 ### Directory Structure

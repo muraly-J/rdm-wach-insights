@@ -39,10 +39,9 @@ _FILE_PATH = Path(__file__).resolve()
 PROJECT_ROOT = _FILE_PATH.parent.parent.parent  # up 3 levels from backend/routes/forecast.py
 MODEL_DIR = PROJECT_ROOT / "paraquet_data" / "models" / "saved"
 
-# Try multiple locations for models (handles both local and Vercel deployments)
+# Try multiple locations for models
 MODEL_PATHS = [
     MODEL_DIR,
-    Path("/var/paraquet_data/models/saved"),  # Vercel temp path fallback
 ]
 
 MODEL_BASE_PATH = None
