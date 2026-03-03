@@ -77,7 +77,7 @@ const COMPONENT_CONFIG = {
 const TIER_COLORS = {
   Healthy: '#00c9b1',
   Monitor: '#f5a623',
-  MaintenanceSoon: '#f5734e',
+  Maintenance Soon: '#f5734e',
   Critical: '#ff4d6d',
 }
 
@@ -112,7 +112,7 @@ const AHU_COLORS = [
 function getAhuTier(value) {
   if (value == null || isNaN(value)) return 'Healthy'
   if (value < 40) return 'Critical'
-  if (value < 60) return 'MaintenanceSoon'
+  if (value < 60) return 'Maintenance Soon'
   if (value < 80) return 'Monitor'
   return 'Healthy'
 }
@@ -122,7 +122,7 @@ function getTierInfo(metricKey, value) {
   
   if (isHealthIndex) {
     if (value < 40) return { tier: 'Critical', color: '#ff4d6d', label: 'Critical (0-39)' };
-    if (value < 60) return { tier: 'MaintenanceSoon', color: '#f5734e', label: 'Maintenance Soon (40-59)' };
+    if (value < 60) return { tier: 'Maintenance Soon', color: '#f5734e', label: 'Maintenance Soon (40-59)' };
     if (value < 80) return { tier: 'Monitor', color: '#f5a623', label: 'Monitor (60-79)' };
     return { tier: 'Healthy', color: '#00c9b1', label: 'Healthy (80-100)' };
   } else {
@@ -1049,8 +1049,8 @@ export default function AhuHealthTrendDashboard({ onBack }) {
                               const tierA = getTierInfo(metricKey, devicesA[0].value).tier;
                               const tierB = getTierInfo(metricKey, devicesB[0].value).tier;
                               
-                              // Health index order: Healthy > Monitor > MaintenanceSoon > Critical
-                              const tierOrder = { 'Healthy': 4, 'Monitor': 3, 'MaintenanceSoon': 2, 'Critical': 1 };
+                              // Health index order: Healthy > Monitor > Maintenance Soon > Critical
+                              const tierOrder = { 'Healthy': 4, 'Monitor': 3, 'Maintenance Soon': 2, 'Critical': 1 };
                               // Component metrics order: Normal > Elevated > High
                               const componentOrder = { 'Normal': 3, 'Elevated': 2, 'High': 1 };
                               

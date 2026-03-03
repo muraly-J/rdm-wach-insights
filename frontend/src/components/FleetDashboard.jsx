@@ -12,7 +12,7 @@ import {
 const HEALTH_TIERS = {
   Healthy: { color: '#00c9b1', label: 'Healthy', min: 80, max: 100 },
   Monitor: { color: '#f5a623', label: 'Monitor', min: 60, max: 79 },
-  MaintenanceSoon: { color: '#f5734e', label: 'Maintenance Soon', min: 40, max: 59 },
+  Maintenance Soon: { color: '#f5734e', label: 'Maintenance Soon', min: 40, max: 59 },
   Critical: { color: '#ff4d6d', label: 'Critical', min: 0, max: 39 },
 }
 
@@ -108,7 +108,7 @@ export default function FleetDashboard({ onBack }) {
     switch (tier) {
       case 'Healthy': return { bg: '#00c9b115', border: '#00c9b135', text: '#00c9b1' }
       case 'Monitor': return { bg: '#f5a62315', border: '#f5a62335', text: '#f5a623' }
-      case 'MaintenanceSoon': return { bg: '#f5734e15', border: '#f5734e35', text: '#f5734e' }
+      case 'Maintenance Soon': return { bg: '#f5734e15', border: '#f5734e35', text: '#f5734e' }
       case 'Critical': return { bg: '#ff4d6d15', border: '#ff4d6d35', text: '#ff4d6d' }
       default: return { bg: '#7a90b015', border: '#7a90b035', text: '#7a90b0' }
     }
@@ -148,7 +148,7 @@ export default function FleetDashboard({ onBack }) {
             const value = entry.value
             let tier = 'Healthy'
             if (value < 40) tier = 'Critical'
-            else if (value < 60) tier = 'MaintenanceSoon'
+            else if (value < 60) tier = 'Maintenance Soon'
             else if (value < 80) tier = 'Monitor'
 
             const tierColor = getTierColor(tier)

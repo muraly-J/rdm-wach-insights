@@ -595,7 +595,7 @@ slope_n = float(np.clip(ols_slope(hist_series) / rstd, -10, 10))
   "tier_distribution": {
     "Healthy": 45,
     "Monitor": 30,
-    "MaintenanceSoon": 20,
+    "Maintenance Soon": 20,
     "Critical": 7
   },
   "top_5_lowest_health_index": [

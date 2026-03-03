@@ -242,39 +242,52 @@ def score_energy_anomaly(
 ) -> Tuple[float, float]:
     """
     Score 1 · Energy Anomaly  (weight 15%)
-    
+
     Is this AHU consuming an unusual amount of energy this hour compared
     to what IT normally consumes.
-    
+
     Level term (70%):
         z = (delta_kwh − own_median) / own_rstd
         raw = 0.6 × |z| + 0.4 × max(0, z)
-        
+
     Trend term (30%):
         Rising energy over 7 days = worsening.
-        
+
+    Minimum History Requirement:
+        - At least 24 hours of delta_kwh history required for reliable scoring
+        - Slope calculation requires at least 3 data points
+
     Returns (score ∈ [0,1], z_diagnostic)
     """
-    if delta_kwh is None or np.isnan(delta_kwh) or delta_kwh < 0:
-        return 0.0, np.nan
-    
+    # Minimum history check - need at least 24 hours of data for reliable scoring
+    if hist_delta_series is None or len(hist_delta_series) < 24:
+        return 0.5, np.nan  # Neutral score when insufficient history
+
+    if delta_kwh is None or np.isnan(delta_kwh):
+        return 0.5, np.nan  # Neutral score when current value missing
+
     if ahu_median_delta is None or np.isnan(ahu_median_delta):
-        return 0.0, np.nan
-    
+        return 0.5, np.nan  # Neutral score when baseline missing
+
     # Use robust std with minimum
     rstd = max(ahu_rstd_delta, MIN_RSTD.get("delta_kwh", 0.05))
     if rstd <= 0:
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     # Level term: z-score vs own median
     z = (delta_kwh - ahu_median_delta) / rstd
     raw = 0.6 * abs(z) + 0.4 * max(0.0, z)
     lv = sigmoid_score(raw * SENSITIVITY["energy_anomaly"])
-    
-    # Trend term
-    slope_n = float(np.clip(ols_slope(hist_delta_series) / rstd, -10, 10))
-    tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
-    
+
+    # Trend term - with NaN safety guard for historical series
+    hist_clean = np.asarray(hist_delta_series, dtype=float)
+    hist_clean = hist_clean[~np.isnan(hist_clean)]
+    if len(hist_clean) >= 3:
+        slope_n = float(np.clip(ols_slope(hist_clean) / rstd, -10, 10))
+        tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
+    else:
+        tr = 0.0  # No trend term if insufficient history
+
     score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
     return score, round(z, 3)
 
@@ -429,53 +442,67 @@ def score_overload(
 ) -> Tuple[float, float]:
     """
     Score 5 · Overload  (weight 20%)
-    
+
     Is this AHU approaching or exceeding its own historical power ceiling,
     and is load trending upward.
-    
+
     Three sub-components, all relative to this AHU's own history:
-    
+
     A. Ceiling term (50%):
         power_ratio = current_power / own_p95_power
         demand = max(0, power_ratio − 0.85)
         score_A = sigmoid_score(demand × 8)
-        
+
     B. Z-score term (30%):
         z = (current − own_median) / own_rstd
         score_B = sigmoid_score(z × 1.5)
-        
+
     C. Trend term (20%):
         Rising load over 7 days = worsening.
-        
+
     Final = 0.50 × score_A + 0.30 × score_B + 0.20 × score_C
-    
+
+    Minimum History Requirement:
+        - At least 24 hours of power history required for reliable scoring
+        - Slope calculation requires at least 3 data points
+        - P95 baseline needs sufficient history to be meaningful
+
     Returns (score ∈ [0,1], z_diagnostic)
     """
+    # Minimum history check - need at least 24 hours of data for reliable scoring
+    if hist_power_series is None or len(hist_power_series) < 24:
+        return 0.5, np.nan  # Neutral score when insufficient history
+
     if power is None or np.isnan(power):
-        return 0.0, np.nan
-    
+        return 0.5, np.nan  # Neutral score when current value missing
+
     if ahu_median_power is None or np.isnan(ahu_median_power):
-        return 0.0, np.nan
-    
+        return 0.5, np.nan  # Neutral score when baseline missing
+
     if ahu_p95_power is None or np.isnan(ahu_p95_power) or ahu_p95_power <= 0:
-        return 0.0, np.nan
-    
+        return 0.5, np.nan  # Neutral score when P95 baseline unavailable
+
     # Use robust std with minimum
     rstd = max(ahu_rstd_power, MIN_RSTD.get("power_total", 0.05))
-    
+
     # A: ceiling proximity
     power_ratio = power / ahu_p95_power
     demand = max(0.0, power_ratio - 0.85)
     score_A = sigmoid_score(demand * 8.0)
-    
+
     # B: z-score vs own median
     z = (power - ahu_median_power) / rstd
     score_B = sigmoid_score(z * 1.5)
-    
-    # C: trend
-    slope_n = float(np.clip(ols_slope(hist_power_series) / rstd, -10, 10))
-    score_C = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
-    
+
+    # C: trend - with NaN safety guard for historical series
+    hist_clean = np.asarray(hist_power_series, dtype=float)
+    hist_clean = hist_clean[~np.isnan(hist_clean)]
+    if len(hist_clean) >= 3:
+        slope_n = float(np.clip(ols_slope(hist_clean) / rstd, -10, 10))
+        score_C = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
+    else:
+        score_C = 0.0  # No trend term if insufficient history
+
     score = 0.50 * score_A + 0.30 * score_B + 0.20 * score_C
     return clamp01(score), round(z, 3)
 

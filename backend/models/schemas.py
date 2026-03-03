@@ -337,7 +337,7 @@ class FleetTierDistribution(BaseModel):
     """Distribution of AHUs across health tiers."""
     Healthy: int = 0
     Monitor: int = 0
-    MaintenanceSoon: int = 0
+    Maintenance_Soon: int = 0
     Critical: int = 0
 
 

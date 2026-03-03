@@ -90,19 +90,34 @@ MIN_RSTD = {
 THD_ROLLING_H = 24
 TREND_WINDOW_H = 168   # 7 days
 
-# Sample device selection (2-3 per level)
+# Sample device selection - updated to fetch all devices per level
 SAMPLE_DEVICES = {
-    1: ['e0101', 'e0105', 'e0111'],     # Low, mid, high power
-    2: ['e0201', 'e0205', 'e0213'],
-    3: ['e0301', 'e0307', 'e0401'],     # Mix of levels
-    4: ['e0403', 'e0411', 'e0419'],
-    5: ['e0501', 'e0506', 'e0622'],     # Including outlier
-    6: ['e0603', 'e0611', 'e0626'],
-    7: ['e0701', 'e0703', 'e0704'],     # Small level
-    8: ['e0801', 'e0803', 'e0805'],
-    9: ['e0901', 'e0904', 'e0908'],
-    10: ['e1001', 'e1004', 'e1008'],
-    11: ['e1101', 'e1105', 'e1108'],
+    1: get_devices_by_level(1),     # All 21 devices on Level 1
+    2: get_devices_by_level(2),     # All 15 devices on Level 2
+    3: get_devices_by_level(3),     # All 16 devices on Level 3
+    4: get_devices_by_level(4),     # All 13 devices on Level 4
+    5: get_devices_by_level(5),     # All 12 devices on Level 5
+    6: get_devices_by_level(6),     # All 11 devices on Level 6
+    7: get_devices_by_level(7),     # All 4 devices on Level 7
+    8: get_devices_by_level(8),     # All 5 devices on Level 8
+    9: get_devices_by_level(9),     # All 8 devices on Level 9
+    10: get_devices_by_level(10),   # All 8 devices on Level 10
+    11: get_devices_by_level(11),   # All 8 devices on Level 11
+}
+
+# Broad sample: all devices per level
+BROAD_SAMPLE_DEVICES = {
+    1: ['e0101', 'e0102', 'e0103', 'e0104', 'e0105', 'e0106', 'e0107', 'e0108', 'e0109', 'e0110', 'e0111', 'e0112', 'e0113', 'e0114', 'e0115', 'e0116', 'e0117', 'e0118', 'e0120', 'e0121', 'e0212'],
+    2: ['e0201', 'e0202', 'e0203', 'e0204', 'e0205', 'e0206', 'e0207', 'e0208', 'e0209', 'e0213', 'e0214', 'e0215', 'e0216', 'e0217', 'e0218'],
+    3: ['e0210', 'e0211', 'e0301', 'e0303', 'e0304', 'e0306', 'e0307', 'e0308', 'e0311', 'e0312', 'e0313', 'e0314', 'e0315', 'e0401', 'e0402', 'e0423'],
+    4: ['e0403', 'e0404', 'e0406', 'e0407', 'e0408', 'e0409', 'e0411', 'e0412', 'e0413', 'e0414', 'e0415', 'e0416', 'e0419'],
+    5: ['e0501', 'e0502', 'e0503', 'e0504', 'e0505', 'e0506', 'e0507', 'e0508', 'e0509', 'e0510', 'e0511', 'e0622'],
+    6: ['e0602', 'e0603', 'e0604', 'e0605', 'e0606', 'e0607', 'e0611', 'e0625', 'e0626', 'e0627', 'e0628'],
+    7: ['e0701', 'e0702', 'e0703', 'e0704'],
+    8: ['e0801', 'e0802', 'e0803', 'e0804', 'e0805'],
+    9: ['e0901', 'e0902', 'e0903', 'e0904', 'e0905', 'e0906', 'e0907', 'e0908'],
+    10: ['e1001', 'e1002', 'e1003', 'e1004', 'e1005', 'e1006', 'e1007', 'e1008'],
+    11: ['e1101', 'e1102', 'e1103', 'e1104', 'e1105', 'e1106', 'e1107', 'e1108'],
 }
 
 # Time range mapping

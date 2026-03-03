@@ -32,6 +32,7 @@ Author: Rule-Based Baseline System (Stage 2B MVP)
 
 import asyncio
 import math
+import numpy as np
 import pandas as pd
 from typing import Dict, List, Tuple, Optional, Any
 from datetime import datetime, timedelta
@@ -55,10 +56,10 @@ HEALTH_INDEX_WEIGHTS = {
 
 # Risk tier thresholds
 HEALTH_TIERS = {
-    "Critical":       (0, 39),
-    "MaintenanceSoon": (40, 59),
-    "Monitor":        (60, 79),
-    "Healthy":        (80, 100),
+    "Critical":        (0, 39),
+    "Maintenance Soon": (40, 59),
+    "Monitor":         (60, 79),
+    "Healthy":         (80, 100),
 }
 
 # Sigmoid scaling factors (from requirements)
@@ -179,6 +180,59 @@ def normalize_to_01(value: float, min_val: float, max_val: float) -> float:
         return 0.5  # Neutral score if no range
     normalized = (value - min_val) / (max_val - min_val)
     return max(0.0, min(1.0, normalized))
+
+
+def detect_bimodality(values: np.ndarray, threshold: float = 2.0) -> Tuple[bool, float]:
+    """
+    Detect bimodal distribution using the Dip Test approximation.
+    
+    For a bimodal distribution, the distance between modes is large compared
+    to the spread within each mode. This creates a "dip" in the CDF.
+    
+    Simplified bimodality indicator:
+        - Compute gaps between consecutive points after sorting
+        - Large gaps suggest mode separation
+        - Ratio of largest gap to median gap indicates bimodality
+    
+    Args:
+        values: Input array of numeric values
+        threshold: Bimodality score above which distribution is considered bimodal
+    
+    Returns:
+        (is_bimodal: bool, bimodality_score: float)
+        - is_bimodal: True if distribution appears bimodal
+        - bimodality_score: 0-1 scale (higher = more bimodal)
+    """
+    import numpy as np
+    
+    v = values[~np.isnan(values)]
+    if len(v) < 10:  # Need enough data for meaningful analysis
+        return False, 0.0
+    
+    # Sort values
+    sorted_vals = np.sort(v)
+    
+    # Compute gaps between consecutive points
+    gaps = np.diff(sorted_vals)
+    
+    if len(gaps) < 2:
+        return False, 0.0
+    
+    # Median gap (typical spacing)
+    median_gap = float(np.median(gaps))
+    
+    if median_gap == 0:
+        return False, 0.0
+    
+    # Largest gap (potential mode separation)
+    max_gap = float(np.max(gaps))
+    
+    # Bimodality score: ratio of largest to median gap
+    bimodality_score = min(1.0, (max_gap / median_gap - 1) / 5.0)
+    
+    is_bimodal = bimodality_score >= threshold
+    
+    return is_bimodal, min(1.0, bimodality_score)
 
 
 def percentile_rank(value: float, series: pd.Series) -> int:
@@ -558,6 +612,7 @@ def energy_anomaly_score(
     current_energy: float,
     ahu_mean_delta_kwh: float,
     ahu_std_delta_kwh: float,
+    min_history_hours: int = 24,
 ) -> float:
     """
     Calculate energy anomaly score using FAIR per-AHU baseline method.
@@ -568,17 +623,29 @@ def energy_anomaly_score(
     Uses z-score: how many SDs above own mean is current consumption?
     This makes it inherently fair across differently-sized AHUs.
 
+    Minimum History Requirement:
+        - At least min_history_hours (default 24) of delta_kwh history
+        - Slope calculation requires at least 3 data points
+
     Args:
         current_energy: Current delta_kwh (hourly energy consumption)
         ahu_mean_delta_kwh: This AHU's mean hourly energy
         ahu_std_delta_kwh: This AHU's hourly energy standard deviation
+        min_history_hours: Minimum hours of history required (default 24)
 
     Returns:
         Energy anomaly score in [0, 1]
     """
+    # Minimum history check
+    if min_history_hours < 3:
+        min_history_hours = 3
+
     # Handle missing/invalid data
-    if current_energy is None or ahu_mean_delta_kwh is None:
-        return 0.0
+    if current_energy is None or np.isnan(current_energy):
+        return 0.5  # Neutral score when current value missing
+
+    if ahu_mean_delta_kwh is None or np.isnan(ahu_mean_delta_kwh):
+        return 0.5  # Neutral score when baseline missing
 
     # Minimum std to avoid division by zero
     MIN_STD_POWER = 0.05
@@ -633,6 +700,14 @@ def power_factor_risk_score(
     MIN_STD_PF = 0.005
     ahu_std_pf = max(ahu_std_pf, MIN_STD_PF) if ahu_std_pf else MIN_STD_PF
 
+    # Handle missing/invalid current PF
+    if current_pf is None or np.isnan(current_pf):
+        return 0.5  # Neutral score when current value missing
+
+    # Handle missing baseline
+    if ahu_mean_pf is None or np.isnan(ahu_mean_pf):
+        return 0.5  # Neutral score when baseline missing
+
     # RELATIVE: how many SDs below own mean? (lower PF = worse)
     if ahu_mean_pf:
         z_score = (current_pf - ahu_mean_pf) / ahu_std_pf
@@ -654,7 +729,7 @@ def power_factor_risk_score(
 
     # Blend relative (60%) and absolute (40%)
     rel_score = sigmoid_score(raw_relative)
-    abs_score = raw_absolute  # Already in [0,1]
+    abs_score = clamp01(raw_absolute)  # FIX: Clamp absolute score to [0,1]
     score = 0.60 * rel_score + 0.40 * abs_score
 
     # LOAD DISCOUNT: if below 60% of own mean power, discount by 65%
@@ -703,6 +778,14 @@ def phase_imbalance_risk_score(
     MIN_STD_UNBAL = 0.10
     ahu_std_unbalance = max(ahu_std_unbalance, MIN_STD_UNBAL) if ahu_std_unbalance else MIN_STD_UNBAL
 
+    # Handle missing/invalid current unbalance
+    if current_unbalance is None or np.isnan(current_unbalance):
+        return 0.5  # Neutral score when current value missing
+
+    # Handle missing baseline
+    if ahu_mean_unbalance is None or np.isnan(ahu_mean_unbalance):
+        return 0.5  # Neutral score when baseline missing
+
     # RELATIVE: how many SDs above own mean?
     z_score = (current_unbalance - ahu_mean_unbalance) / ahu_std_unbalance
     raw_relative = z_score * 2.0
@@ -715,7 +798,7 @@ def phase_imbalance_risk_score(
         raw_absolute = 0.0
 
     # Blend relative (60%) and absolute (40%)
-    score = 0.60 * sigmoid_score(raw_relative) + 0.40 * raw_absolute
+    score = 0.60 * sigmoid_score(raw_relative) + 0.40 * clamp01(raw_absolute)
 
     return float(max(0.0, min(1.0, score)))
 
@@ -752,6 +835,14 @@ def thd_risk_score(
     MIN_STD_THD = 0.10
     ahu_std_thd = max(ahu_std_thd, MIN_STD_THD) if ahu_std_thd else MIN_STD_THD
 
+    # Handle missing/invalid current THD
+    if composite_thd_24h_mean is None or np.isnan(composite_thd_24h_mean):
+        return 0.5  # Neutral score when current value missing
+
+    # Handle missing baseline
+    if ahu_mean_thd is None or np.isnan(ahu_mean_thd):
+        return 0.5  # Neutral score when baseline missing
+
     # RELATIVE: how many SDs above own mean?
     z_score = (composite_thd_24h_mean - ahu_mean_thd) / ahu_std_thd
     raw_relative = z_score * 2.0
@@ -764,7 +855,7 @@ def thd_risk_score(
         raw_absolute = 0.0
 
     # Blend relative (60%) and absolute (40%)
-    score = 0.60 * sigmoid_score(raw_relative) + 0.40 * raw_absolute
+    score = 0.60 * sigmoid_score(raw_relative) + 0.40 * clamp01(raw_absolute)
 
     return float(max(0.0, min(1.0, score)))
 
@@ -775,6 +866,7 @@ def overload_risk_score(
     ahu_mean_power: float,
     fleet_median_delta_kwh: float,
     fleet_p95_delta_kwh: float,
+    min_history_hours: int = 24,
 ) -> float:
     """
     Calculate Overload risk score using FAIR per-AHU baseline method.
@@ -786,21 +878,37 @@ def overload_risk_score(
     Score starts accumulating above 85% of the AHU's own p95.
     Also includes z-score of current power vs own mean.
 
+    Minimum History Requirement:
+        - At least min_history_hours (default 24) of power history
+        - P95 baseline needs sufficient data to be meaningful
+
     Args:
         current_power: Current power reading
         ahu_p95_power: This AHU's 95th percentile power (ceiling reference)
         ahu_mean_power: This AHU's mean power
         fleet_median_delta_kwh: Fleet median energy consumption
         fleet_p95_delta_kwh: Fleet 95th percentile energy
+        min_history_hours: Minimum hours of history required (default 24)
 
     Returns:
         Overload risk score in [0, 1]
     """
+    # Minimum history check
+    if min_history_hours < 3:
+        min_history_hours = 3
+
     # Minimum std to avoid division by zero
     MIN_STD_POWER = 0.05
 
-    if ahu_p95_power is None or ahu_p95_power <= 0:
-        return 0.0
+    # Check for missing/invalid data
+    if current_power is None or np.isnan(current_power):
+        return 0.5  # Neutral score when current value missing
+
+    if ahu_mean_power is None or np.isnan(ahu_mean_power):
+        return 0.5  # Neutral score when baseline missing
+
+    if ahu_p95_power is None or np.isnan(ahu_p95_power) or ahu_p95_power <= 0:
+        return 0.5  # Neutral score when P95 baseline unavailable
 
     # Relative: how far above own p95 ceiling?
     power_ratio = current_power / ahu_p95_power
@@ -829,7 +937,7 @@ def overload_risk_score(
 def calculate_ahu_health_index(risk_scores: Dict[str, float]) -> Tuple[float, str]:
     """
     Calculate unified AHU Health Index from individual risk scores.
-    
+
     health_index = 100 - weighted_sum(
         energy_anomaly_score × 0.15,
         pf_risk_score        × 0.25,
@@ -837,24 +945,27 @@ def calculate_ahu_health_index(risk_scores: Dict[str, float]) -> Tuple[float, st
         thd_risk_score       × 0.15,
         overload_risk_score  × 0.20
     )
-    
+
     Args:
-        risk_scores: Dict with keys: energy_anomaly, power_factor, 
+        risk_scores: Dict with keys: energy_anomaly, power_factor,
                      phase_imbalance, thd_drift, overload
-    
+
     Returns:
         Tuple of (health_index: float, health_tier: str)
     """
     weighted_sum = 0.0
     for metric, score in risk_scores.items():
         weight = HEALTH_INDEX_WEIGHTS.get(metric, 0)
+        # Handle NaN scores - treat as neutral (0.5) to avoid corrupting calculation
+        if score is None or np.isnan(score):
+            score = 0.5
         weighted_sum += score * weight
-    
+
     health_index = 100 - (weighted_sum * 100)
     health_index = max(0, min(100, health_index))  # Clamp to [0, 100]
-    
+
     health_tier = get_health_tier(health_index)
-    
+
     return round(health_index, 1), health_tier
 
 def calculate_ahu_health_index_fair(risk_scores: Dict[str, float]) -> Tuple[float, str]:
@@ -1311,7 +1422,7 @@ def generate_fleet_summary(assessments: List[Dict]) -> Dict[str, Any]:
     valid_assessments = [a for a in assessments if "error" not in a]
     
     # Count by tier
-    tier_counts = {"Healthy": 0, "Monitor": 0, "MaintenanceSoon": 0, "Critical": 0}
+    tier_counts = {"Healthy": 0, "Monitor": 0, "Maintenance Soon": 0, "Critical": 0}
     for a in valid_assessments:
         tier = a.get("health_tier", "Unknown")
         if tier in tier_counts:
