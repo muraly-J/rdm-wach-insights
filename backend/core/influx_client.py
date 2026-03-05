@@ -11,7 +11,11 @@ Both return clean pandas DataFrames ready for the visualization layer.
 """
 
 import os
+import math
 import warnings
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
+
 import pandas as pd
 from influxdb_client import InfluxDBClient
 
@@ -271,3 +275,284 @@ def get_available_devices(time_range: str = "last_30d") -> list[str]:
         return []
     finally:
         client.close()
+
+
+# ── Exact Slot Fetching for t-24h, t-168h, t-336h comparison ────────────────
+
+def fetch_exact_slots(
+    device_ids: list[str],
+    metric: str,
+    reference_time: datetime,
+    slots_hours_ago: list[int]
+) -> Dict[str, Dict[int, Optional[float]]]:
+    """
+    Fetch exact historical values at specific time slots (t-24h, t-168h, etc).
+
+    This enables comparison of current value against specific historical points:
+    - t:     Current hour
+    - t-24h: Same hour yesterday
+    - t-168h: Same hour last week (7 days ago)
+    - t-336h: Two weeks ago (14 days ago)
+
+    Args:
+        device_ids: List of AHU IDs to fetch
+        metric: Metric name (e.g., "power_total", "energy_import")
+        reference_time: Current timestamp t
+        slots_hours_ago: List of hours ago to fetch (e.g., [0, 24, 168, 336])
+
+    Returns:
+        Nested dict: {ahu_id: {hours_ago: value, ...}}
+        Example: {"e0101": {0: 35.2, 24: 33.1, 168: 34.8, 336: 32.5}}
+
+    Example usage:
+        now = datetime.now(timezone.utc)
+        slots = fetch_exact_slots(["e0101"], "power_total", now, [24, 168])
+        # Compare current vs t-24h vs t-168h for trend detection
+    """
+    results = {ahu_id: {} for ahu_id in device_ids}
+
+    if not device_ids:
+        return results
+
+    client = _get_client()
+    try:
+        for ahu_id in device_ids:
+            for hours_ago in slots_hours_ago:
+                # Calculate start and end time for exact slot
+                # Fetch a narrow window around the target time (±30 min tolerance)
+                start_time = reference_time - timedelta(hours=hours_ago + 1)
+                end_time = reference_time - timedelta(hours=hours_ago)
+
+                flux_query = f'''
+                from(bucket: "{_BUCKET}")
+                  |> range(start: {start_time.isoformat()}, stop: {end_time.isoformat()})
+                  |> filter(fn: (r) => r._measurement == "wach_{ahu_id}_{metric}")
+                  |> mean()
+                '''
+
+                try:
+                    tables = client.query_api().query(flux_query)
+                    value = None
+                    for table in tables:
+                        for record in table.records:
+                            val = record.get_value()
+                            if val is not None and not math.isnan(float(val)):
+                                value = float(val)
+                                break
+
+                    # If no result in 1-hour window, try broader search
+                    if value is None:
+                        broader_start = reference_time - timedelta(hours=hours_ago + 2)
+                        broader_query = f'''
+                        from(bucket: "{_BUCKET}")
+                          |> range(start: {broader_start.isoformat()}, stop: {reference_time.isoformat()})
+                          |> filter(fn: (r) => r._measurement == "wach_{ahu_id}_{metric}")
+                          |> last()
+                        '''
+                        broader_tables = client.query_api().query(broader_query)
+                        for table in broader_tables:
+                            for record in table.records:
+                                val = record.get_value()
+                                if val is not None and not math.isnan(float(val)):
+                                    value = float(val)
+                                    break
+
+                    results[ahu_id][hours_ago] = value
+
+                except Exception as e:
+                    print(f"[influx_client] Slot fetch failed for {ahu_id} @ t-{hours_ago}h: {e}")
+                    results[ahu_id][hours_ago] = None
+
+    except Exception as e:
+        print(f"[influx_client] fetch_exact_slots failed: {e}")
+    finally:
+        client.close()
+
+    return results
+
+
+# ── Fetch Latest Hourly Data for All AHUs ────────────────────────────────────
+
+def fetch_latest_hourly_data(
+    metrics_to_fetch: list[str] = None,
+    level_filter: int = None
+) -> pd.DataFrame:
+    """
+    Fetch the latest hourly data point for each AHU across all levels or a specific level.
+
+    This function queries InfluxDB to get the most recent reading for each
+    metric for every AHU, then aggregates them into a single DataFrame.
+
+    Args:
+        metrics_to_fetch: List of metric names to fetch.
+                         Default: ["power_total", "energy_import",
+                                   "power_factor_avg", "current_unbalance",
+                                   "current_l1_thd", "current_l3_thd"]
+        level_filter: Optional level number (1-11) to fetch only specific level.
+                     If None, fetches all levels.
+
+    Returns:
+        DataFrame with columns:
+        - timestamp (latest reading time)
+        - ahu_id
+        - level (Building level 1-11)
+        - All requested metrics
+
+    Example:
+        >>> df = fetch_latest_hourly_data()
+        >>> print(f"Retrieved {len(df)} AHU readings")
+        >>> # Fetch only Level 1
+        >>> df = fetch_latest_hourly_data(level_filter=1)
+    """
+    if metrics_to_fetch is None:
+        metrics_to_fetch = [
+            "power_total",
+            "energy_import",
+            "power_factor_avg",
+            "current_unbalance",
+            "current_l1_thd",
+            "current_l3_thd",
+        ]
+
+    from models.schemas import AHU_LEVEL_CONFIG
+
+    # Determine which devices to fetch
+    if level_filter is not None:
+        if level_filter not in AHU_LEVEL_CONFIG:
+            print(f"[influx_client] Error: Invalid level {level_filter}")
+            return pd.DataFrame()
+        device_ids = AHU_LEVEL_CONFIG[level_filter]["device_ids"]
+        print(f"[influx_client] Fetching latest data for Level {level_filter} ({len(device_ids)} AHUs)...")
+    else:
+        all_devices = []
+        for level_config in AHU_LEVEL_CONFIG.values():
+            all_devices.extend(level_config["device_ids"])
+        device_ids = all_devices
+        print(f"[influx_client] Fetching latest data for {len(device_ids)} AHUs (all levels)...")
+
+    print(f"[influx_client] Metrics: {', '.join(metrics_to_fetch)}")
+
+    records = []
+
+    client = _get_client()
+    try:
+        # Batch by level for better performance (avoids N+1 queries)
+        levels_to_fetch = [level_filter] if level_filter else sorted(AHU_LEVEL_CONFIG.keys())
+        
+        for level_num in levels_to_fetch:
+            # Skip if filtering by a specific level and this doesn't match
+            if level_filter is not None and level_num != level_filter:
+                continue
+            
+            level_devices = AHU_LEVEL_CONFIG[level_num]["device_ids"]
+            
+            # Build measurement regex for this level's devices
+            devices_regex = "|".join([d.replace("e", "e") for d in level_devices])
+            
+            # Query each metric for this level
+            for metric in metrics_to_fetch:
+                flux_query = f'''
+                from(bucket: "{_BUCKET}")
+                  |> range(start: -7d)
+                  |> filter(fn: (r) => r._measurement =~ /^wach_({devices_regex})_{metric}$/)
+                  |> last()
+                '''
+
+                try:
+                    tables = client.query_api().query(flux_query)
+                    for table in tables:
+                        for record in table.records:
+                            measurement = record.get_measurement()
+                            # Parse: wach_e0101_power_total -> e0101
+                            parts = measurement.split("_")
+                            if len(parts) >= 2:
+                                ahu_id = parts[1]
+                                val = record.get_value()
+
+                                if val is not None and not math.isnan(float(val)):
+                                    # Determine level from AHU ID
+                                    level_code = ahu_id[1:3]  # "01" from "e0101"
+                                    level = f"Level {int(level_code)}"
+
+                                    records.append({
+                                        "ahu_id": ahu_id,
+                                        "level": level,
+                                        "metric": metric,
+                                        "value": float(val),
+                                    })
+
+                except Exception as e:
+                    print(f"[influx_client] Query failed for {metric} (Level {level_num}): {e}")
+                    continue
+
+    except Exception as e:
+        print(f"[influx_client] fetch_latest_hourly_data failed: {e}")
+    finally:
+        client.close()
+
+    if not records:
+        print("[influx_client] No data found!")
+        return pd.DataFrame()
+
+    # Convert to DataFrame
+    df = pd.DataFrame(records)
+
+    if df.empty:
+        return df
+
+    # Pivot to wide format (one row per AHU, one column per metric)
+    df_wide = df.pivot_table(
+        index=["ahu_id", "level"],
+        columns="metric",
+        values="value"
+    ).reset_index()
+
+    # Ensure all expected metrics are present
+    for metric in metrics_to_fetch:
+        if metric not in df_wide.columns:
+            df_wide[metric] = None
+
+    # Get timestamps from power_total data (has all AHUs)
+    print("[influx_client] Fetching timestamps...")
+
+    # Get the devices for this query (all or filtered)
+    if level_filter is not None:
+        devices_for_timestamps = AHU_LEVEL_CONFIG[level_filter]["device_ids"]
+    else:
+        devices_for_timestamps = all_devices
+
+    # First, fetch power data with the relevant devices to get timestamps
+    df_power = fetch_time_series(devices_for_timestamps, "power_total", "last_7d")
+    
+    # Extract timestamps from the last row of each AHU
+    timestamps = {}
+    for ahu_id in df_wide["ahu_id"]:
+        if ahu_id in df_power.columns and not pd.isna(df_power[ahu_id].iloc[-1]):
+            timestamps[ahu_id] = df_power.index[-1].isoformat()
+        else:
+            # Try to find a non-null value anywhere in the series
+            non_null = df_power[ahu_id].dropna()
+            if len(non_null) > 0:
+                # Get timestamp of last non-null value
+                last_valid_idx = non_null.index[-1]
+                timestamps[ahu_id] = last_valid_idx.isoformat()
+            else:
+                timestamps[ahu_id] = None
+
+    df_wide["timestamp"] = df_wide["ahu_id"].map(timestamps)
+
+    # Compute composite_thd from max of L1 and L3 THD
+    has_composite = False
+    if "current_l1_thd" in df_wide.columns and "current_l3_thd" in df_wide.columns:
+        df_wide["composite_thd"] = df_wide[["current_l1_thd", "current_l3_thd"]].max(axis=1)
+        has_composite = True
+
+    # Reorder columns for cleaner output
+    col_order = ["timestamp", "ahu_id", "level"] + metrics_to_fetch
+    if has_composite:
+        col_order.append("composite_thd")
+    df_wide = df_wide[[c for c in col_order if c in df_wide.columns]]
+
+    print(f"[influx_client] Retrieved {len(df_wide)} AHU readings")
+
+    return df_wide

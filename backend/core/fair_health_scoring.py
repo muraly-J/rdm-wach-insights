@@ -239,6 +239,7 @@ def score_energy_anomaly(
     ahu_median_delta: float,
     ahu_rstd_delta: float,
     hist_delta_series: np.ndarray,
+    min_history_hours: int = 24,
 ) -> Tuple[float, float]:
     """
     Score 1 · Energy Anomaly  (weight 15%)
@@ -254,20 +255,23 @@ def score_energy_anomaly(
         Rising energy over 7 days = worsening.
 
     Minimum History Requirement:
-        - At least 24 hours of delta_kwh history required for reliable scoring
-        - Slope calculation requires at least 3 data points
+        - At least min_history_hours (default 24) of delta_kwh history required
+        - Trend calculation requires at least 168 hours (7 days) of data
+        - For < 24h: return neutral score (0.5)
+        - For 24h-168h: return level-only score with trend=0
+        - For ≥ 168h: return full score with level + trend
 
     Returns (score ∈ [0,1], z_diagnostic)
     """
-    # Minimum history check - need at least 24 hours of data for reliable scoring
+    # Minimum 24h required for any meaningful scoring
     if hist_delta_series is None or len(hist_delta_series) < 24:
-        return 0.5, np.nan  # Neutral score when insufficient history
+        return 0.5, np.nan
 
     if delta_kwh is None or np.isnan(delta_kwh):
-        return 0.5, np.nan  # Neutral score when current value missing
+        return 0.5, np.nan
 
     if ahu_median_delta is None or np.isnan(ahu_median_delta):
-        return 0.5, np.nan  # Neutral score when baseline missing
+        return 0.5, np.nan
 
     # Use robust std with minimum
     rstd = max(ahu_rstd_delta, MIN_RSTD.get("delta_kwh", 0.05))
@@ -279,14 +283,16 @@ def score_energy_anomaly(
     raw = 0.6 * abs(z) + 0.4 * max(0.0, z)
     lv = sigmoid_score(raw * SENSITIVITY["energy_anomaly"])
 
-    # Trend term - with NaN safety guard for historical series
+    # Trend term - requires at least 168h (7 days) of data
     hist_clean = np.asarray(hist_delta_series, dtype=float)
     hist_clean = hist_clean[~np.isnan(hist_clean)]
-    if len(hist_clean) >= 3:
+    if len(hist_clean) >= 168:
+        # Full data available: compute trend
         slope_n = float(np.clip(ols_slope(hist_clean) / rstd, -10, 10))
         tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
     else:
-        tr = 0.0  # No trend term if insufficient history
+        # Insufficient data for trend: return level-only score (trend=0)
+        tr = 0.0
 
     score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
     return score, round(z, 3)
@@ -298,6 +304,7 @@ def score_power_factor(
     ahu_median_pf: float,
     ahu_rstd_pf: float,
     hist_pf_series: np.ndarray,
+    min_history_hours: int = 24,
 ) -> Tuple[float, float]:
     """
     Score 2 · PF Degradation  (weight 25%)
@@ -482,6 +489,10 @@ def score_overload(
     if ahu_p95_power is None or np.isnan(ahu_p95_power) or ahu_p95_power <= 0:
         return 0.5, np.nan  # Neutral score when P95 baseline unavailable
 
+    # Check for valid std (default to MIN_RSTD if invalid)
+    if ahu_rstd_power is None or np.isnan(ahu_rstd_power) or ahu_rstd_power <= 0:
+        ahu_rstd_power = MIN_RSTD.get("power_total", 0.05)
+
     # Use robust std with minimum
     rstd = max(ahu_rstd_power, MIN_RSTD.get("power_total", 0.05))
 
@@ -494,14 +505,16 @@ def score_overload(
     z = (power - ahu_median_power) / rstd
     score_B = sigmoid_score(z * 1.5)
 
-    # C: trend - with NaN safety guard for historical series
+    # C: trend - requires at least 168h (7 days) for reliable slope calculation
     hist_clean = np.asarray(hist_power_series, dtype=float)
     hist_clean = hist_clean[~np.isnan(hist_clean)]
-    if len(hist_clean) >= 3:
+    if len(hist_clean) >= 168:
+        # Full data available: compute trend
         slope_n = float(np.clip(ols_slope(hist_clean) / rstd, -10, 10))
         score_C = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
     else:
-        score_C = 0.0  # No trend term if insufficient history
+        # Insufficient data for trend: return level-only score (trend=0)
+        score_C = 0.0
 
     score = 0.50 * score_A + 0.30 * score_B + 0.20 * score_C
     return clamp01(score), round(z, 3)

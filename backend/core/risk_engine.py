@@ -254,6 +254,10 @@ def calculate_7d_slope(df: pd.DataFrame, column: str) -> float:
     """
     Calculate 7-day slope using linear regression.
     Returns normalized slope (change per day).
+    
+    Minimum History Requirement:
+        - At least 7 daily data points required for slope calculation
+        - If history < 168h (7 days), return 0.0 (no trend)
     """
     if column not in df.columns:
         return 0.0
@@ -708,6 +712,12 @@ def power_factor_risk_score(
     if ahu_mean_pf is None or np.isnan(ahu_mean_pf):
         return 0.5  # Neutral score when baseline missing
 
+    # Handle invalid fleet values (NaN or invalid denominator)
+    if fleet_median_pf is None or np.isnan(fleet_median_pf):
+        fleet_median_pf = 0.0
+    if fleet_p5_pf is None or np.isnan(fleet_p5_pf):
+        fleet_p5_pf = 0.0
+
     # RELATIVE: how many SDs below own mean? (lower PF = worse)
     if ahu_mean_pf:
         z_score = (current_pf - ahu_mean_pf) / ahu_std_pf
@@ -721,6 +731,7 @@ def power_factor_risk_score(
 
     # ABSOLUTE: fleet-calibrated (uses actual fleet p5 and median)
     # For PF, lower is worse, so use p5 as the "bad" threshold
+    # Guard against zero denominator
     denom = fleet_median_pf - fleet_p5_pf
     if denom > 0:
         raw_absolute = max(0, (fleet_median_pf - current_pf) / denom)
@@ -729,16 +740,15 @@ def power_factor_risk_score(
 
     # Blend relative (60%) and absolute (40%)
     rel_score = sigmoid_score(raw_relative)
-    abs_score = clamp01(raw_absolute)  # FIX: Clamp absolute score to [0,1]
+    abs_score = clamp01(raw_absolute)  # Clamp absolute score to [0,1]
     score = 0.60 * rel_score + 0.40 * abs_score
 
-    # LOAD DISCOUNT: if below 60% of own mean power, discount by 65%
-    PF_LOAD_DISCOUNT_THRESHOLD = 0.60
-    PF_LOAD_DISCOUNT_FACTOR = 0.65
-
-    if current_power is not None and ahu_mean_power is not None and ahu_mean_power > 0:
-        if current_power < PF_LOAD_DISCOUNT_THRESHOLD * ahu_mean_power:
-            score *= (1.0 - PF_LOAD_DISCOUNT_FACTOR)
+    # LOAD DISCOUNT: if below 60% of own mean power, discount score by 65%
+    # Use module-level constants for consistency
+    if (current_power is not None and ahu_mean_power is not None 
+        and ahu_mean_power > 0
+        and current_power < PF_DISCOUNT_THRESHOLD * ahu_mean_power):
+        score *= PF_DISCOUNT_FACTOR
 
     return float(max(0.0, min(1.0, score)))
 
@@ -786,11 +796,18 @@ def phase_imbalance_risk_score(
     if ahu_mean_unbalance is None or np.isnan(ahu_mean_unbalance):
         return 0.5  # Neutral score when baseline missing
 
+    # Handle invalid fleet values (NaN or invalid denominator)
+    if fleet_median_unbalance is None or np.isnan(fleet_median_unbalance):
+        fleet_median_unbalance = 0.0
+    if fleet_p95_unbalance is None or np.isnan(fleet_p95_unbalance):
+        fleet_p95_unbalance = 1.0
+
     # RELATIVE: how many SDs above own mean?
     z_score = (current_unbalance - ahu_mean_unbalance) / ahu_std_unbalance
     raw_relative = z_score * 2.0
 
     # ABSOLUTE: where does this sit in fleet distribution?
+    # Guard against zero denominator
     denom = fleet_p95_unbalance - fleet_median_unbalance
     if denom > 0:
         raw_absolute = max(0, (current_unbalance - fleet_median_unbalance) / denom)
@@ -843,11 +860,18 @@ def thd_risk_score(
     if ahu_mean_thd is None or np.isnan(ahu_mean_thd):
         return 0.5  # Neutral score when baseline missing
 
+    # Handle invalid fleet values (NaN or invalid denominator)
+    if fleet_median_thd is None or np.isnan(fleet_median_thd):
+        fleet_median_thd = 0.0
+    if fleet_p95_thd is None or np.isnan(fleet_p95_thd):
+        fleet_p95_thd = 1.0
+
     # RELATIVE: how many SDs above own mean?
     z_score = (composite_thd_24h_mean - ahu_mean_thd) / ahu_std_thd
     raw_relative = z_score * 2.0
 
     # ABSOLUTE: where does this sit in fleet distribution?
+    # Guard against zero denominator
     denom = fleet_p95_thd - fleet_median_thd
     if denom > 0:
         raw_absolute = max(0, (composite_thd_24h_mean - fleet_median_thd) / denom)
