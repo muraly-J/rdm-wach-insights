@@ -1,0 +1,60 @@
+# Git files
+.git/
+.gitignore
+
+# Virtual environment
+venv/
+__pycache__/
+
+# Frontend (not needed for backend-only container)
+frontend/
+dist/
+node_modules/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Documentation (except docs we want to include)
+*.md
+!docs/
+docs/archive/
+
+# Models and data (optional - comment out if you want to include them)
+# paraquet_data/
+# data/
+
+# Docker files (not needed inside container)
+Dockerfile
+.dockerignore
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Configuration files with secrets
+.env
+*.env
+.env.local
+.env.*.local
+
+# Jupyter notebooks
+*.ipynb
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+.cache/
