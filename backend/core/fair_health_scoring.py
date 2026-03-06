@@ -158,6 +158,58 @@ SAFETY_FLAGS_DEF = {
 # MATH UTILITIES
 # ─────────────────────────────────────────────────────────────────────────────
 
+def load_prediction_deltas(ahu_ids: List[str]) -> Dict[str, float]:
+    """
+    Load prediction-based delta_kwh from predictions.csv.
+    
+    The prediction ETL computes: delta_kwh = energy_current - predicted_kwh
+    This represents how much the actual energy deviated from the forecast.
+
+    Args:
+        ahu_ids: List of AHU IDs to fetch deltas for
+
+    Returns:
+        Dict mapping ahu_id -> delta_kwh (from prediction, not hour-over-hour)
+    """
+    import os
+    # Resolve path relative to project root (not current working directory)
+    PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    DATA_DIR = os.environ.get("DATA_DIR", "data")
+    PREDICTIONS_FILE = os.path.join(PROJECT_ROOT, DATA_DIR, "predictions.csv")
+
+    if not os.path.exists(PREDICTIONS_FILE):
+        # Return neutral deltas (0) if file doesn't exist
+        return {ahu_id: 0.0 for ahu_id in ahu_ids}
+
+    try:
+        df = pd.read_csv(PREDICTIONS_FILE)
+
+        if 'ahu_id' not in df.columns or 'delta_kwh' not in df.columns:
+            return {ahu_id: 0.0 for ahu_id in ahu_ids}
+
+        # Get latest prediction delta per AHU (use most recent row for each device)
+        result = {}
+        for ahu_id in ahu_ids:
+            if ahu_id in df['ahu_id'].values:
+                rows = df[df['ahu_id'] == ahu_id]
+                if len(rows) > 0:
+                    # Use the most recent delta (last row)
+                    latest_delta = rows.iloc[-1]['delta_kwh']
+                    result[ahu_id] = float(latest_delta) if not pd.isna(latest_delta) else 0.0
+                else:
+                    result[ahu_id] = 0.0
+            else:
+                # AHU not in predictions file - use neutral delta
+                result[ahu_id] = 0.0
+
+        return result
+
+    except Exception as e:
+        # On error, return neutral deltas
+        print(f"[WARNING] Could not load prediction deltas: {e}")
+        return {ahu_id: 0.0 for ahu_id in ahu_ids}
+
+
 def sigmoid(x: float) -> float:
     """Numerically stable logistic sigmoid."""
     return 1.0 / (1.0 + math.exp(-float(np.clip(x, -500, 500))))
@@ -244,8 +296,12 @@ def score_energy_anomaly(
     """
     Score 1 · Energy Anomaly  (weight 15%)
 
-    Is this AHU consuming an unusual amount of energy this hour compared
-    to what IT normally consumes.
+    Is this AHU consuming an unusual amount of energy compared to its own baseline.
+
+    DELTA SOURCE:
+        - The delta_kwh is computed by the prediction ETL as: delta = energy_current - predicted_kwh
+        - predicted_kwh is a 3-slot average: avg(yesterday, last_week, two_weeks)
+        - This represents how much actual energy deviated from the forecast
 
     Level term (70%):
         z = (delta_kwh − own_median) / own_rstd
@@ -725,14 +781,28 @@ def generate_fleet_risk_assessment_fair(
         }
         combined = pd.concat([combined, pd.DataFrame([row])], ignore_index=True)
     
-    # Calculate delta_kwh from energy
-    if not df_energy.empty:
+    # Calculate delta_kwh from prediction ETL (preferred) or fallback to energy diff
+    try:
+        # First, try to load prediction-based deltas from CSV
+        pred_deltas = load_prediction_deltas(ahu_ids)
+        
+        # Update combined DataFrame with prediction deltas
         for ahu_id in ahu_ids:
-            if ahu_id in df_energy.columns and len(df_energy) >= 2:
-                sorted_df = df_energy[[ahu_id]].sort_index()
-                delta = sorted_df[ahu_id].diff().iloc[-1]
-                combined.loc[combined['ahu_id'] == ahu_id, 'delta_kwh'] = float(delta) if not pd.isna(delta) else None
-    
+            if ahu_id in pred_deltas:
+                combined.loc[combined['ahu_id'] == ahu_id, 'delta_kwh'] = pred_deltas[ahu_id]
+        
+        # Also store the source indicator
+        combined['delta_source'] = 'prediction'
+    except Exception:
+        # Fallback: compute delta from energy (hour-over-hour change)
+        if not df_energy.empty:
+            for ahu_id in ahu_ids:
+                if ahu_id in df_energy.columns and len(df_energy) >= 2:
+                    sorted_df = df_energy[[ahu_id]].sort_index()
+                    delta = sorted_df[ahu_id].diff().iloc[-1]
+                    combined.loc[combined['ahu_id'] == ahu_id, 'delta_kwh'] = float(delta) if not pd.isna(delta) else None
+        combined['delta_source'] = 'hour_diff'
+
     # Build per-AHU baselines
     baselines = build_baselines(combined)
     

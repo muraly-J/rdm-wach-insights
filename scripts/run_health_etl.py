@@ -790,7 +790,7 @@ def print_safety_flags_summary(df_scores):
 # MAIN ETL FUNCTION
 # ──────────────────────────────────────────────────────────────────────────────
 
-def run_etl_pipeline(output_path=None, dry_run=False, level=None):
+def run_etl_pipeline(output_path=None, dry_run=False, level=None, scheduled=False):
     """
     Run the complete ETL pipeline.
 
@@ -798,12 +798,14 @@ def run_etl_pipeline(output_path=None, dry_run=False, level=None):
         output_path: Path to output CSV file
         dry_run: If True, skip writing to file
         level: Filter by specific level (1-11) or None for all levels
+        scheduled: If True, run in scheduled mode (quiet output)
 
     Returns:
         Dictionary with ETL results
     """
-    print("\n" + "="*70)
-    print("FAIR HEALTH SCORING ETL PIPELINE")
+    if not scheduled:
+        print("\n" + "="*70)
+        print("FAIR HEALTH SCORING ETL PIPELINE")
     print(f"Started at: {datetime.now().isoformat()}")
     if level:
         print(f"Level filter: Level {level} only")
@@ -861,29 +863,33 @@ def run_etl_pipeline(output_path=None, dry_run=False, level=None):
     total_elapsed = time.time() - total_start
 
     # Final summary with timing
-    print("\n" + "="*70)
-    print("ETL PIPELINE COMPLETE")
-    print("="*70)
-    print(f"  Status: {results['status']}")
-    print(f"  Rows extracted:   {results['rows_extracted']}")
-    print(f"  Rows transformed: {results['rows_transformed']}")
-    print(f"  Rows loaded:      {results['rows_loaded']}")
-    print(f"  Output file:      {results['output_path']}")
-    if level:
-        print(f"  Level filter:     Level {level} only")
-    print("-"*70)
-    print("  TIMING BREAKDOWN:")
-    print(f"    Extract:     {step_timings.get('extract', 0):.2f}s")
-    print(f"    Transform:   {step_timings.get('transform', 0):.2f}s")
-    print(f"    Load:        {step_timings.get('load', 0):.2f}s")
-    print(f"    TOTAL:       {total_elapsed:.2f}s")
-    print("="*70)
+    if not scheduled:
+        print("\n" + "="*70)
+        print("ETL PIPELINE COMPLETE")
+        print("="*70)
+        print(f"  Status: {results['status']}")
+        print(f"  Rows extracted:   {results['rows_extracted']}")
+        print(f"  Rows transformed: {results['rows_transformed']}")
+        print(f"  Rows loaded:      {results['rows_loaded']}")
+        print(f"  Output file:      {results['output_path']}")
+        if level:
+            print(f"  Level filter:     Level {level} only")
+        print("-"*70)
+        print("  TIMING BREAKDOWN:")
+        print(f"    Extract:     {step_timings.get('extract', 0):.2f}s")
+        print(f"    Transform:   {step_timings.get('transform', 0):.2f}s")
+        print(f"    Load:        {step_timings.get('load', 0):.2f}s")
+        print(f"    TOTAL:       {total_elapsed:.2f}s")
+        print("="*70)
 
-    # Check if within target
-    if total_elapsed < 45:
-        print(f"\n✓ Pipeline completed in {total_elapsed:.2f}s (TARGET: <45s)")
+        # Check if within target
+        if total_elapsed < 45:
+            print(f"\n✓ Pipeline completed in {total_elapsed:.2f}s (TARGET: <45s)")
+        else:
+            print(f"\n⚠ Pipeline took {total_elapsed:.2f}s (TARGET: <45s)")
     else:
-        print(f"\n⚠ Pipeline took {total_elapsed:.2f}s (TARGET: <45s)")
+        # Scheduled mode: print minimal summary
+        print(f"[INFO] ETL Complete | Status: {results['status']} | Rows: {results['rows_loaded']} | Time: {total_elapsed:.1f}s")
 
     return results
 
@@ -927,6 +933,12 @@ Output:
         help="Filter by specific level (1-11) or 'all' for all levels"
     )
 
+    parser.add_argument(
+        "--scheduled",
+        action="store_true",
+        help="Run in scheduled mode (quiet output, automatic settings)"
+    )
+
     args = parser.parse_args()
 
     # Parse level filter
@@ -941,11 +953,16 @@ Output:
             print(f"Error: Invalid level '{args.level}'. Must be integer 1-11 or 'all'")
             sys.exit(1)
 
+    # Set default output path
+    if args.output is None:
+        args.output = OUTPUT_FILE
+
     # Run pipeline
     results = run_etl_pipeline(
         output_path=args.output,
         dry_run=args.dry_run,
-        level=level_filter
+        level=level_filter,
+        scheduled=args.scheduled
     )
 
     # Exit with appropriate code

@@ -1076,24 +1076,26 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, An
     
     energy_value = float(energy_df.iloc[-1][ahu_id]) if not energy_df.empty else None
 
-    # Load prediction-based delta_kwh from CSV (for energy anomaly comparison)
+    # Compute delta_kwh from prediction ETL (preferred) or fallback to energy diff
     try:
+        # First, try to load prediction-based delta from CSV
         pred_deltas = load_prediction_deltas([ahu_id])
-        pred_delta_kwh = pred_deltas.get(ahu_id)
+        delta_kwh = pred_deltas.get(ahu_id)
     except Exception:
-        pred_delta_kwh = None
-    
-    # Compute historical baseline from InfluxDB energy data (hour-over-hour changes)
-    delta_kwh_series = None
-    if not energy_df.empty and len(energy_df) >= 2:
-        try:
-            energy_df_sorted = energy_df.sort_index()
-            # Compute ALL deltas for proper statistics
-            delta_kwh_series = energy_df_sorted[ahu_id].diff().dropna()
-        except (IndexError, TypeError):
-            delta_kwh_series = None
-    # Use the most recent delta as current value for energy_anomaly_score
-    delta_kwh = float(delta_kwh_series.iloc[-1]) if (delta_kwh_series is not None and len(delta_kwh_series) > 0) else None
+        # Fallback: compute delta from energy (hour-over-hour change)
+        delta_kwh = None
+        if not energy_df.empty and len(energy_df) >= 2:
+            try:
+                # Sort by time to ensure correct order
+                energy_df_sorted = energy_df.sort_index()
+                current_energy = float(energy_df_sorted.iloc[-1][ahu_id])
+                prev_energy = float(energy_df_sorted.iloc[-2][ahu_id])
+                delta_kwh = current_energy - prev_energy
+                # Handle meter reset (negative delta)
+                if delta_kwh < 0:
+                    delta_kwh = None
+            except (IndexError, TypeError):
+                delta_kwh = None
 
     # Get power factor
     pf_df = fetch_time_series(
@@ -1153,13 +1155,18 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, An
         hourly_energy = df[ahu_id].mean() * 1  # approximate hourly kWh from power
         energy_values = energy_df[ahu_id].dropna()
         
-        # Compute historical baseline from InfluxDB energy data (hour-over-hour changes)
-        if len(energy_df) >= 2:
-            energy_df_sorted = energy_df.sort_index()
-            delta_kwh_series = energy_df_sorted[ahu_id].diff().dropna()
-            historical_energy_median = delta_kwh_series.median() if len(delta_kwh_series) > 0 else None
+        # Use prediction-based delta_kwh if available, otherwise compute from InfluxDB
+        if delta_kwh is not None:
+            # Prediction ETL already computed delta_kwh = energy_current - predicted_kwh
+            historical_energy_median = delta_kwh
         else:
-            historical_energy_median = energy_values.median() if len(energy_values) > 0 else None
+            # Fallback: compute delta from energy (hour-over-hour change)
+            if len(energy_df) >= 2:
+                energy_df_sorted = energy_df.sort_index()
+                delta_kwh_series = energy_df_sorted[ahu_id].diff().dropna()
+                historical_energy_median = delta_kwh_series.median() if len(delta_kwh_series) > 0 else None
+            else:
+                historical_energy_median = energy_values.median() if len(energy_values) > 0 else None
     else:
         historical_energy_median = None
     
@@ -1202,8 +1209,7 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, An
         "energy": {
             "current": energy_value,
             "historical_median": historical_energy_median,
-            "delta_kwh": delta_kwh,  # Current delta value
-            "delta_series": delta_kwh_series,  # Full delta series for scoring
+            "delta_kwh": delta_kwh,
         },
         "power_factor": {
             "current": pf_value,
@@ -1341,20 +1347,26 @@ def generate_fleet_risk_assessment(
             fleet_p95_delta_kwh=1.0
         )
         
-        # Energy anomaly uses delta_series for proper statistics
-        delta_series = metrics["energy"].get("delta_series")
+        # Energy anomaly (simplified - compare to mean)
+        energy_median = metrics["energy"]["historical_median"]
+        energy_current = metrics["energy"]["current"]
         
-        if delta_series is not None and len(delta_series) > 0:
-            # Compute statistics from full series
-            ahu_mean_delta = delta_series.mean()
-            ahu_std_delta = delta_series.std() if len(delta_series) > 1 else 0.1
-            # Current delta is the most recent value
-            current_delta = float(delta_series.iloc[-1])
-            energy_anomaly = energy_anomaly_score(
-                current_energy=current_delta,
-                ahu_mean_delta_kwh=ahu_mean_delta,
-                ahu_std_delta_kwh=ahu_std_delta
-            )
+        if energy_median and energy_current:
+            # Use delta_kwh for hourly consumption comparison, fallback to current_energy
+            delta_kwh = metrics["energy"].get("delta_kwh")
+            energy_anomaly = 0.5
+            if delta_kwh is not None:
+                # Calculate mean and std from delta_kwh series if available
+                delta_kwh_series = pd.Series(delta_kwh) if not isinstance(delta_kwh, pd.Series) else delta_kwh
+                ahu_mean_delta = delta_kwh_series.mean() if len(delta_kwh_series) > 0 else 1.0
+                ahu_std_delta = delta_kwh_series.std() if len(delta_kwh_series) > 0 else 0.1
+                energy_anomaly = energy_anomaly_score(
+                    current_energy=energy_current,
+                    ahu_mean_delta_kwh=ahu_mean_delta,
+                    ahu_std_delta_kwh=ahu_std_delta
+                )
+            else:
+                energy_anomaly = 0.5
         else:
             energy_anomaly = 0.5
         
@@ -1652,22 +1664,23 @@ async def get_ahu_risk_details(ahu_id: str, time_range: str = "last_30d") -> Dic
         fleet_p95_delta_kwh=1.0
     )
     
-    # Energy anomaly uses delta_series for proper statistics
-    delta_series = metrics["energy"].get("delta_series")
-    
-    if delta_series is not None and len(delta_series) > 0:
-        # Compute statistics from full series
-        ahu_mean_delta = delta_series.mean()
-        ahu_std_delta = delta_series.std() if len(delta_series) > 1 else 0.1
-        # Current delta is the most recent value
-        current_delta = float(delta_series.iloc[-1])
+    energy_median = metrics["energy"]["historical_median"]
+    energy_current = metrics["energy"]["current"]
+    # Use delta_kwh if available for hourly consumption comparison
+    delta_kwh = metrics["energy"].get("delta_kwh")
+    energy_anomaly = 0.5
+    if delta_kwh is not None and energy_median:
+        # Calculate mean and std from delta_kwh series if available
+        delta_kwh_series = pd.Series(delta_kwh) if not isinstance(delta_kwh, pd.Series) else delta_kwh
+        ahu_mean_delta = delta_kwh_series.mean() if len(delta_kwh_series) > 0 else 1.0
+        ahu_std_delta = delta_kwh_series.std() if len(delta_kwh_series) > 0 else 0.1
         energy_anomaly = energy_anomaly_score(
-            current_energy=current_delta,
+            current_energy=energy_current or 0,
             ahu_mean_delta_kwh=ahu_mean_delta,
             ahu_std_delta_kwh=ahu_std_delta
         )
     else:
-        energy_anomaly = 0.5
+        energy_anomaly = 0.5 if energy_median else 0.5
     
     risk_scores = {
         "energy_anomaly": energy_anomaly,
@@ -1695,7 +1708,6 @@ async def get_ahu_risk_details(ahu_id: str, time_range: str = "last_30d") -> Dic
                         "decreasing" if (metrics["power"]["slope_7d"] and metrics["power"]["slope_7d"] < -0.1) else "stable",
         },
         "risk_scores": {
-            "energy_anomaly": energy_anomaly,
             "power_factor": {
                 "score": round(pf_risk, 3),
                 "severity": get_severity(pf_risk, "power_factor"),

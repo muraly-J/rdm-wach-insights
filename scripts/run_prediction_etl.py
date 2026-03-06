@@ -173,8 +173,24 @@ def transform_predictions(df_raw):
             return None
         return float(np.mean(valid_values))
 
+    def count_available_slots(row):
+        """Count how many historical slots have valid data."""
+        values = [
+            row['yesterday_kwh'],
+            row['last_week_kwh'],
+            row['two_weeks_kwh']
+        ]
+        valid_count = sum(1 for v in values if v is not None and not np.isnan(v))
+        return valid_count
+
     # Apply prediction formula
     df['predicted_kwh'] = df.apply(compute_predicted, axis=1)
+
+    # Count available historical slots
+    df['available_slots'] = df.apply(count_available_slots, axis=1)
+
+    # Mark insufficient history (< 3 slots means data < 2 weeks)
+    df['insufficient_history'] = df['available_slots'] < 3
 
     # Compute delta_kwh = actual - predicted
     def compute_delta(row):
@@ -203,7 +219,8 @@ def transform_predictions(df_raw):
     col_order = [
         'timestamp', 'ahu_id', 'level',
         'energy_current', 'predicted_kwh', 'delta_kwh',
-        'yesterday_kwh', 'last_week_kwh', 'two_weeks_kwh'
+        'yesterday_kwh', 'last_week_kwh', 'two_weeks_kwh',
+        'available_slots', 'insufficient_history'
     ]
     df = df[[c for c in col_order if c in df.columns]]
 
@@ -237,6 +254,13 @@ def transform_predictions(df_raw):
     positive_delta = (df['delta_kwh'] > 0).sum()
     if valid_pred > 0:
         print(f"      Devices above prediction: {positive_delta} ({100*positive_delta/valid_pred:.1f}%)")
+
+    # Insufficient history summary
+    insufficient_count = df['insufficient_history'].sum()
+    sufficient_count = len(df) - insufficient_count
+    print(f"\n      Historical data quality:")
+    print(f"        Sufficient (≥3 slots): {sufficient_count} ({100*sufficient_count/len(df):.1f}%)")
+    print(f"        Insufficient (<3 slots): {insufficient_count} ({100*insufficient_count/len(df):.1f}%)")
 
     return df
 
@@ -284,7 +308,8 @@ def load_to_csv(df_predictions, output_path=None, dry_run=False):
     required_cols = [
         "timestamp", "ahu_id", "level",
         "energy_current", "predicted_kwh", "delta_kwh",
-        "yesterday_kwh", "last_week_kwh", "two_weeks_kwh"
+        "yesterday_kwh", "last_week_kwh", "two_weeks_kwh",
+        "available_slots", "insufficient_history"
     ]
 
     # Reorder columns
@@ -319,7 +344,7 @@ def validate_level_results(df_results: pd.DataFrame, level_num: int) -> bool:
     Args:
         df_results: DataFrame with prediction results
         level_num: Level number (1-11)
-    
+        
     Returns:
         True if all devices match, False otherwise
     """
@@ -346,6 +371,14 @@ def validate_level_results(df_results: pd.DataFrame, level_num: int) -> bool:
     if extra:
         print(f"  [WARN] Extra devices: {extra}")
     
+    # Count insufficient history
+    if 'insufficient_history' in df_results.columns:
+        insufficient_count = df_results['insufficient_history'].sum()
+        sufficient_count = len(df_results) - insufficient_count
+        print(f"  [INFO] Data quality:")
+        print(f"    Sufficient (≥3 slots): {sufficient_count}")
+        print(f"    Insufficient (<3 slots): {insufficient_count}")
+    
     return actual_count == expected_count
 
 
@@ -353,7 +386,7 @@ def validate_level_results(df_results: pd.DataFrame, level_num: int) -> bool:
 # MAIN ETL PIPELINE
 # ──────────────────────────────────────────────────────────────────────────────
 
-def run_prediction_etl(level_filter=None, output_path=None, dry_run=False):
+def run_prediction_etl(level_filter=None, output_path=None, dry_run=False, scheduled=False):
     """
     Run the complete prediction ETL pipeline.
 
@@ -361,14 +394,16 @@ def run_prediction_etl(level_filter=None, output_path=None, dry_run=False):
         level_filter: Optional level number (1-11) to filter devices
         output_path: Custom output path
         dry_run: If True, don't write to CSV
+        scheduled: If True, run in scheduled mode (quiet output)
 
     Returns:
         DataFrame with prediction results
     """
     # Step 1: Extract
-    print("\n" + "="*70)
-    print("PREDICTION ETL PIPELINE")
-    print("="*70)
+    if not scheduled:
+        print("\n" + "="*70)
+        print("PREDICTION ETL PIPELINE")
+        print("="*70)
 
     # Determine device IDs
     if level_filter is not None:
@@ -433,6 +468,16 @@ def run_prediction_etl(level_filter=None, output_path=None, dry_run=False):
         else:
             print(f"[ERROR] ETL completed but some devices are missing from results")
             return None
+        
+        # Overall insufficient history summary
+        if 'insufficient_history' in df_predictions.columns:
+            total = len(df_predictions)
+            insufficient = df_predictions['insufficient_history'].sum()
+            sufficient = total - insufficient
+            print(f"\n[OK] Overall Data Quality:")
+            print(f"  Sufficient (≥3 slots): {sufficient}/{total} ({100*sufficient/total:.1f}%)")
+            print(f"  Insufficient (<3 slots): {insufficient}/{total} ({100*insufficient/total:.1f}%)")
+    
     print("="*70)
 
     return df_predictions
@@ -463,6 +508,11 @@ def main():
         default=None,
         help="Level number (1-11) or 'all' for all levels"
     )
+    parser.add_argument(
+        "--scheduled",
+        action="store_true",
+        help="Run in scheduled mode (quiet output, automatic settings)"
+    )
 
     args = parser.parse_args()
 
@@ -481,22 +531,29 @@ def main():
                 print(f"[ERROR] Invalid level value: {args.level}")
                 sys.exit(1)
 
+    # Set default output path if not specified
+    if args.output is None:
+        args.output = OUTPUT_FILE
+
     # Run ETL
     result = run_prediction_etl(
         level_filter=level_filter,
         output_path=args.output,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
+        scheduled=args.scheduled
     )
 
     if result is None:
         sys.exit(1)
 
-    print("\n" + "="*70)
-    print("SUMMARY")
-    print("="*70)
-    print(f"  Devices processed: {len(result)}")
-    print(f"  Valid predictions: {result['predicted_kwh'].notna().sum()}")
-    print(f"  Avg delta (actual - predicted): {result['delta_kwh'].mean():.2f} kWh")
+    # Print summary (only in interactive mode)
+    if not args.scheduled:
+        print("\n" + "="*70)
+        print("SUMMARY")
+        print("="*70)
+    else:
+        # In scheduled mode, print minimal summary
+        print(f"[INFO] Devices: {len(result)} | Predictions: {result['predicted_kwh'].notna().sum()} | Avg delta: {result['delta_kwh'].mean():.2f} kWh")
 
 
 if __name__ == "__main__":
