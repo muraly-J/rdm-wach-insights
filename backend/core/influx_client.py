@@ -371,6 +371,66 @@ def fetch_exact_slots(
     return results
 
 
+# ── Fetch Prediction Data for ETL (t, t-24h, t-168h, t-336h) ───────────────
+
+def fetch_prediction_data(
+    device_ids: list[str],
+    reference_time: datetime = None,
+) -> Dict[str, Dict[str, Optional[float]]]:
+    """
+    Fetch energy values at t, t-24h, t-168h, and t-336h for prediction ETL.
+
+    This enables computation of:
+      ŷ(t)   = (E(t−24h) + E(t−168h) + E(t−336h)) / 3
+      Δkwh   = E(t) − ŷ(t)
+
+    Args:
+        device_ids: List of AHU IDs to fetch
+        reference_time: Current timestamp t (defaults to now in UTC)
+
+    Returns:
+        Nested dict: {ahu_id: {
+            'energy_current': E(t),
+            'yesterday_kwh': E(t−24h),
+            'last_week_kwh': E(t−168h),
+            'two_weeks_kwh': E(t−336h)
+        }}
+
+    Example:
+        now = datetime.now(timezone.utc)
+        data = fetch_prediction_data(["e0101"], now)
+        # Compute prediction: ŷ(t) = (yesterday + last_week + two_weeks) / 3
+    """
+    if reference_time is None:
+        from datetime import timezone
+        reference_time = datetime.now(timezone.utc)
+
+    # Slots to fetch: current, t-24h, t-168h, t-336h
+    slots_hours_ago = [0, 24, 168, 336]
+    slot_labels = {
+        0: 'energy_current',
+        24: 'yesterday_kwh',
+        168: 'last_week_kwh',
+        336: 'two_weeks_kwh'
+    }
+
+    # Fetch using existing fetch_exact_slots
+    raw_data = fetch_exact_slots(device_ids, "energy_import", reference_time, slots_hours_ago)
+
+    # Transform to prediction format
+    results = {}
+    for ahu_id in device_ids:
+        slot_values = raw_data.get(ahu_id, {})
+        results[ahu_id] = {
+            'energy_current': slot_values.get(0),
+            'yesterday_kwh': slot_values.get(24),
+            'last_week_kwh': slot_values.get(168),
+            'two_weeks_kwh': slot_values.get(336)
+        }
+
+    return results
+
+
 # ── Fetch Latest Hourly Data for All AHUs ────────────────────────────────────
 
 def fetch_latest_hourly_data(

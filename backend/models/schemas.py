@@ -181,6 +181,38 @@ def get_all_device_counts() -> dict[int, int]:
 ALLOWED_DEVICES: set[str] = _build_device_set()
 
 
+# ── Reverse device-to-level mapping ───────────────────────────────────────────
+
+def _build_device_to_level_map() -> dict[str, str]:
+    """
+    Build reverse mapping from device ID to level string.
+    
+    Returns:
+        Dict mapping device_id -> "Level N"
+    """
+    mapping = {}
+    for level, config in AHU_LEVEL_CONFIG.items():
+        for dev_id in config["device_ids"]:
+            mapping[dev_id] = f"Level {level}"
+    return mapping
+
+
+DEVICE_TO_LEVEL: dict[str, str] = _build_device_to_level_map()
+
+
+def get_level_for_device(ahu_id: str) -> str:
+    """
+    Get the level string for a given device ID.
+    
+    Args:
+        ahu_id: Device ID (e.g., 'e0101')
+        
+    Returns:
+        Level string (e.g., 'Level 1'), or 'Unknown' if device not found
+    """
+    return DEVICE_TO_LEVEL.get(ahu_id, "Unknown")
+
+
 # ── Query types ───────────────────────────────────────────────────────────────
 
 class QueryType(str, Enum):
