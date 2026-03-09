@@ -77,7 +77,7 @@ const COMPONENT_CONFIG = {
 const TIER_COLORS = {
   Healthy: '#00c9b1',
   Monitor: '#f5a623',
-  Maintenance Soon: '#f5734e',
+   'Maintenance Soon': '#f5734e',
   Critical: '#ff4d6d',
 }
 
@@ -165,6 +165,13 @@ function formatYAxisTick(value, config) {
     return (value * 100).toFixed(0) + '%'
   }
   return value.toFixed(2)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Format numeric values for tooltip display
+function formatValue(value, decimals = 2) {
+  if (value === null || value === undefined || isNaN(value)) return '-'
+  return Number(value).toFixed(decimals)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -357,6 +364,10 @@ function HealthChart({
                 
                 if (displayPayload.length === 0) return null
                 
+                // Find row data for this timestamp
+                const timestamp = props.label
+                const rowData = allData.find(row => row.timestamp === timestamp)
+                
                 return (
                   <div style={{
                     background: '#0d1424',
@@ -390,19 +401,36 @@ function HealthChart({
                             background: TIER_COLORS[tier] || '#7a90b0',
                             flexShrink: 0,
                           }} />
-                          <span style={{
-                            fontFamily: "'DM Mono', monospace",
-                            fontSize: '13px',
-                            color: '#eaf0fb',
-                          }}>
-                            {ahuId}
-                          </span>
-                          <span style={{
-                            fontSize: '13px',
-                            color: '#7a90b0',
-                          }}>
-                            {value}
-                          </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{
+                              fontFamily: "'DM Mono', monospace",
+                              fontSize: '12px',
+                              color: '#eaf0fb',
+                            }}>
+                              {ahuId}
+                            </span>
+                            <span style={{
+                              fontSize: '12px',
+                              color: '#7a90b0',
+                            }}>
+                              Score: {value}
+                            </span>
+                            {/* Show diagnostic data if available */}
+                            {row && metricKey !== 'health_index' && (
+                              <div style={{
+                                fontSize: '10px',
+                                color: '#3d526e',
+                                fontFamily: "'DM Mono', monospace",
+                              }}>
+                                <span>Raw: {formatValue(row[`raw_${metricKey}`])}</span>
+                                {row[`z_${metricKey}`] && (
+                                  <span style={{ color: '#6bc7f5' }}>
+                                    {' '}Z: {formatValue(row[`z_${metricKey}`], 2)}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )
                     })}

@@ -167,28 +167,28 @@ def ols_slope(values):
 def score_energy_anomaly(delta_kwh, ahu_median_delta, ahu_rstd_delta, hist_delta_series):
     """
     Score 1 · Energy Anomaly (weight 15%)
-    
-    Returns (score ∈ [0,1], z_diagnostic)
+
+    Returns (score ∈ [0,1], z_diagnostic, level_term, trend_term)
     """
     if hist_delta_series is None or len(hist_delta_series) < 24:
-        return 0.5, np.nan
-    
+        return 0.5, np.nan, np.nan, np.nan
+
     if delta_kwh is None or np.isnan(delta_kwh):
-        return 0.5, np.nan
-    
+        return 0.5, np.nan, np.nan, np.nan
+
     if ahu_median_delta is None or np.isnan(ahu_median_delta):
-        return 0.5, np.nan
-    
+        return 0.5, np.nan, np.nan, np.nan
+
     # Use robust std with minimum
     rstd = max(ahu_rstd_delta, MIN_RSTD.get("delta_kwh", 0.05))
     if rstd <= 0:
-        return 0.5, np.nan
-    
+        return 0.5, np.nan, np.nan, np.nan
+
     # Level term: z-score vs own median
     z = (delta_kwh - ahu_median_delta) / rstd
     raw = 0.6 * abs(z) + 0.4 * max(0.0, z)
     lv = sigmoid_score(raw * SENSITIVITY["energy_anomaly"])
-    
+
     # Trend term - requires at least 168h (7 days) of data
     hist_clean = np.asarray(hist_delta_series, dtype=float)
     hist_clean = hist_clean[~np.isnan(hist_clean)]
@@ -197,133 +197,133 @@ def score_energy_anomaly(delta_kwh, ahu_median_delta, ahu_rstd_delta, hist_delta
         tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
     else:
         tr = 0.0
-    
+
     score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
-    return score, round(z, 3)
+    return score, round(z, 3), round(lv, 4), round(tr, 4)
 
 
 def score_power_factor(pf, power, ahu_median_pf, ahu_rstd_pf, hist_pf_series):
     """
     Score 2 · PF Degradation (weight 25%)
-    
-    Returns (score ∈ [0,1], z_diagnostic)
+
+    Returns (score ∈ [0,1], z_diagnostic, level_term, trend_term)
     """
     if pf is None or np.isnan(pf):
-        return 0.0, np.nan
-    
+        return 0.0, np.nan, np.nan, np.nan
+
     if ahu_median_pf is None or np.isnan(ahu_median_pf):
-        return 0.0, np.nan
-    
+        return 0.0, np.nan, np.nan, np.nan
+
     # Use robust std with minimum
     rstd = max(ahu_rstd_pf, MIN_RSTD.get("power_factor_avg", 0.008))
     if rstd <= 0:
-        return 0.0, np.nan
-    
+        return 0.0, np.nan, np.nan, np.nan
+
     # Level term: z-score (negative means below median)
     z = (ahu_median_pf - pf) / rstd
     lv = sigmoid_score(z * SENSITIVITY["pf_degradation"])
-    
+
     # Trend term (negative slope = falling = bad)
     slope_n = float(np.clip(ols_slope(hist_pf_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, -slope_n) * SLOPE_SENS)
-    
+
     score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
-    return score, round(z, 3)
+    return score, round(z, 3), round(lv, 4), round(tr, 4)
 
 
 def score_phase_imbalance(unbal, ahu_median_unbal, ahu_rstd_unbal, hist_unbal_series):
     """
     Score 3 · Phase Imbalance (weight 25%)
-    
-    Returns (score ∈ [0,1], z_diagnostic)
+
+    Returns (score ∈ [0,1], z_diagnostic, level_term, trend_term)
     """
     if unbal is None or np.isnan(unbal):
-        return 0.0, np.nan
-    
+        return 0.0, np.nan, np.nan, np.nan
+
     if ahu_median_unbal is None or np.isnan(ahu_median_unbal):
-        return 0.0, np.nan
-    
+        return 0.0, np.nan, np.nan, np.nan
+
     # Use robust std with minimum
     rstd = max(ahu_rstd_unbal, MIN_RSTD.get("current_unbalance", 0.15))
     if rstd <= 0:
-        return 0.0, np.nan
-    
+        return 0.0, np.nan, np.nan, np.nan
+
     # Level term: z-score
     z = (unbal - ahu_median_unbal) / rstd
     lv = sigmoid_score(z * SENSITIVITY["phase_imbalance"])
-    
+
     # Trend term
     slope_n = float(np.clip(ols_slope(hist_unbal_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
-    
+
     score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
-    return score, round(z, 3)
+    return score, round(z, 3), round(lv, 4), round(tr, 4)
 
 
 def score_thd_drift(thd_24h, ahu_median_thd, ahu_rstd_thd, hist_thd_24h_series):
     """
     Score 4 · THD Drift (weight 15%)
-    
-    Returns (score ∈ [0,1], z_diagnostic)
+
+    Returns (score ∈ [0,1], z_diagnostic, level_term, trend_term)
     """
     if thd_24h is None or np.isnan(thd_24h):
-        return 0.0, np.nan
-    
+        return 0.0, np.nan, np.nan, np.nan
+
     if ahu_median_thd is None or np.isnan(ahu_median_thd):
-        return 0.0, np.nan
-    
+        return 0.0, np.nan, np.nan, np.nan
+
     # Use robust std with minimum
     rstd = max(ahu_rstd_thd, MIN_RSTD.get("composite_thd_24h", 0.15))
     if rstd <= 0:
-        return 0.0, np.nan
-    
+        return 0.0, np.nan, np.nan, np.nan
+
     # Level term: z-score
     z = (thd_24h - ahu_median_thd) / rstd
     lv = sigmoid_score(z * SENSITIVITY["thd_drift"])
-    
+
     # Trend term
     slope_n = float(np.clip(ols_slope(hist_thd_24h_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
-    
+
     score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
-    return score, round(z, 3)
+    return score, round(z, 3), round(lv, 4), round(tr, 4)
 
 
 def score_overload(power, ahu_median_power, ahu_rstd_power, ahu_p95_power, hist_power_series):
     """
     Score 5 · Overload (weight 20%)
-    
-    Returns (score ∈ [0,1], z_diagnostic)
+
+    Returns (score ∈ [0,1], z_diagnostic, score_A, score_B, score_C)
     """
     # Minimum history check
     if hist_power_series is None or len(hist_power_series) < 24:
-        return 0.5, np.nan
-    
+        return 0.5, np.nan, np.nan, np.nan, np.nan
+
     if power is None or np.isnan(power):
-        return 0.5, np.nan
-    
+        return 0.5, np.nan, np.nan, np.nan, np.nan
+
     if ahu_median_power is None or np.isnan(ahu_median_power):
-        return 0.5, np.nan
-    
+        return 0.5, np.nan, np.nan, np.nan, np.nan
+
     if ahu_p95_power is None or np.isnan(ahu_p95_power) or ahu_p95_power <= 0:
-        return 0.5, np.nan
-    
+        return 0.5, np.nan, np.nan, np.nan, np.nan
+
     # Check for valid std
     if ahu_rstd_power is None or np.isnan(ahu_rstd_power) or ahu_rstd_power <= 0:
         ahu_rstd_power = MIN_RSTD.get("power_total", 0.05)
-    
+
     # Use robust std with minimum
     rstd = max(ahu_rstd_power, MIN_RSTD.get("power_total", 0.05))
-    
+
     # A: ceiling proximity
     power_ratio = power / ahu_p95_power
     demand = max(0.0, power_ratio - 0.85)
     score_A = sigmoid_score(demand * 8.0)
-    
+
     # B: z-score vs own median
     z = (power - ahu_median_power) / rstd
     score_B = sigmoid_score(z * 1.5)
-    
+
     # C: trend
     hist_clean = np.asarray(hist_power_series, dtype=float)
     hist_clean = hist_clean[~np.isnan(hist_clean)]
@@ -332,9 +332,9 @@ def score_overload(power, ahu_median_power, ahu_rstd_power, ahu_p95_power, hist_
         score_C = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
     else:
         score_C = 0.0
-    
+
     score = 0.50 * score_A + 0.30 * score_B + 0.20 * score_C
-    return clamp01(score), round(z, 3)
+    return clamp01(score), round(z, 3), round(score_A, 4), round(score_B, 4), round(score_C, 4)
 
 
 def calculate_health_index(scores):
@@ -598,54 +598,54 @@ def transform_health_scores(df_raw):
         
         # Compute all 5 scores
         try:
-            energy_score, z_energy = score_energy_anomaly(
+            energy_score, z_energy, lv_energy, tr_energy = score_energy_anomaly(
                 delta_kwh,
-                baseline["energy_median"],
-                baseline["energy_rstd"],
+                baseline["delta_kwh"]["median"],
+                baseline["delta_kwh"]["rstd"],
                 hist_delta if len(hist_delta) >= 2 else np.array([])
             )
         except Exception as e:
-            energy_score, z_energy = 0.5, np.nan
+            energy_score, z_energy, lv_energy, tr_energy = 0.5, np.nan, np.nan, np.nan
         
         try:
-            pf_score, z_pf = score_power_factor(
+            pf_score, z_pf, lv_pf, tr_pf = score_power_factor(
                 pf_current, power_current,
-                baseline["pf_median"], baseline["pf_rstd"],
+                baseline["power_factor_avg"]["median"], baseline["power_factor_avg"]["rstd"],
                 hist_pf if len(hist_pf) >= 2 else np.array([])
             )
         except Exception as e:
-            pf_score, z_pf = 0.0, np.nan
+            pf_score, z_pf, lv_pf, tr_pf = 0.0, np.nan, np.nan, np.nan
         
         try:
-            unbal_score, z_unbal = score_phase_imbalance(
+            unbal_score, z_unbal, lv_unbal, tr_unbal = score_phase_imbalance(
                 unbalance_current,
-                baseline["unbal_median"],
-                baseline["unbal_rstd"],
+                baseline["current_unbalance"]["median"],
+                baseline["current_unbalance"]["rstd"],
                 hist_unbal if len(hist_unbal) >= 2 else np.array([])
             )
         except Exception as e:
-            unbal_score, z_unbal = 0.0, np.nan
+            unbal_score, z_unbal, lv_unbal, tr_unbal = 0.0, np.nan, np.nan, np.nan
         
         try:
-            thd_score, z_thd = score_thd_drift(
+            thd_score, z_thd, lv_thd, tr_thd = score_thd_drift(
                 thd_24h,
                 baseline["thd_median"],
                 baseline["thd_rstd"],
                 hist_df['composite_thd'].values.astype(float) if 'composite_thd' in hist_df.columns else np.array([])
             )
         except Exception as e:
-            thd_score, z_thd = 0.0, np.nan
+            thd_score, z_thd, lv_thd, tr_thd = 0.0, np.nan, np.nan, np.nan
         
         try:
-            overload_score, z_overload = score_overload(
+            overload_score, z_overload, score_A, score_B, score_C = score_overload(
                 power_current,
-                baseline["power_median"],
-                baseline["power_rstd"],
-                baseline.get("power_p95"),
+                baseline["power_total"]["median"],
+                baseline["power_total"]["rstd"],
+                baseline["power_total"].get("p95"),
                 hist_power if len(hist_power) >= 24 else np.array([])
             )
         except Exception as e:
-            overload_score, z_overload = 0.5, np.nan
+            overload_score, z_overload, score_A, score_B, score_C = 0.5, np.nan, np.nan, np.nan, np.nan
         
         # Calculate health index
         risk_scores = {
@@ -663,18 +663,97 @@ def transform_health_scores(df_raw):
         sf_flags = safety_flags.get(ahu_id, [])
         safety_flags_str = ",".join(sf_flags) if sf_flags else ""
         
-        # Build result row
+        # Build result row with diagnostic columns
         results.append({
             "timestamp": row['timestamp'],
             "ahu_id": ahu_id,
             "level": row.get('level', f"Level {ahu_id[1:3]}"),
+            
+            # === Health Index ===
             "health_index": round(health_index, 1),
             "tier": tier,
-            "energy_anomaly": risk_scores["energy_anomaly"],
-            "pf_degradation": risk_scores["pf_degradation"],
-            "phase_imbalance": risk_scores["phase_imbalance"],
-            "thd_drift": risk_scores["thd_drift"],
-            "overload": risk_scores["overload"],
+            
+            # === Component Scores ===
+            "energy_anomaly": round(energy_score, 4),
+            "pf_degradation": round(pf_score, 4),
+            "phase_imbalance": round(unbal_score, 4),
+            "thd_drift": round(thd_score, 4),
+            "overload": round(overload_score, 4),
+            
+            # === Raw Metrics (Current Hour) ===
+            "raw_power_total": power_current,
+            "raw_energy_import": energy_current,
+            "raw_power_factor_avg": pf_current,
+            "raw_current_unbalance": unbalance_current,
+            "raw_composite_thd": thd_24h,
+            
+            # === Baseline Statistics (30-day) ===
+            "baseline_power_median": baseline["power_total"]["median"],
+            "baseline_power_rstd": baseline["power_total"]["rstd"],
+            "baseline_power_p5": baseline["power_total"]["p5"],
+            "baseline_power_p25": baseline["power_total"]["p25"],
+            "baseline_power_p75": baseline["power_total"]["p75"],
+            "baseline_power_p95": baseline["power_total"]["p95"],
+            
+            "baseline_energy_median": baseline["delta_kwh"]["median"],
+            "baseline_energy_rstd": baseline["delta_kwh"]["rstd"],
+            "baseline_energy_p5": baseline["delta_kwh"]["p5"],
+            "baseline_energy_p25": baseline["delta_kwh"]["p25"],
+            "baseline_energy_p75": baseline["delta_kwh"]["p75"],
+            "baseline_energy_p95": baseline["delta_kwh"]["p95"],
+            
+            "baseline_pf_median": baseline["power_factor_avg"]["median"],
+            "baseline_pf_rstd": baseline["power_factor_avg"]["rstd"],
+            "baseline_pf_p5": baseline["power_factor_avg"]["p5"],
+            "baseline_pf_p25": baseline["power_factor_avg"]["p25"],
+            "baseline_pf_p75": baseline["power_factor_avg"]["p75"],
+            "baseline_pf_p95": baseline["power_factor_avg"]["p95"],
+            
+            "baseline_unbalance_median": baseline["current_unbalance"]["median"],
+            "baseline_unbalance_rstd": baseline["current_unbalance"]["rstd"],
+            "baseline_unbalance_p5": baseline["current_unbalance"]["p5"],
+            "baseline_unbalance_p25": baseline["current_unbalance"]["p25"],
+            "baseline_unbalance_p75": baseline["current_unbalance"]["p75"],
+            "baseline_unbalance_p95": baseline["current_unbalance"]["p95"],
+            
+            "baseline_thd_24h_median": baseline["composite_thd_24h"].get("median", np.nan),
+            "baseline_thd_24h_rstd": baseline["composite_thd_24h"].get("rstd", np.nan),
+            "baseline_thd_24h_p5": baseline["composite_thd_24h"].get("p5", np.nan),
+            "baseline_thd_24h_p95": baseline["composite_thd_24h"].get("p95", np.nan),
+            
+            # === Z-Scores (Current Reading vs Baseline) ===
+            "z_energy": round(z_energy, 3),
+            "z_power_factor": round(z_pf, 3),
+            "z_phase_imbalance": round(z_unbal, 3),
+            "z_thd_drift": round(z_thd, 3),
+            "z_overload": round(z_overload, 3),
+            
+            # === Level Term (70% weight) ===
+            "level_energy": round(lv_energy, 4),
+            "level_pf": round(lv_pf, 4),
+            "level_unbalance": round(lv_unbal, 4),
+            "level_thd": round(lv_thd, 4),
+            
+            # === Trend Term (30% weight) ===
+            "trend_energy": round(tr_energy, 4),
+            "trend_pf": round(tr_pf, 4),
+            "trend_unbalance": round(tr_unbal, 4),
+            "trend_thd": round(tr_thd, 4),
+            
+            # === Overload Components (A: ceiling, B: z-score, C: trend) ===
+            "overload_power_ratio": round(power_current / baseline["power_total"]["p95"], 4) if baseline["power_total"].get("p95") else None,
+            "overload_demand": round(max(0.0, power_current / baseline["power_total"]["p95"] - 0.85), 4) if baseline["power_total"].get("p95") else None,
+            "score_overload_A": round(score_A, 4),
+            "score_overload_B": round(score_B, 4),
+            "score_overload_C": round(score_C, 4),
+            
+            # === Safety Flags (Boolean) ===
+            "flag_thd_chronic_high": "THD_CHRONIC_HIGH" in sf_flags,
+            "flag_imbalance_severe": "IMBALANCE_SEVERE" in sf_flags,
+            "flag_pf_chronic_low": "PF_CHRONIC_LOW" in sf_flags,
+            "flag_overload_chronic": "OVERLOAD_CHRONIC" in sf_flags,
+            
+            # === Safety Flags (String) ===
             "safety_flags": safety_flags_str,
         })
     
@@ -711,13 +790,55 @@ def load_to_csv(df_scores, output_path=None):
     file_exists = os.path.exists(output_path)
     
     # Define columns in order
+    # All columns to include (all diagnostic columns)
     required_cols = [
-        "timestamp", "ahu_id", "level", "health_index",
-        "energy_anomaly", "pf_degradation", "phase_imbalance",
-        "thd_drift", "overload", "tier", "safety_flags"
+        # Core columns
+        "timestamp", "ahu_id", "level", "health_index", "tier",
+        
+        # Component scores
+        "energy_anomaly", "pf_degradation", "phase_imbalance", "thd_drift", "overload",
+        
+        # Raw metrics
+        "raw_power_total", "raw_energy_import", "raw_power_factor_avg",
+        "raw_current_unbalance", "raw_composite_thd",
+        
+        # Baseline statistics
+        "baseline_power_median", "baseline_power_rstd",
+        "baseline_power_p5", "baseline_power_p25", "baseline_power_p75", "baseline_power_p95",
+        "baseline_energy_median", "baseline_energy_rstd",
+        "baseline_energy_p5", "baseline_energy_p25", "baseline_energy_p75", "baseline_energy_p95",
+        "baseline_pf_median", "baseline_pf_rstd",
+        "baseline_pf_p5", "baseline_pf_p25", "baseline_pf_p75", "baseline_pf_p95",
+        "baseline_unbalance_median", "baseline_unbalance_rstd",
+        "baseline_unbalance_p5", "baseline_unbalance_p25", "baseline_unbalance_p75", "baseline_unbalance_p95",
+        "baseline_thd_24h_median", "baseline_thd_24h_rstd",
+        "baseline_thd_24h_p5", "baseline_thd_24h_p95",
+        
+        # Z-scores
+        "z_energy", "z_power_factor", "z_phase_imbalance", "z_thd_drift", "z_overload",
+        
+        # Level and trend breakdowns
+        "level_energy", "trend_energy",
+        "level_pf", "trend_pf",
+        "level_unbalance", "trend_unbalance",
+        "level_thd", "trend_thd",
+        
+        # Overload components
+        "overload_power_ratio", "overload_demand",
+        "score_overload_A", "score_overload_B", "score_overload_C",
+        
+        # Safety flags (boolean)
+        "flag_thd_chronic_high", "flag_imbalance_severe",
+        "flag_pf_chronic_low", "flag_overload_chronic",
+        
+        # Safety flags (string)
+        "safety_flags"
     ]
-    
-    # Reorder columns
+
+    # Reorder columns - only include columns that exist in the DataFrame
+    available_cols = [c for c in required_cols if c in df_scores.columns]
+    df_output = df_scores[available_cols]
+
     df_output = df_scores[[c for c in required_cols if c in df_scores.columns]]
     
     # Append mode
