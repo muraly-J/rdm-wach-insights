@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import api from './api.js'
 import ChatView from './components/ChatView.jsx'
-import AhuHealthTrendDashboard from './components/AhuHealthTrendDashboard.jsx'
+import LuxuryDashboard from './components/LuxuryDashboard.jsx'
 import { MAPPED_COUNT } from './deviceMap.js'
 
 const SESSION_ID = crypto.randomUUID()
@@ -132,7 +132,7 @@ export default function App() {
         </div>
       </header>
       {showDashboard ? (
-        <AhuHealthTrendDashboard onBack={() => setShowDashboard(false)} />
+        <LuxuryDashboard onBack={() => setShowDashboard(false)} />
       ) : (
         <ChatView
           messages={messages}
