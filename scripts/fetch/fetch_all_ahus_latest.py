@@ -17,8 +17,8 @@ import os
 import argparse
 from datetime import datetime
 
-# Add backend to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+# Add backend to path for imports (scripts/fetch → .. → scripts → .. → backend)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
 
 from core.influx_client import fetch_latest_hourly_data
 

@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "local-files": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "local-files@latest"
+      ],
+      "env": {
+        "ROOT_DIRS": "/Users/rdmasia/wach-insight"
+      }
+    },
+    "fetch": {
+      "description": "Use Python requests instead"
+    },
+    "sqlite": {
+      "description": "Use Python sqlite3 instead"
+    }
+  }
+}

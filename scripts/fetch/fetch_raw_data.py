@@ -29,10 +29,10 @@ import sys
 import time
 import math
 
-# Import from backend
-sys.path.insert(0, '/Users/rdmasia/wach-insight')
+# Add backend to path for imports (scripts/fetch → .. → scripts → .. → backend)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
 
-from backend.core.influx_client import fetch_time_series, get_available_devices
+from core.influx_client import fetch_time_series, get_available_devices
 
 
 def fetch_level1_raw_data_chunk(level1_devices, start_date, end_date):

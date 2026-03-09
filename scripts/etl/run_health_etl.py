@@ -27,8 +27,8 @@ import argparse
 import time
 from datetime import datetime
 
-# Add backend to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+# Add backend to path for imports (scripts/etl → .. → scripts → .. → backend)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
 
 import pandas as pd
 import numpy as np
@@ -44,7 +44,7 @@ from models.schemas import AHU_LEVEL_CONFIG, get_devices_by_level
 # CONFIGURATION
 # ──────────────────────────────────────────────────────────────────────────────
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
+DATA_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data')
 OUTPUT_FILE = os.path.join(DATA_DIR, "health_all_levels.csv")
 
 # Timing utilities

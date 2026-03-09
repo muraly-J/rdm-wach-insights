@@ -24,8 +24,8 @@ import os
 import argparse
 from datetime import datetime, timezone
 
-# Add backend to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+# Add backend to path for imports (scripts/etl → .. → scripts → .. → backend)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
 
 import pandas as pd
 import numpy as np
