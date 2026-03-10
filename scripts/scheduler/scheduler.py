@@ -72,7 +72,7 @@ def run_etl(script_name: str, log_file: str, extra_args: list = None) -> tuple:
     Returns:
         Tuple of (success: bool, output: str)
     """
-    script_path = os.path.join(PROJECT_ROOT, "scripts", script_name)
+    script_path = os.path.join(PROJECT_ROOT, "scripts", "etl", script_name)
     
     # Build command
     cmd = [
