@@ -329,7 +329,7 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
                 row = {
                     'timestamp': ts,
                     'ahu_id': device_id,
-                    'level': f"Level {DEVICE_TO_LEVEL.get(device_id, 'N/A')}",
+                    'level': DEVICE_TO_LEVEL.get(device_id, 'N/A'),
                     'energy_current': float(energy_current) if pd.notna(energy_current) else None,
                     'yesterday_kwh': float(yesterday_kwh) if pd.notna(yesterday_kwh) else None,
                     'last_week_kwh': float(last_week_kwh) if pd.notna(last_week_kwh) else None,
