@@ -46,7 +46,7 @@ from models.schemas import (
 
 
 # Configuration
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 PREDICTIONS_FILE = os.path.join(DATA_DIR, "predictions.csv")
 HEALTH_FILE = os.path.join(DATA_DIR, "health_all_levels.csv")
