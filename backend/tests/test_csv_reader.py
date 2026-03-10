@@ -58,6 +58,19 @@ def test_score_breakdown_returns_fair_scores(csv_has_data):
         assert 'trend' in score
         assert 'data' in score
 
+def test_score_values_are_0_to_100(csv_has_data):
+    result = get_score_breakdown(level=1, time_range="30d")
+    assert result
+    # At least one score across all devices must be >= 1.0 — confirms 0-100 scale not 0-1
+    max_seen = 0.0
+    for device in result:
+        for score_name, score in device['scores'].items():
+            max_seen = max(max_seen, score['current'])
+    assert max_seen >= 1.0, (
+        f"All scores look like 0-1 fractions (max seen = {max_seen}); expected 0-100 scale"
+    )
+
+
 def test_raw_score_relationship_has_raw_and_score(csv_has_data):
     df = csv_has_data
     device_id = df['ahu_id'].iloc[0]
