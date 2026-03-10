@@ -85,6 +85,32 @@ def test_raw_score_relationship_has_raw_and_score(csv_has_data):
         assert 'scoreData' in entry
 
 
+def test_device_name_equals_device_id(csv_has_data):
+    """name field should be the raw device_id, e.g. 'e0101'."""
+    result = get_health_index_series(level=1, device_id=None, time_range="30d")
+    assert result
+    item = result[0]
+    assert item['name'] == item['id'], (
+        f"Expected name == id (raw device_id), got name={item['name']!r} id={item['id']!r}"
+    )
+
+
+def test_no_duplicate_device_names(csv_has_data):
+    result = get_health_index_series(level=1, device_id=None, time_range="30d")
+    names = [item['name'] for item in result]
+    assert len(names) == len(set(names)), (
+        f"Duplicate names: {[n for n in names if names.count(n) > 1]}"
+    )
+
+
+def test_device_has_ahu_label(csv_has_data):
+    """Device objects should have a 'label' field from the TSV."""
+    result = get_health_index_series(level=1, device_id=None, time_range="30d")
+    assert result
+    labels = [item.get('label', '') for item in result]
+    assert any(labels), "No TSV labels found in response"
+
+
 # API endpoint tests
 from fastapi.testclient import TestClient
 from main import app

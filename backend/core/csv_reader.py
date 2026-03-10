@@ -35,6 +35,28 @@ RANGE_DELTA = {
     '30d': timedelta(days=30),
 }
 
+_AHU_LABELS: dict[str, dict] = {}
+
+
+def _load_ahu_labels() -> dict[str, dict]:
+    """Load docs/ahu_relationships.tsv → {device_id: {label, department, area}}."""
+    global _AHU_LABELS
+    if _AHU_LABELS:
+        return _AHU_LABELS
+    tsv_path = os.path.join(os.path.dirname(__file__), '..', '..', 'docs', 'ahu_relationships.tsv')
+    if not os.path.exists(tsv_path):
+        return {}
+    df = pd.read_csv(tsv_path, sep='\t')
+    for _, row in df.iterrows():
+        device_id = str(row.get('device_id', '')).strip()
+        if device_id:
+            _AHU_LABELS[device_id] = {
+                'label': str(row.get('AHU Label', '')).strip(),
+                'department': str(row.get('Department Name', '')).strip(),
+                'area': str(row.get('Area Name', '')).strip(),
+            }
+    return _AHU_LABELS
+
 
 def _load_csv() -> pd.DataFrame:
     """Load CSV; return empty DataFrame if missing."""
@@ -50,13 +72,9 @@ def _filter_time_range(df: pd.DataFrame, time_range: str) -> pd.DataFrame:
     return df[ts >= cutoff]
 
 
-def _ahu_name(device_id: str, level: int) -> str:
-    return f"AHU-L{level}-{device_id[-2:]}"
-
-
 def get_health_index_series(level: int, device_id: str | None, time_range: str) -> list[dict]:
     """
-    Returns [{device: {id, name, level}, data: [{timestamp, value}]}]
+    Returns [{id, name, label, department, area, data: [{timestamp, value}]}]
     for all devices on the level (or just device_id if specified).
     """
     df = _load_csv()
@@ -67,11 +85,16 @@ def get_health_index_series(level: int, device_id: str | None, time_range: str) 
         df = df[df['ahu_id'] == device_id]
     df = _filter_time_range(df, time_range).sort_values('timestamp')
 
+    labels = _load_ahu_labels()
     result = []
     for ahu_id, group in df.groupby('ahu_id'):
+        meta = labels.get(str(ahu_id), {})
         result.append({
             'id': ahu_id,
-            'name': _ahu_name(ahu_id, level),
+            'name': ahu_id,
+            'label': meta.get('label', ''),
+            'department': meta.get('department', ''),
+            'area': meta.get('area', ''),
             'data': [
                 {'timestamp': row['timestamp'].isoformat(), 'value': round(float(row['health_index']), 2)}
                 for _, row in group.iterrows()
@@ -91,6 +114,7 @@ def get_score_breakdown(level: int, time_range: str) -> list[dict]:
     df = df[df['level'] == f"Level {level}"]
     df = _filter_time_range(df, time_range).sort_values('timestamp')
 
+    labels = _load_ahu_labels()
     result = []
     for ahu_id, group in df.groupby('ahu_id'):
         scores = {}
@@ -108,7 +132,14 @@ def get_score_breakdown(level: int, time_range: str) -> list[dict]:
             current = round(float(values.iloc[-1]), 2)
             trend = round(float(values.iloc[-1] - values.iloc[0]), 2) if len(values) > 1 else 0.0
             scores[col] = {'current': current, 'trend': trend, 'data': data_points}
-        result.append({'id': ahu_id, 'name': _ahu_name(ahu_id, level), 'scores': scores})
+        meta = labels.get(str(ahu_id), {})
+        result.append({
+            'id': ahu_id,
+            'name': ahu_id,
+            'label': meta.get('label', ''),
+            'department': meta.get('department', ''),
+            'scores': scores,
+        })
     return result
 
 
