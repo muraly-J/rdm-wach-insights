@@ -32,6 +32,8 @@ export interface ScoreBreakdown {
 export interface Device {
   id: string;
   name: string;
+  label?: string;
+  department?: string;
   level: number;
 }
 
@@ -74,6 +76,9 @@ export interface HealthIndexResponse {
   devices: {
     id: string;
     name: string;
+    label?: string;
+    department?: string;
+    area?: string;
     data: { timestamp: string; value: number }[];
   }[];
 }
@@ -82,6 +87,8 @@ export interface ScoresResponse {
   devices: {
     id: string;
     name: string;
+    label?: string;
+    department?: string;
     scores: Record<
       'energy_anomaly' | 'pf_degradation' | 'phase_imbalance' | 'thd_drift' | 'overload',
       { current: number; trend: number; data: { timestamp: string; value: number }[] }

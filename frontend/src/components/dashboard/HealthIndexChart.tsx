@@ -13,7 +13,7 @@ import { motion } from 'framer-motion';
 
 interface HealthIndexChartProps {
   data: Array<{ timestamp: string; [key: string]: number }>;
-  devices: Array<{ id: string; name: string }>;
+  devices: Array<{ id: string; name: string; label?: string; department?: string }>;
 }
 
 /**
@@ -56,15 +56,19 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
   const CustomLegend = ({ payload }: any) => {
     return (
       <div className="flex flex-wrap justify-center gap-4 mt-6">
-        {payload.map((entry: any, index: number) => (
-          <div key={index} className="flex items-center gap-2">
-            <span
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-xs text-[#8A95A5]">{entry.value}</span>
-          </div>
-        ))}
+        {payload.map((entry: any, index: number) => {
+          const dev = devices.find((d) => d.name === entry.value);
+          const tooltip = [dev?.label, dev?.department].filter(Boolean).join(' — ') || entry.value;
+          return (
+            <div key={index} className="flex items-center gap-2" title={tooltip}>
+              <span
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: entry.color }}
+              />
+              <span className="text-xs text-[#8A95A5]">{entry.value}</span>
+            </div>
+          );
+        })}
       </div>
     );
   };

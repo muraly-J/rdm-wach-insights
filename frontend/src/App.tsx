@@ -90,6 +90,8 @@ function App() {
       (healthData?.devices ?? []).map((d) => ({
         id: d.id,
         name: d.name,
+        label: d.label,
+        department: d.department,
         level: selectedLevel!,
       })),
     [healthData, selectedLevel]
