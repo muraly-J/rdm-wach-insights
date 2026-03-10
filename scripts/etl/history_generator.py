@@ -137,17 +137,15 @@ def compute_ahu_health_score(
     Returns dict with health_index, risk_scores, and tier.
     """
     try:
-        # Energy Anomaly (uses delta_kwh)
+        # Energy Anomaly — normalize delta_kwh against daily energy variation std
         energy_score = 0.5
         ahu_energy = df_energy.get(ahu_id)
         if ahu_energy is not None and pd.notna(energy_anomaly_val) and ahu_energy.notna().sum() > 24:
             hist_energy = ahu_energy.dropna()
-            energy_median = float(hist_energy.median())
-            energy_mad = float((hist_energy - energy_median).abs().median())
-            energy_std = max(1.4826 * energy_mad, 0.05)
-            if energy_std > 0:
-                z_score = (energy_anomaly_val - energy_median) / energy_std
-                energy_score = sigmoid_score(z_score)
+            hist_daily = hist_energy.diff().dropna()
+            daily_std = max(float(hist_daily.std()), 1.0)
+            z_score = float(energy_anomaly_val) / daily_std
+            energy_score = sigmoid_score(z_score)
         
         # Power Factor Risk
         pf_score = 0.5
