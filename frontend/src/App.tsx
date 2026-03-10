@@ -23,14 +23,11 @@ const ScoreDerivationSection = React.lazy(
 import ChatWidget from './components/chat/ChatWidget';
 
 // State
-import { useAppStore } from './store/useAppStore';
+import { useAppStore, TimeRange } from './store/useAppStore';
 
-// Mock data
-import {
-  generateHealthIndex,
-  generateScoreBreakdowns,
-  generateRawScoreRelationship,
-} from './mocks/generateMockData';
+// API
+import { fetchHealthIndex, fetchScoreBreakdown, fetchRawScoreRelationship } from './api/client';
+import type { HealthIndexResponse, ScoresResponse, RawScoreResponse } from './types';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -42,41 +39,71 @@ interface ScoreEntry {
   data: Array<{ timestamp: string; value: number }>;
 }
 
+const TIME_RANGES: TimeRange[] = ['24h', '7d', '30d'];
+
 // ──────────────────────────────────────────────────────────────────────────────
 // App
 // ──────────────────────────────────────────────────────────────────────────────
 
 function App() {
-  const { selectedLevel, selectedDevice, selectDevice } = useAppStore();
+  const { selectedLevel, selectedDevice, selectDevice, timeRange, setTimeRange } = useAppStore();
 
-  // ── Mock data per level ─────────────────────────────────────────────────────
-  const mockHealthIndex = React.useMemo(
-    () => (selectedLevel ? generateHealthIndex(selectedLevel, 48) : []),
-    [selectedLevel]
-  );
+  // ── API State ────────────────────────────────────────────────────────────────
+  const [healthData, setHealthData] = React.useState<HealthIndexResponse | null>(null);
+  const [scoresData, setScoresData] = React.useState<ScoresResponse | null>(null);
+  const [rawData, setRawData] = React.useState<RawScoreResponse | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const mockScoreBreakdowns = React.useMemo(
-    () => (selectedLevel ? generateScoreBreakdowns(selectedLevel, 48) : []),
-    [selectedLevel]
-  );
+  // ── Fetch health index + score breakdown whenever level/device/range changes ─
+  React.useEffect(() => {
+    if (!selectedLevel) return;
+    setIsLoading(true);
+    setError(null);
 
-  // ── Devices ─────────────────────────────────────────────────────────────────
+    Promise.all([
+      fetchHealthIndex(selectedLevel, timeRange, selectedDevice),
+      fetchScoreBreakdown(selectedLevel, timeRange),
+    ])
+      .then(([health, scores]) => {
+        setHealthData(health);
+        setScoresData(scores);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setIsLoading(false));
+  }, [selectedLevel, selectedDevice, timeRange]);
+
+  // ── Fetch raw-score relationship when a single device is selected ────────────
+  React.useEffect(() => {
+    if (!selectedDevice || selectedDevice === 'all') {
+      setRawData(null);
+      return;
+    }
+    fetchRawScoreRelationship(selectedDevice, timeRange)
+      .then((data) => setRawData(data as RawScoreResponse))
+      .catch(() => setRawData(null));
+  }, [selectedDevice, timeRange]);
+
+  // ── Devices list derived from health data ────────────────────────────────────
   const devices = React.useMemo(
-    () => mockHealthIndex.map((item) => item.device),
-    [mockHealthIndex]
+    () =>
+      (healthData?.devices ?? []).map((d) => ({
+        id: d.id,
+        name: d.name,
+        level: selectedLevel!,
+      })),
+    [healthData, selectedLevel]
   );
 
-  // ── Health Index chart data (merge by timestamp index) ───────────────────────
+  // ── Health Index chart data ──────────────────────────────────────────────────
   const healthChartData = React.useMemo(() => {
-    if (mockHealthIndex.length === 0) return [];
+    if (!healthData?.devices?.length) return [];
 
-    // If a specific device is selected, show only that device
     const series =
       selectedDevice && selectedDevice !== 'all'
-        ? mockHealthIndex.filter((d) => d.device.id === selectedDevice)
-        : mockHealthIndex;
+        ? healthData.devices.filter((d) => d.id === selectedDevice)
+        : healthData.devices;
 
-    // Use first device's timestamps as the reference
     const refData = series[0]?.data ?? [];
     return refData.map((point, idx) => {
       const entry: Record<string, any> = {
@@ -85,14 +112,14 @@ function App() {
           day: 'numeric',
         }),
       };
-      series.forEach(({ device, data }) => {
-        entry[device.name] = data[idx]?.value ?? null;
+      series.forEach(({ name, data }) => {
+        entry[name] = data[idx]?.value ?? null;
       });
       return entry;
     });
-  }, [mockHealthIndex, selectedDevice]);
+  }, [healthData, selectedDevice]);
 
-  // Devices visible in the chart (all or single)
+  // Devices visible in the chart
   const chartDevices = React.useMemo(() => {
     if (selectedDevice && selectedDevice !== 'all') {
       return devices.filter((d) => d.id === selectedDevice);
@@ -100,46 +127,37 @@ function App() {
     return devices;
   }, [devices, selectedDevice]);
 
-  // ── Score card data (aggregate across devices for "all", or single device) ──
+  // ── Score card data ──────────────────────────────────────────────────────────
   const scoreCardData = React.useMemo<Record<string, ScoreEntry>>(() => {
-    if (mockScoreBreakdowns.length === 0) return {};
+    if (!scoresData?.devices?.length) return {};
 
     const scoreNames = ['energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload'] as const;
 
-    // Filter to selected device if applicable
-    const relevantBreakdowns =
+    const relevantDevices =
       selectedDevice && selectedDevice !== 'all'
-        ? mockScoreBreakdowns.filter((d) => d.id === selectedDevice)
-        : mockScoreBreakdowns;
+        ? scoresData.devices.filter((d) => d.id === selectedDevice)
+        : scoresData.devices;
 
-    if (relevantBreakdowns.length === 0) return {};
+    if (relevantDevices.length === 0) return {};
 
     const result: Record<string, ScoreEntry> = {};
-
     scoreNames.forEach((name) => {
-      const allScores = relevantBreakdowns.map((d) => d.scores[name]);
+      const allScores = relevantDevices
+        .map((d) => d.scores[name])
+        .filter(Boolean);
+      if (allScores.length === 0) return;
       const count = allScores.length;
-
       const avgCurrent = allScores.reduce((s, v) => s + v.current, 0) / count;
       const avgTrend = allScores.reduce((s, v) => s + v.trend, 0) / count;
-
       const pointCount = allScores[0]?.data.length ?? 0;
       const avgData = Array.from({ length: pointCount }, (_, i) => ({
         timestamp: allScores[0]?.data[i]?.timestamp ?? '',
         value: allScores.reduce((s, v) => s + (v.data[i]?.value ?? 0), 0) / count,
       }));
-
       result[name] = { current: avgCurrent, trend: avgTrend, data: avgData };
     });
-
     return result;
-  }, [mockScoreBreakdowns, selectedDevice]);
-
-  // ── Raw-score relationship data (single device only) ─────────────────────────
-  const rawRelationData = React.useMemo(() => {
-    if (!selectedDevice || selectedDevice === 'all') return null;
-    return generateRawScoreRelationship(selectedDevice, 48);
-  }, [selectedDevice]);
+  }, [scoresData, selectedDevice]);
 
   const showDerivation = Boolean(selectedDevice && selectedDevice !== 'all');
 
@@ -168,6 +186,37 @@ function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
+              {/* Time range picker */}
+              <div className="flex gap-2 justify-end mb-4">
+                {TIME_RANGES.map((range) => (
+                  <button
+                    key={range}
+                    onClick={() => setTimeRange(range)}
+                    className={`px-3 py-1 rounded text-sm border transition-colors ${
+                      timeRange === range
+                        ? 'bg-[#1E2A3A] border-[#3B82F6] text-white'
+                        : 'bg-transparent border-[#1E2A3A] text-[#8A95A5] hover:border-[#3B82F6]'
+                    }`}
+                  >
+                    {range}
+                  </button>
+                ))}
+              </div>
+
+              {/* Loading indicator */}
+              {isLoading && (
+                <div className="flex justify-center py-4">
+                  <span className="text-[#8A95A5] text-sm animate-pulse">Loading data…</span>
+                </div>
+              )}
+
+              {/* Error state */}
+              {error && !isLoading && (
+                <div className="mb-4 px-4 py-3 rounded bg-red-900/20 border border-red-700 text-red-400 text-sm">
+                  Failed to load data: {error}
+                </div>
+              )}
+
               {/* Device selector sub-bar */}
               <DeviceSelector
                 devices={devices}
@@ -188,7 +237,7 @@ function App() {
 
               {/* Score Derivation (single-device mode only) */}
               <AnimatePresence>
-                {showDerivation && rawRelationData && (
+                {showDerivation && rawData && (
                   <React.Suspense
                     fallback={
                       <div className="card p-6 h-40 flex items-center justify-center">
@@ -200,7 +249,7 @@ function App() {
                       deviceName={
                         devices.find((d) => d.id === selectedDevice)?.name ?? selectedDevice ?? ''
                       }
-                      rawData={rawRelationData.scores}
+                      rawData={rawData.scores}
                     />
                   </React.Suspense>
                 )}
