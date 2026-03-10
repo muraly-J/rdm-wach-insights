@@ -308,10 +308,11 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
                 ts_168h = ts - pd.Timedelta(weeks=1)
                 ts_336h = ts - pd.Timedelta(weeks=2)
                 
-                # Get values at those offsets
-                yesterday_kwh = df[device_id].loc.get(ts_24h, None)
-                last_week_kwh = df[device_id].loc.get(ts_168h, None)
-                two_weeks_kwh = df[device_id].loc.get(ts_336h, None)
+                # Get values at those offsets (Series.get works; .loc.get does not)
+                series = df[device_id]
+                yesterday_kwh = series.get(ts_24h, None)
+                last_week_kwh = series.get(ts_168h, None)
+                two_weeks_kwh = series.get(ts_336h, None)
                 
                 # Compute prediction
                 if all(v is not None and not pd.isna(v) for v in [
