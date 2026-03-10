@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { motion } from 'framer-motion';
+import InfoTooltip from '../shared/InfoTooltip';
 
 interface HealthIndexChartProps {
   data: Array<{ timestamp: string; [key: string]: number }>;
@@ -90,13 +91,9 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
     >
       {/* Header (Section 5.2) */}
       <div className="mb-6">
-        <h3
-          className="
-            font-display text-[24px] font-bold
-            tracking-[-0.01em]
-          "
-        >
+        <h3 className="font-display text-[24px] font-bold tracking-[-0.01em] flex items-center">
           Health Index
+          <InfoTooltip text="Combined risk score for each AHU. 0 = all systems healthy, 100 = critical risk. Calculated as a weighted sum of all five indicators: Phase Imbalance (25%), Power Factor (25%), Overload (20%), Energy Anomaly (15%), THD Drift (15%). Lower is better." />
         </h3>
         
         <p className="mt-2 text-sm text-[#8A95A5]">
