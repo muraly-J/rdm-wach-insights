@@ -103,14 +103,6 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
       {/* Chart container */}
       <ResponsiveContainer width="100%" height={320}>
         <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-          <defs>
-            {/* Gradient fill definition */}
-            <linearGradient id="healthIndexGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#00E5A0" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#00E5A0" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-
           <CartesianGrid
             stroke="#1E2A3A"
             strokeDasharray="3 3"
@@ -148,7 +140,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
               dataKey={device.name}
               stroke={getColor(index)}
               strokeWidth={2}
-              fill="url(#healthIndexGradient)"
+              fill="none"
               connectNulls
             />
           ))}
