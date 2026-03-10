@@ -23,6 +23,7 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from routes.forecast import router as forecast_router
 from routes.dashboard import router as dashboard_router
+from routes.health_scores import router as health_scores_router
 
 from dotenv import load_dotenv
 from middleware.query_logger import init_db, log_query
@@ -91,6 +92,7 @@ def create_app():
     app.include_router(forecast_router, prefix="/api")
     app.include_router(query_router, prefix="/api")
     app.include_router(dashboard_router)
+    app.include_router(health_scores_router, prefix="/api")
 
     @app.get('/health')
     async def health():

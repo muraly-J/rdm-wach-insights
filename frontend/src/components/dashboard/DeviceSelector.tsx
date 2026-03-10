@@ -50,15 +50,6 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
           `}
         >
           {allDevicesOption.name}
-          
-          {/* Active underline */}
-          {(selectedDevice === null || selectedDevice === 'all') && (
-            <motion.div
-              className="absolute bottom-0 left-1/2 h-[2px] w-full bg-[#00E5A0]"
-              initial={{ width: 0 }}
-              animate={{ width: '100%' }}
-            />
-          )}
         </motion.button>
 
         {/* Individual device chips */}
@@ -79,15 +70,6 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
             `}
           >
             {device.id}
-            
-            {/* Active underline */}
-            {selectedDevice === device.id && (
-              <motion.div
-                className="absolute bottom-0 left-1/2 h-[2px] w-full bg-[#00E5A0]"
-                initial={{ width: 0 }}
-                animate={{ width: '100%' }}
-              />
-            )}
           </motion.button>
         ))}
 

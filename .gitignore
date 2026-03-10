@@ -233,3 +233,4 @@ secrets.json
 # =========================
 documentation/startup.md
 .vercel
+.aider*
