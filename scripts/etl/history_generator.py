@@ -363,161 +363,139 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
     
     log_info(f"Processing {len(devices)} devices...")
     
-    # Health scoring columns
+    # Health scoring columns — must match run_health_etl.py output format
     health_columns = [
         'timestamp', 'ahu_id', 'level',
-        'health_index', 'health_tier',
+        'health_index', 'tier',
         'energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload',
-        'energy_anomaly_severity', 'pf_degradation_severity', 
-        'phase_imbalance_severity', 'thd_drift_severity', 'overload_severity',
+        'raw_power_total', 'raw_energy_import', 'raw_power_factor_avg',
+        'raw_current_unbalance', 'raw_composite_thd',
         'safety_flags'
     ]
-    
+
     all_health_records = []
-    
+
     # Fetch all metrics for ALL devices
     log_info("Fetching all metrics from InfluxDB...")
-    
-    # Get latest timestamp for each device
-    latest_timestamps = predictions_df.groupby('ahu_id')['timestamp'].max().to_dict()
-    
+
     # Fetch energy at latest timestamp
     devices_with_data = predictions_df['ahu_id'].unique()
-    
-    # Fetch power at latest timestamp for overload calculation
-    df_power = fetch_time_series(list(devices_with_data), 'power_total', 'all_time')
-    
+
+    # Fetch power for overload calculation — sort index for .asof() lookups
+    df_power = fetch_time_series(list(devices_with_data), 'power_total', 'all_time').sort_index()
+
     # Fetch energy for delta_kwh stats
-    df_energy = fetch_time_series(list(devices_with_data), 'energy_import', 'all_time')
-    
+    df_energy = fetch_time_series(list(devices_with_data), 'energy_import', 'all_time').sort_index()
+
     # Fetch other metrics
-    df_pf = fetch_time_series(list(devices_with_data), 'power_factor_avg', 'all_time')
-    df_unbalance = fetch_time_series(list(devices_with_data), 'current_unbalance', 'all_time')
-    df_l1_thd = fetch_time_series(list(devices_with_data), 'current_l1_thd', 'all_time')
-    df_l3_thd = fetch_time_series(list(devices_with_data), 'current_l3_thd', 'all_time')
-    
-    # Process each device
+    df_pf = fetch_time_series(list(devices_with_data), 'power_factor_avg', 'all_time').sort_index()
+    df_unbalance = fetch_time_series(list(devices_with_data), 'current_unbalance', 'all_time').sort_index()
+    df_l1_thd = fetch_time_series(list(devices_with_data), 'current_l1_thd', 'all_time').sort_index()
+    df_l3_thd = fetch_time_series(list(devices_with_data), 'current_l3_thd', 'all_time').sort_index()
+
+    def _asof_value(df, ahu_id, ts):
+        """Look up nearest-prior value for ahu_id at timestamp ts."""
+        if df.empty or ahu_id not in df.columns:
+            return None
+        s = df[ahu_id].dropna()
+        if s.empty:
+            return None
+        try:
+            val = s.asof(ts)
+            return float(val) if pd.notna(val) else None
+        except Exception:
+            return float(s.iloc[-1]) if not s.empty else None
+
+    # Process each device — iterate ALL timestamps (not just latest)
     for idx, ahu_id in enumerate(devices):
         processed = idx + 1
         log_info(f"Computing health scores for {ahu_id} ({processed}/{len(devices)})...")
-        
-        # Get latest row for this device
-        device_data = predictions_df[predictions_df['ahu_id'] == ahu_id]
-        
+
+        # Get ALL rows for this device sorted by timestamp
+        device_data = predictions_df[predictions_df['ahu_id'] == ahu_id].sort_values('timestamp')
+
         if device_data.empty:
             continue
-        
-        # Get latest timestamp and delta_kwh
-        latest_row = device_data.sort_values('timestamp').iloc[-1]
-        latest_ts = latest_row['timestamp']
-        
-        # Get device level
-        level_val = str(latest_row.get('level', 'Level 1'))
-        
-        # Get delta_kwh from predictions
-        energy_anomaly_val = latest_row.get('delta_kwh')
-        
-        # Get current values from metrics
-        current_power = None
-        current_pf = None
-        current_unbalance = None
-        current_composite_thd = None
-        
-        try:
-            if not df_power.empty and ahu_id in df_power.columns:
-                power_series = df_power[ahu_id].dropna()
-                if not power_series.empty:
-                    current_power = float(power_series.iloc[-1])
-            
-            if not df_energy.empty and ahu_id in df_energy.columns:
-                energy_series = df_energy[ahu_id].dropna()
-                # Use last delta_kwh as reference
-                energy_anomaly_val = latest_row.get('delta_kwh')
-            
-            if not df_pf.empty and ahu_id in df_pf.columns:
-                pf_series = df_pf[ahu_id].dropna()
-                if not pf_series.empty:
-                    current_pf = float(pf_series.iloc[-1])
-            
-            if not df_unbalance.empty and ahu_id in df_unbalance.columns:
-                unbalance_series = df_unbalance[ahu_id].dropna()
-                if not unbalance_series.empty:
-                    current_unbalance = float(unbalance_series.iloc[-1])
-            
-            if not df_l1_thd.empty and ahu_id in df_l1_thd.columns:
-                l1_series = df_l1_thd[ahu_id].dropna()
-                if not l1_series.empty:
-                    l3_series = df_l3_thd[ahu_id].dropna() if not df_l3_thd.empty else pd.Series()
-                    if not l3_series.empty:
-                        current_composite_thd = max(float(l1_series.iloc[-1]), float(l3_series.iloc[-1]))
-                    else:
-                        current_composite_thd = float(l1_series.iloc[-1])
-        except Exception as e:
-            log_error(f"Error fetching metrics for {ahu_id}: {e}")
-            continue
-        
-        # Compute health score
-        result = compute_ahu_health_score(
-            energy_anomaly_val=energy_anomaly_val,
-            current_pf=current_pf,
-            current_power=current_power,
-            current_unbalance=current_unbalance,
-            current_composite_thd=current_composite_thd,
-            df_energy=df_energy,
-            df_pf=df_pf,
-            df_power=df_power,
-            df_unbalance=df_unbalance,
-            df_l1_thd=df_l1_thd,
-            df_l3_thd=df_l3_thd
-        )
-        
-        if result is None:
-            continue
-        
-        # Build record
-        risk_scores = result['risk_scores']
-        
-        def get_severity(score):
-            if score >= 0.8:
-                return 'Critical'
-            elif score >= 0.6:
-                return 'Elevated'
-            elif score >= 0.4:
-                return 'Monitor'
+
+        for _, row in device_data.iterrows():
+            ts = row['timestamp']
+            level_val = str(row.get('level', 'Level 1'))
+            energy_anomaly_val = row.get('delta_kwh')
+
+            # Look up raw metric values at this timestamp using .asof()
+            current_power = _asof_value(df_power, ahu_id, ts)
+            current_pf = _asof_value(df_pf, ahu_id, ts)
+            current_unbalance = _asof_value(df_unbalance, ahu_id, ts)
+            current_energy = _asof_value(df_energy, ahu_id, ts)
+
+            # Composite THD: average of L1 and L3
+            l1 = _asof_value(df_l1_thd, ahu_id, ts)
+            l3 = _asof_value(df_l3_thd, ahu_id, ts)
+            if l1 is not None and l3 is not None:
+                current_composite_thd = (l1 + l3) / 2
+            elif l1 is not None:
+                current_composite_thd = l1
+            elif l3 is not None:
+                current_composite_thd = l3
             else:
-                return 'Normal'
-        
-        # Generate safety flags
-        safety_flags = []
-        if risk_scores.get('thd_drift', 0) >= 0.8:
-            safety_flags.append('THD_CHRONIC_HIGH')
-        if risk_scores.get('phase_imbalance', 0) >= 0.8:
-            safety_flags.append('IMBALANCE_SEVERE')
-        if risk_scores.get('power_factor', 0) >= 0.8 and current_pf is not None:
-            if current_pf < 0.50:
-                safety_flags.append('PF_CHRONIC_LOW')
-        
-        record = {
-            'timestamp': latest_ts,
-            'ahu_id': ahu_id,
-            'level': level_val,
-            'health_index': result['health_index'],
-            'health_tier': result['health_tier'],
-            'energy_anomaly': round(risk_scores.get('energy_anomaly', 0), 4),
-            'pf_degradation': round(risk_scores.get('power_factor', 0), 4),
-            'phase_imbalance': round(risk_scores.get('phase_imbalance', 0), 4),
-            'thd_drift': round(risk_scores.get('thd_drift', 0), 4),
-            'overload': round(risk_scores.get('overload', 0), 4),
-            'energy_anomaly_severity': get_severity(risk_scores.get('energy_anomaly', 0)),
-            'pf_degradation_severity': get_severity(risk_scores.get('power_factor', 0)),
-            'phase_imbalance_severity': get_severity(risk_scores.get('phase_imbalance', 0)),
-            'thd_drift_severity': get_severity(risk_scores.get('thd_drift', 0)),
-            'overload_severity': get_severity(risk_scores.get('overload', 0)),
-            'safety_flags': ';'.join(safety_flags) if safety_flags else ''
-        }
-        
-        all_health_records.append(record)
-        _stats['health_scores_computed'] += 1
+                current_composite_thd = None
+
+            # Compute health score
+            try:
+                result = compute_ahu_health_score(
+                    energy_anomaly_val=energy_anomaly_val,
+                    current_pf=current_pf,
+                    current_power=current_power,
+                    current_unbalance=current_unbalance,
+                    current_composite_thd=current_composite_thd,
+                    df_energy=df_energy,
+                    df_pf=df_pf,
+                    df_power=df_power,
+                    df_unbalance=df_unbalance,
+                    df_l1_thd=df_l1_thd,
+                    df_l3_thd=df_l3_thd
+                )
+            except Exception as e:
+                log_error(f"Error computing health score for {ahu_id} at {ts}: {e}")
+                continue
+
+            if result is None:
+                continue
+
+            # Build record
+            risk_scores = result['risk_scores']
+
+            # Generate safety flags
+            safety_flags = []
+            if risk_scores.get('thd_drift', 0) >= 0.8:
+                safety_flags.append('THD_CHRONIC_HIGH')
+            if risk_scores.get('phase_imbalance', 0) >= 0.8:
+                safety_flags.append('IMBALANCE_SEVERE')
+            if risk_scores.get('power_factor', 0) >= 0.8 and current_pf is not None:
+                if current_pf < 0.50:
+                    safety_flags.append('PF_CHRONIC_LOW')
+
+            record = {
+                'timestamp': ts,
+                'ahu_id': ahu_id,
+                'level': level_val,
+                'health_index': result['health_index'],
+                'tier': result['health_tier'],
+                'energy_anomaly': round(risk_scores.get('energy_anomaly', 0), 4),
+                'pf_degradation': round(risk_scores.get('power_factor', 0), 4),
+                'phase_imbalance': round(risk_scores.get('phase_imbalance', 0), 4),
+                'thd_drift': round(risk_scores.get('thd_drift', 0), 4),
+                'overload': round(risk_scores.get('overload', 0), 4),
+                'raw_power_total': current_power,
+                'raw_energy_import': current_energy,
+                'raw_power_factor_avg': current_pf,
+                'raw_current_unbalance': current_unbalance,
+                'raw_composite_thd': current_composite_thd,
+                'safety_flags': ';'.join(safety_flags) if safety_flags else ''
+            }
+
+            all_health_records.append(record)
+            _stats['health_scores_computed'] += 1
     
     # Create DataFrame
     if not all_health_records:
@@ -548,17 +526,32 @@ def save_predictions(predictions_df: pd.DataFrame):
 
 
 def save_health_scores(health_df: pd.DataFrame):
-    """Save health scores to CSV."""
+    """Append health scores to CSV, deduplicating on (timestamp, ahu_id)."""
     log_info(f"Saving health scores to {HEALTH_FILE}...")
-    
+
     if health_df.empty:
         log_error("No data to save!")
         return False
-    
+
     os.makedirs(os.path.dirname(HEALTH_FILE), exist_ok=True)
-    health_df.to_csv(HEALTH_FILE, index=False)
-    log_info(f"Saved {len(health_df)} records to health_all_levels.csv")
-    
+
+    if os.path.exists(HEALTH_FILE) and os.path.getsize(HEALTH_FILE) > 0:
+        existing = pd.read_csv(HEALTH_FILE)
+        existing_keys = set(zip(existing['timestamp'].astype(str), existing['ahu_id'].astype(str)))
+        new_rows = health_df[
+            ~health_df.apply(
+                lambda r: (str(r['timestamp']), str(r['ahu_id'])) in existing_keys, axis=1
+            )
+        ]
+        if new_rows.empty:
+            log_info("No new rows to append (all already present)")
+            return True
+        new_rows.to_csv(HEALTH_FILE, mode='a', header=False, index=False)
+        log_info(f"Appended {len(new_rows)} new records to health_all_levels.csv")
+    else:
+        health_df.to_csv(HEALTH_FILE, index=False)
+        log_info(f"Created health_all_levels.csv with {len(health_df)} records")
+
     return True
 
 
