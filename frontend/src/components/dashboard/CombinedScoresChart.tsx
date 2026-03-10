@@ -18,6 +18,7 @@ interface ScoreEntry {
 
 interface CombinedScoresChartProps {
   scoreData: Record<string, ScoreEntry>;
+  timeRange: '24h' | '7d' | '30d';
 }
 
 /**
@@ -34,7 +35,7 @@ const SCORE_NAMES = [
   { key: 'overload',        label: 'Overload',        color: '#EF4444' },
 ] as const;
 
-const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData }) => {
+const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, timeRange }) => {
   // Merge all score series into a single array indexed by position
   const mergedData = React.useMemo(() => {
     const firstScore = scoreData[SCORE_NAMES[0].key];
@@ -88,7 +89,12 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData }) 
             fontSize={12}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            tickFormatter={(v) => {
+              const d = new Date(v);
+              return timeRange === '24h'
+                ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+                : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }}
           />
           <YAxis
             domain={[0, 100]}
