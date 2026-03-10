@@ -118,6 +118,7 @@ def sigmoid_score(raw: float) -> float:
 
 
 def compute_ahu_health_score(
+    ahu_id: str,
     energy_anomaly_val: float,
     current_pf: float,
     current_power: float,
@@ -463,6 +464,7 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
             # Compute health score
             try:
                 result = compute_ahu_health_score(
+                    ahu_id=ahu_id,
                     energy_anomaly_val=energy_anomaly_val,
                     current_pf=current_pf,
                     current_power=current_power,
