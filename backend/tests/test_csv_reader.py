@@ -27,13 +27,22 @@ def test_health_index_series_returns_list(csv_has_data):
     assert isinstance(result, list)
     if result:
         item = result[0]
-        assert 'device' in item
+        assert 'id' in item
+        assert 'name' in item
         assert 'data' in item
-        assert 'id' in item['device']
-        assert 'name' in item['device']
         if item['data']:
             assert 'timestamp' in item['data'][0]
             assert 'value' in item['data'][0]
+
+
+def test_health_index_series_flat_shape(csv_has_data):
+    result = get_health_index_series(level=1, device_id=None, time_range="30d")
+    assert result
+    item = result[0]
+    assert 'device' not in item, "Shape is nested — expected flat {id, name, data}"
+    assert 'id' in item
+    assert 'name' in item
+    assert 'data' in item
 
 def test_score_breakdown_returns_fair_scores(csv_has_data):
     result = get_score_breakdown(level=1, time_range="7d")

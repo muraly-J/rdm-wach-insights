@@ -70,11 +70,8 @@ def get_health_index_series(level: int, device_id: str | None, time_range: str) 
     result = []
     for ahu_id, group in df.groupby('ahu_id'):
         result.append({
-            'device': {
-                'id': ahu_id,
-                'name': _ahu_name(ahu_id, level),
-                'level': level,
-            },
+            'id': ahu_id,
+            'name': _ahu_name(ahu_id, level),
             'data': [
                 {'timestamp': row['timestamp'].isoformat(), 'value': round(float(row['health_index']), 2)}
                 for _, row in group.iterrows()
