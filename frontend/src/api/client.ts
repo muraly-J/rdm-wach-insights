@@ -46,7 +46,7 @@ export async function fetchHealthIndex(
   deviceId?: string | null
 ): Promise<HealthIndexResponse> {
   const params = new URLSearchParams({ time_range: range });
-  if (deviceId) params.set('device_id', deviceId);
+  if (deviceId && deviceId !== 'all') params.set('device_id', deviceId);
   return apiFetch<HealthIndexResponse>(`/level/${levelId}/health-index?${params}`);
 }
 
