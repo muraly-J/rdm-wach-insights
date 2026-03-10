@@ -90,6 +90,26 @@ def get_all_devices() -> list:
     return sorted(devices)
 
 
+def _fetch_batched(devices: list, metric: str, time_range: str, batch_size: int = 20) -> pd.DataFrame:
+    """
+    Batch fetch_time_series into groups of batch_size to avoid InfluxDB
+    connection drops caused by oversized regex patterns.
+    """
+    chunks = [devices[i:i + batch_size] for i in range(0, len(devices), batch_size)]
+    frames = []
+    for i, chunk in enumerate(chunks):
+        log_info(f"  Fetching {metric} batch {i + 1}/{len(chunks)} ({len(chunk)} devices)...")
+        try:
+            df_chunk = fetch_time_series(chunk, metric, time_range)
+            if not df_chunk.empty:
+                frames.append(df_chunk)
+        except Exception as e:
+            log_error(f"  Batch {i + 1} failed for {metric}: {e}")
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, axis=1).sort_index()
+
+
 def sigmoid_score(raw: float) -> float:
     """Convert raw value to [0, 1] using sigmoid transformation."""
     raw = max(-500.0, min(500.0, float(raw)))
@@ -214,29 +234,31 @@ def compute_ahu_health_score(
         return None
 
 
-def run_prediction_etl_historical(start_time: datetime, end_time: datetime = None) -> pd.DataFrame:
+def run_prediction_etl_historical(start_time: datetime, end_time: datetime = None, devices: list = None) -> pd.DataFrame:
     """
     Run Prediction ETL for full historical period.
-    
+
     Formula:
         ŷ(t)   = (E(t−24h) + E(t−168h) + E(t−336h)) / 3
         Δkwh   = E(t) − ŷ(t)
-    
+
     Args:
         start_time: Start timestamp
         end_time: End timestamp
-        
+        devices: Optional list of device IDs to restrict processing (level filter)
+
     Returns:
         DataFrame with predictions and energy values
     """
     log_info("=" * 70)
     log_info("STEP 1: EXTRACT - Fetching Historical Energy Data")
     log_info("=" * 70)
-    
+
     if end_time is None:
         end_time = datetime.now(timezone.utc)
-    
-    devices = get_all_devices()
+
+    if devices is None:
+        devices = get_all_devices()
     total_devices = len(devices)
     
     # Columns for predictions output
@@ -248,11 +270,11 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
     
     all_predictions = []
     
-    # Fetch energy_import for ALL devices at once
-    log_info(f"Fetching energy_import for {len(devices)} devices...")
-    
+    # Fetch energy_import in batches to avoid InfluxDB connection drops
+    log_info(f"Fetching energy_import for {len(devices)} devices (batched)...")
+
     try:
-        df = fetch_time_series(devices, 'energy_import', 'all_time')
+        df = _fetch_batched(devices, 'energy_import', 'all_time')
         
         if df.empty:
             log_error("No energy data fetched!")
@@ -381,17 +403,14 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
     # Fetch energy at latest timestamp
     devices_with_data = predictions_df['ahu_id'].unique()
 
-    # Fetch power for overload calculation — sort index for .asof() lookups
-    df_power = fetch_time_series(list(devices_with_data), 'power_total', 'all_time').sort_index()
-
-    # Fetch energy for delta_kwh stats
-    df_energy = fetch_time_series(list(devices_with_data), 'energy_import', 'all_time').sort_index()
-
-    # Fetch other metrics
-    df_pf = fetch_time_series(list(devices_with_data), 'power_factor_avg', 'all_time').sort_index()
-    df_unbalance = fetch_time_series(list(devices_with_data), 'current_unbalance', 'all_time').sort_index()
-    df_l1_thd = fetch_time_series(list(devices_with_data), 'current_l1_thd', 'all_time').sort_index()
-    df_l3_thd = fetch_time_series(list(devices_with_data), 'current_l3_thd', 'all_time').sort_index()
+    # Fetch all metrics in batches to avoid InfluxDB connection drops
+    devices_list = list(devices_with_data)
+    df_power    = _fetch_batched(devices_list, 'power_total',      'all_time').sort_index()
+    df_energy   = _fetch_batched(devices_list, 'energy_import',    'all_time').sort_index()
+    df_pf       = _fetch_batched(devices_list, 'power_factor_avg', 'all_time').sort_index()
+    df_unbalance = _fetch_batched(devices_list, 'current_unbalance', 'all_time').sort_index()
+    df_l1_thd   = _fetch_batched(devices_list, 'current_l1_thd',   'all_time').sort_index()
+    df_l3_thd   = _fetch_batched(devices_list, 'current_l3_thd',   'all_time').sort_index()
 
     def _asof_value(df, ahu_id, ts):
         """Look up nearest-prior value for ahu_id at timestamp ts."""
@@ -635,7 +654,8 @@ Output:
     
     predictions_df = run_prediction_etl_historical(
         start_time=datetime.now(timezone.utc) - pd.Timedelta(days=365),
-        end_time=datetime.now(timezone.utc)
+        end_time=datetime.now(timezone.utc),
+        devices=devices,
     )
     
     if predictions_df.empty:
