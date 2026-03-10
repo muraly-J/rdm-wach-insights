@@ -108,18 +108,20 @@ function App() {
 
     const refData = series[0]?.data ?? [];
     return refData.map((point, idx) => {
-      const entry: Record<string, any> = {
-        timestamp: new Date(point.timestamp).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-        }),
-      };
+      const d = new Date(point.timestamp);
+      const timestamp =
+        timeRange === '24h'
+          ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+          : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      const entry: Record<string, any> = { timestamp };
       series.forEach(({ name, data }) => {
-        entry[name] = data[idx]?.value ?? null;
+        const val = data[idx]?.value;
+        entry[name] = val !== undefined && val !== null ? parseFloat((100 - val).toFixed(2)) : null;
       });
       return entry;
     });
-  }, [healthData, selectedDevice]);
+  }, [healthData, selectedDevice, timeRange]);
 
   // Devices visible in the chart
   const chartDevices = React.useMemo(() => {
