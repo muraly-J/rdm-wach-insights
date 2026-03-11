@@ -30,7 +30,7 @@ SCORE_RAW_MAP = {
 }
 
 RANGE_DELTA = {
-    '24h': timedelta(hours=24),
+    '24h': timedelta(days=3),   # daily CSV data — 3 days gives visible trend
     '7d':  timedelta(days=7),
     '30d': timedelta(days=30),
 }
