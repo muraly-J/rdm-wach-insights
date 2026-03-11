@@ -234,7 +234,7 @@ function App() {
               <ScoreCardsGrid scoreData={scoreCardData} />
 
               {/* Combined Scores Chart */}
-              <CombinedScoresChart scoreData={scoreCardData} timeRange={timeRange} />
+              <CombinedScoresChart scoreData={scoreCardData} />
 
               {/* Score Derivation (single-device mode only) */}
               <AnimatePresence>
