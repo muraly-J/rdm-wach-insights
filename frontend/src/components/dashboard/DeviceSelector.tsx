@@ -53,7 +53,7 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         </motion.button>
 
         {/* Individual device chips */}
-        {devices.slice(0, 20).map((device) => (
+        {devices.map((device) => (
           <motion.button
             key={device.id}
             title={[device.label, device.department].filter(Boolean).join(' — ') || device.id}
@@ -72,11 +72,6 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
             {device.id}
           </motion.button>
         ))}
-
-        {/* Expand indicator if more devices */}
-        {devices.length > 20 && (
-          <span className="text-xs text-[#8A95A5] px-2">+{devices.length - 20} more</span>
-        )}
       </div>
     </div>
   );
