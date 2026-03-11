@@ -14,6 +14,10 @@ import HealthIndexChart from './components/dashboard/HealthIndexChart';
 import ScoreCardsGrid from './components/dashboard/ScoreCardsGrid';
 import CombinedScoresChart from './components/dashboard/CombinedScoresChart';
 
+// Health Rankings and Safety Flags
+import HealthRankSection from './components/dashboard/HealthRankSection';
+import SafetyFlagsCombinedCard, { type SafetyFlag } from './components/dashboard/SafetyFlagsCombinedCard';
+
 // Score Derivation (lazy-loaded — Section 12)
 const ScoreDerivationSection = React.lazy(
   () => import('./components/dashboard/derivation/ScoreDerivationSection')
@@ -26,7 +30,7 @@ import ChatWidget from './components/chat/ChatWidget';
 import { useAppStore, TimeRange } from './store/useAppStore';
 
 // API
-import { fetchHealthIndex, fetchScoreBreakdown, fetchRawScoreRelationship } from './api/client';
+import { fetchHealthIndex, fetchScoreBreakdown, fetchRawScoreRelationship, fetchDashboardRanking, fetchDashboardSafetyFlags } from './api/client';
 import type { HealthIndexResponse, ScoresResponse, RawScoreResponse } from './types';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -52,6 +56,8 @@ function App() {
   const [healthData, setHealthData] = React.useState<HealthIndexResponse | null>(null);
   const [scoresData, setScoresData] = React.useState<ScoresResponse | null>(null);
   const [rawData, setRawData] = React.useState<RawScoreResponse | null>(null);
+  const [rankings, setRankings] = React.useState<{ best: Array<{ ahu_id: string; index: number }>; worst: Array<{ ahu_id: string; index: number }> } | null>(null);
+  const [safetyFlagsData, setSafetyFlagsData] = React.useState<Record<string, Array<{ flag_id: string; label: string; severity: string }>> | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 

@@ -23,6 +23,14 @@ from core.risk_engine import (
 from core.influx_client import get_available_devices
 import asyncio
 
+# Flag ID to label mapping
+FLAG_LABELS = {
+    "THD_CHRONIC_HIGH": "THD Critical",
+    "IMBALANCE_SEVERE": "Severe Imbalance", 
+    "PF_CHRONIC_LOW": "Low Power Factor",
+    "OVERLOAD_CHRONIC": "Overload Risk",
+}
+
 # FAIR scoring imports
 from core.fair_health_scoring import (
     score_energy_anomaly,
@@ -280,6 +288,14 @@ async def dashboard_trend(
             "series": series,
             "latest_snapshot": {
                 a["ahu_id"]: round(a["health_index"], 1)
+                for a in assessments
+            },
+            "safety_flags": {
+                a["ahu_id"]: [
+                    {"flag_id": f.strip(), "label": FLAG_LABELS.get(f.strip(), "Safety Issue"), "severity": "High" if f.strip() in ["THD_CHRONIC_HIGH", "OVERLOAD_CHRONIC"] else ("Moderate" if f.strip() == "PF_CHRONIC_LOW" else "High")}
+                    for f in a.get("safety_flags", "").split(",")
+                    if f.strip()
+                ]
                 for a in assessments
             }
         }
@@ -669,6 +685,117 @@ async def dashboard_summary(
             "range": range,
             "ahu_id": ahu_id,
             "summaries": summaries
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/safety-flags")
+async def dashboard_safety_flags(
+    level: str = Query(default="1", description="Building level (1-11)"),
+    time_range: str = Query(default="last_30d", description="Time period to analyze")
+):
+    """
+    Get safety flags for all AHUs on a specific level.
+
+    Returns list of safety flags per device:
+      - THD_CHRONIC_HIGH:   composite_thd_24h > 15.0%
+      - IMBALANCE_SEVERE:   current_unbalance > 30.0%
+      - PF_CHRONIC_LOW:     power_factor_avg < 0.50
+      - OVERLOAD_CHRONIC:   power_total > 90% of own p95
+
+    Parameters:
+        level: Building level number (1-11)
+        time_range: last_24h, last_7d, last_30d
+
+    Example:
+        GET /api/dashboard/safety-flags?level=1&range=last_30d
+    """
+    try:
+        # Validate level
+        try:
+            level_num = int(level)
+            if level_num < 1 or level_num > 11:
+                raise HTTPException(status_code=400, detail="Level must be between 1 and 11")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Level must be a valid number")
+
+        # Get all available devices
+        available_devices = get_available_devices(time_range)
+
+        # Filter by level prefix (e.g., e05 for Level 5)
+        level_prefix = f"e{str(level_num).zfill(2)}"
+        level_devices = [d for d in available_devices if d.startswith(level_prefix)]
+
+        if not level_devices:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No devices found for level {level}. Available levels: 1-11"
+            )
+
+        # Run fleet risk assessment to get safety flags
+        result = await asyncio.to_thread(
+            generate_fleet_risk_assessment,
+            time_range=time_range,
+            cluster_by_level=True,
+            devices_filter=level_devices
+        )
+
+        assessments = result.get("assessments", [])
+
+        if not assessments:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No health data available for level {level} in the selected time range"
+            )
+
+        # Extract safety flags from assessments
+        safety_flags_list = []
+        for assessment in assessments:
+            ahu_id = assessment.get("ahu_id")
+            safety_flags_str = assessment.get("safety_flags", "")
+            
+            # Parse flags from comma-separated string
+            if isinstance(safety_flags_str, str):
+                flags = [f.strip() for f in safety_flags_str.split(",") if f.strip()]
+            elif isinstance(safety_flags_str, list):
+                flags = safety_flags_str
+            else:
+                flags = []
+
+            # Map flag IDs to display labels and severity
+            flag_info_map = {
+                "THD_CHRONIC_HIGH": {"label": "THD Critical", "severity": "High", "threshold": ">15.0%"},
+                "IMBALANCE_SEVERE": {"label": "Severe Imbalance", "severity": "High", "threshold": ">30.0%"},
+                "PF_CHRONIC_LOW": {"label": "Low Power Factor", "severity": "Moderate", "threshold": "<0.50"},
+                "OVERLOAD_CHRONIC": {"label": "Overload Risk", "severity": "High", "threshold": ">90% p95"},
+            }
+
+            # Build flag info list
+            flags_info = []
+            for flag_id in flags:
+                if flag_id in flag_info_map:
+                    info = flag_info_map[flag_id]
+                    flags_info.append({
+                        "flag_id": flag_id,
+                        "label": info["label"],
+                        "severity": info["severity"],
+                        "threshold": info["threshold"]
+                    })
+
+            safety_flags_list.append({
+                "ahu_id": ahu_id,
+                "flags": flags_info
+            })
+
+        return {
+            "level": level,
+            "time_range": time_range,
+            "generated_at": result.get("generated_at"),
+            "safety_flags": safety_flags_list
         }
 
     except HTTPException:

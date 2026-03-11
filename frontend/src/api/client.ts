@@ -96,3 +96,14 @@ export async function fetchDashboardRanking(
 ) {
   return apiFetch(`/dashboard/ranking?level=${level}&range=${range}`);
 }
+
+/**
+ * GET /api/dashboard/safety-flags — Safety flags per device
+ * Existing: backend/routes/dashboard.py#L631
+ */
+export async function fetchDashboardSafetyFlags(
+  level: number,
+  range: 'last_24h' | 'last_7d' | 'last_30d'
+) {
+  return apiFetch(`/dashboard/safety-flags?level=${level}&range=${range}`);
+}
