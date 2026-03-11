@@ -14,9 +14,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
+from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -29,8 +29,103 @@ from dotenv import load_dotenv
 from middleware.query_logger import init_db, log_query
 from routes.query import router as query_router
 
-# Load env but don't fail if not found
-load_dotenv()
+
+# ── Rate Limiter (in-memory, per IP) ───────────────────────────────────────
+_rate_store: dict = defaultdict(list)
+RATE_LIMIT        = int(os.getenv("RATE_LIMIT_REQUESTS", "20"))
+RATE_WINDOW       = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
+
+
+def _check_rate_limit(ip: str) -> None:
+    now  = time.time()
+    hits = [t for t in _rate_store[ip] if now - t < RATE_WINDOW]
+    hits.append(now)
+    _rate_store[ip] = hits
+    if len(hits) > RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail={"error": "Too many requests. Please wait a moment before trying again."}
+        )
+
+
+# ── API Key Authentication Middleware ────────────────────────────────────────
+def get_api_key() -> str:
+    """Get the API key from environment."""
+    api_key = os.getenv("API_KEY")
+    if not api_key:
+        # For local development without API key, use a default that can be overridden
+        api_key = os.getenv("DEV_API_KEY", "dev-key-change-in-production")
+    return api_key
+
+
+class APIKeyAuthMiddleware(BaseHTTPMiddleware):
+    """API Key Authentication Middleware."""
+    
+    async def dispatch(self, request: Request, call_next):
+        # Skip auth for health check endpoint
+        if request.url.path == "/health":
+            return await call_next(request)
+        
+        # Skip auth for OPTIONS requests (CORS preflight)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+        
+        # Get API key from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        
+        # Also allow API key as query parameter (for browsers)
+        api_key_param = request.query_params.get("api_key")
+        
+        if not auth_header and not api_key_param:
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "error": "Missing API key",
+                    "suggestion": "Include 'Authorization: Bearer <api_key>' header or '?api_key=<key>' query parameter"
+                }
+            )
+        
+        # Extract API key from "Bearer <token>" format
+        if auth_header.startswith("Bearer "):
+            api_key = auth_header[7:]
+        else:
+            api_key = auth_header
+        
+        # Check query param if header not present
+        if not api_key and api_key_param:
+            api_key = api_key_param
+        
+        # Validate API key
+        expected_api_key = get_api_key()
+        if api_key != expected_api_key:
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "error": "Invalid API key",
+                    "suggestion": "Please provide a valid API key"
+                }
+            )
+        
+        return await call_next(request)
+
+
+# ── Rate Limiting Middleware ─────────────────────────────────────────────────
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Rate Limiting Middleware - applied to forecast endpoints."""
+    
+    async def dispatch(self, request: Request, call_next):
+        # Skip rate limiting for health check
+        if request.url.path == "/health":
+            return await call_next(request)
+        
+        # Get client IP
+        client_ip = request.client.host or "unknown"
+        
+        # Check rate limit for /api endpoints
+        if request.url.path.startswith("/api/"):
+            _check_rate_limit(client_ip)
+        
+        return await call_next(request)
 
 
 # ── Security headers middleware ───────────────────────────────────────────────
@@ -62,7 +157,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 def get_cors_origins():
     """Get CORS origins from env or use defaults."""
-    raw = os.getenv("CORS_ORIGIN", "http://localhost:3000")
+    raw = os.getenv("CORS_ORIGINS", "http://localhost:3000")
     origins = [o.strip() for o in raw.split(",") if o.strip()]
     return origins
 
@@ -75,17 +170,24 @@ def create_app():
         version="1.0.0",
     )
 
+    # Add security middleware in order of execution (first to last)
+    app.add_middleware(APIKeyAuthMiddleware)  # Authentication
+    app.add_middleware(RateLimitMiddleware)   # Rate limiting
     app.add_middleware(SecurityHeadersMiddleware)
 
-    # CORS — allow both localhost and network access
+    # CORS — restrict to specific origins (not all methods/headers)
     _cors_origins = get_cors_origins()
 
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_cors_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST"],  # Restricted methods
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "X-Request-ID"
+        ],  # Restricted headers
     )
 
     # Include all routers with /api prefix for consistent routing

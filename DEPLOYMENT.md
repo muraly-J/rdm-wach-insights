@@ -1,5 +1,33 @@
 # Deployment Guide: WACH Insight
 
+## Security Requirements for Production
+
+### Environment Variables (REQUIRED)
+
+Before deploying, ensure the following environment variables are set in your `.env` file:
+
+```bash
+# InfluxDB Configuration (HTTPS required for production)
+INFLUX_URL=https://your-influxdb-host.cloud.influxdata.com
+INFLUX_TOKEN=secure-api-token-with-read-access
+
+# API Authentication (REQUIRED for all /api endpoints)
+API_KEY=generate-a-long-random-string-here
+
+# Optional: Developer API key for local testing
+DEV_API_KEY=dev-key-change-in-production
+```
+
+### Generating Secure API Keys
+
+```bash
+# Generate a secure random string for API_KEY
+python3 -c "import secrets; print(secrets.token_urlsafe(64))"
+
+# Or use OpenSSL
+openssl rand -base64 64 | tr -d '\n'
+```
+
 ## Architecture
 
 ### Local Development (Recommended)
@@ -42,16 +70,32 @@ Visit http://localhost:3000
 Create a `.env` file in the project root with:
 
 ```bash
+# InfluxDB Configuration (HTTPS required for production)
 INFLUX_URL=https://us-east-1-1.aws.cloud.influxdata.com
 INFLUX_TOKEN=your-influx-token-here
 INFLUX_ORG=wach
 INFLUX_BUCKET=wach_bucket_3
+
+# API Authentication (REQUIRED for /api endpoints)
+API_KEY=your-api-key-here
 ```
 
 Optional:
 ```bash
+# Developer API key for local testing without authentication
+DEV_API_KEY=dev-key-change-in-production
+
+# CORS Configuration
+CORS_ORIGINS=http://localhost:3000,http://your-production-domain.com
+
+# Rate Limiting (default: 20 requests per minute)
+RATE_LIMIT_REQUESTS=20
+RATE_LIMIT_WINDOW=60
+
+# LLM Configuration (optional)
 ENABLE_LLM=true
 LMS_BASE_URL=http://localhost:1234/v1
+LMS_API_KEY=lm-studio
 ```
 
 ## Build for Production

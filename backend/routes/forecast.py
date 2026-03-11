@@ -19,13 +19,24 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from influxdb_client import InfluxDBClient
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
 
 router = APIRouter()
+
+
+# ── Path Parameter Validation ────────────────────────────────────────────────
+_DEVICE_ID_PATTERN = re.compile(r'^e\d{4}$')
+
+
+def _validate_device_id(device_id: str) -> bool:
+    """Validate device ID format."""
+    return bool(_DEVICE_ID_PATTERN.match(device_id))
+
 
 _URL    = os.getenv("INFLUX_URL")
 _TOKEN  = os.getenv("INFLUX_TOKEN")
@@ -257,10 +268,21 @@ def _build_summary(
 
 
 @router.get("/forecast/{device_id}")
-async def get_forecast(device_id: str):
+async def get_forecast(request: Request, device_id: str):
     """
     Returns 7-day historical power_total + 24-hour forecast for a supported device.
     """
+    # 1. Validate device ID format (path parameter validation)
+    if not _validate_device_id(device_id):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": f"Invalid device ID format: '{device_id}'",
+                "suggestion": "Device IDs must match pattern 'eXXXX' (e.g., e0202, e0207)"
+            }
+        )
+    
+    # 2. Check if device is in supported list
     if device_id not in FORECAST_DEVICES:
         raise HTTPException(
             status_code=400,

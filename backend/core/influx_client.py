@@ -11,6 +11,7 @@ Both return clean pandas DataFrames ready for the visualization layer.
 """
 
 import os
+import re
 import math
 import warnings
 from datetime import datetime, timedelta
@@ -19,7 +20,7 @@ from typing import Dict, List, Optional
 import pandas as pd
 from influxdb_client import InfluxDBClient
 
-from models.schemas import ALLOWED_TIME_RANGES
+from models.schemas import ALLOWED_TIME_RANGES, ALLOWED_DEVICES
 from config import get_influx_url, get_influx_token, get_influx_org, get_influx_bucket
 
 warnings.filterwarnings("ignore")
@@ -37,6 +38,25 @@ _RESAMPLE_MAP = {
     "last_30d":  "4h",
     "all_time":  "1d",
 }
+
+# ── Device ID Validation ─────────────────────────────────────────────────────
+_DEVICE_ID_PATTERN = re.compile(r'^e\d{4}$')
+
+
+def _validate_device_ids(device_ids: list[str]) -> None:
+    """Validate device IDs against allowed list and format pattern."""
+    for did in device_ids:
+        if not _DEVICE_ID_PATTERN.match(did):
+            raise ValueError(f"Invalid device ID format: '{did}'")
+        if did not in ALLOWED_DEVICES:
+            raise ValueError(f"Device ID not in allowed list: '{did}'")
+
+
+def _validate_metric(metric: str) -> None:
+    """Validate metric name against allowed list."""
+    from models.schemas import ALLOWED_METRICS
+    if metric not in ALLOWED_METRICS:
+        raise ValueError(f"Metric '{metric}' is not in allowed list")
 
 
 def _get_client() -> InfluxDBClient:
@@ -61,9 +81,16 @@ def fetch_time_series(
         2026-02-10 00:05:00  1198.1   975.4
         ...
     """
+    # Security validation: validate device IDs and metric before building query
+    _validate_device_ids(device_ids)
+    _validate_metric(metric)
+    
     influx_start  = ALLOWED_TIME_RANGES[time_range]
     resample_freq = _RESAMPLE_MAP[time_range]
-    devices_regex = "|".join(device_ids)
+    
+    # Sanitize: escape special regex characters in device IDs
+    sanitized_ids = [re.escape(did) for did in device_ids]
+    devices_regex = "|".join(sanitized_ids)
 
     flux_query = f'''
     from(bucket: "{_BUCKET}")
@@ -94,11 +121,18 @@ def fetch_ranking(
         e0101        2150.4
         ...
     """
+    # Security validation: validate device IDs and metric before building query
+    if device_ids:
+        _validate_device_ids(device_ids)
+    _validate_metric(metric)
+    
     influx_start = ALLOWED_TIME_RANGES[time_range]
 
     # If no device filter → match all WACH devices with a broad regex
     if device_ids:
-        devices_regex = "|".join(device_ids)
+        # Sanitize device IDs for regex escaping
+        sanitized_ids = [re.escape(did) for did in device_ids]
+        devices_regex = "|".join(sanitized_ids)
         # When explicit device_ids are provided, respect top_n if specified
         if top_n is not None:
             query_limit = min(top_n, len(device_ids))

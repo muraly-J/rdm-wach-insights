@@ -36,13 +36,42 @@ def load_env_files():
 
 # ── InfluxDB Configuration ────────────────────────────────────────────────────
 def get_influx_url() -> str:
-    """Get InfluxDB URL."""
-    return os.getenv("INFLUX_URL", "http://localhost:8086")
+    """Get InfluxDB URL (must use HTTPS for production).
+    
+    For local development with http://localhost or IP addresses, HTTP is allowed.
+    For production (cloud URLs), HTTPS is required.
+    """
+    url = os.getenv("INFLUX_URL")
+    if not url:
+        raise ValueError(
+            "INFLUX_URL environment variable is required. "
+            "Set to your InfluxDB URL (e.g., http://localhost:8086 or https://cloud.influxdata.com)."
+        )
+    
+    # Allow HTTP for localhost development
+    if url.startswith("http://localhost") or url.startswith("http://127.0.0.1"):
+        return url
+    
+    # For other hosts (including IPs), require HTTPS
+    if not url.startswith("https://"):
+        raise ValueError(
+            "INFLUX_URL must use HTTPS for secure communication. "
+            f"Received: {url}\n\n"
+            "For local development, use: http://localhost:8086 or http://127.0.0.1:8086\n"
+            "For production, use: https://your-influxdb-host.cloud.influxdata.com"
+        )
+    return url
 
 
 def get_influx_token() -> str:
     """Get InfluxDB API token."""
-    return os.getenv("INFLUX_TOKEN", "")
+    token = os.getenv("INFLUX_TOKEN")
+    if not token:
+        raise ValueError(
+            "INFLUX_TOKEN environment variable is required. "
+            "Set to a valid InfluxDB API token with read access."
+        )
+    return token
 
 
 def get_influx_org() -> str:
@@ -68,7 +97,19 @@ def get_lms_model() -> str:
 
 def get_lms_api_key() -> str:
     """Get LM Studio API key (placeholder for lm-studio)."""
-    return os.getenv("LMS_API_KEY", "lm-studio")
+    api_key = os.getenv("LMS_API_KEY")
+    if not api_key:
+        raise ValueError(
+            "LMS_API_KEY environment variable is required. "
+            "Set to your LM Studio API key or 'lm-studio' for local development."
+        )
+    # Reject default placeholder
+    if api_key == "lm-studio":
+        raise ValueError(
+            "LMS_API_KEY is set to default placeholder. "
+            "Please configure a valid API key."
+        )
+    return api_key
 
 
 # ── Application Configuration ───────────────────────────────────────────────
