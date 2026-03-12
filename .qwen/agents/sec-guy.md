@@ -1,5 +1,5 @@
 ---
-name: security-sentinel
+name: sec-guy
 description: Use this agent when performing a security audit of backend/ and scripts/ directories, especially before merging major features, after updating dependencies, or during routine security health checks to catch hard-coded secrets, injection risks, insecure libraries, and network hardening issues
 color: Purple
 ---

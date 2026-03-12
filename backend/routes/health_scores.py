@@ -74,7 +74,10 @@ async def get_level_scores(
             detail=f"Level {level_id} is invalid. Valid levels: 1-11"
         )
 
-    devices = await asyncio.to_thread(get_score_breakdown, level_id, time_range)
+    try:
+        devices = await asyncio.to_thread(get_score_breakdown, level_id, time_range)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Failed to read score data: {exc}")
     return {
         "level": level_id,
         "time_range": time_range,
@@ -114,7 +117,10 @@ async def get_level_health_index(
             detail=f"Level {level_id} is invalid. Valid levels: 1-11"
         )
 
-    series = await asyncio.to_thread(get_health_index_series, level_id, device_id, time_range)
+    try:
+        series = await asyncio.to_thread(get_health_index_series, level_id, device_id, time_range)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Failed to read health index data: {exc}")
     return {
         "level": level_id,
         "time_range": time_range,

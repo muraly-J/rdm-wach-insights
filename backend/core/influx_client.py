@@ -37,6 +37,7 @@ _RESAMPLE_MAP = {
     "last_7d":   "1h",
     "last_30d":  "4h",
     "all_time":  "1d",
+    "last_30d_hourly": "1h",   # Used by history_generator.py for hourly historical data
 }
 
 # ── Device ID Validation ─────────────────────────────────────────────────────

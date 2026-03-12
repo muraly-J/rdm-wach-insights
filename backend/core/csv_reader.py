@@ -18,6 +18,14 @@ CSV_PATH = os.path.join(
     os.path.dirname(__file__), '..', '..', 'data', 'health_all_levels.csv'
 )
 
+HOURLY_CSV_PATH = os.path.join(
+    os.path.dirname(__file__), '..', '..', 'data', 'health_hourly.csv'
+)
+
+DAILY_CSV_PATH = os.path.join(
+    os.path.dirname(__file__), '..', '..', 'data', 'health_daily.csv'
+)
+
 SCORE_COLUMNS = ['energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload']
 
 # Score → (raw column, unit)
@@ -58,11 +66,24 @@ def _load_ahu_labels() -> dict[str, dict]:
     return _AHU_LABELS
 
 
-def _load_csv() -> pd.DataFrame:
-    """Load CSV; return empty DataFrame if missing."""
-    if not os.path.exists(CSV_PATH) or os.path.getsize(CSV_PATH) == 0:
+def _load_csv(time_range: str = "7d") -> pd.DataFrame:
+    """
+    Load the appropriate CSV for the requested time range.
+
+    24h  → health_hourly.csv  (hourly rows, last 3 days)
+    7d   → health_daily.csv   (one row per AHU per day)
+    30d  → health_daily.csv   (one row per AHU per day)
+
+    Falls back to health_all_levels.csv if the daily CSV is missing.
+    """
+    if time_range == "24h":
+        path = HOURLY_CSV_PATH
+    else:
+        path = DAILY_CSV_PATH if os.path.exists(DAILY_CSV_PATH) else CSV_PATH
+
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
         return pd.DataFrame()
-    return pd.read_csv(CSV_PATH, parse_dates=['timestamp'])
+    return pd.read_csv(path, parse_dates=['timestamp'])
 
 
 def _filter_time_range(df: pd.DataFrame, time_range: str) -> pd.DataFrame:
@@ -77,7 +98,7 @@ def get_health_index_series(level: int, device_id: str | None, time_range: str) 
     Returns [{id, name, label, department, area, data: [{timestamp, value}]}]
     for all devices on the level (or just device_id if specified).
     """
-    df = _load_csv()
+    df = _load_csv(time_range=time_range)
     if df.empty:
         return []
     df = df[df['level'] == f"Level {level}"]
@@ -108,7 +129,7 @@ def get_score_breakdown(level: int, time_range: str) -> list[dict]:
     """
     Returns [{id, name, scores: {energy_anomaly: {current, trend, data}, ...}}]
     """
-    df = _load_csv()
+    df = _load_csv(time_range=time_range)
     if df.empty:
         return []
     df = df[df['level'] == f"Level {level}"]
@@ -147,7 +168,7 @@ def get_raw_score_relationship(device_id: str, time_range: str) -> dict:
     """
     Returns {score_name: {rawMetric, rawUnit, rawData, scoreData}}
     """
-    df = _load_csv()
+    df = _load_csv(time_range=time_range)
     if df.empty:
         return {}
     df = df[df['ahu_id'] == device_id]

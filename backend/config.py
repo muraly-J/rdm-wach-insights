@@ -35,11 +35,25 @@ def load_env_files():
 
 
 # ── InfluxDB Configuration ────────────────────────────────────────────────────
+def get_influx_skip_tls() -> bool:
+    """Return True if INFLUX_SKIP_TLS=true, meaning HTTP is allowed for non-localhost hosts.
+
+    Use this when InfluxDB is running without TLS (plain HTTP) on a remote server.
+    Only set this if the connection is on a trusted private network.
+    """
+    return os.getenv("INFLUX_SKIP_TLS", "false").lower() == "true"
+
+
 def get_influx_url() -> str:
-    """Get InfluxDB URL (must use HTTPS for production).
-    
-    For local development with http://localhost or IP addresses, HTTP is allowed.
-    For production (cloud URLs), HTTPS is required.
+    """Get InfluxDB URL.
+
+    HTTP is allowed for localhost and when INFLUX_SKIP_TLS=true.
+    Otherwise HTTPS is required for non-localhost hosts.
+
+    Allowed formats:
+    - Local development: http://localhost:8086 or http://127.0.0.1:8086
+    - Remote (no TLS):   http://178.128.53.199:8086  (requires INFLUX_SKIP_TLS=true)
+    - Remote (TLS):      https://178.128.53.199:8086
     """
     url = os.getenv("INFLUX_URL")
     if not url:
@@ -47,18 +61,23 @@ def get_influx_url() -> str:
             "INFLUX_URL environment variable is required. "
             "Set to your InfluxDB URL (e.g., http://localhost:8086 or https://cloud.influxdata.com)."
         )
-    
-    # Allow HTTP for localhost development
+
+    # Always allow HTTP for localhost
     if url.startswith("http://localhost") or url.startswith("http://127.0.0.1"):
         return url
-    
-    # For other hosts (including IPs), require HTTPS
+
+    # Allow HTTP for remote hosts only when explicitly opted in
+    if url.startswith("http://") and get_influx_skip_tls():
+        return url
+
+    # For other hosts, require HTTPS
     if not url.startswith("https://"):
         raise ValueError(
             "INFLUX_URL must use HTTPS for secure communication. "
             f"Received: {url}\n\n"
             "For local development, use: http://localhost:8086 or http://127.0.0.1:8086\n"
-            "For production, use: https://your-influxdb-host.cloud.influxdata.com"
+            "If your InfluxDB server runs plain HTTP (no TLS), set INFLUX_SKIP_TLS=true in .env\n"
+            "For production with TLS, use: https://178.128.53.199:8086"
         )
     return url
 
@@ -99,16 +118,11 @@ def get_lms_api_key() -> str:
     """Get LM Studio API key (placeholder for lm-studio)."""
     api_key = os.getenv("LMS_API_KEY")
     if not api_key:
-        raise ValueError(
-            "LMS_API_KEY environment variable is required. "
-            "Set to your LM Studio API key or 'lm-studio' for local development."
-        )
-    # Reject default placeholder
+        # Return default placeholder for local development without LLM
+        return "lm-studio-placeholder"
+    # Allow lm-studio placeholder for local development without valid API
     if api_key == "lm-studio":
-        raise ValueError(
-            "LMS_API_KEY is set to default placeholder. "
-            "Please configure a valid API key."
-        )
+        return "lm-studio-placeholder"
     return api_key
 
 

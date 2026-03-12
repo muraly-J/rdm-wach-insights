@@ -1,8 +1,18 @@
-"""
-ahu_health_index_fair.py
-────────────────────────
-Computes AHU Health Index scores that are FAIR across AHUs of different
-sizes and different inherent operating characteristics.
+# Learning History & Architecture Notes
+
+## CSV Architecture Update (March 12, 2026)
+
+The dual CSV architecture was implemented to enable hourly granularity for the 24h health index chart. This separation addresses the original problem where only 1 data point was displayed for 24h charts.
+
+**Files Created:**
+- [README_CSV_ARCHITECTURE.md](./README_CSV_ARCHITECTURE.md) - Quick start guide
+- [data_flows.md](./data_flows.md) - Complete data flow diagrams
+- [csv_file_formats.md](./csv_file_formats.md) - CSV schema documentation
+- [health_index_chart.md](./health_index_chart.md) - Chart integration guide
+
+**Problem Solved:**
+- Before: 24h chart showed only 1 data point (daily aggregate)
+- After: 24h chart shows 24 hourly data points for smooth visualization
 
 WHY THE PREVIOUS APPROACH WAS UNFAIR
 ──────────────────────────────────────

@@ -9,8 +9,8 @@ Generates complete historical data from earliest available timestamp to latest:
 This is a one-shot script - it runs once and exits (no scheduling).
 
 Usage:
-    python scripts/history_generator.py
-    python scripts/history_generator.py --level all --verbose
+    python3 scripts/history_generator.py
+    python3 scripts/history_generator.py --level all --verbose
 
 Output:
     data/predictions.csv       - Energy predictions with actual vs predicted values
@@ -50,6 +50,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 PREDICTIONS_FILE = os.path.join(DATA_DIR, "predictions.csv")
 HEALTH_FILE = os.path.join(DATA_DIR, "health_all_levels.csv")
+HOURLY_FILE = os.path.join(DATA_DIR, "health_hourly.csv")
 
 # Statistics
 _stats = {
@@ -133,7 +134,7 @@ def compute_ahu_health_score(
 ) -> dict:
     """
     Compute FAIR health score for a single AHU.
-    
+
     Returns dict with health_index, risk_scores, and tier.
     """
     try:
@@ -146,7 +147,7 @@ def compute_ahu_health_score(
             daily_std = max(float(hist_daily.std()), 1.0)
             z_score = float(energy_anomaly_val) / daily_std
             energy_score = sigmoid_score(z_score)
-        
+
         # Power Factor Risk
         pf_score = 0.5
         ahu_pf = df_pf.get(ahu_id)
@@ -157,7 +158,7 @@ def compute_ahu_health_score(
             if pf_std > 0:
                 z_score = (pf_mean - current_pf) / pf_std
                 pf_score = sigmoid_score(z_score)
-        
+
         # Phase Imbalance Risk
         imbalance_score = 0.5
         ahu_unbalance = df_unbalance.get(ahu_id)
@@ -168,7 +169,7 @@ def compute_ahu_health_score(
             if unbalance_std > 0:
                 z_score = (current_unbalance - unbalance_mean) / unbalance_std
                 imbalance_score = sigmoid_score(z_score)
-        
+
         # THD Drift Risk
         thd_score = 0.5
         if current_composite_thd is not None:
@@ -181,7 +182,7 @@ def compute_ahu_health_score(
                 if thd_std > 0:
                     z_score = (current_composite_thd - thd_mean) / thd_std
                     thd_score = sigmoid_score(z_score)
-        
+
         # Overload Risk
         overload_score = 0.5
         ahu_power = df_power.get(ahu_id)
@@ -191,7 +192,7 @@ def compute_ahu_health_score(
             if power_p99 > 0:
                 ratio = current_power / power_p99
                 overload_score = sigmoid_score(ratio * 2 - 1)
-        
+
         # Build risk scores dict
         risk_scores = {
             'energy_anomaly': energy_score,
@@ -200,7 +201,7 @@ def compute_ahu_health_score(
             'thd_drift': thd_score,
             'overload': overload_score
         }
-        
+
         # Calculate health index: 100 - (weighted_sum * 100)
         weighted_sum = 0.0
         for metric, score in risk_scores.items():
@@ -208,10 +209,10 @@ def compute_ahu_health_score(
             if score is None or np.isnan(score):
                 score = 0.5
             weighted_sum += score * weight
-        
+
         health_index = 100 - (weighted_sum * 100)
         health_index = max(0, min(100, health_index))
-        
+
         # Determine tier
         if health_index >= 80:
             health_tier = 'Healthy'
@@ -221,13 +222,13 @@ def compute_ahu_health_score(
             health_tier = 'Maintenance Soon'
         else:
             health_tier = 'Critical'
-        
+
         return {
             'health_index': round(health_index, 2),
             'health_tier': health_tier,
             'risk_scores': risk_scores
         }
-        
+
     except Exception as e:
         log_error(f"Error computing health score: {e}")
         return None
@@ -259,60 +260,60 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
     if devices is None:
         devices = get_all_devices()
     total_devices = len(devices)
-    
+
     # Columns for predictions output
     columns = [
         'timestamp', 'ahu_id', 'level',
         'energy_current', 'yesterday_kwh', 'last_week_kwh', 'two_weeks_kwh',
         'predicted_energy', 'delta_kwh'
     ]
-    
+
     all_predictions = []
-    
+
     # Fetch energy_import in batches to avoid InfluxDB connection drops
     log_info(f"Fetching energy_import for {len(devices)} devices (batched)...")
 
     try:
-        df = _fetch_batched(devices, 'energy_import', 'all_time')
-        
+        df = _fetch_batched(devices, 'energy_import', 'last_30d_hourly')
+
         if df.empty:
             log_error("No energy data fetched!")
             return pd.DataFrame(columns=columns)
-        
+
         log_info(f"Fetched {len(df)} rows of energy data")
-        
+
         # Get timestamps that exist across all devices
         valid_timestamps = df.dropna(how='all').index
-        
+
         log_info(f"Processing {len(valid_timestamps)} timestamps...")
-        
+
         # Process each timestamp
         for ts_idx, ts in enumerate(valid_timestamps):
             if ts_idx % 100 == 0:
                 log_info(f"  Timestamp {ts_idx + 1}/{len(valid_timestamps)}: {ts}")
-            
+
             # For each device at this timestamp
             for device_id in devices:
                 if device_id not in df.columns:
                     continue
-                
+
                 if pd.isna(df[device_id].loc[ts]):
                     continue
-                
+
                 # Get values at t, t-24h, t-168h, t-336h
                 energy_current = df[device_id].loc[ts]
-                
+
                 # Calculate historical offsets
                 ts_24h = ts - pd.Timedelta(hours=24)
                 ts_168h = ts - pd.Timedelta(weeks=1)
                 ts_336h = ts - pd.Timedelta(weeks=2)
-                
+
                 # Get values at those offsets (Series.get works; .loc.get does not)
                 series = df[device_id]
                 yesterday_kwh = series.get(ts_24h, None)
                 last_week_kwh = series.get(ts_168h, None)
                 two_weeks_kwh = series.get(ts_336h, None)
-                
+
                 # Compute prediction
                 if all(v is not None and not pd.isna(v) for v in [
                     yesterday_kwh, last_week_kwh, two_weeks_kwh
@@ -322,7 +323,7 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
                 else:
                     predicted_energy = None
                     delta_kwh = None
-                
+
                 # Build row
                 row = {
                     'timestamp': ts,
@@ -335,56 +336,56 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
                     'predicted_energy': float(predicted_energy) if pd.notna(predicted_energy) else None,
                     'delta_kwh': float(delta_kwh) if pd.notna(delta_kwh) else None
                 }
-                
+
                 all_predictions.append(row)
                 _stats['predictions_generated'] += 1
-        
+
         log_info(f"Generated {len(all_predictions)} prediction records")
-        
+
     except Exception as e:
         log_error(f"Error in ETL: {e}")
         import traceback
         traceback.print_exc()
-    
+
     # Create DataFrame
     if not all_predictions:
         log_error("No predictions generated!")
         return pd.DataFrame(columns=columns)
-    
+
     df_predictions = pd.DataFrame(all_predictions, columns=columns)
     df_predictions = df_predictions.sort_values(['timestamp', 'ahu_id'])
-    
+
     log_info(f"Generated {len(df_predictions)} prediction records")
-    
+
     return df_predictions
 
 
 def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
     """
     Run Health Scoring ETL using historical predictions.
-    
+
     Computes FAIR health scores:
         - Energy Anomaly (15%)
         - Power Factor Degradation (25%)
         - Phase Imbalance (25%)
         - THD Drift (15%)
         - Overload (20%)
-    
+
     Args:
         predictions_df: DataFrame from prediction ETL
-        
+
     Returns:
         DataFrame with health scores and safety flags
     """
     log_info("=" * 70)
     log_info("STEP 2: TRANSFORM & LOAD - Computing Health Scores")
     log_info("=" * 70)
-    
+
     # Get unique devices
     devices = predictions_df['ahu_id'].unique()
-    
+
     log_info(f"Processing {len(devices)} devices...")
-    
+
     # Health scoring columns — must match run_health_etl.py output format
     health_columns = [
         'timestamp', 'ahu_id', 'level',
@@ -405,12 +406,12 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
 
     # Fetch all metrics in batches to avoid InfluxDB connection drops
     devices_list = list(devices_with_data)
-    df_power    = _fetch_batched(devices_list, 'power_total',      'all_time').sort_index()
-    df_energy   = _fetch_batched(devices_list, 'energy_import',    'all_time').sort_index()
-    df_pf       = _fetch_batched(devices_list, 'power_factor_avg', 'all_time').sort_index()
-    df_unbalance = _fetch_batched(devices_list, 'current_unbalance', 'all_time').sort_index()
-    df_l1_thd   = _fetch_batched(devices_list, 'current_l1_thd',   'all_time').sort_index()
-    df_l3_thd   = _fetch_batched(devices_list, 'current_l3_thd',   'all_time').sort_index()
+    df_power    = _fetch_batched(devices_list, 'power_total',      'last_30d_hourly').sort_index()
+    df_energy   = _fetch_batched(devices_list, 'energy_import',    'last_30d_hourly').sort_index()
+    df_pf       = _fetch_batched(devices_list, 'power_factor_avg', 'last_30d_hourly').sort_index()
+    df_unbalance = _fetch_batched(devices_list, 'current_unbalance', 'last_30d_hourly').sort_index()
+    df_l1_thd   = _fetch_batched(devices_list, 'current_l1_thd',   'last_30d_hourly').sort_index()
+    df_l3_thd   = _fetch_batched(devices_list, 'current_l3_thd',   'last_30d_hourly').sort_index()
 
     def _asof_value(df, ahu_id, ts):
         """Look up nearest-prior value for ahu_id at timestamp ts."""
@@ -516,32 +517,32 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
 
             all_health_records.append(record)
             _stats['health_scores_computed'] += 1
-    
+
     # Create DataFrame
     if not all_health_records:
         log_error("No health scores generated!")
         return pd.DataFrame(columns=health_columns)
-    
+
     df_health = pd.DataFrame(all_health_records, columns=health_columns)
     df_health = df_health.sort_values(['timestamp', 'ahu_id'])
-    
+
     log_info(f"Generated {len(df_health)} health records")
-    
+
     return df_health
 
 
 def save_predictions(predictions_df: pd.DataFrame):
     """Save predictions to CSV."""
     log_info(f"Saving predictions to {PREDICTIONS_FILE}...")
-    
+
     if predictions_df.empty:
         log_error("No data to save!")
         return False
-    
+
     os.makedirs(os.path.dirname(PREDICTIONS_FILE), exist_ok=True)
     predictions_df.to_csv(PREDICTIONS_FILE, index=False)
     log_info(f"Saved {len(predictions_df)} records to predictions.csv")
-    
+
     return True
 
 
@@ -575,6 +576,42 @@ def save_health_scores(health_df: pd.DataFrame):
     return True
 
 
+def save_hourly_scores(health_df: pd.DataFrame):
+    """
+    Append hourly health scores to CSV (append-only for historical ETL).
+
+    Note: This is a one-shot historical run, so we simply append without deduplication.
+    The hourly file uses (timestamp, ahu_id) as the primary key for 24h chart.
+
+    Args:
+        health_df: DataFrame with health scores
+    """
+    log_info(f"Saving hourly health scores to {HOURLY_FILE}...")
+
+    if health_df.empty:
+        log_error("No data to save!")
+        return False
+
+    os.makedirs(os.path.dirname(HOURLY_FILE), exist_ok=True)
+
+    if os.path.exists(HOURLY_FILE) and os.path.getsize(HOURLY_FILE) > 0:
+        # Append mode for historical data (no deduplication - one-time run)
+        existing_df = pd.read_csv(HOURLY_FILE, parse_dates=['timestamp'])
+        total_before = len(existing_df)
+
+        # Combine and dedupe on (timestamp, ahu_id) to handle edge cases
+        combined = pd.concat([existing_df, health_df], ignore_index=True)
+        combined = combined.drop_duplicates(subset=['timestamp', 'ahu_id'], keep='last')
+
+        combined.to_csv(HOURLY_FILE, index=False)
+        log_info(f"Appended to hourly file (total: {len(combined)} records)")
+    else:
+        health_df.to_csv(HOURLY_FILE, index=False)
+        log_info(f"Created health_hourly.csv with {len(health_df)} records")
+
+    return True
+
+
 def main():
     """Main entry point - runs ETL pipeline once."""
     parser = argparse.ArgumentParser(
@@ -584,34 +621,34 @@ def main():
 Examples:
   python scripts/history_generator.py          # Run complete ETL
   python scripts/history_generator.py --dry-run  # Show what would run
-  
+
 Output:
   data/predictions.csv       - Energy predictions
   data/health_all_levels.csv - Health scores with tiers and safety flags
         """
     )
-    
+
     parser.add_argument(
         '--dry-run',
         action='store_true',
         help="Show what would run without executing"
     )
-    
+
     parser.add_argument(
         '--level',
         type=str,
         default='all',
         help="Level to process (1-11) or 'all' for all levels"
     )
-    
+
     parser.add_argument(
         '--verbose', '-v',
         action='store_true',
         help="Show verbose output"
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.dry_run:
         log_info("=" * 70)
         log_info("DRY-RUN MODE - Showing plan only")
@@ -631,54 +668,55 @@ Output:
         log_info(f"Estimated devices to process: {len(devices)} AHUs across all levels")
         log_info("")
         return
-    
+
     # Start ETL
     start_time = datetime.now()
-    
+
     log_info("=" * 70)
     log_info("WACH Insight Historical ETL Pipeline")
     log_info("=" * 70)
     log_info(f"Started at: {start_time.isoformat()}")
     log_info(f"Level filter: {args.level}")
-    
+
     devices = get_all_devices()
     if args.level != 'all':
         level_num = int(args.level)
         devices = get_devices_by_level(level_num)
-    
+
     log_info(f"Devices to process: {len(devices)} AHUs")
-    
+
     # Step 1: Prediction ETL
     log_info("")
     log_info("Phase 1: Running Prediction ETL")
     log_info("-" * 50)
-    
+
     predictions_df = run_prediction_etl_historical(
         start_time=datetime.now(timezone.utc) - pd.Timedelta(days=365),
         end_time=datetime.now(timezone.utc),
         devices=devices,
     )
-    
+
     if predictions_df.empty:
         log_error("Prediction ETL produced no data!")
     else:
         save_predictions(predictions_df)
-    
+
     # Step 2: Health Scoring ETL
     log_info("")
     log_info("Phase 2: Running Health Scoring ETL")
     log_info("-" * 50)
-    
+
     health_df = run_health_etl_historical(predictions_df)
-    
+
     if health_df.empty:
         log_error("Health Scoring ETL produced no data!")
     else:
         save_health_scores(health_df)
-    
+        save_hourly_scores(health_df)
+
     # Summary
     elapsed = (datetime.now() - start_time).total_seconds()
-    
+
     log_info("")
     log_info("=" * 70)
     log_info("ETL Pipeline Complete")
@@ -687,12 +725,12 @@ Output:
     log_info(f"Devices processed: {_stats['devices_processed']}")
     log_info(f"Predictions generated: {_stats['predictions_generated']}")
     log_info(f"Health scores computed: {_stats['health_scores_computed']}")
-    
+
     if _stats['errors']:
         log_info(f"Errors encountered: {len(_stats['errors'])}")
         for err in _stats['errors'][:5]:
             log_error(f"  - {err}")
-    
+
     return 0 if not _stats['errors'] else 1
 
 

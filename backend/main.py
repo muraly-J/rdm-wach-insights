@@ -12,12 +12,14 @@ Backend and frontend communicate via /api endpoints.
 """
 import os
 import sys
+import time
+from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(__file__))
 from fastapi import FastAPI, HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
-from starlette.responses import Response
+from starlette.responses import Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -60,52 +62,58 @@ def get_api_key() -> str:
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):
     """API Key Authentication Middleware."""
-    
+
     async def dispatch(self, request: Request, call_next):
         # Skip auth for health check endpoint
         if request.url.path == "/health":
             return await call_next(request)
-        
+
         # Skip auth for OPTIONS requests (CORS preflight)
         if request.method == "OPTIONS":
             return await call_next(request)
-        
+
         # Get API key from Authorization header
         auth_header = request.headers.get("Authorization", "")
-        
+
         # Also allow API key as query parameter (for browsers)
         api_key_param = request.query_params.get("api_key")
-        
+
         if not auth_header and not api_key_param:
-            raise HTTPException(
+            response = JSONResponse(
                 status_code=401,
-                detail={
-                    "error": "Missing API key",
-                    "suggestion": "Include 'Authorization: Bearer <api_key>' header or '?api_key=<key>' query parameter"
+                content={
+                    "detail": {
+                        "error": "Missing API key",
+                        "suggestion": "Include 'Authorization: Bearer <api_key>' header or '?api_key=<key>' query parameter"
+                    }
                 }
             )
-        
+            return response
+
         # Extract API key from "Bearer <token>" format
         if auth_header.startswith("Bearer "):
             api_key = auth_header[7:]
         else:
             api_key = auth_header
-        
+
         # Check query param if header not present
         if not api_key and api_key_param:
             api_key = api_key_param
-        
+
         # Validate API key
         expected_api_key = get_api_key()
         if api_key != expected_api_key:
-            raise HTTPException(
+            response = JSONResponse(
                 status_code=401,
-                detail={
-                    "error": "Invalid API key",
-                    "suggestion": "Please provide a valid API key"
+                content={
+                    "detail": {
+                        "error": "Invalid API key",
+                        "suggestion": "Please provide a valid API key"
+                    }
                 }
             )
-        
+            return response
+
         return await call_next(request)
 
 

@@ -7,13 +7,19 @@ import { LevelsResponse, HealthIndexResponse, ScoresResponse } from '../types';
 // API base URL (Vite proxy configuration in vite.config.js)
 const API_BASE = '/api';
 
+// Get API key from environment variable
+const API_KEY = import.meta.env.VITE_API_KEY || 'dev-key-local-development';
+
 /**
  * Generic fetch wrapper with error handling
  */
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   try {
     const response = await fetch(`${API_BASE}${url}`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+      },
       ...options,
     });
 

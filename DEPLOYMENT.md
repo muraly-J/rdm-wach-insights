@@ -8,7 +8,7 @@ Before deploying, ensure the following environment variables are set in your `.e
 
 ```bash
 # InfluxDB Configuration (HTTPS required for production)
-INFLUX_URL=https://your-influxdb-host.cloud.influxdata.com
+INFLUX_URL=https://178.128.53.199:8086
 INFLUX_TOKEN=secure-api-token-with-read-access
 
 # API Authentication (REQUIRED for all /api endpoints)
@@ -17,6 +17,14 @@ API_KEY=generate-a-long-random-string-here
 # Optional: Developer API key for local testing
 DEV_API_KEY=dev-key-change-in-production
 ```
+
+### ⚠️ Security Notes for IP-Based InfluxDB
+
+When using an IP address instead of a domain:
+- **HTTPS is required** to ensure encrypted communication
+- Verify the SSL certificate is valid (or use self-signed with proper CA trust)
+- Consider using a VPN or firewall to restrict access to the InfluxDB port (8086)
+- Never commit `.env` files to version control
 
 ### Generating Secure API Keys
 
@@ -71,7 +79,7 @@ Create a `.env` file in the project root with:
 
 ```bash
 # InfluxDB Configuration (HTTPS required for production)
-INFLUX_URL=https://us-east-1-1.aws.cloud.influxdata.com
+INFLUX_URL=https://178.128.53.199:8086
 INFLUX_TOKEN=your-influx-token-here
 INFLUX_ORG=wach
 INFLUX_BUCKET=wach_bucket_3

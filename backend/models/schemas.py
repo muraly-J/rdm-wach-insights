@@ -90,6 +90,7 @@ ALLOWED_TIME_RANGES = {
     "last_7d":  "-7d",
     "last_30d": "-30d",
     "all_time": "-1y",   # InfluxDB needs a concrete start; 1 year covers "all time" for MVP
+    "last_30d_hourly": "-30d",  # Used by history_generator.py for hourly historical data
 }
 
 # ── AHU Level Configuration (11 Levels based on Relationships TSV) ───────────

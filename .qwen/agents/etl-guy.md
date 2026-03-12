@@ -1,5 +1,5 @@
 ---
-name: etl-engineer
+name: etl-guy
 description: Use this agent when modifying ETL transformation logic, implementing new feature engineering rules, handling missing data interpolation, resampling time-series sensor data (e.g., to 15-minute intervals), detecting sensor anomalies like flatlines/spikes in AHU data, or modularizing large ETL scripts to improve maintainability and robustness.
 color: Red
 ---

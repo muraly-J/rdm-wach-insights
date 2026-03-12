@@ -10,10 +10,30 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:8081',
         changeOrigin: true,
+        onProxyReq(proxyReq, req, res) {
+          // Pass through Authorization header if present
+          const authHeader = req.headers['authorization'];
+          if (authHeader) {
+            proxyReq.setHeader('Authorization', authHeader);
+            console.log('[Vite Proxy] Forwarded Authorization header');
+          } else {
+            console.log('[Vite Proxy] No Authorization header found');
+          }
+        },
       },
       '/dashboard': {
         target: 'http://127.0.0.1:8081',
         changeOrigin: true,
+        onProxyReq(proxyReq, req, res) {
+          // Pass through Authorization header if present
+          const authHeader = req.headers['authorization'];
+          if (authHeader) {
+            proxyReq.setHeader('Authorization', authHeader);
+            console.log('[Vite Proxy /dashboard] Forwarded Authorization header');
+          } else {
+            console.log('[Vite Proxy /dashboard] No Authorization header found');
+          }
+        },
         rewrite: (path) => path.replace(/^\/dashboard/, '/api/dashboard'),
       },
     },
