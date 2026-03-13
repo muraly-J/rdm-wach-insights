@@ -118,7 +118,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
       <div className="mb-6">
         <h3 className="font-display text-[24px] font-bold tracking-[-0.01em] flex items-center">
           Health Index
-          <InfoTooltip text="Combined health score for each AHU. 0 = all systems healthy, 100 = critical failure risk. Calculated as a weighted sum of all five indicators: Phase Imbalance (25%), Power Factor (25%), Overload (20%), Energy Anomaly (15%), THD Drift (15%). Higher is better." />
+          <InfoTooltip text="Combined health score for each AHU. 100 = healthy, 0 = critical failure risk. Calculated as a weighted sum of all five indicators: Phase Imbalance (25%), Power Factor (25%), Overload (20%), Energy Anomaly (15%), THD Drift (15%). Higher is better." />
         </h3>
         
         <p className="mt-2 text-sm text-[#8A95A5]">
