@@ -26,7 +26,7 @@ DAILY_CSV_PATH = os.path.join(
     os.path.dirname(__file__), '..', '..', 'data', 'health_daily.csv'
 )
 
-SCORE_COLUMNS = ['energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload']
+SCORE_COLUMNS = ['energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload', 'health_index']
 
 # Score → (raw column, unit)
 # Note: For energy_anomaly, the raw metric is hourly_delta (energy consumed in one hour)

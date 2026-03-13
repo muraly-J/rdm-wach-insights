@@ -107,3 +107,22 @@ export interface RawScoreResponse {
     }
   >;
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Ranking Types (for ExpandableHealthRankings)
+// ──────────────────────────────────────────────────────────────────────────────
+
+export interface DeviceRank {
+  ahu_id: string;
+  index: number; // health index (0-100)
+  tier?: string;
+  level?: string;
+}
+
+export interface RankingResponse {
+  level: number | string;
+  time_range: string;
+  snapshot_time?: string;
+  best: DeviceRank[];
+  worst: DeviceRank[];
+}
