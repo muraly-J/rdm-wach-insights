@@ -34,7 +34,7 @@ from routes.query import router as query_router
 
 # ── Rate Limiter (in-memory, per IP) ───────────────────────────────────────
 _rate_store: dict = defaultdict(list)
-RATE_LIMIT        = int(os.getenv("RATE_LIMIT_REQUESTS", "20"))
+RATE_LIMIT        = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
 RATE_WINDOW       = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
 
 
