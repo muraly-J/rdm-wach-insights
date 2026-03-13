@@ -77,14 +77,49 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                 </div>
               }
             >
-              <RawScoreRelationChartLazy
-                scoreName={score.charAt(0).toUpperCase() + score.slice(1)}
-                rawMetric={rawMetrics[score]?.name || 'unknown'}
-                rawUnit={rawMetrics[score]?.unit || ''}
-                rawData={scoreData.rawData}
-                scoreData={scoreData.scoreData}
-                chartColor={SCORE_COLORS[index]}
-              />
+              {/* Check if data is empty and show appropriate UI */}
+              {(() => {
+                const isEmpty = !scoreData?.rawData?.length || !scoreData?.scoreData?.length;
+                
+                if (isEmpty) {
+                  return (
+                    <div className="card p-6 h-[240px] flex items-center justify-center bg-yellow-900/10 border border-yellow-700/30">
+                      <div className="text-center max-w-[280px]">
+                        <svg
+                          className="w-10 h-10 mx-auto mb-2 text-yellow-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                          />
+                        </svg>
+                        <p className="text-yellow-500 font-semibold mb-1 text-sm">
+                          No Data Available
+                        </p>
+                        <p className="text-[#8A95A5] text-xs leading-tight">
+                          {rawMetrics[score]?.name || score}: No valid data points for the selected time range
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <RawScoreRelationChartLazy
+                    scoreName={score.charAt(0).toUpperCase() + score.slice(1)}
+                    rawMetric={rawMetrics[score]?.name || 'unknown'}
+                    rawUnit={rawMetrics[score]?.unit || ''}
+                    rawData={scoreData.rawData}
+                    scoreData={scoreData.scoreData}
+                    chartColor={SCORE_COLORS[index]}
+                  />
+                );
+              })()}
             </React.Suspense>
           );
         })}

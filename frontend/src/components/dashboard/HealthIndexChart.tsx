@@ -28,7 +28,32 @@ interface HealthIndexChartProps {
 const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) => {
   // Generate colors from chart palette (repeating)
   const getColor = (index: number) => {
-    const colors = ['#00E5A0', '#00B8D4', '#7C5CFC', '#FF6B8A', '#FFB020'];
+    const colors = [
+      '#00E5A0', // teal-green (original accent)
+      '#00B8D4', // cyan
+      '#7C5CFC', // purple
+      '#FF6B8A', // pink-red
+      '#FFB020', // amber
+      '#F97316', // orange
+      '#84CC16', // lime
+      '#38BDF8', // sky-blue
+      '#C084FC', // light-purple
+      '#F43F5E', // rose
+      '#22D3EE', // light-cyan
+      '#4ADE80', // light-green
+      '#FB923C', // peach
+      '#818CF8', // indigo
+      '#F472B6', // light-pink
+      '#A3E635', // yellow-green
+      '#FCD34D', // gold
+      '#34D399', // emerald
+      '#60A5FA', // blue
+      '#E879F9', // fuchsia
+      '#2DD4BF', // teal
+      '#FCA5A5', // light-red
+      '#86EFAC', // pale-green
+      '#FDE68A', // pale-yellow
+    ];
     return colors[index % colors.length];
   };
 

@@ -37,8 +37,27 @@ SCORE_RAW_MAP = {
     'overload':        ('raw_power_total',         'kW'),
 }
 
+# Debug logging flag - set to True for detailed diagnostics
+DEBUG_MODE = os.getenv('CSV_DEBUG', 'false').lower() == 'true'
+
+
+def _debug_csv_state(time_range: str) -> dict:
+    """Debug helper to log CSV state for diagnostics."""
+    if not DEBUG_MODE:
+        return {}
+    df = _load_csv(time_range=time_range)
+    return {
+        'path': os.path.abspath(CSV_PATH),
+        'row_count': len(df),
+        'columns': list(df.columns) if not df.empty else [],
+        'time_range': time_range,
+    }
+
+# Time range window for filtering CSV data
+# For hourly data: exact 24 hours (no interpolation needed)
+# For daily data: range with matching number of days
 RANGE_DELTA = {
-    '24h': timedelta(days=3),   # daily CSV data — 3 days gives visible trend
+    '24h': timedelta(hours=24),  # hourly data — exact 24 hours
     '7d':  timedelta(days=7),
     '30d': timedelta(days=30),
 }
@@ -167,32 +186,70 @@ def get_score_breakdown(level: int, time_range: str) -> list[dict]:
 def get_raw_score_relationship(device_id: str, time_range: str) -> dict:
     """
     Returns {score_name: {rawMetric, rawUnit, rawData, scoreData}}
+    
+    Debug output logged when CSV_DEBUG=true environment variable is set.
     """
     df = _load_csv(time_range=time_range)
     if df.empty:
+        if DEBUG_MODE:
+            print(f"[DEBUG] get_raw_score_relationship: CSV empty for time_range={time_range}")
         return {}
+    
     df = df[df['ahu_id'] == device_id]
+    if DEBUG_MODE:
+        print(f"[DEBUG] After device filter: {len(df)} rows")
+    
     df = _filter_time_range(df, time_range).sort_values('timestamp')
+    if DEBUG_MODE:
+        print(f"[DEBUG] After time filter: {len(df)} rows")
+    
     if df.empty:
+        if DEBUG_MODE:
+            print(f"[DEBUG] No data after filtering: device={device_id}, time_range={time_range}")
         return {}
 
     result = {}
     for score_col, (raw_col, raw_unit) in SCORE_RAW_MAP.items():
-        if score_col not in df.columns or raw_col not in df.columns:
+        # Skip if either column is missing
+        if score_col not in df.columns:
+            print(f"[WARN] Score column '{score_col}' missing from CSV (available: {list(df.columns)[:10]}...)")
             continue
-        sub = df[['timestamp', score_col, raw_col]].dropna(subset=[score_col, raw_col])
+        if raw_col not in df.columns:
+            print(f"[WARN] Raw column '{raw_col}' missing from CSV")
+            continue
+        
+        # Select only required columns
+        sub = df[['timestamp', score_col, raw_col]].copy()
+        
+        if DEBUG_MODE:
+            print(f"[DEBUG] {score_col}: before dropna={len(sub)}")
+        
+        # Drop rows where either score or raw value is NaN
+        sub = sub.dropna(subset=[score_col, raw_col])
+        
         if sub.empty:
+            print(f"[WARN] No valid pairs for {score_col}/{raw_col} after dropna")
             continue
+        
+        # Sort by timestamp (explicitly)
+        sub = sub.sort_values('timestamp')
+        
         result[score_col] = {
             'rawMetric': raw_col,
             'rawUnit': raw_unit,
             'rawData': [
-                {'timestamp': r['timestamp'].isoformat(), 'value': round(float(r[raw_col]), 4)}
+                {'timestamp': r['timestamp'].isoformat(), 'value': float(r[raw_col])}
                 for _, r in sub.iterrows()
             ],
             'scoreData': [
-                {'timestamp': r['timestamp'].isoformat(), 'value': round(float(r[score_col]), 2)}
+                {'timestamp': r['timestamp'].isoformat(), 'value': float(r[score_col])}
                 for _, r in sub.iterrows()
             ],
         }
+        
+        if DEBUG_MODE:
+            print(f"[DEBUG] {score_col}: after dropna={len(result[score_col]['rawData'])}")
+    
+    if DEBUG_MODE:
+        print(f"[DEBUG] get_raw_score_relationship returned {len(result)} scores")
     return result
