@@ -238,9 +238,12 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
     """
     Run Prediction ETL for full historical period.
 
-    Formula:
-        ŷ(t)   = (E(t−24h) + E(t−168h) + E(t−336h)) / 3
-        Δkwh   = E(t) − ŷ(t)
+    NEW Formula:
+      hourly_delta(t)     = E(t) - E(t-1h)
+      predicted_delta(t)  = (δ(t−24h) + δ(t−168h) + δ(t−336h)) / 3
+      energy_anomaly      = hourly_delta(t) - predicted_delta(t)
+
+    Where δ(t−nh) = E(t−nh) - E(t−nh-1h)
 
     Args:
         start_time: Start timestamp
@@ -261,11 +264,13 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
         devices = get_all_devices()
     total_devices = len(devices)
 
-    # Columns for predictions output
+    # Columns for predictions output (new format with hourly deltas)
     columns = [
         'timestamp', 'ahu_id', 'level',
-        'energy_current', 'yesterday_kwh', 'last_week_kwh', 'two_weeks_kwh',
-        'predicted_energy', 'delta_kwh'
+        'energy_current', 'hourly_delta', 'predicted_delta', 'energy_anomaly',
+        'yesterday_kwh', 'delta_yesterday',
+        'last_week_kwh', 'delta_last_week',
+        'two_weeks_kwh', 'delta_two_weeks'
     ]
 
     all_predictions = []
@@ -300,29 +305,61 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
                 if pd.isna(df[device_id].loc[ts]):
                     continue
 
-                # Get values at t, t-24h, t-168h, t-336h
+                # Get values at t, t-24h, t-168h, t-336h and their t-1h counterparts
                 energy_current = df[device_id].loc[ts]
 
                 # Calculate historical offsets
                 ts_24h = ts - pd.Timedelta(hours=24)
                 ts_168h = ts - pd.Timedelta(weeks=1)
                 ts_336h = ts - pd.Timedelta(weeks=2)
+                
+                # Also get t-1h offsets for hourly delta calculation
+                ts_1h = ts - pd.Timedelta(hours=1)
+                ts_25h = ts - pd.Timedelta(hours=25)
+                ts_169h = ts - pd.Timedelta(weeks=1, hours=1)
+                ts_337h = ts - pd.Timedelta(weeks=2, hours=1)
 
                 # Get values at those offsets (Series.get works; .loc.get does not)
                 series = df[device_id]
+                energy_t_minus_1h = series.get(ts_1h, None)
                 yesterday_kwh = series.get(ts_24h, None)
+                yesterday_minus_1h = series.get(ts_25h, None)
                 last_week_kwh = series.get(ts_168h, None)
+                last_week_minus_1h = series.get(ts_169h, None)
                 two_weeks_kwh = series.get(ts_336h, None)
+                two_weeks_minus_1h = series.get(ts_337h, None)
 
-                # Compute prediction
-                if all(v is not None and not pd.isna(v) for v in [
-                    yesterday_kwh, last_week_kwh, two_weeks_kwh
-                ]):
-                    predicted_energy = (yesterday_kwh + last_week_kwh + two_weeks_kwh) / 3
-                    delta_kwh = energy_current - predicted_energy
-                else:
-                    predicted_energy = None
-                    delta_kwh = None
+                # Compute hourly deltas
+                hourly_delta = None
+                if energy_current is not None and not pd.isna(energy_current) and \
+                   energy_t_minus_1h is not None and not pd.isna(energy_t_minus_1h):
+                    hourly_delta = float(energy_current - energy_t_minus_1h)
+
+                # Compute historical hourly deltas
+                delta_yesterday = None
+                if yesterday_kwh is not None and not pd.isna(yesterday_kwh) and \
+                   yesterday_minus_1h is not None and not pd.isna(yesterday_minus_1h):
+                    delta_yesterday = float(yesterday_kwh - yesterday_minus_1h)
+
+                delta_last_week = None
+                if last_week_kwh is not None and not pd.isna(last_week_kwh) and \
+                   last_week_minus_1h is not None and not pd.isna(last_week_minus_1h):
+                    delta_last_week = float(last_week_kwh - last_week_minus_1h)
+
+                delta_two_weeks = None
+                if two_weeks_kwh is not None and not pd.isna(two_weeks_kwh) and \
+                   two_weeks_minus_1h is not None and not pd.isna(two_weeks_minus_1h):
+                    delta_two_weeks = float(two_weeks_kwh - two_weeks_minus_1h)
+
+                # Compute predicted delta (average of historical hourly deltas)
+                valid_deltas = [v for v in [delta_yesterday, delta_last_week, delta_two_weeks] 
+                               if v is not None and not pd.isna(v)]
+                predicted_delta = float(np.mean(valid_deltas)) if valid_deltas else None
+
+                # Compute energy anomaly
+                energy_anomaly = None
+                if hourly_delta is not None and predicted_delta is not None:
+                    energy_anomaly = float(hourly_delta - predicted_delta)
 
                 # Build row
                 row = {
@@ -330,11 +367,15 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
                     'ahu_id': device_id,
                     'level': DEVICE_TO_LEVEL.get(device_id, 'N/A'),
                     'energy_current': float(energy_current) if pd.notna(energy_current) else None,
+                    'hourly_delta': float(hourly_delta) if hourly_delta is not None else None,
+                    'predicted_delta': float(predicted_delta) if predicted_delta is not None else None,
+                    'energy_anomaly': float(energy_anomaly) if energy_anomaly is not None else None,
                     'yesterday_kwh': float(yesterday_kwh) if pd.notna(yesterday_kwh) else None,
+                    'delta_yesterday': float(delta_yesterday) if delta_yesterday is not None else None,
                     'last_week_kwh': float(last_week_kwh) if pd.notna(last_week_kwh) else None,
+                    'delta_last_week': float(delta_last_week) if delta_last_week is not None else None,
                     'two_weeks_kwh': float(two_weeks_kwh) if pd.notna(two_weeks_kwh) else None,
-                    'predicted_energy': float(predicted_energy) if pd.notna(predicted_energy) else None,
-                    'delta_kwh': float(delta_kwh) if pd.notna(delta_kwh) else None
+                    'delta_two_weeks': float(delta_two_weeks) if delta_two_weeks is not None else None
                 }
 
                 all_predictions.append(row)
@@ -391,8 +432,9 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
         'timestamp', 'ahu_id', 'level',
         'health_index', 'tier',
         'energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload',
-        'raw_power_total', 'raw_energy_import', 'raw_power_factor_avg',
-        'raw_current_unbalance', 'raw_composite_thd',
+        'raw_power_total', 'raw_energy_import', 'raw_hourly_delta',
+        'raw_predicted_delta', 'raw_energy_anomaly_raw',
+        'raw_power_factor_avg', 'raw_current_unbalance', 'raw_composite_thd',
         'safety_flags'
     ]
 
@@ -440,7 +482,11 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
         for _, row in device_data.iterrows():
             ts = row['timestamp']
             level_val = str(row.get('level', 'Level 1'))
-            energy_anomaly_val = row.get('delta_kwh')
+            
+            # Get raw values from predictions for plotting
+            hourly_delta_val = row.get('hourly_delta')
+            predicted_delta_val = row.get('predicted_delta')
+            energy_anomaly_raw = row.get('energy_anomaly')
 
             # Look up raw metric values at this timestamp using .asof()
             current_power = _asof_value(df_power, ahu_id, ts)
@@ -460,11 +506,11 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
             else:
                 current_composite_thd = None
 
-            # Compute health score
+            # Compute health score using energy_anomaly (from predictions)
             try:
                 result = compute_ahu_health_score(
                     ahu_id=ahu_id,
-                    energy_anomaly_val=energy_anomaly_val,
+                    energy_anomaly_val=energy_anomaly_raw,
                     current_pf=current_pf,
                     current_power=current_power,
                     current_unbalance=current_unbalance,
@@ -509,6 +555,10 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
                 'overload': round(risk_scores.get('overload', 0) * 100, 2),
                 'raw_power_total': current_power,
                 'raw_energy_import': current_energy,
+                # Raw values for energy anomaly score derivation
+                'raw_hourly_delta': float(hourly_delta_val) if hourly_delta_val is not None else None,
+                'raw_predicted_delta': float(predicted_delta_val) if predicted_delta_val is not None else None,
+                'raw_energy_anomaly_raw': float(energy_anomaly_raw) if energy_anomaly_raw is not None else None,
                 'raw_power_factor_avg': current_pf,
                 'raw_current_unbalance': current_unbalance,
                 'raw_composite_thd': current_composite_thd,
@@ -654,9 +704,10 @@ Output:
         log_info("DRY-RUN MODE - Showing plan only")
         log_info("=" * 70)
         log_info("Step 1: Prediction ETL")
-        log_info(f"  - Fetch energy_import data for all AHUs")
-        log_info(f"  - Compute ŷ(t) = (E(t−24h) + E(t−168h) + E(t−336h)) / 3")
-        log_info(f"  - Compute Δkwh = E(t) − ŷ(t)")
+        log_info(f"  - Fetch energy_import data for all AHUs (t, t-1h, t-24h, t-25h, t-168h, t-169h, t-336h, t-337h)")
+        log_info(f"  - Compute hourly_delta(t) = E(t) - E(t-1h)")
+        log_info(f"  - Compute predicted_delta(t) = avg(δ(t−24h), δ(t−168h), δ(t−336h))")
+        log_info(f"  - Compute energy_anomaly = hourly_delta(t) − predicted_delta(t)")
         log_info(f"  - Output: data/predictions.csv")
         log_info("")
         log_info("Step 2: Health Scoring ETL")

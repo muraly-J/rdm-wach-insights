@@ -413,11 +413,15 @@ def fetch_prediction_data(
     reference_time: datetime = None,
 ) -> Dict[str, Dict[str, Optional[float]]]:
     """
-    Fetch energy values at t, t-24h, t-168h, and t-336h for prediction ETL.
+    Fetch energy values at t, t-1h, t-24h, t-25h, t-168h, t-169h, t-336h, t-337h
+    for prediction ETL.
 
     This enables computation of:
-      ŷ(t)   = (E(t−24h) + E(t−168h) + E(t−336h)) / 3
-      Δkwh   = E(t) − ŷ(t)
+      hourly_delta(t)     = E(t) - E(t-1h)
+      predicted_delta(t)  = (δ(t−24h) + δ(t−168h) + δ(t−336h)) / 3
+      energy_anomaly      = hourly_delta(t) - predicted_delta(t)
+
+    Where δ(t−nh) = E(t−nh) - E(t−nh-1h)
 
     Args:
         device_ids: List of AHU IDs to fetch
@@ -426,27 +430,38 @@ def fetch_prediction_data(
     Returns:
         Nested dict: {ahu_id: {
             'energy_current': E(t),
+            'energy_t_minus_1h': E(t-1h),
             'yesterday_kwh': E(t−24h),
+            'yesterday_minus_1h': E(t-25h),
             'last_week_kwh': E(t−168h),
-            'two_weeks_kwh': E(t−336h)
+            'last_week_minus_1h': E(t-169h),
+            'two_weeks_kwh': E(t−336h),
+            'two_weeks_minus_1h': E(t-337h)
         }}
 
     Example:
         now = datetime.now(timezone.utc)
         data = fetch_prediction_data(["e0101"], now)
-        # Compute prediction: ŷ(t) = (yesterday + last_week + two_weeks) / 3
+        # Compute hourly delta: δ(t) = E(t) - E(t-1h)
+        # Compute predicted delta: ŷ_δ(t) = avg(δ(t-24h), δ(t-168h), δ(t-336h))
+        # Compute energy anomaly: E(t) - ŷ_δ(t)
     """
     if reference_time is None:
         from datetime import timezone
         reference_time = datetime.now(timezone.utc)
 
-    # Slots to fetch: current, t-24h, t-168h, t-336h
-    slots_hours_ago = [0, 24, 168, 336]
+    # Slots to fetch: current, t-1h, t-24h, t-25h, t-168h, t-169h, t-336h, t-337h
+    # These are needed to compute hourly deltas for actual and historical points
+    slots_hours_ago = [0, 1, 24, 25, 168, 169, 336, 337]
     slot_labels = {
         0: 'energy_current',
+        1: 'energy_t_minus_1h',
         24: 'yesterday_kwh',
+        25: 'yesterday_minus_1h',
         168: 'last_week_kwh',
-        336: 'two_weeks_kwh'
+        169: 'last_week_minus_1h',
+        336: 'two_weeks_kwh',
+        337: 'two_weeks_minus_1h'
     }
 
     # Fetch using existing fetch_exact_slots
@@ -458,9 +473,13 @@ def fetch_prediction_data(
         slot_values = raw_data.get(ahu_id, {})
         results[ahu_id] = {
             'energy_current': slot_values.get(0),
+            'energy_t_minus_1h': slot_values.get(1),
             'yesterday_kwh': slot_values.get(24),
+            'yesterday_minus_1h': slot_values.get(25),
             'last_week_kwh': slot_values.get(168),
-            'two_weeks_kwh': slot_values.get(336)
+            'last_week_minus_1h': slot_values.get(169),
+            'two_weeks_kwh': slot_values.get(336),
+            'two_weeks_minus_1h': slot_values.get(337)
         }
 
     return results

@@ -10,7 +10,8 @@ Used for 7d and 30d dashboard charts.
 Output columns:
     timestamp, ahu_id, level, health_index, tier,
     energy_anomaly, pf_degradation, phase_imbalance, thd_drift, overload,
-    raw_power_total, raw_energy_import, raw_power_factor_avg,
+    raw_power_total, raw_energy_import, raw_hourly_delta,
+    raw_predicted_delta, raw_energy_anomaly_raw, raw_power_factor_avg,
     raw_current_unbalance, raw_composite_thd
 
 Usage:
@@ -37,6 +38,9 @@ SCORE_COLS = ["energy_anomaly", "pf_degradation", "phase_imbalance", "thd_drift"
 RAW_METRIC_COLS = [
     "raw_power_total",
     "raw_energy_import",
+    "raw_hourly_delta",      # NEW: raw hourly delta for energy anomaly score derivation
+    "raw_predicted_delta",   # NEW: predicted hourly delta
+    "raw_energy_anomaly_raw",# NEW: raw energy anomaly (before scoring normalization)
     "raw_power_factor_avg",
     "raw_current_unbalance",
     "raw_composite_thd",

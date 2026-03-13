@@ -6,6 +6,13 @@ Derive data/health_hourly.csv from data/health_all_levels.csv.
 
 Filters to the last 3 days of hourly data for the 24h dashboard chart.
 
+Output columns (from health_all_levels.csv):
+    timestamp, ahu_id, level, health_index, tier,
+    energy_anomaly, pf_degradation, phase_imbalance, thd_drift, overload,
+    raw_power_total, raw_energy_import, raw_hourly_delta,
+    raw_predicted_delta, raw_energy_anomaly_raw, raw_power_factor_avg,
+    raw_current_unbalance, raw_composite_thd
+
 Usage:
     python3 scripts/etl/build_hourly_csv.py
 

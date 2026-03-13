@@ -60,14 +60,14 @@ OUTPUT_FILE = os.path.join(DATA_DIR, "predictions.csv")
 
 def extract_prediction_data(device_ids, reference_time=None):
     """
-    Step 1: Fetch energy values at t, t-24h, t-168h, t-336h.
+    Step 1: Fetch energy values at t, t-1h, t-24h, t-25h, t-168h, t-169h, t-336h, t-337h.
 
     Args:
         device_ids: List of AHU IDs to fetch
         reference_time: Reference timestamp (defaults to now)
 
     Returns:
-        DataFrame with columns: ahu_id, energy_current, yesterday_kwh, last_week_kwh, two_weeks_kwh
+        DataFrame with columns including hourly deltas needed for energy anomaly
     """
     print("\n" + "="*70)
     print("STEP 1: EXTRACT - Fetching Prediction Data from InfluxDB")
@@ -133,17 +133,20 @@ def extract_prediction_data(device_ids, reference_time=None):
 
 def transform_predictions(df_raw):
     """
-    Step 2: Compute predicted energy (ŷ) and delta (Δkwh).
+    Step 2: Compute predicted energy (ŷ), hourly deltas, and energy anomaly.
 
-    Formula:
-      ŷ(t)   = (E(t−24h) + E(t−168h) + E(t−336h)) / 3
-      Δkwh   = E(t) − ŷ(t)
+    NEW Formula:
+      hourly_delta(t)     = E(t) - E(t-1h)
+      predicted_delta(t)  = (δ(t−24h) + δ(t−168h) + δ(t−336h)) / 3
+      energy_anomaly      = hourly_delta(t) - predicted_delta(t)
+
+    Where δ(t−nh) = E(t−nh) - E(t−nh-1h)
 
     Args:
         df_raw: DataFrame with energy values from Step 1
 
     Returns:
-        DataFrame with added columns: predicted_kwh, delta_kwh
+        DataFrame with added columns: hourly_delta, predicted_delta, energy_anomaly
     """
     print("\n" + "="*70)
     print("STEP 2: TRANSFORM - Computing Predictions")
@@ -156,16 +159,34 @@ def transform_predictions(df_raw):
     # Make a copy to avoid modifying original
     df = df_raw.copy()
 
-    # Compute predicted_kwh: average of yesterday, last_week, two_weeks
-    # Only use available values (handle missing data)
-    historical_columns = ['yesterday_kwh', 'last_week_kwh', 'two_weeks_kwh']
+    # ── Compute Hourly Deltas (actual energy consumed in the hour) ─────────────
+    def compute_hourly_delta(row, current_col, prev_col):
+        """Compute δ = E(current) - E(previous_hour)."""
+        current = row.get(current_col)
+        prev = row.get(prev_col)
 
-    def compute_predicted(row):
-        """Compute ŷ(t) = mean of available historical values."""
+        if current is None or np.isnan(current):
+            return None
+        if prev is None or np.isnan(prev):
+            return None
+
+        return float(current - prev)
+
+    # Hourly delta at current time
+    df['hourly_delta'] = df.apply(lambda row: compute_hourly_delta(row, 'energy_current', 'energy_t_minus_1h'), axis=1)
+
+    # Hourly deltas at historical points
+    df['delta_yesterday'] = df.apply(lambda row: compute_hourly_delta(row, 'yesterday_kwh', 'yesterday_minus_1h'), axis=1)
+    df['delta_last_week'] = df.apply(lambda row: compute_hourly_delta(row, 'last_week_kwh', 'last_week_minus_1h'), axis=1)
+    df['delta_two_weeks'] = df.apply(lambda row: compute_hourly_delta(row, 'two_weeks_kwh', 'two_weeks_minus_1h'), axis=1)
+
+    # ── Compute Predicted Delta (average of historical hourly deltas) ─────────
+    def compute_predicted_delta(row):
+        """Compute ŷ_δ(t) = avg(δ(t−24h), δ(t−168h), δ(t−336h))."""
         values = [
-            row['yesterday_kwh'],
-            row['last_week_kwh'],
-            row['two_weeks_kwh']
+            row.get('delta_yesterday'),
+            row.get('delta_last_week'),
+            row.get('delta_two_weeks')
         ]
         # Filter out None/NaN values
         valid_values = [v for v in values if v is not None and not np.isnan(v)]
@@ -173,39 +194,39 @@ def transform_predictions(df_raw):
             return None
         return float(np.mean(valid_values))
 
-    def count_available_slots(row):
-        """Count how many historical slots have valid data."""
+    def count_delta_slots(row):
+        """Count how many delta slots have valid data."""
         values = [
-            row['yesterday_kwh'],
-            row['last_week_kwh'],
-            row['two_weeks_kwh']
+            row.get('delta_yesterday'),
+            row.get('delta_last_week'),
+            row.get('delta_two_weeks')
         ]
         valid_count = sum(1 for v in values if v is not None and not np.isnan(v))
         return valid_count
 
-    # Apply prediction formula
-    df['predicted_kwh'] = df.apply(compute_predicted, axis=1)
+    # Apply predicted delta formula
+    df['predicted_delta'] = df.apply(compute_predicted_delta, axis=1)
 
-    # Count available historical slots
-    df['available_slots'] = df.apply(count_available_slots, axis=1)
+    # Count available delta slots
+    df['available_delta_slots'] = df.apply(count_delta_slots, axis=1)
 
-    # Mark insufficient history (< 3 slots means data < 2 weeks)
-    df['insufficient_history'] = df['available_slots'] < 3
+    # Mark insufficient history (< 3 delta slots means data < 2 weeks)
+    df['insufficient_history'] = df['available_delta_slots'] < 3
 
-    # Compute delta_kwh = actual - predicted
-    def compute_delta(row):
-        """Compute Δkwh = E(t) − ŷ(t)."""
-        actual = row['energy_current']
-        predicted = row['predicted_kwh']
+    # ── Compute Energy Anomaly (deviation of hourly delta from predicted) ─────
+    def compute_energy_anomaly(row):
+        """Compute energy_anomaly = hourly_delta - predicted_delta."""
+        actual_delta = row.get('hourly_delta')
+        predicted = row.get('predicted_delta')
 
-        if actual is None or np.isnan(actual):
+        if actual_delta is None or np.isnan(actual_delta):
             return None
         if predicted is None or np.isnan(predicted):
             return None
 
-        return float(actual - predicted)
+        return float(actual_delta - predicted)
 
-    df['delta_kwh'] = df.apply(compute_delta, axis=1)
+    df['energy_anomaly'] = df.apply(compute_energy_anomaly, axis=1)
 
     # Add level column from AHU ID using reverse mapping
     def get_level(ahu_id):
@@ -218,9 +239,11 @@ def transform_predictions(df_raw):
     # Reorder columns for cleaner output
     col_order = [
         'timestamp', 'ahu_id', 'level',
-        'energy_current', 'predicted_kwh', 'delta_kwh',
-        'yesterday_kwh', 'last_week_kwh', 'two_weeks_kwh',
-        'available_slots', 'insufficient_history'
+        'energy_current', 'hourly_delta', 'predicted_delta', 'energy_anomaly',
+        'yesterday_kwh', 'delta_yesterday',
+        'last_week_kwh', 'delta_last_week',
+        'two_weeks_kwh', 'delta_two_weeks',
+        'available_delta_slots', 'insufficient_history'
     ]
     df = df[[c for c in col_order if c in df.columns]]
 
@@ -234,26 +257,32 @@ def transform_predictions(df_raw):
         ec_std = df['energy_current'].std()
         print(f"      Energy Current: {ec_mean:.2f} kWh (σ={ec_std:.2f})")
 
-    # Predicted stats
-    if df['predicted_kwh'].notna().any():
-        pred_mean = df['predicted_kwh'].mean()
-        pred_std = df['predicted_kwh'].std()
-        print(f"      Predicted (ŷ):  {pred_mean:.2f} kWh (σ={pred_std:.2f})")
+    # Hourly delta stats
+    if df['hourly_delta'].notna().any():
+        hd_mean = df['hourly_delta'].mean()
+        hd_std = df['hourly_delta'].std()
+        print(f"      Hourly Delta:     {hd_mean:.2f} kWh (σ={hd_std:.2f})")
 
-    # Delta stats
-    if df['delta_kwh'].notna().any():
-        delta_mean = df['delta_kwh'].mean()
-        delta_std = df['delta_kwh'].std()
-        print(f"      Delta (Δ):      {delta_mean:.2f} kWh (σ={delta_std:.2f})")
+    # Predicted delta stats
+    if df['predicted_delta'].notna().any():
+        pred_mean = df['predicted_delta'].mean()
+        pred_std = df['predicted_delta'].std()
+        print(f"      Predicted (ŷ_δ):  {pred_mean:.2f} kWh (σ={pred_std:.2f})")
+
+    # Energy anomaly stats
+    if df['energy_anomaly'].notna().any():
+        anom_mean = df['energy_anomaly'].mean()
+        anom_std = df['energy_anomaly'].std()
+        print(f"      Energy Anomaly:   {anom_mean:.2f} kWh (σ={anom_std:.2f})")
 
     # Count devices with valid predictions
-    valid_pred = df['predicted_kwh'].notna().sum()
+    valid_pred = df['predicted_delta'].notna().sum()
     print(f"\n      Devices with valid prediction: {valid_pred}/{len(df)}")
 
-    # Count devices where actual > predicted (positive delta)
-    positive_delta = (df['delta_kwh'] > 0).sum()
+    # Count devices where actual > predicted (positive energy anomaly)
+    positive_anomaly = (df['energy_anomaly'] > 0).sum()
     if valid_pred > 0:
-        print(f"      Devices above prediction: {positive_delta} ({100*positive_delta/valid_pred:.1f}%)")
+        print(f"      Devices above prediction: {positive_anomaly} ({100*positive_anomaly/valid_pred:.1f}%)")
 
     # Insufficient history summary
     insufficient_count = df['insufficient_history'].sum()
@@ -297,19 +326,22 @@ def load_to_csv(df_predictions, output_path=None, dry_run=False):
         print("\n    First 5 rows:")
         for i, row in df_predictions.head(5).iterrows():
             print(f"      {row['ahu_id']}: E={row.get('energy_current', 'N/A'):.2f}, "
-                  f"ŷ={row.get('predicted_kwh', 'N/A'):.2f}, "
-                  f"Δ={row.get('delta_kwh', 'N/A'):.2f}")
+                  f"δ={row.get('hourly_delta', 'N/A'):.2f}, "
+                  f"ŷ_δ={row.get('predicted_delta', 'N/A'):.2f}, "
+                  f"Δ={row.get('energy_anomaly', 'N/A'):.2f}")
         return len(df_predictions)
 
     # Determine if file exists and needs header
     file_exists = os.path.exists(output_path)
 
-    # Define columns in order
+    # Define columns in order (new format with hourly deltas)
     required_cols = [
         "timestamp", "ahu_id", "level",
-        "energy_current", "predicted_kwh", "delta_kwh",
-        "yesterday_kwh", "last_week_kwh", "two_weeks_kwh",
-        "available_slots", "insufficient_history"
+        "energy_current", "hourly_delta", "predicted_delta", "energy_anomaly",
+        "yesterday_kwh", "delta_yesterday",
+        "last_week_kwh", "delta_last_week",
+        "two_weeks_kwh", "delta_two_weeks",
+        "available_delta_slots", "insufficient_history"
     ]
 
     # Reorder columns
@@ -553,7 +585,8 @@ def main():
         print("="*70)
     else:
         # In scheduled mode, print minimal summary
-        print(f"[INFO] Devices: {len(result)} | Predictions: {result['predicted_kwh'].notna().sum()} | Avg delta: {result['delta_kwh'].mean():.2f} kWh")
+        # Use energy_anomaly column (renamed from old delta_kwh)
+        print(f"[INFO] Devices: {len(result)} | Predictions: {result['predicted_delta'].notna().sum()} | Avg anomaly: {result['energy_anomaly'].mean():.2f} kWh")
 
 
 if __name__ == "__main__":

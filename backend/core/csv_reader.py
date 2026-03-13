@@ -29,8 +29,10 @@ DAILY_CSV_PATH = os.path.join(
 SCORE_COLUMNS = ['energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload']
 
 # Score → (raw column, unit)
+# Note: For energy_anomaly, the raw metric is hourly_delta (energy consumed in one hour)
+#       not cumulative energy_import. The score derivation plot shows hourly_delta vs energy_anomaly.
 SCORE_RAW_MAP = {
-    'energy_anomaly':  ('raw_energy_import',     'kWh'),
+    'energy_anomaly':  ('raw_hourly_delta',      'kWh'),
     'pf_degradation':  ('raw_power_factor_avg',   ''),
     'phase_imbalance': ('raw_current_unbalance',  '%'),
     'thd_drift':       ('raw_composite_thd',      '%'),
@@ -185,8 +187,15 @@ def get_score_breakdown(level: int, time_range: str) -> list[dict]:
 
 def get_raw_score_relationship(device_id: str, time_range: str) -> dict:
     """
-    Returns {score_name: {rawMetric, rawUnit, rawData, scoreData}}
-    
+    Returns {score_name: {rawMetric, rawUnit, rawData, predictedData, scoreData}}
+
+    For energy_anomaly:
+      - rawData: hourly_delta (raw energy consumed in the hour)
+      - predictedData: predicted_delta (expected consumption based on historical averages)
+      - scoreData: energy_anomaly score (computed deviation)
+
+    For other scores, predictedData is None.
+
     Debug output logged when CSV_DEBUG=true environment variable is set.
     """
     df = _load_csv(time_range=time_range)

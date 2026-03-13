@@ -29,8 +29,9 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
   rawData,
 }) => {
   // Raw metric mappings (matching FAIR score names)
+  // For energy_anomaly: raw_hourly_delta is the hourly energy consumption
   const rawMetrics: Record<string, { name: string; unit: string }> = {
-    energy_anomaly:  { name: 'raw_energy_import',     unit: 'kWh' },
+    energy_anomaly:  { name: 'raw_hourly_delta',      unit: 'kWh' },
     pf_degradation:  { name: 'raw_power_factor_avg',   unit: ''    },
     phase_imbalance: { name: 'raw_current_unbalance',  unit: '%'   },
     thd_drift:       { name: 'raw_composite_thd',      unit: '%'   },

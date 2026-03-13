@@ -75,9 +75,17 @@ HEALTH TIERS
 OUTPUT COLUMNS
   timestamp, ahu_id, level, health_index, tier
   energy_anomaly, pf_degradation, phase_imbalance, thd_drift, overload
-  power_total, power_factor, unbalance_pct, thd_24h, delta_kwh
+  power_total, power_factor, unbalance_pct, thd_24h, energy_anomaly
   data_quality_flag, safety_flags
   z_energy, z_pf, z_imbalance, z_thd, z_overload   ← diagnostic only
+
+Note: The energy_anomaly column is computed by the prediction ETL as:
+  hourly_delta(t) = E(t) - E(t-1h)
+  predicted_delta(t) = (δ(t−24h) + δ(t−168h) + δ(t−336h)) / 3
+  energy_anomaly = hourly_delta(t) - predicted_delta(t)
+
+This represents how much the actual HOURLY energy consumption deviated
+from the predicted hourly consumption. It is NOT cumulative energy.
 """
 
 import math
@@ -160,16 +168,21 @@ SAFETY_FLAGS_DEF = {
 
 def load_prediction_deltas(ahu_ids: List[str]) -> Dict[str, float]:
     """
-    Load prediction-based delta_kwh from predictions.csv.
-    
-    The prediction ETL computes: delta_kwh = energy_current - predicted_kwh
-    This represents how much the actual energy deviated from the forecast.
+    Load prediction-based energy_anomaly from predictions.csv.
+
+    The prediction ETL computes:
+      hourly_delta(t)     = E(t) - E(t-1h)
+      predicted_delta(t)  = (δ(t−24h) + δ(t−168h) + δ(t−336h)) / 3
+      energy_anomaly      = hourly_delta(t) - predicted_delta(t)
+
+    The energy_anomaly column represents how much the actual hourly energy
+    consumption deviated from the predicted hourly consumption.
 
     Args:
-        ahu_ids: List of AHU IDs to fetch deltas for
+        ahu_ids: List of AHU IDs to fetch anomalies for
 
     Returns:
-        Dict mapping ahu_id -> delta_kwh (from prediction, not hour-over-hour)
+        Dict mapping ahu_id -> energy_anomaly (from prediction ETL)
     """
     import os
     # Resolve path relative to project root (not current working directory)
@@ -178,34 +191,34 @@ def load_prediction_deltas(ahu_ids: List[str]) -> Dict[str, float]:
     PREDICTIONS_FILE = os.path.join(PROJECT_ROOT, DATA_DIR, "predictions.csv")
 
     if not os.path.exists(PREDICTIONS_FILE):
-        # Return neutral deltas (0) if file doesn't exist
+        # Return neutral anomalies (0) if file doesn't exist
         return {ahu_id: 0.0 for ahu_id in ahu_ids}
 
     try:
         df = pd.read_csv(PREDICTIONS_FILE)
 
-        if 'ahu_id' not in df.columns or 'delta_kwh' not in df.columns:
+        if 'ahu_id' not in df.columns or 'energy_anomaly' not in df.columns:
             return {ahu_id: 0.0 for ahu_id in ahu_ids}
 
-        # Get latest prediction delta per AHU (use most recent row for each device)
+        # Get latest energy anomaly per AHU (use most recent row for each device)
         result = {}
         for ahu_id in ahu_ids:
             if ahu_id in df['ahu_id'].values:
                 rows = df[df['ahu_id'] == ahu_id]
                 if len(rows) > 0:
-                    # Use the most recent delta (last row)
-                    latest_delta = rows.iloc[-1]['delta_kwh']
-                    result[ahu_id] = float(latest_delta) if not pd.isna(latest_delta) else 0.0
+                    # Use the most recent anomaly (last row)
+                    latest_anomaly = rows.iloc[-1]['energy_anomaly']
+                    result[ahu_id] = float(latest_anomaly) if not pd.isna(latest_anomaly) else 0.0
                 else:
                     result[ahu_id] = 0.0
             else:
-                # AHU not in predictions file - use neutral delta
+                # AHU not in predictions file - use neutral anomaly
                 result[ahu_id] = 0.0
 
         return result
 
     except Exception as e:
-        # On error, return neutral deltas
+        # On error, return neutral anomalies
         print(f"[WARNING] Could not load prediction deltas: {e}")
         return {ahu_id: 0.0 for ahu_id in ahu_ids}
 
@@ -299,9 +312,12 @@ def score_energy_anomaly(
     Is this AHU consuming an unusual amount of energy compared to its own baseline.
 
     DELTA SOURCE:
-        - The delta_kwh is computed by the prediction ETL as: delta = energy_current - predicted_kwh
-        - predicted_kwh is a 3-slot average: avg(yesterday, last_week, two_weeks)
-        - This represents how much actual energy deviated from the forecast
+        - The delta_kwh is computed by the prediction ETL as:
+          hourly_delta(t) = E(t) - E(t-1h)
+          predicted_delta(t) = (δ(t−24h) + δ(t−168h) + δ(t−336h)) / 3
+          energy_anomaly = hourly_delta(t) - predicted_delta(t)
+        - This represents how much the actual HOURLY energy consumption
+          deviated from the predicted hourly consumption
 
     Level term (70%):
         z = (delta_kwh − own_median) / own_rstd
