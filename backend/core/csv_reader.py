@@ -229,6 +229,21 @@ def get_raw_score_relationship(device_id: str, time_range: str) -> dict:
         
         # Select only required columns
         sub = df[['timestamp', score_col, raw_col]].copy()
+
+        # For energy_anomaly, also include predicted_delta for the third line
+        predicted_data = None
+        if score_col == 'energy_anomaly' and 'raw_predicted_delta' in df.columns:
+            pred_sub = df[['timestamp', 'raw_predicted_delta']].copy()
+            pred_sub = pred_sub.dropna(subset=['raw_predicted_delta'])
+            if not pred_sub.empty:
+                # Merge with score data on timestamp
+                merged = sub[['timestamp']].merge(
+                    pred_sub, on='timestamp', how='left'
+                )
+                predicted_data = [
+                    {'timestamp': r['timestamp'].isoformat(), 'value': float(r['raw_predicted_delta'])}
+                    for _, r in merged.iterrows()
+                ]
         
         if DEBUG_MODE:
             print(f"[DEBUG] {score_col}: before dropna={len(sub)}")
@@ -250,6 +265,7 @@ def get_raw_score_relationship(device_id: str, time_range: str) -> dict:
                 {'timestamp': r['timestamp'].isoformat(), 'value': float(r[raw_col])}
                 for _, r in sub.iterrows()
             ],
+            'predictedData': predicted_data,
             'scoreData': [
                 {'timestamp': r['timestamp'].isoformat(), 'value': float(r[score_col])}
                 for _, r in sub.iterrows()

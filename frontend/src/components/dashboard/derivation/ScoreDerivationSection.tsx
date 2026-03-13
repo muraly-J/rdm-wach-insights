@@ -123,6 +123,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                       rawMetric={rawMetrics[score]?.name || 'unknown'}
                       rawUnit={rawMetrics[score]?.unit || ''}
                       rawData={scoreData.rawData}
+                      predictedData={scoreData.predictedData}
                       scoreData={scoreData.scoreData}
                       chartColor={SCORE_COLORS[index]}
                     />

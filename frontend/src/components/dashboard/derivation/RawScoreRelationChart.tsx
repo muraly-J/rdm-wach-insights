@@ -14,6 +14,7 @@ interface RawScoreRelationChartProps {
   rawMetric: string;
   rawUnit: string;
   rawData: Array<{ timestamp: string; value: number }>;
+  predictedData?: Array<{ timestamp: string; value: number }>; // Optional third line for energy anomaly
   scoreData: Array<{ timestamp: string; value: number }>;
   chartColor: string;
 }
@@ -24,7 +25,14 @@ interface RawScoreRelationChartProps {
  * Left Y-axis: Raw data value
  * Right Y-axis: Computed score (0-100)
  * X-axis: Time
- * 
+ *
+ * For energy anomaly, shows 3 lines:
+ * - hourly_delta (raw consumption)
+ * - predicted_delta (expected consumption from historical avg)
+ * - energy_anomaly score
+ *
+ * For other scores, shows 2 lines (raw + score only)
+ *
  * Netflix-style shelf layout with larger, more prominent charts
  */
 const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
@@ -32,6 +40,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
   rawMetric,
   rawUnit,
   rawData,
+  predictedData,
   scoreData,
   chartColor,
 }) => {
@@ -45,6 +54,16 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
     mergedData[idx].rawValue = point.value;
   });
 
+  // Merge predicted data if available (for energy_anomaly)
+  if (predictedData) {
+    predictedData.forEach((point, idx) => {
+      if (!mergedData[idx]) {
+        mergedData[idx] = { timestamp: point.timestamp };
+      }
+      mergedData[idx].predictedValue = point.value;
+    });
+  }
+
   scoreData.forEach((point, idx) => {
     if (mergedData[idx]) {
       mergedData[idx].scoreValue = point.value;
@@ -56,6 +75,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
     if (active && payload && payload.length) {
       const rawEntry = payload.find((p: any) => p.dataKey === 'rawValue');
       const scoreEntry = payload.find((p: any) => p.dataKey === 'scoreValue');
+      const predictedEntry = payload.find((p: any) => p.dataKey === 'predictedValue');
 
       return (
         <div className="bg-[#1A2230] p-4 rounded-xl border border-[#1E2A3A] shadow-2xl">
@@ -74,6 +94,24 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
                 style={{ color: '#8A95A5' }}
               >
                 {rawEntry.value.toFixed(2)}
+              </div>
+            </div>
+          )}
+
+          {/* Show predicted_delta only for energy_anomaly */}
+          {predictedEntry && (
+            <div className="mb-2">
+              <div
+                className="text-xs text-[#8A95A5]"
+                style={{ color: '#60A5FA' }}
+              >
+                predicted_delta (kWh)
+              </div>
+              <div
+                className="text-sm font-medium"
+                style={{ color: '#60A5FA' }}
+              >
+                {predictedEntry.value.toFixed(2)}
               </div>
             </div>
           )}
@@ -118,9 +156,16 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
         {scoreName}
       </h4>
 
-      <p className="text-[13px] text-[#8A95A5] mb-4 font-mono">
-        Raw: {rawMetric} ({rawUnit}) → Score: 0–100
-      </p>
+      {/* Dynamic description based on score type */}
+      {scoreName === 'EnergyAnomaly' ? (
+        <p className="text-[13px] text-[#8A95A5] mb-4 font-mono">
+          hourly_delta → predicted_delta → Score: 0–100
+        </p>
+      ) : (
+        <p className="text-[13px] text-[#8A95A5] mb-4 font-mono">
+          Raw: {rawMetric} ({rawUnit}) → Score: 0–100
+        </p>
+      )}
 
       {/* Chart - Larger height for shelf layout */}
       <ResponsiveContainer width="100%" height={280}>
@@ -183,6 +228,20 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
             strokeWidth={3}
             dot={false}
           />
+
+          {/* Predicted delta line for energy anomaly (third line) */}
+          {predictedData && predictedData.length > 0 && (
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="predictedValue"
+              stroke="#60A5FA"
+              strokeWidth={2}
+              strokeDasharray="4 4"
+              opacity={0.7}
+              dot={false}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
 
@@ -193,8 +252,18 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
             className="w-3 h-1 rounded-full"
             style={{ backgroundColor: '#8A95A5' }}
           />
-          <span className="text-[#8A95A5]">Raw</span>
+          <span className="text-[#8A95A5]">Raw ({rawMetric})</span>
         </div>
+        {/* Show predicted_delta legend only for energy anomaly */}
+        {predictedData && predictedData.length > 0 && (
+          <div className="flex items-center gap-2 text-xs">
+            <span
+              className="w-3 h-1 rounded-full"
+              style={{ backgroundColor: '#60A5FA' }}
+            />
+            <span className="text-[#8A95A5]">Predicted</span>
+          </div>
+        )}
         <div className="flex items-center gap-2 text-xs">
           <span
             className="w-3 h-1 rounded-full"
