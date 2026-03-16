@@ -140,12 +140,12 @@ def get_gemini_api_key() -> str:
 
 def get_gemini_model() -> str:
     """Get Gemini generative model name."""
-    return os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
+    return os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
 
 def get_gemini_embed_model() -> str:
     """Get Gemini embedding model name."""
-    return os.getenv("GEMINI_EMBED_MODEL", "text-embedding-004")
+    return os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
 
 
 # ── Application Configuration ───────────────────────────────────────────────

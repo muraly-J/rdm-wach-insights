@@ -19,10 +19,10 @@ def test_gemini_client_imports():
 
 def test_gemini_client_raises_without_key(monkeypatch):
     """Client must raise ValueError if GEMINI_API_KEY is missing."""
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    # Re-import config to pick up cleared env
     import importlib, config as cfg
+    # Reload config, then remove the key (reload re-reads .env, so remove after)
     importlib.reload(cfg)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     with pytest.raises(ValueError, match="GEMINI_API_KEY"):
         cfg.get_gemini_api_key()
 
