@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 /**
  * TypingIndicator - Three bouncing dots animation (Section 6.3)
