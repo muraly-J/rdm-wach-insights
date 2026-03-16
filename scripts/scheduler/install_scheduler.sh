@@ -14,9 +14,9 @@
 set -e  # Exit on error
 
 # Project directory
-PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+PROJECT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 VENV_PYTHON="${PROJECT_DIR}/venv/bin/python"
-SCRIPTS_DIR="${PROJECT_DIR}/scripts"
+SCRIPTS_DIR="${PROJECT_DIR}/scripts/scheduler"
 
 # Path for LaunchAgent
 LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
@@ -138,7 +138,7 @@ cat > "${PLIST_FILE}" << PLIST_EOF
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>${PROJECT_DIR}/scripts/scheduler.sh</string>
+    <string>${SCRIPTS_DIR}/scheduler.sh</string>
   </array>
 
   <!-- Working directory (project root) -->

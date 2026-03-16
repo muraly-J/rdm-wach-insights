@@ -34,7 +34,7 @@ import os
 import argparse
 
 # Configuration
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 LOGS_DIR = os.path.join(PROJECT_ROOT, "logs")
 DEFAULT_INTERVAL_MINUTES = 30
 

@@ -16,8 +16,8 @@
 set -e  # Exit on error
 
 # Project directory
-PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-SCRIPTS_DIR="${PROJECT_DIR}/scripts"
+PROJECT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+SCRIPTS_DIR="${PROJECT_DIR}/scripts/scheduler"
 VENV_PYTHON="${PROJECT_DIR}/venv/bin/python"
 
 # Default interval
@@ -84,7 +84,7 @@ if [[ "${BACKGROUND}" = "true" ]]; then
     mkdir -p "${LOG_DIR}"
     
     # Start scheduler in background
-    nohup python scripts/scheduler.py --interval "${INTERVAL}" >> "${LOG_DIR}/scheduler.log" 2>&1 &
+    nohup python scripts/scheduler/scheduler.py --interval "${INTERVAL}" >> "${LOG_DIR}/scheduler.log" 2>&1 &
     
     SCHEDULER_PID=$!
     echo "[OK] Scheduler started with PID: ${SCHEDULER_PID}"
@@ -103,5 +103,5 @@ else
     echo "[INFO] Starting scheduler (Ctrl+C to stop)..."
     
     # Use exec to replace shell with python process
-    exec python scripts/scheduler.py --interval "${INTERVAL}"
+    exec python scripts/scheduler/scheduler.py --interval "${INTERVAL}"
 fi
