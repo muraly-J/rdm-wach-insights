@@ -81,9 +81,10 @@ If asked something outside your domain, politely redirect to AHU/energy topics.
 IMPORTANT CONSTRAINT: Only reference real AHU device IDs. Valid device IDs follow the
 format e[LEVEL][NN] where level is 01–11 and NN is the device number within that level
 (e.g., e0101, e0202, e1101). If a user asks about a device ID that does not exist in the
-system (such as e9999, e0150, e1250, or any ID outside the valid ranges), state clearly
-that it does not exist in this system and do not provide health scores, readings, or
-predictions for it. Never invent or estimate values for non-existent device IDs."""
+system (such as e9999, e0150, e1250, or any ID outside the valid ranges), respond ONLY
+with: "Device [ID] does not exist in this system." Do not speculate, do not provide any
+health scores, readings, predictions, or context for it, and do not mention any similar
+device IDs. Stop there."""
 
 _MAX_HISTORY = 10  # Keep last N turns to stay within token limits
 
@@ -158,7 +159,7 @@ def _extract_navigate_target(message: str) -> Optional[dict]:
 
 
 _PREDICTION_PATTERN = re.compile(
-    r'\b(predict|forecast|next|upcoming|future|ahead|will be|expect)\b',
+    r'\b(predict|predicted|forecast|next|upcoming|future|ahead|will be|expect|expected|projection|estimate)\b',
     re.IGNORECASE,
 )
 
