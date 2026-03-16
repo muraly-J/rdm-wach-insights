@@ -214,6 +214,126 @@ async def _get_live_context(context: Optional[dict]) -> str:
         return ""  # Never let live context failure crash the chat
 
 
+def _read_csv_context_sync(context: dict) -> str:
+    """
+    Read latest health scores from ETL CSV files for the given context.
+    Synchronous — called via run_in_executor.
+
+    Returns empty string on any error (graceful degradation).
+    """
+    import pandas as pd
+
+    level = context.get("level")
+    device = context.get("device")
+
+    if not level and not device:
+        return ""
+
+    project_root = Path(__file__).parent.parent.parent
+    hourly_path = project_root / "data" / "health_hourly.csv"
+    daily_path = project_root / "data" / "health_all_levels.csv"
+
+    # Try hourly first, fall back to daily
+    csv_path = hourly_path if hourly_path.exists() else daily_path
+    if not csv_path.exists():
+        return ""
+
+    df = pd.read_csv(csv_path, parse_dates=["timestamp"])
+
+    if df.empty:
+        return ""
+
+    # Filter to the relevant level/device
+    if device:
+        subset = df[df["ahu_id"] == device]
+    elif level:
+        level_str = f"Level {level}"
+        subset = df[df["level"] == level_str]
+    else:
+        return ""
+
+    if subset.empty:
+        return ""
+
+    # Take the most recent snapshot per AHU
+    latest = (
+        subset.sort_values("timestamp")
+              .groupby("ahu_id", sort=False)
+              .last()
+              .reset_index()
+    )
+
+    lines = ["\n\n## Computed Health Scores (ETL — latest snapshot)"]
+
+    if device:
+        # Single device: full detail
+        row = latest.iloc[0]
+        hi = row.get("health_index")
+        tier = row.get("tier", "")
+        ea = row.get("energy_anomaly")
+        pf = row.get("pf_degradation")
+        pi = row.get("phase_imbalance")
+        thd = row.get("thd_drift")
+        ol = row.get("overload")
+        flags = row.get("safety_flags", "")
+
+        lines.append(f"**{row['ahu_id']}** ({row.get('level', '')}):")
+        if hi is not None and not pd.isna(hi):
+            lines.append(f"  - Health Index: **{hi:.1f}/100** ({tier})")
+        score_parts = []
+        if ea is not None and not pd.isna(ea): score_parts.append(f"EnergyAnomaly={ea:.1f}")
+        if pf is not None and not pd.isna(pf): score_parts.append(f"PFDeg={pf:.1f}")
+        if pi is not None and not pd.isna(pi): score_parts.append(f"PhaseImbalance={pi:.1f}")
+        if thd is not None and not pd.isna(thd): score_parts.append(f"THDDrift={thd:.1f}")
+        if ol is not None and not pd.isna(ol): score_parts.append(f"Overload={ol:.1f}")
+        if score_parts:
+            lines.append(f"  - FAIR Scores: {', '.join(score_parts)}")
+        if flags and str(flags).strip() and str(flags).strip() != "nan":
+            lines.append(f"  - Safety Flags: {flags}")
+    else:
+        # Level summary: all AHUs sorted by health index
+        latest_sorted = latest.sort_values("health_index")
+        lines.append(f"Level {level} — {len(latest_sorted)} AHUs:")
+
+        # Worst 5
+        worst = latest_sorted.head(5)
+        lines.append("  Worst health:")
+        for _, row in worst.iterrows():
+            hi = row.get("health_index")
+            tier = row.get("tier", "")
+            flags = row.get("safety_flags", "")
+            flag_str = f" ⚠ {flags}" if flags and str(flags).strip() and str(flags).strip() != "nan" else ""
+            hi_str = f"{hi:.1f}" if hi is not None and not pd.isna(hi) else "?"
+            lines.append(f"    - **{row['ahu_id']}**: {hi_str}/100 ({tier}){flag_str}")
+
+        # Best 5
+        best = latest_sorted.tail(5).iloc[::-1]
+        lines.append("  Best health:")
+        for _, row in best.iterrows():
+            hi = row.get("health_index")
+            tier = row.get("tier", "")
+            hi_str = f"{hi:.1f}" if hi is not None and not pd.isna(hi) else "?"
+            lines.append(f"    - **{row['ahu_id']}**: {hi_str}/100 ({tier})")
+
+        # Level average
+        avg_hi = latest_sorted["health_index"].mean()
+        if not pd.isna(avg_hi):
+            lines.append(f"  Level average health index: **{avg_hi:.1f}/100**")
+
+    return "\n".join(lines)
+
+
+async def _get_csv_context(context: Optional[dict]) -> str:
+    """Async wrapper around _read_csv_context_sync."""
+    if not context:
+        return ""
+    try:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, _read_csv_context_sync, context)
+    except Exception:
+        return ""
+
+
 @router.post("/chat")
 async def chat(body: ChatRequest):
     """
@@ -230,6 +350,11 @@ async def chat(body: ChatRequest):
     if live_ctx:
         system_prompt += live_ctx
 
+    # Computed health scores from ETL CSVs (dashboard view)
+    csv_ctx = await _get_csv_context(body.context)
+    if csv_ctx:
+        system_prompt += csv_ctx
+
     # If the user asked about a specific level/device different from the
     # current dashboard context, also inject live data for that target so
     # the bot can answer with real readings instead of deflecting.
@@ -245,6 +370,9 @@ async def chat(body: ChatRequest):
             extra_ctx = await _get_live_context(nav_target)
             if extra_ctx:
                 system_prompt += "\n\n## Live AHU Readings (mentioned in query)" + extra_ctx.split("## Live AHU Readings", 1)[-1]
+            extra_csv = await _get_csv_context(nav_target)
+            if extra_csv:
+                system_prompt += "\n\n## Computed Health Scores (mentioned in query)" + extra_csv.split("## Computed Health Scores", 1)[-1]
 
     # Inject RAG context if documents have been ingested
     retriever = _get_retriever()
