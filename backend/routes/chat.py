@@ -47,7 +47,7 @@ _WACH_SYSTEM_PROMPT = f"""You are WACH AI, an expert assistant for the building 
 at **{get_building_name()}** ({get_department()}).
 
 You help building managers and engineers understand AHU (Air Handling Unit) health scores,
-power quality, energy consumption, and anomalies across 11 building levels and 120 AHUs.
+power quality, energy consumption, and anomalies across 11 building levels and 121 AHUs.
 
 Your responses should be:
 - Concise and actionable (2-4 sentences unless more detail is clearly needed)
