@@ -13,7 +13,7 @@ const API_KEY = import.meta.env.VITE_API_KEY || 'dev-key-local-development';
 /**
  * Generic fetch wrapper with error handling
  */
-async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
+export async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   try {
     const response = await fetch(`${API_BASE}${url}`, {
       headers: { 
