@@ -11,12 +11,31 @@ Uses Gemini 2.0 Flash with the WACH AI system persona.
 Conversation history is passed by the client (stateless server).
 """
 
+import os
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 from typing import Optional
 
 from llm.gemini_client import GeminiClient
 from models.schemas import ChatHistoryItem
+
+_CHROMA_DIR = os.getenv("CHROMA_PERSIST_DIR", "data/chroma")
+_RAG_COLLECTION = os.getenv("RAG_COLLECTION", "wach_docs")
+
+
+def _get_retriever():
+    """Lazily load retriever — returns None if no documents ingested yet."""
+    from rag.vector_store import VectorStore
+    from rag.retriever import Retriever
+    try:
+        store = VectorStore(persist_dir=_CHROMA_DIR, collection_name=_RAG_COLLECTION)
+        if store.count == 0:
+            return None
+        return Retriever(vector_store=store)
+    except Exception:
+        return None
 
 router = APIRouter()
 
@@ -88,6 +107,13 @@ async def chat(body: ChatRequest):
     """
     gemini_history = _build_gemini_history(body.history)
     system_prompt = _build_system_prompt(body.context)
+
+    # Inject RAG context if documents have been ingested
+    retriever = _get_retriever()
+    if retriever:
+        snippets = await retriever.retrieve(body.message, top_k=3)
+        if snippets:
+            system_prompt += "\n\nRelevant technical documentation:\n" + "\n---\n".join(snippets)
 
     # Append current user message to history for the Gemini call
     full_messages = gemini_history + [
