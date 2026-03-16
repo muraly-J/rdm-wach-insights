@@ -99,20 +99,27 @@ TEST_QUERIES = [
 
 # ── Runner ────────────────────────────────────────────────────────────────────
 def run_query(url: str, msg: str, context: dict | None = None, api_key: str | None = None) -> dict:
-    try:
-        headers = {}
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
-        resp = requests.post(
-            f"{url}/api/chat",
-            json={"message": msg, "history": [], "context": context or {}},
-            headers=headers,
-            timeout=20,
-        )
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as e:
-        return {"reply": "", "navigate": None, "_error": str(e)}
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    for attempt in range(3):
+        try:
+            resp = requests.post(
+                f"{url}/api/chat",
+                json={"message": msg, "history": [], "context": context or {}},
+                headers=headers,
+                timeout=30,
+            )
+            if resp.status_code == 503:
+                time.sleep(5 * (attempt + 1))
+                continue
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            if attempt == 2:
+                return {"reply": "", "navigate": None, "_error": str(e)}
+            time.sleep(3)
+    return {"reply": "", "navigate": None, "_error": "max retries exceeded"}
 
 
 def categorize(q: dict, result: dict) -> str:
@@ -181,7 +188,7 @@ def main():
         categories.setdefault(cat, []).append(detail)
         status = "✓" if cat == "PASS" else "✗"
         print(f"  {status} [{q['id']}] {q['cat']:10} → {cat}")
-        time.sleep(0.3)  # polite rate limit
+        time.sleep(2.0)  # polite rate limit — avoid Gemini 503s
 
     total = len(results)
     passed = len(categories.get("PASS", []))

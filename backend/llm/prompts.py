@@ -73,6 +73,14 @@ For a ranking query (compare all devices by a metric):
   "top_n": 10
 }
 
+For a prediction query (forecast future values for one or more specific devices):
+{
+  "query_type": "prediction",
+  "device_ids": ["e0202"],
+  "metric": "energy_import",
+  "time_range": "next_24h"
+}
+
 For an unclear or invalid query (fallback):
 {
   "query_type": null,
@@ -82,7 +90,14 @@ For an unclear or invalid query (fallback):
 }
 
 ━━━ ALLOWED VALUES ━━━
-query_type: "time_series" or "ranking"
+query_type: "time_series", "ranking", or "prediction"
+  "time_series"  — historical readings for one or more specific devices over time
+  "ranking"      — compare all devices (or a level's devices) by a metric
+  "prediction"   — forecasts of energy, power, health index, or FAIR scores at future horizons
+                   Required fields: device_ids (at least one), metric, time_range
+                   metric: "energy_import" | "power_total" | "power_factor_avg" |
+                           "current_unbalance" | "composite_thd" | "health_index"
+                   time_range: "next_1h" | "next_12h" | "next_24h" | "next_168h"
 
 metric (choose the single best match from this list only):
   POWER:
@@ -113,7 +128,8 @@ metric (choose the single best match from this list only):
     digital_input_1_and_2
 
 time_range:
-  last_24h, last_7d, last_30d, all_time
+  Historical queries: last_24h, last_7d, last_30d, all_time
+  Prediction queries: next_1h, next_12h, next_24h, next_168h
 
 device_ids:
   - Format: "eXXXX" where XX is level (01-11) and XX is device number
@@ -217,8 +233,13 @@ Understanding metric units helps interpret variance across AHUs:
 "week" / "7 days"                             → last_7d
 "month" / "30 days"                           → last_30d
 "all" / "ever" / "all time"                  → all_time
+"next hour" / "next 1h"                       → next_1h
+"next 6 hours" / "next 6h" / "next 12h"       → next_12h
+"tomorrow" / "next 24h" / "next day"          → next_24h
+"next week" / "next 7 days" / "next 168h"     → next_168h
 "rank" / "top N" / "highest" / "worst" / "best" / "compare all" / "which device" → ranking
-specific device IDs mentioned                 → time_series
+"predict" / "forecast" / "will be" / "expect" / "upcoming" + device ID → prediction
+specific device IDs mentioned (historical)    → time_series
 
 ━━━ EXAMPLES ━━━
 Note: Examples show variance across levels. Level 01 has most devices (21), Level 08 has fewest (8).
@@ -243,6 +264,27 @@ Output: {"query_type":"ranking","device_ids":[],"metric":"volts_l1_thd","time_ra
 
 Input:  "Show reactive power for e0101 and e0202 this month"
 Output: {"query_type":"time_series","device_ids":["e0101","e0202"],"metric":"reactive_power_total","time_range":"last_30d"}
+
+Input:  "Predict energy for e0202 for next 6 hours"
+Output: {"query_type":"prediction","device_ids":["e0202"],"metric":"energy_import","time_range":"next_12h"}
+
+Input:  "What will the health index be for e0207 next week?"
+Output: {"query_type":"prediction","device_ids":["e0207"],"metric":"health_index","time_range":"next_168h"}
+
+Input:  "Forecast power for e0211 tomorrow"
+Output: {"query_type":"prediction","device_ids":["e0211"],"metric":"power_total","time_range":"next_24h"}
+
+Input:  "Will e0202 energy be above normal next 24 hours?"
+Output: {"query_type":"prediction","device_ids":["e0202"],"metric":"energy_import","time_range":"next_24h"}
+
+Input:  "What is the predicted health score for e0101 in 12 hours?"
+Output: {"query_type":"prediction","device_ids":["e0101"],"metric":"health_index","time_range":"next_12h"}
+
+Input:  "Show me energy forecast for e0202"
+Output: {"query_type":"prediction","device_ids":["e0202"],"metric":"energy_import","time_range":"next_24h"}
+
+Input:  "How much energy is e0207 expected to use next week?"
+Output: {"query_type":"prediction","device_ids":["e0207"],"metric":"energy_import","time_range":"next_168h"}
 
 ━━━ LEVEL VARIANCE EXAMPLES ━━━
 Note: Device IDs vary by level - compare performance across different AHU counts.
