@@ -13,6 +13,7 @@ Conversation history is passed by the client (stateless server).
 
 import asyncio
 import os
+import re
 from functools import partial
 from pathlib import Path
 
@@ -104,12 +105,45 @@ def _build_system_prompt(context: Optional[dict]) -> str:
         level = context.get("level")
         device = context.get("device")
         if level or device:
-            prompt += f"\n\nCurrent dashboard context: "
+            prompt += "\n\nDashboard background (supplementary context only):"
             if level:
-                prompt += f"viewing Level {level}. "
+                prompt += f" The user currently has Level {level} open on their dashboard."
             if device:
-                prompt += f"focused on device {device}."
+                prompt += f" They are focused on device {device}."
+            prompt += (
+                " Live sensor readings for this view are included above."
+                " If the user's question is about a different level or device,"
+                " answer that question directly — do not imply you are restricted"
+                " to the current dashboard view."
+            )
     return prompt
+
+
+def _extract_navigate_target(message: str) -> Optional[dict]:
+    """
+    Extract a navigation target from the user's message.
+
+    Returns {"level": int, "device": str} if a specific AHU is mentioned,
+    {"level": int} if a level number is mentioned, or None for general questions.
+    """
+    from models.schemas import AHU_LEVEL_CONFIG
+
+    # Check for explicit device ID (e.g., "e0501", "E0501")
+    device_match = re.search(r'\b(e\d{4})\b', message, re.IGNORECASE)
+    if device_match:
+        device_id = device_match.group(1).lower()
+        for level_num, config in AHU_LEVEL_CONFIG.items():
+            if device_id in config["device_ids"]:
+                return {"level": level_num, "device": device_id}
+
+    # Check for level mention (e.g., "Level 5", "level5", "level 11")
+    level_match = re.search(r'\blevel\s*(\d+)\b', message, re.IGNORECASE)
+    if level_match:
+        level_num = int(level_match.group(1))
+        if 1 <= level_num <= 11:
+            return {"level": level_num}
+
+    return None
 
 
 async def _get_live_context(context: Optional[dict]) -> str:
@@ -220,4 +254,4 @@ async def chat(body: ChatRequest):
             detail=f"AI service unavailable: {e}",
         )
 
-    return {"reply": reply}
+    return {"reply": reply, "navigate": _extract_navigate_target(body.message)}
