@@ -1,13 +1,10 @@
 """
 llm/translator.py
 ─────────────────
-Converts natural language → validated StructuredQuery using LM Studio.
-
-LM Studio exposes an OpenAI-compatible API at http://localhost:1234/v1,
-so we use the openai SDK pointed at the local server.
+Converts natural language → validated StructuredQuery using Gemini.
 
 Flow:
-  1. Send user query + system prompt to LM Studio
+  1. Send user query + system prompt to Gemini
   2. Parse the JSON response
   3. Pass through middleware validator
   4. Return (StructuredQuery | None, error_message | None)
@@ -24,39 +21,12 @@ import re
 from typing import Optional, Union
 
 # Disable LLM by default for local development
-# Set ENABLE_LLM=true to enable AI translation via LM Studio
+# Set ENABLE_LLM=true to enable AI translation via Gemini
 LLM_ENABLED = os.getenv("ENABLE_LLM", "false").lower() == "true"
-
-if LLM_ENABLED and not IN_PRODUCTION:
-    # Only import if in development with LLM enabled
-    from openai import AsyncOpenAI
 
 from llm.prompts import SYSTEM_PROMPT
 from middleware.validator import validate_raw_dict
 from models.schemas import StructuredQuery, QueryType, AHU_LEVEL_CONFIG, ALLOWED_DEVICES
-from config import get_lms_base_url, get_lms_model, get_lms_api_key
-
-_LMS_BASE_URL = None
-_LMS_MODEL = None
-_LMS_API_KEY = None
-
-
-def _get_client() -> Optional['AsyncOpenAI']:
-    """Get OpenAI client - only available when LLM_ENABLED is True."""
-    if not LLM_ENABLED:
-        return None
-    try:
-        from openai import AsyncOpenAI
-        return AsyncOpenAI(base_url=_LMS_BASE_URL, api_key=_LMS_API_KEY)
-    except ImportError:
-        return None
-
-
-# Configure LLM settings when module loads
-if LLM_ENABLED:
-    _LMS_BASE_URL = get_lms_base_url()
-    _LMS_MODEL = get_lms_model()
-    _LMS_API_KEY = get_lms_api_key()
 
 
 def _extract_json(text: str) -> Optional[dict]:
@@ -97,7 +67,7 @@ async def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None]
     Main entry point. Converts a natural language string to a validated StructuredQuery.
 
     LLM translation is disabled by default for local development.
-    Set ENABLE_LLM=true to enable AI translation via LM Studio.
+    Set ENABLE_LLM=true to enable AI translation via Gemini.
 
     When LLM is disabled, queries are parsed using rule-based extraction
     from the structured query schemas.
@@ -110,22 +80,18 @@ async def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None]
     if not LLM_ENABLED:
         return _parse_query_rules(user_query)
 
-    client = _get_client()
+    from llm.gemini_client import GeminiClient
+    client = GeminiClient()
 
     try:
-        response = await client.chat.completions.create(
-            model=_LMS_MODEL,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user",   "content": user_query},
-            ],
-            temperature=0.0,     # deterministic — we want consistent JSON
-            max_tokens=256,      # JSON output is small; this keeps responses fast
+        raw_text = await client.generate_text(
+            prompt=user_query,
+            system_instruction=SYSTEM_PROMPT,
+            temperature=0.0,
+            max_output_tokens=256,
         )
     except Exception as e:
-        return None, f"Could not reach the LM Studio server. Is it running? ({e})"
-
-    raw_text = response.choices[0].message.content or ""
+        return None, f"Could not reach Gemini API. ({e})"
 
     # Extract JSON from the response
     parsed = _extract_json(raw_text)
