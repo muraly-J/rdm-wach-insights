@@ -131,7 +131,7 @@ async def _get_live_context(context: Optional[dict]) -> str:
     try:
         from core.influx_client import fetch_latest_hourly_data
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         level_filter = int(level) if level else None
         df = await loop.run_in_executor(
             None,
@@ -157,11 +157,10 @@ async def _get_live_context(context: Optional[dict]) -> str:
             ahu_id = row.get("ahu_id", "?")
             pf = row.get("power_factor_avg")
             power = row.get("power_total")
-            thd_l1 = row.get("current_l1_thd")
-            thd_l3 = row.get("current_l3_thd")
-            thd = max(v for v in [thd_l1, thd_l3] if v is not None) if any(
-                v is not None for v in [thd_l1, thd_l3]
-            ) else None
+            thd = row.get("composite_thd") or max(
+                (v for v in [row.get("current_l1_thd"), row.get("current_l3_thd")] if v is not None),
+                default=None,
+            )
             unbalance = row.get("current_unbalance")
 
             parts = [f"**{ahu_id}**:"]
