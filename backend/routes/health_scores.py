@@ -15,8 +15,7 @@ import asyncio
 import re
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Query, HTTPException, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, Query, HTTPException
 
 from models.schemas import AHU_LEVEL_CONFIG
 from core.csv_reader import (
@@ -174,53 +173,3 @@ async def get_raw_score_relationship(
         "generated_at": datetime.now().isoformat(),
     }
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# POST /api/chat — Chat endpoint
-# ──────────────────────────────────────────────────────────────────────────────
-
-class ChatRequest(BaseModel):
-    message: str
-    context: Optional[dict] = None
-
-
-@router.post("/chat")
-async def chat(request: Request, body: ChatRequest):
-    """
-    Chat widget messaging endpoint.
-
-    Parameters:
-        message: User's query
-        context: Optional {level, device} for contextual responses
-    """
-    message = body.message.lower()
-    context = body.context or {}
-
-    level = context.get("level")
-    device = context.get("device")
-
-    if "health" in message or "score" in message:
-        reply = (
-            f"I can see you're viewing {'Level ' + str(level) if level else ''} "
-            f"{'device ' + device if device else ''}. "
-            "Health scores range from 0-100, with 80+ being Healthy. "
-            "Would you like to see the breakdown by component?"
-        )
-    elif "energy" in message:
-        reply = (
-            "Energy anomaly shows deviation from expected consumption. "
-            "High values indicate either increased usage or measurement issues."
-        )
-    elif "levels" in message or "compare" in message:
-        reply = (
-            f"Level 1 has {len(AHU_LEVEL_CONFIG[1]['device_ids'])} AHUs, "
-            f"Level 2 has {len(AHU_LEVEL_CONFIG[2]['device_ids'])}, "
-            f"and Level 3 has {len(AHU_LEVEL_CONFIG[3]['device_ids'])}."
-        )
-    else:
-        reply = (
-            "I'm WACH AI, your AHU health assistant. "
-            "Ask me about health scores, energy usage, or device performance."
-        )
-
-    return {"reply": reply}

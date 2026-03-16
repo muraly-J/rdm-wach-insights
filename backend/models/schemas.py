@@ -411,6 +411,19 @@ class RiskSummaryRequest(BaseModel):
     time_range: Literal["last_24h", "last_7d", "last_30d", "all_time"] = "last_30d"
 
 
+class ChatHistoryItem(BaseModel):
+    """A single message in the chat conversation history."""
+    role: Literal["user", "model"]
+    content: str
+
+
+class AIChatRequest(BaseModel):
+    """Request body for POST /api/chat"""
+    message: str
+    history: list[ChatHistoryItem] = []
+    context: Optional[dict] = None
+
+
 # ── Utility Functions ────────────────────────────────────────────────────────
 
 def get_metric_unit(metric: str) -> str:

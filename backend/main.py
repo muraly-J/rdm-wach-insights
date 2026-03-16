@@ -204,6 +204,9 @@ def create_app():
     app.include_router(dashboard_router)
     app.include_router(health_scores_router, prefix="/api")
 
+    from routes.chat import router as chat_router
+    app.include_router(chat_router, prefix="/api")
+
     @app.get('/health')
     async def health():
         return {'status': 'ok'}
