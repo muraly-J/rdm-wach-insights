@@ -41,11 +41,8 @@ def _get_retriever():
 router = APIRouter()
 
 # ── System persona ─────────────────────────────────────────────────────────────
-_BUILDING_NAME = get_building_name()
-_DEPARTMENT = get_department()
-
 _WACH_SYSTEM_PROMPT = f"""You are WACH AI, an expert assistant for the building energy monitoring platform
-at **{_BUILDING_NAME}** ({_DEPARTMENT}).
+at **{get_building_name()}** ({get_department()}).
 
 You help building managers and engineers understand AHU (Air Handling Unit) health scores,
 power quality, energy consumption, and anomalies across 11 building levels and 120 AHUs.

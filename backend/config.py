@@ -150,10 +150,12 @@ def get_gemini_embed_model() -> str:
 
 # ── Building Identity ─────────────────────────────────────────────────────────
 def get_building_name() -> str:
+    """Get building/facility name."""
     return os.getenv("WACH_BUILDING_NAME", "Hospital Kuala Lumpur")
 
 
 def get_department() -> str:
+    """Get department or wing within the building."""
     return os.getenv("WACH_DEPARTMENT", "Women and Children Hospital")
 
 
