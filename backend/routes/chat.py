@@ -20,6 +20,7 @@ from typing import Optional
 
 from llm.gemini_client import GeminiClient
 from models.schemas import ChatHistoryItem
+from config import get_building_name, get_department
 
 _CHROMA_DIR = os.getenv("CHROMA_PERSIST_DIR", "data/chroma")
 _RAG_COLLECTION = os.getenv("RAG_COLLECTION", "wach_docs")
@@ -40,9 +41,14 @@ def _get_retriever():
 router = APIRouter()
 
 # ── System persona ─────────────────────────────────────────────────────────────
-_WACH_SYSTEM_PROMPT = """You are WACH AI, an expert assistant for the WACH building energy
-monitoring platform. You help building managers and engineers understand AHU (Air Handling Unit)
-health scores, power quality, energy consumption, and anomalies.
+_BUILDING_NAME = get_building_name()
+_DEPARTMENT = get_department()
+
+_WACH_SYSTEM_PROMPT = f"""You are WACH AI, an expert assistant for the building energy monitoring platform
+at **{_BUILDING_NAME}** ({_DEPARTMENT}).
+
+You help building managers and engineers understand AHU (Air Handling Unit) health scores,
+power quality, energy consumption, and anomalies across 11 building levels and 120 AHUs.
 
 Your responses should be:
 - Concise and actionable (2-4 sentences unless more detail is clearly needed)
@@ -51,10 +57,20 @@ Your responses should be:
 - Formatted in Markdown when structure helps clarity
 
 You have knowledge of:
-- AHU electrical health scoring (0-100 scale, tiers: Critical <50, Poor 50-65, Fair 65-80, Healthy 80+)
-- Power quality metrics: power factor (target >0.85), voltage THD (IEEE 519: <5%), current unbalance (NEMA MG-1: <2%)
+- AHU electrical health scoring (0-100 scale):
+  - **Healthy**: 80–100 — normal operation
+  - **Monitor**: 60–79 — watch for degradation
+  - **Maintenance Soon**: 40–59 — schedule service
+  - **Critical**: 0–39 — urgent intervention needed
+- FAIR scoring components: Energy Anomaly (15%), Power Factor Degradation (25%),
+  Phase Imbalance (25%), THD Drift (15%), Overload (20%)
+- Power quality targets: power factor >0.85, voltage THD <5% (IEEE 519),
+  current unbalance <2% (NEMA MG-1)
 - Energy anomaly detection and diagnosis
 - HVAC operational best practices
+
+The building has 11 levels (Levels 1–11) serving departments including Emergency,
+O&G Clinic, ICU, Operation Theatre, Paediatric Wards, and more.
 
 If asked something outside your domain, politely redirect to AHU/energy topics."""
 
@@ -126,7 +142,7 @@ async def chat(body: ChatRequest):
             messages=full_messages,
             system_instruction=system_prompt,
             temperature=0.7,
-            max_output_tokens=512,
+            max_output_tokens=2048,
         )
     except Exception as e:
         raise HTTPException(

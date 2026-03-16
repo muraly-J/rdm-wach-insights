@@ -148,6 +148,15 @@ def get_gemini_embed_model() -> str:
     return os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
 
 
+# ── Building Identity ─────────────────────────────────────────────────────────
+def get_building_name() -> str:
+    return os.getenv("WACH_BUILDING_NAME", "Hospital Kuala Lumpur")
+
+
+def get_department() -> str:
+    return os.getenv("WACH_DEPARTMENT", "Women and Children Hospital")
+
+
 # ── Application Configuration ───────────────────────────────────────────────
 def get_app_env() -> str:
     """Get application environment (development/production)."""
