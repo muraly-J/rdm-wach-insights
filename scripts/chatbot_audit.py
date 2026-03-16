@@ -187,8 +187,8 @@ def main():
         results.append(detail)
         categories.setdefault(cat, []).append(detail)
         status = "✓" if cat == "PASS" else "✗"
-        print(f"  {status} [{q['id']}] {q['cat']:10} → {cat}")
-        time.sleep(2.0)  # polite rate limit — avoid Gemini 503s
+        print(f"  {status} [{q['id']}] {q['cat']:10} → {cat}", flush=True)
+        time.sleep(0.5)  # polite rate limit — avoid Gemini 503s
 
     total = len(results)
     passed = len(categories.get("PASS", []))
