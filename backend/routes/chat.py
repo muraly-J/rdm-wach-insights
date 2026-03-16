@@ -68,6 +68,7 @@ You have knowledge of:
   current unbalance <2% (NEMA MG-1)
 - Energy anomaly detection and diagnosis
 - HVAC operational best practices
+- Math-based energy and health predictions (1h, 12h, 24h, 1-week horizons) using seasonal-naive forecasting (linear trend for 1h, historical same-hour averages for longer horizons). Δ kWh = predicted energy minus 3-week same-hour baseline.
 
 The building has 11 levels (Levels 1–11) serving departments including Emergency,
 O&G Clinic, ICU, Operation Theatre, Paediatric Wards, and more.
@@ -144,6 +145,63 @@ def _extract_navigate_target(message: str) -> Optional[dict]:
             return {"level": level_num}
 
     return None
+
+
+_PREDICTION_PATTERN = re.compile(
+    r'\b(predict|forecast|next|upcoming|future|ahead|will be|expect)\b',
+    re.IGNORECASE,
+)
+
+
+def _is_prediction_query(message: str) -> bool:
+    """Return True if the message is asking about future values."""
+    return bool(_PREDICTION_PATTERN.search(message))
+
+
+def _get_prediction_context_sync(device_id: str, horizon: str = "1h") -> str:
+    """
+    Compute prediction for device_id and return a compact text summary
+    for injection into the system prompt.
+    """
+    try:
+        from core.prediction_engine import compute_predictions
+        horizon_map = {
+            "1h": "1h", "6h": "12h",
+            "12h": "12h", "24h": "24h", "1d": "24h",
+            "168h": "168h", "1w": "168h", "week": "168h",
+        }
+        h_key = horizon_map.get(horizon.replace(" ", "").lower(), "24h")
+        result = compute_predictions(device_id, horizons=[h_key])
+        if result is None:
+            return ""
+
+        h_data = result["horizons"].get(h_key, {})
+        hi = h_data.get("predicted_health_index", "?")
+        delta = h_data.get("delta_kwh", 0)
+        preds = h_data.get("predictions", {})
+        scores = h_data.get("fair_scores", {})
+
+        lines = [f"\n\n## Prediction Context ({device_id}, +{h_key})"]
+        lines.append(f"Predicted Health Index: {hi:.1f}/100" if isinstance(hi, float) else f"Predicted Health Index: {hi}")
+        lines.append(f"Δ kWh vs baseline: {'+' if delta >= 0 else ''}{delta:.2f} kWh")
+        if preds.get("energy_import"):
+            lines.append(f"Predicted energy: {preds['energy_import']:.2f} kWh")
+        if preds.get("power_factor_avg"):
+            lines.append(f"Predicted PF: {preds['power_factor_avg']:.3f}")
+        if scores:
+            score_str = ", ".join(f"{k}={v:.2f}" for k, v in scores.items())
+            lines.append(f"FAIR scores: {score_str}")
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
+async def _get_prediction_context(device_id: str, horizon: str = "1h") -> str:
+    """Async wrapper."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None, _get_prediction_context_sync, device_id, horizon
+    )
 
 
 async def _get_live_context(context: Optional[dict]) -> str:
@@ -373,6 +431,25 @@ async def chat(body: ChatRequest):
             extra_csv = await _get_csv_context(nav_target)
             if extra_csv:
                 system_prompt += "\n\n## Computed Health Scores (mentioned in query)" + extra_csv.split("## Computed Health Scores", 1)[-1]
+
+    # Prediction context: if the message asks about future values,
+    # inject predicted measurements and scores for the mentioned device.
+    if _is_prediction_query(body.message) and nav_target and nav_target.get("device"):
+        horizon_match = re.search(r'(\d+)\s*(h|hour|day|week)', body.message, re.IGNORECASE)
+        horizon_hint = "24h"
+        if horizon_match:
+            n, unit = horizon_match.group(1), horizon_match.group(2).lower()
+            if unit in ("h", "hour"):
+                horizon_hint = f"{n}h"
+            elif unit in ("day",):
+                horizon_hint = "24h"
+            elif unit in ("week",):
+                horizon_hint = "168h"
+        pred_ctx = await _get_prediction_context(nav_target["device"], horizon_hint)
+        if pred_ctx:
+            system_prompt += pred_ctx
+        # Signal the frontend to show the prediction view
+        nav_target["view"] = "prediction"
 
     # Inject RAG context if documents have been ingested
     retriever = _get_retriever()
