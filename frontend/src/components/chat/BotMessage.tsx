@@ -25,9 +25,11 @@ const BotMessage: React.FC<BotMessageProps> = ({
   onClearChat,
 }) => {
   const navigateLabel = navigate
-    ? navigate.device
-      ? `Navigate to ${navigate.device} — Level ${navigate.level}`
-      : `Navigate to Level ${navigate.level}`
+    ? navigate.view === 'prediction' && navigate.device
+      ? `View Predictions — ${navigate.device}`
+      : navigate.device
+        ? `Navigate to ${navigate.device} — Level ${navigate.level}`
+        : `Navigate to Level ${navigate.level}`
     : null;
 
   const showActions = isLast && (navigateLabel || onClearChat);

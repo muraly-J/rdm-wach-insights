@@ -81,6 +81,7 @@ export async function fetchRawScoreRelationship(
 export interface NavigateTarget {
   level: number;
   device?: string;
+  view?: 'prediction' | 'dashboard';
 }
 
 /**

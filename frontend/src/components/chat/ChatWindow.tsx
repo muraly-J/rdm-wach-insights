@@ -38,6 +38,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
   const handleNavigate = (target: NavigateTarget) => {
     selectLevel(target.level);
     selectDevice(target.device ?? null);
+    if (target.view === 'prediction') {
+      setTimeout(() => {
+        document.getElementById('prediction-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 400);
+    }
   };
 
   const handleClearChat = () => {
