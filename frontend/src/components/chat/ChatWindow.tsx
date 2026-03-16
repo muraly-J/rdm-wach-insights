@@ -1,47 +1,71 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
-import { simulateBotResponse } from '../../mocks/generateMockData';
+import { sendChatMessage } from '../../api/client';
+import { useAppStore } from '../../store/useAppStore';
 
 interface ChatWindowProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-/**
- * ChatWindow - Expanded chat widget (Section 6.3)
- * 
- * Structure:
- *   Header bar (48px tall)
- *   Message area (flex-1, scrollable)
- *   Input bar (56px tall)
- */
+interface Message {
+  id: string;
+  role: 'user' | 'bot';
+  content: string;
+}
+
+const INITIAL_MESSAGE: Message = {
+  id: 'init-1',
+  role: 'bot',
+  content: "Hey! I'm WACH AI. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
+};
+
 const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
-  const [messages, setMessages] = useState([
-    {
-      id: 'init-1',
-      role: 'bot' as const,
-      content: "Hey! I'm WACH AI. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [isTyping, setIsTyping] = useState(false);
 
+  const selectedLevel = useAppStore((s) => s.selectedLevel);
+  const selectedDevice = useAppStore((s) => s.selectedDevice);
+
   const handleSendMessage = async (text: string) => {
-    const newMessage = { id: Date.now().toString(), role: 'user' as const, content: text };
-    setMessages((prev) => [...prev, newMessage]);
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text };
+    setMessages((prev) => [...prev, userMsg]);
     setIsTyping(true);
 
-    // Simulate bot response
-    const response = await simulateBotResponse(text);
-    
-    setIsTyping(false);
-    setMessages((prev) => [
-      ...prev,
-      { id: (Date.now() + 1).toString(), role: 'bot' as const, content: response },
-    ]);
+    // Build history for the API (exclude the initial bot greeting)
+    const history = messages
+      .slice(1) // skip initial bot message
+      .map((m) => ({
+        role: m.role === 'bot' ? ('model' as const) : ('user' as const),
+        content: m.content,
+      }));
+
+    try {
+      const { reply } = await sendChatMessage(text, {
+        level: selectedLevel ?? undefined,
+        device: selectedDevice ?? undefined,
+        history,
+      });
+      setMessages((prev) => [
+        ...prev,
+        { id: (Date.now() + 1).toString(), role: 'bot', content: reply },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'bot',
+          content: 'Sorry, I had trouble connecting. Please try again in a moment.',
+        },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
@@ -65,12 +89,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
       }}
     >
       <ChatHeader isOpen={isOpen} onClose={onClose} />
-
-      <MessageList
-        messages={messages}
-        isTyping={isTyping}
-      />
-
+      <MessageList messages={messages} isTyping={isTyping} />
       <ChatInput onSendMessage={handleSendMessage} />
     </motion.div>
   );

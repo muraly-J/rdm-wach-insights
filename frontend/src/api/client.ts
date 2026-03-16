@@ -84,11 +84,16 @@ export async function fetchRawScoreRelationship(
  */
 export async function sendChatMessage(
   message: string,
-  context?: { level?: number; device?: string | null }
+  options?: {
+    level?: number;
+    device?: string | null;
+    history?: Array<{ role: 'user' | 'model'; content: string }>;
+  }
 ) {
+  const { history, ...context } = options ?? {};
   return apiFetch<{ reply: string }>('/chat', {
     method: 'POST',
-    body: JSON.stringify({ message, context }),
+    body: JSON.stringify({ message, context, history: history ?? [] }),
   });
 }
 

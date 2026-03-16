@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 
 interface BotMessageProps {
   content: string;
@@ -27,7 +28,9 @@ const BotMessage: React.FC<BotMessageProps> = ({ content }) => {
           px-4 py-3
         "
       >
-        <p className="text-[#E8ECF1] text-sm leading-relaxed">{content}</p>
+        <div className="text-sm text-[#E8ECF1] leading-relaxed prose prose-invert prose-sm max-w-none">
+          <ReactMarkdown>{content}</ReactMarkdown>
+        </div>
       </div>
     </motion.div>
   );
