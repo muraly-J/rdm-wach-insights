@@ -103,7 +103,7 @@ def generate_ahu_directory(
         "",
         "Examples:",
         "- `e0101` = Level 1, AHU unit 01 (Emergency Department)",
-        "- `e0501` = Level 5, AHU unit 01 (Main Operation Theatre)",
+        "- `e0501` = Level 5, AHU unit 01 (PICU T3 / Paediatric Intensive Care Unit)",
         "- `e1101` = Level 11, AHU unit 01 (Paediatric Surgical Ward)",
         "",
         "## How to Query by Level",
@@ -114,7 +114,7 @@ def generate_ahu_directory(
     ]
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text("\n".join(lines), encoding="utf-8")
+    out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"[generate_ahu_docs] Written {len(lines)} lines to {out_path}")
     return str(out_path)
 

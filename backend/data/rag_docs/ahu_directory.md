@@ -229,7 +229,7 @@ Device IDs follow the pattern `e{LLUU}` where:
 
 Examples:
 - `e0101` = Level 1, AHU unit 01 (Emergency Department)
-- `e0501` = Level 5, AHU unit 01 (Main Operation Theatre)
+- `e0501` = Level 5, AHU unit 01 (PICU T3 / Paediatric Intensive Care Unit)
 - `e1101` = Level 11, AHU unit 01 (Paediatric Surgical Ward)
 
 ## How to Query by Level
