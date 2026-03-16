@@ -11,7 +11,9 @@ Uses Gemini 2.0 Flash with the WACH AI system persona.
 Conversation history is passed by the client (stateless server).
 """
 
+import asyncio
 import os
+from functools import partial
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -110,6 +112,75 @@ def _build_system_prompt(context: Optional[dict]) -> str:
     return prompt
 
 
+async def _get_live_context(context: Optional[dict]) -> str:
+    """
+    Fetch live AHU readings from InfluxDB and format as a compact text summary.
+
+    Returns empty string if no level/device context provided, or on any error
+    (graceful degradation — live context is best-effort, never blocks chat).
+    """
+    if not context:
+        return ""
+
+    level = context.get("level")
+    device = context.get("device")
+
+    if not level and not device:
+        return ""
+
+    try:
+        from core.influx_client import fetch_latest_hourly_data
+
+        loop = asyncio.get_event_loop()
+        level_filter = int(level) if level else None
+        df = await loop.run_in_executor(
+            None,
+            partial(
+                fetch_latest_hourly_data,
+                ["power_total", "power_factor_avg", "current_unbalance",
+                 "current_l1_thd", "current_l3_thd"],
+                level_filter,
+            ),
+        )
+
+        if df is None or df.empty:
+            return ""
+
+        # If a specific device is requested, filter to that device
+        if device:
+            df = df[df["ahu_id"] == device]
+            if df.empty:
+                return ""
+
+        lines = ["\n\n## Live AHU Readings (current snapshot)"]
+        for _, row in df.iterrows():
+            ahu_id = row.get("ahu_id", "?")
+            pf = row.get("power_factor_avg")
+            power = row.get("power_total")
+            thd_l1 = row.get("current_l1_thd")
+            thd_l3 = row.get("current_l3_thd")
+            thd = max(v for v in [thd_l1, thd_l3] if v is not None) if any(
+                v is not None for v in [thd_l1, thd_l3]
+            ) else None
+            unbalance = row.get("current_unbalance")
+
+            parts = [f"**{ahu_id}**:"]
+            if power is not None:
+                parts.append(f"Power={power:.1f}kW")
+            if pf is not None:
+                parts.append(f"PF={pf:.3f}")
+            if thd is not None:
+                parts.append(f"THD={thd:.1f}%")
+            if unbalance is not None:
+                parts.append(f"Unbalance={unbalance:.1f}%")
+            lines.append("- " + " ".join(parts))
+
+        return "\n".join(lines)
+
+    except Exception:
+        return ""  # Never let live context failure crash the chat
+
+
 @router.post("/chat")
 async def chat(body: ChatRequest):
     """
@@ -120,6 +191,9 @@ async def chat(body: ChatRequest):
     """
     gemini_history = _build_gemini_history(body.history)
     system_prompt = _build_system_prompt(body.context)
+    live_ctx = await _get_live_context(body.context)
+    if live_ctx:
+        system_prompt += live_ctx
 
     # Inject RAG context if documents have been ingested
     retriever = _get_retriever()
