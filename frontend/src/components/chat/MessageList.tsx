@@ -17,18 +17,24 @@ interface MessageListProps {
   messages: Message[];
   isTyping: boolean;
   onNavigate: (target: NavigateTarget) => void;
+  onClearChat: () => void;
 }
 
 /**
  * MessageList - Scrollable message container (Section 6.3)
  */
-const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onNavigate }) => {
+const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onNavigate, onClearChat }) => {
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
+
+  // Index of the last bot message — only that one shows the clear button
+  const lastBotIndex = messages.reduce(
+    (last, msg, idx) => (msg.role === 'bot' ? idx : last),
+    -1
+  );
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -39,7 +45,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onNavigat
       )}
 
       <AnimatePresence initial={false}>
-        {messages.map((msg) => (
+        {messages.map((msg, idx) => (
           <motion.div
             key={msg.id}
             initial={{ opacity: 0, y: 10 }}
@@ -52,6 +58,8 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onNavigat
                 content={msg.content}
                 navigate={msg.navigate}
                 onNavigate={onNavigate}
+                isLast={idx === lastBotIndex && !isTyping}
+                onClearChat={onClearChat}
               />
             ) : (
               <UserMessage content={msg.content} />

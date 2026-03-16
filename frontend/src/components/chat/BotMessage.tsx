@@ -7,6 +7,8 @@ interface BotMessageProps {
   content: string;
   navigate?: NavigateTarget | null;
   onNavigate?: (target: NavigateTarget) => void;
+  isLast?: boolean;
+  onClearChat?: () => void;
 }
 
 /**
@@ -15,12 +17,20 @@ interface BotMessageProps {
  * bg: var(--bg-secondary), border-radius: 16px 16px 16px 4px
  * left-aligned, max-width 85%
  */
-const BotMessage: React.FC<BotMessageProps> = ({ content, navigate, onNavigate }) => {
+const BotMessage: React.FC<BotMessageProps> = ({
+  content,
+  navigate,
+  onNavigate,
+  isLast,
+  onClearChat,
+}) => {
   const navigateLabel = navigate
     ? navigate.device
       ? `Navigate to ${navigate.device} — Level ${navigate.level}`
       : `Navigate to Level ${navigate.level}`
     : null;
+
+  const showActions = isLast && (navigateLabel || onClearChat);
 
   return (
     <motion.div
@@ -42,24 +52,47 @@ const BotMessage: React.FC<BotMessageProps> = ({ content, navigate, onNavigate }
           </div>
         </div>
 
-        {navigateLabel && onNavigate && navigate && (
-          <button
-            onClick={() => onNavigate(navigate)}
-            className="
-              self-start
-              flex items-center gap-1.5
-              text-xs font-medium
-              text-[#00E5A0]
-              border border-[#00E5A0]/30
-              rounded-full
-              px-3 py-1
-              hover:bg-[#00E5A0]/10
-              transition-colors duration-150
-            "
-          >
-            <span>↗</span>
-            <span>{navigateLabel}</span>
-          </button>
+        {showActions && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {navigateLabel && onNavigate && navigate && (
+              <button
+                onClick={() => onNavigate(navigate)}
+                className="
+                  flex items-center gap-1.5
+                  text-xs font-medium
+                  text-[#00E5A0]
+                  border border-[#00E5A0]/30
+                  rounded-full
+                  px-3 py-1
+                  hover:bg-[#00E5A0]/10
+                  transition-colors duration-150
+                "
+              >
+                <span>↗</span>
+                <span>{navigateLabel}</span>
+              </button>
+            )}
+
+            {onClearChat && (
+              <button
+                onClick={onClearChat}
+                className="
+                  flex items-center gap-1.5
+                  text-xs font-medium
+                  text-[#8A95A5]
+                  border border-[#8A95A5]/20
+                  rounded-full
+                  px-3 py-1
+                  hover:bg-[#8A95A5]/10
+                  hover:text-[#E8ECF1]
+                  transition-colors duration-150
+                "
+              >
+                <span>✕</span>
+                <span>Clear conversation</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
     </motion.div>

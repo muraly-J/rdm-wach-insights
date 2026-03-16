@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
@@ -28,6 +28,7 @@ const INITIAL_MESSAGE: Message = {
 const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [isTyping, setIsTyping] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const selectedLevel = useAppStore((s) => s.selectedLevel);
   const selectedDevice = useAppStore((s) => s.selectedDevice);
@@ -37,6 +38,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
   const handleNavigate = (target: NavigateTarget) => {
     selectLevel(target.level);
     selectDevice(target.device ?? null);
+  };
+
+  const handleClearChat = () => {
+    setMessages([INITIAL_MESSAGE]);
   };
 
   const handleSendMessage = async (text: string) => {
@@ -81,24 +86,45 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
       layoutId="chat-window"
       className="
         fixed bottom-6 right-6 z-50
-        w-[400px] h-[560px]
+        w-[400px]
         bg-[#0B0F14]
         rounded-[20px]
         overflow-hidden
         shadow-2xl border border-[#1E2A3A]
         flex flex-col
       "
+      animate={{ height: isMinimized ? 'auto' : 560 }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
       initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      transition={{
-        layout: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
-        opacity: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
-      }}
     >
-      <ChatHeader isOpen={isOpen} onClose={onClose} />
-      <MessageList messages={messages} isTyping={isTyping} onNavigate={handleNavigate} />
-      <ChatInput onSendMessage={handleSendMessage} />
+      <ChatHeader
+        isOpen={isOpen}
+        onClose={onClose}
+        isMinimized={isMinimized}
+        onMinimize={() => setIsMinimized((v) => !v)}
+      />
+
+      <AnimatePresence initial={false}>
+        {!isMinimized && (
+          <motion.div
+            key="chat-body"
+            className="flex flex-col flex-1 min-h-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <MessageList
+              messages={messages}
+              isTyping={isTyping}
+              onNavigate={handleNavigate}
+              onClearChat={handleClearChat}
+            />
+            <ChatInput onSendMessage={handleSendMessage} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
