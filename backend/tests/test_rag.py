@@ -19,7 +19,7 @@ async def test_embedder_returns_vector():
     embedder = Embedder()
     vec = await embedder.embed_document("power factor optimal range 0.95")
     assert isinstance(vec, list)
-    assert len(vec) > 100  # gemini-embedding-001 produces 768-dim vectors
+    assert len(vec) > 100  # gemini-embedding-001 produces 3072-dim vectors
 
 
 def test_vector_store_add_and_query():
@@ -30,9 +30,9 @@ def test_vector_store_add_and_query():
         store.add_documents(
             ids=["doc1", "doc2", "doc3"],
             documents=["power factor measures efficiency", "energy import is daily kWh", "voltage unbalance causes motor damage"],
-            embeddings=[[0.1]*768, [0.2]*768, [0.3]*768],
+            embeddings=[[0.1]*3072, [0.2]*3072, [0.3]*3072],
         )
-        results = store.query_by_embedding(embedding=[0.1]*768, top_k=1)
+        results = store.query_by_embedding(embedding=[0.1]*3072, top_k=1)
         assert len(results) == 1
         assert "power factor" in results[0]
 
@@ -48,7 +48,7 @@ async def test_retriever_returns_snippets():
         store.add_documents(
             ids=["p1"],
             documents=["A power factor below 0.85 indicates reactive power losses."],
-            embeddings=[[0.5]*768],
+            embeddings=[[0.5]*3072],
         )
         retriever = Retriever(vector_store=store)
         snippets = await retriever.retrieve("what is a good power factor", top_k=1)
