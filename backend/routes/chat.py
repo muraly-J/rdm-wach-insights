@@ -224,9 +224,27 @@ async def chat(body: ChatRequest):
     """
     gemini_history = _build_gemini_history(body.history)
     system_prompt = _build_system_prompt(body.context)
+
+    # Live context for the currently-open dashboard view
     live_ctx = await _get_live_context(body.context)
     if live_ctx:
         system_prompt += live_ctx
+
+    # If the user asked about a specific level/device different from the
+    # current dashboard context, also inject live data for that target so
+    # the bot can answer with real readings instead of deflecting.
+    nav_target = _extract_navigate_target(body.message)
+    if nav_target:
+        ctx_level = body.context.get("level") if body.context else None
+        ctx_device = body.context.get("device") if body.context else None
+        target_differs = (
+            nav_target.get("level") != ctx_level
+            or nav_target.get("device") != ctx_device
+        )
+        if target_differs:
+            extra_ctx = await _get_live_context(nav_target)
+            if extra_ctx:
+                system_prompt += "\n\n## Live AHU Readings (mentioned in query)" + extra_ctx.split("## Live AHU Readings", 1)[-1]
 
     # Inject RAG context if documents have been ingested
     retriever = _get_retriever()
@@ -254,4 +272,4 @@ async def chat(body: ChatRequest):
             detail=f"AI service unavailable: {e}",
         )
 
-    return {"reply": reply, "navigate": _extract_navigate_target(body.message)}
+    return {"reply": reply, "navigate": nav_target}
