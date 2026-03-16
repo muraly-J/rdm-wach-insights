@@ -12,10 +12,13 @@ Conversation history is passed by the client (stateless server).
 """
 
 import asyncio
+import logging
 import os
 import re
 from functools import partial
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
@@ -458,12 +461,15 @@ async def chat(body: ChatRequest):
         # Signal the frontend to show the prediction view
         nav_target["view"] = "prediction"
 
-    # Inject RAG context if documents have been ingested
+    # Inject RAG context if documents have been ingested (best-effort, never blocks chat)
     retriever = _get_retriever()
     if retriever:
-        snippets = await retriever.retrieve(body.message, top_k=3)
-        if snippets:
-            system_prompt += "\n\nRelevant technical documentation:\n" + "\n---\n".join(snippets)
+        try:
+            snippets = await retriever.retrieve(body.message, top_k=3)
+            if snippets:
+                system_prompt += "\n\nRelevant technical documentation:\n" + "\n---\n".join(snippets)
+        except Exception as rag_err:
+            logger.warning("RAG retrieval failed (skipping): %s", rag_err)
 
     # Append current user message to history for the Gemini call
     full_messages = gemini_history + [
