@@ -126,6 +126,28 @@ def get_lms_api_key() -> str:
     return api_key
 
 
+# ── Gemini Configuration ──────────────────────────────────────────────────────
+def get_gemini_api_key() -> str:
+    """Get Google AI Studio API key."""
+    key = os.getenv("GEMINI_API_KEY")
+    if not key:
+        raise ValueError(
+            "GEMINI_API_KEY environment variable is required. "
+            "Get a key from https://aistudio.google.com/app/apikey"
+        )
+    return key
+
+
+def get_gemini_model() -> str:
+    """Get Gemini generative model name."""
+    return os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
+
+
+def get_gemini_embed_model() -> str:
+    """Get Gemini embedding model name."""
+    return os.getenv("GEMINI_EMBED_MODEL", "text-embedding-004")
+
+
 # ── Application Configuration ───────────────────────────────────────────────
 def get_app_env() -> str:
     """Get application environment (development/production)."""
