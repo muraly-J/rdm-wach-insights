@@ -78,6 +78,11 @@ export async function fetchRawScoreRelationship(
   return apiFetch(`/device/${deviceId}/raw-score-relationship?range=${range}`);
 }
 
+export interface NavigateTarget {
+  level: number;
+  device?: string;
+}
+
 /**
  * POST /api/chat — Chat widget messaging
  * Spec: Section 6.4 chat backend integration
@@ -91,7 +96,7 @@ export async function sendChatMessage(
   }
 ) {
   const { history, ...context } = options ?? {};
-  return apiFetch<{ reply: string }>('/chat', {
+  return apiFetch<{ reply: string; navigate?: NavigateTarget | null }>('/chat', {
     method: 'POST',
     body: JSON.stringify({ message, context, history: history ?? [] }),
   });

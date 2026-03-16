@@ -4,22 +4,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 import BotMessage from './BotMessage';
 import UserMessage from './UserMessage';
 import TypingIndicator from './TypingIndicator';
+import { NavigateTarget } from '../../api/client';
 
 interface Message {
   id: string;
   role: 'user' | 'bot';
   content: string;
+  navigate?: NavigateTarget | null;
 }
 
 interface MessageListProps {
   messages: Message[];
   isTyping: boolean;
+  onNavigate: (target: NavigateTarget) => void;
 }
 
 /**
  * MessageList - Scrollable message container (Section 6.3)
  */
-const MessageList: React.FC<MessageListProps> = ({ messages, isTyping }) => {
+const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onNavigate }) => {
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom
@@ -45,7 +48,11 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping }) => {
             transition={{ duration: 0.2 }}
           >
             {msg.role === 'bot' ? (
-              <BotMessage content={msg.content} />
+              <BotMessage
+                content={msg.content}
+                navigate={msg.navigate}
+                onNavigate={onNavigate}
+              />
             ) : (
               <UserMessage content={msg.content} />
             )}

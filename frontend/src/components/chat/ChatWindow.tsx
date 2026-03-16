@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
-import { sendChatMessage } from '../../api/client';
+import { sendChatMessage, NavigateTarget } from '../../api/client';
 import { useAppStore } from '../../store/useAppStore';
 
 interface ChatWindowProps {
@@ -16,6 +16,7 @@ interface Message {
   id: string;
   role: 'user' | 'bot';
   content: string;
+  navigate?: NavigateTarget | null;
 }
 
 const INITIAL_MESSAGE: Message = {
@@ -30,6 +31,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
 
   const selectedLevel = useAppStore((s) => s.selectedLevel);
   const selectedDevice = useAppStore((s) => s.selectedDevice);
+  const selectLevel = useAppStore((s) => s.selectLevel);
+  const selectDevice = useAppStore((s) => s.selectDevice);
+
+  const handleNavigate = (target: NavigateTarget) => {
+    selectLevel(target.level);
+    selectDevice(target.device ?? null);
+  };
 
   const handleSendMessage = async (text: string) => {
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text };
@@ -45,14 +53,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
       }));
 
     try {
-      const { reply } = await sendChatMessage(text, {
+      const { reply, navigate } = await sendChatMessage(text, {
         level: selectedLevel ?? undefined,
         device: selectedDevice ?? undefined,
         history,
       });
       setMessages((prev) => [
         ...prev,
-        { id: (Date.now() + 1).toString(), role: 'bot', content: reply },
+        { id: (Date.now() + 1).toString(), role: 'bot', content: reply, navigate },
       ]);
     } catch {
       setMessages((prev) => [
@@ -89,7 +97,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
       }}
     >
       <ChatHeader isOpen={isOpen} onClose={onClose} />
-      <MessageList messages={messages} isTyping={isTyping} />
+      <MessageList messages={messages} isTyping={isTyping} onNavigate={handleNavigate} />
       <ChatInput onSendMessage={handleSendMessage} />
     </motion.div>
   );
