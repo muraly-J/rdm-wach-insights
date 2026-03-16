@@ -75,7 +75,7 @@ def _fetch_3week_hourly(device_id: str) -> Optional[pd.DataFrame]:
             df = fetch_time_series(
                 device_ids=[device_id],
                 metric=metric,
-                time_range="last_30d",
+                time_range="last_30d_hourly",
             )
             if df is None or df.empty or device_id not in df.columns:
                 logger.warning("No data for device=%s metric=%s", device_id, metric)
@@ -113,6 +113,24 @@ def _compute_1h_pred(series: pd.Series) -> Optional[float]:
     return last_val + slope
 
 
+def _compute_trend_pred(series: pd.Series, offset_hours: int) -> Optional[float]:
+    """
+    Linear OLS trend over the last 4 points → predict offset_hours steps ahead.
+
+    Returns None if fewer than 2 data points are available.
+    """
+    s = series.dropna()
+    if len(s) < 2:
+        return None
+
+    tail = s.iloc[-4:] if len(s) >= 4 else s
+    x = np.arange(len(tail), dtype=float)
+    y = tail.values.astype(float)
+    slope = float(np.polyfit(x, y, 1)[0])
+    last_val = float(y[-1])
+    return last_val + slope * offset_hours
+
+
 def _compute_same_hour_pred(
     series: pd.Series,
     target_hour: int,
@@ -145,8 +163,8 @@ def _compute_yesterday_pred(series: pd.Series, target_hour: int) -> Optional[flo
 
     last_ts = s.index[-1]
     target_ts = last_ts - timedelta(hours=24)
-    # Find closest hour match
-    matching = s[s.index.hour == target_ts.hour]
+    # Find closest hour match using target_hour parameter
+    matching = s[s.index.hour == target_hour]
     if matching.empty:
         return None
     idx = matching.index.get_indexer([target_ts], method="nearest")[0]
@@ -161,7 +179,8 @@ def _compute_lastweek_pred(series: pd.Series, target_hour: int) -> Optional[floa
 
     last_ts = s.index[-1]
     target_ts = last_ts - timedelta(hours=168)
-    matching = s[s.index.hour == target_ts.hour]
+    # Find closest hour match using target_hour parameter
+    matching = s[s.index.hour == target_hour]
     if matching.empty:
         return None
     idx = matching.index.get_indexer([target_ts], method="nearest")[0]
@@ -209,7 +228,7 @@ def _predict_metric(series: pd.Series, offset_hours: int) -> Optional[float]:
     target_hour = target_ts.hour
 
     same_hr = _compute_same_hour_pred(s, target_hour=target_hour, n_slots=3)
-    trend = _compute_1h_pred(s)
+    trend = _compute_trend_pred(s, offset_hours=offset_hours)
 
     if same_hr is None and trend is None:
         return None
@@ -492,7 +511,7 @@ def compute_predictions(
         "two_weeks_ago": _build_history_profile(df, offset_days=14, label="two_weeks_ago"),
     }
 
-    actuals = _build_actuals(df, n_hours=24)
+    actuals = _build_actuals(df, n_hours=48)
 
     return {
         "device_id": device_id,
@@ -507,9 +526,9 @@ def compute_predictions(
 async def compute_predictions_async(
     device_id: str,
     horizons: list[str] | None = None,
-) -> Awaitable[dict | None]:
+) -> dict | None:
     """Async wrapper — runs compute_predictions in a thread pool."""
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
         None, compute_predictions, device_id, horizons
     )
