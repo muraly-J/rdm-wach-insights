@@ -24,6 +24,11 @@ const ScoreDerivationSection = React.lazy(
   () => import('./components/dashboard/derivation/ScoreDerivationSection')
 );
 
+// Prediction View (lazy-loaded — per-device predictions)
+const PredictionView = React.lazy(
+  () => import('./components/prediction/PredictionView')
+);
+
 // ZONE D — Chat Widget
 import ChatWidget from './components/chat/ChatWidget';
 
@@ -270,6 +275,13 @@ function App() {
                   </React.Suspense>
                 )}
               </AnimatePresence>
+
+              {/* Prediction View (single-device mode only) */}
+              {selectedDevice && selectedDevice !== 'all' && (
+                <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#1E2A3A] rounded-xl" />}>
+                  <PredictionView deviceId={selectedDevice} />
+                </React.Suspense>
+              )}
             </motion.main>
           ) : (
             <motion.div
