@@ -42,7 +42,7 @@ def run(devices: list[str], mode: str) -> None:
                 logger.warning("  Skipped %s (no data)", device_id)
                 continue
             level = DEVICE_TO_LEVEL.get(device_id, "?")
-            level_str = f"Level {level}"
+            level_str = level  # DEVICE_TO_LEVEL already returns "Level N"
             now_ts = result["t_now"]
             row = {
                 "timestamp": now_ts,

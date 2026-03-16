@@ -44,14 +44,17 @@ _HORIZON_MAP = {
     "168h": 168,
 }
 
-# Metrics to fetch from InfluxDB
+# Metrics to fetch from InfluxDB (composite_thd is derived, not a raw metric)
 _METRICS = [
     "power_total",
     "energy_import",
     "power_factor_avg",
     "current_unbalance",
-    "composite_thd",
+    "current_l1_thd",
+    "current_l3_thd",
 ]
+# Derived metrics computed after fetch
+_DERIVED_METRICS = ["composite_thd"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -84,6 +87,13 @@ def _fetch_3week_hourly(device_id: str) -> Optional[pd.DataFrame]:
                 frames[metric] = df[device_id]
 
         wide = pd.DataFrame(frames)
+
+        # Compute composite_thd = max(current_l1_thd, current_l3_thd) row-wise
+        # (mirrors the calculation in fair_health_scoring.py)
+        l1 = wide.get("current_l1_thd", pd.Series(dtype=float))
+        l3 = wide.get("current_l3_thd", pd.Series(dtype=float))
+        wide["composite_thd"] = pd.concat([l1, l3], axis=1).max(axis=1)
+
         wide.index.name = "time"
         return wide if not wide.empty else None
     except Exception as exc:
@@ -461,9 +471,9 @@ def compute_predictions(
         target_ts = last_ts + timedelta(hours=offset_hours)
         target_hour = target_ts.hour
 
-        # Predict each metric
+        # Predict each metric (raw + derived composite_thd)
         preds: dict[str, float] = {}
-        for metric in _METRICS:
+        for metric in _METRICS + _DERIVED_METRICS:
             if metric not in df.columns:
                 preds[metric] = float("nan")
                 continue

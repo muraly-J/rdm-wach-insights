@@ -164,7 +164,7 @@ def main():
     parser.add_argument("--url", default="http://localhost:8081")
     parser.add_argument("--output", default="data/audit_results.json")
     parser.add_argument("--context-level", type=int, default=2)
-    parser.add_argument("--api-key", default=None, help="Bearer token for Authorization header")
+    parser.add_argument("--api-key", default="dev-key-local-development", help="Bearer token for Authorization header")
     args = parser.parse_args()
 
     context = {"level": args.context_level}
