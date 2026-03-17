@@ -54,11 +54,13 @@ def _check_rate_limit(ip: str) -> None:
 
 # ── API Key Authentication Middleware ────────────────────────────────────────
 def get_api_key() -> str:
-    """Get the API key from environment."""
-    api_key = os.getenv("API_KEY")
+    """Get the API key from environment. Raises RuntimeError if unset."""
+    api_key = os.getenv("API_KEY") or os.getenv("DEV_API_KEY")
     if not api_key:
-        # For local development without API key, use a default that can be overridden
-        api_key = os.getenv("DEV_API_KEY", "dev-key-change-in-production")
+        raise RuntimeError(
+            "API_KEY environment variable is required. "
+            "Set it in your .env file before starting the server."
+        )
     return api_key
 
 

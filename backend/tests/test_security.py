@@ -138,6 +138,16 @@ class TestEnvironmentSecurity:
         assert 'INFLUX_TOKEN' in str(exc_info.value)
 
 
+    def test_get_api_key_raises_when_unset(self):
+        """get_api_key() must raise RuntimeError if neither API_KEY nor DEV_API_KEY is set."""
+        from unittest.mock import patch as _patch
+        import main as main_mod
+        # Patch os.getenv on the already-imported module (avoids breaking module-level int() calls)
+        with _patch.object(main_mod.os, 'getenv', return_value=None):
+            with pytest.raises(RuntimeError, match='API_KEY'):
+                main_mod.get_api_key()
+
+
 class TestDeviceIdInjectionPrevention:
     """Test device ID injection prevention with standalone validation."""
     
