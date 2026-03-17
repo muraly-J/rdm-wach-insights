@@ -9,11 +9,13 @@ Query params:
 """
 
 import asyncio
-import re
+import logging
 from fastapi import APIRouter, Query, HTTPException
 from models.schemas import ALLOWED_METRICS_WITH_UNITS, ALLOWED_DEVICES
+from core.influx_client import fetch_time_series
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 _RANGE_MAP = {
     "24h": "last_24h",
@@ -29,7 +31,7 @@ async def get_measurements(
     range: str = Query(default="7d", description="24h | 7d | 30d"),
 ):
     # Validate device ID
-    if not re.match(r"^e\d{4}$", device_id) or device_id not in ALLOWED_DEVICES:
+    if device_id not in ALLOWED_DEVICES:
         raise HTTPException(status_code=404, detail=f"Unknown device: {device_id}")
 
     # Validate range
@@ -49,24 +51,22 @@ async def get_measurements(
 
     influx_range = _RANGE_MAP[range]
 
-    # Fetch each metric — partial failures return [] for that metric
-    result: dict[str, list[dict]] = {}
-    for metric in metric_list:
+    async def _fetch_one(metric: str) -> tuple[str, list[dict]]:
         try:
-            from core.influx_client import fetch_time_series
-            df = await asyncio.to_thread(
-                fetch_time_series, [device_id], metric, influx_range
-            )
+            df = await asyncio.to_thread(fetch_time_series, [device_id], metric, influx_range)
             if device_id in df.columns:
                 series = df[device_id].dropna().reset_index()
-                result[metric] = [
+                return metric, [
                     {"timestamp": str(row["time"]), "value": float(row[device_id])}
                     for _, row in series.iterrows()
                 ]
-            else:
-                result[metric] = []
-        except Exception:
-            result[metric] = []
+            return metric, []
+        except Exception as e:
+            logger.warning("fetch_time_series failed for metric %s: %s", metric, e)
+            return metric, []
+
+    pairs = await asyncio.gather(*[_fetch_one(m) for m in metric_list])
+    result = dict(pairs)
 
     return {
         "device_id": device_id,
