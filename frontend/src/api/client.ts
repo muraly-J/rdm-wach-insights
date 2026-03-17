@@ -2,7 +2,7 @@
 // ========================
 // Fetch wrappers for all endpoints with error handling
 
-import { LevelsResponse, HealthIndexResponse, ScoresResponse } from '../types';
+import { LevelsResponse, HealthIndexResponse, ScoresResponse, MeasurementsResponse } from '../types';
 
 // API base URL (Vite proxy configuration in vite.config.js)
 const API_BASE = '/api';
@@ -123,4 +123,16 @@ export async function fetchDashboardSafetyFlags(
   range: 'last_24h' | 'last_7d' | 'last_30d'
 ) {
   return apiFetch(`/dashboard/safety-flags?level=${level}&range=${range}`);
+}
+
+/**
+ * GET /api/device/{id}/measurements — Raw metric time series for a device
+ */
+export async function fetchMeasurements(
+  deviceId: string,
+  metrics: string[],
+  range: '24h' | '7d' | '30d'
+): Promise<MeasurementsResponse> {
+  const params = new URLSearchParams({ metrics: metrics.join(','), range });
+  return apiFetch<MeasurementsResponse>(`/device/${deviceId}/measurements?${params}`);
 }

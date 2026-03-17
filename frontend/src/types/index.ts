@@ -126,3 +126,29 @@ export interface RankingResponse {
   best: DeviceRank[];
   worst: DeviceRank[];
 }
+
+// ── Measurements API (variable selector) ─────────────────────────────────────
+
+export interface MeasurementPoint {
+  timestamp: string;
+  value: number;
+}
+
+export interface MeasurementsResponse {
+  device_id: string;
+  range: string;
+  measurements: Record<string, MeasurementPoint[]>;
+}
+
+export interface MetricOption {
+  key: string;
+  label: string;
+  unit: string;
+  description: string;
+}
+
+export interface ScoreMetricGroup {
+  scoreKey: string;
+  scoreLabel: string;
+  availableMetrics: MetricOption[];
+}
