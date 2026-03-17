@@ -1,5 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { formatTickByRange } from './utils/formatTick';
 
 // ZONE A — Welcome Hero
 import WelcomeHero from './components/welcome/WelcomeHero';
@@ -119,10 +120,7 @@ function App() {
 
     const refData = series[0]?.data ?? [];
     return refData.map((point, idx) => {
-      const timestamp = new Date(point.timestamp).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      });
+      const timestamp = formatTickByRange(point.timestamp, timeRange);
       const entry: Record<string, any> = { timestamp };
       series.forEach(({ name, data }) => {
         entry[name] = data[idx]?.value ?? null;
