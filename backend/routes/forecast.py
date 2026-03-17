@@ -13,6 +13,7 @@ Strategy:
 """
 
 import os
+import logging
 import math
 import joblib
 import numpy as np
@@ -296,14 +297,15 @@ async def get_forecast(request: Request, device_id: str):
     if not os.path.exists(model_path):
         raise HTTPException(
             status_code=500,
-            detail={"error": f"Model file not found: {model_path}"}
+            detail={"error": "Forecast model not available for this device."}
         )
 
     # 1. Load model
     try:
         model = joblib.load(model_path)
     except Exception as e:
-        raise HTTPException(status_code=500, detail={"error": f"Failed to load model: {e}"})
+        logging.getLogger(__name__).error("Model load error device=%s: %s", device_id, e, exc_info=True)
+        raise HTTPException(status_code=500, detail={"error": "Forecast service temporarily unavailable."})
 
     # 2. Fetch 7 days of history for chart
     history_7d = _fetch_power_history(device_id, hours=168)
@@ -324,7 +326,8 @@ async def get_forecast(request: Request, device_id: str):
     try:
         forecast = _build_forecast(device_id, model, history_7d, electrical)
     except ValueError as e:
-        raise HTTPException(status_code=500, detail={"error": str(e)})
+        logging.getLogger(__name__).error("Forecast error device=%s: %s", device_id, e, exc_info=True)
+        raise HTTPException(status_code=500, detail={"error": "Forecast service temporarily unavailable."})
 
     # 5. Build summary
     recent_avg = float(history_7d.tail(96).mean())  # last 24h average

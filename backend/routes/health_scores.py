@@ -12,6 +12,7 @@ These endpoints serve real data from health_all_levels.csv via csv_reader.
 """
 
 import asyncio
+import logging
 import re
 from datetime import datetime
 from typing import Optional
@@ -119,7 +120,8 @@ async def get_level_health_index(
     try:
         series = await asyncio.to_thread(get_health_index_series, level_id, device_id, time_range)
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Failed to read health index data: {exc}")
+        logging.getLogger(__name__).error("Health index error level=%s: %s", level_id, exc, exc_info=True)
+        raise HTTPException(status_code=503, detail="Health index data temporarily unavailable.")
     return {
         "level": level_id,
         "time_range": time_range,

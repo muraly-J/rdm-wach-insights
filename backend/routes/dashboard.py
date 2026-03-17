@@ -10,6 +10,7 @@ Endpoints:
 This module implements the rule-based Fleet Dashboard for monitoring AHU electrical health.
 """
 
+import logging
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional
 import pandas as pd
@@ -137,7 +138,8 @@ async def dashboard_ranking(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.getLogger(__name__).error("Dashboard error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")
 
 
 @router.get("/trend")
@@ -303,7 +305,8 @@ async def dashboard_trend(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.getLogger(__name__).error("Dashboard error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")
 
 
 @router.get("/trend/csv")
@@ -456,7 +459,8 @@ async def dashboard_trend_csv(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.getLogger(__name__).error("Dashboard error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")
 @router.get("/summary")
 async def dashboard_summary(
     level: str = Query(default="1", description="Building level (1-11)"),
@@ -690,7 +694,8 @@ async def dashboard_summary(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.getLogger(__name__).error("Dashboard error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")
 
 
 @router.get("/safety-flags")
@@ -801,4 +806,5 @@ async def dashboard_safety_flags(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.getLogger(__name__).error("Dashboard error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")

@@ -148,6 +148,32 @@ class TestEnvironmentSecurity:
                 main_mod.get_api_key()
 
 
+class TestErrorResponseSanitization:
+    """HTTP 500 responses must not leak internal exception details."""
+
+    def test_health_index_error_does_not_leak_exception(self, monkeypatch):
+        """health-index endpoint must return generic message when csv_reader throws."""
+        import os
+        os.environ.setdefault("API_KEY", "test-key")
+
+        import core.csv_reader as csv_reader
+        def _boom(*args, **kwargs):
+            raise RuntimeError("/internal/secret/path/health_hourly.csv not found")
+        monkeypatch.setattr(csv_reader, "get_health_index_series", _boom)
+
+        from fastapi.testclient import TestClient
+        from main import app
+        client = TestClient(app)
+        resp = client.get(
+            "/api/level/1/health-index?time_range=24h",
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code in (500, 503)
+        detail = str(resp.json().get("detail", ""))
+        assert "/internal/secret/path" not in detail
+        assert "health_hourly.csv" not in detail
+
+
 class TestDeviceIdInjectionPrevention:
     """Test device ID injection prevention with standalone validation."""
     

@@ -6,6 +6,7 @@ POST /api/query — main endpoint with security hardening:
 - Session ID validation
 - LLM output allowlist validation (prevents injection via structured output)
 """
+import logging
 import re
 import time
 import uuid
@@ -236,12 +237,13 @@ async def handle_query(request: Request, body: QueryRequest):
                 top_n=structured.top_n,  # Pass through None for all devices
             )
     except Exception as e:
+        logging.getLogger(__name__).error("Query processing error: %s", e, exc_info=True)
         log_query(
             session_id=session_id,
             user_query=body.user_query,
             structured_query=structured.model_dump(),
             execution_status='influx_error',
-            error_detail=str(e)
+            error_detail="An error occurred processing your query."
         )
         raise HTTPException(
             status_code=502,
