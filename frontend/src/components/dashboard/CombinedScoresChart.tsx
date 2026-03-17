@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatTickByRange, tickIntervalByRange, type TimeRange } from '../../utils/formatTick';
 import {
   LineChart,
   Line,
@@ -18,6 +19,7 @@ interface ScoreEntry {
 
 interface CombinedScoresChartProps {
   scoreData: Record<string, ScoreEntry>;
+  timeRange: TimeRange;
 }
 
 /**
@@ -34,7 +36,7 @@ const SCORE_NAMES = [
   { key: 'overload',        label: 'Overload',        color: '#EF4444' },
 ] as const;
 
-const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData }) => {
+const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, timeRange }) => {
   // Merge all score series into a single array indexed by position
   const mergedData = React.useMemo(() => {
     const firstScore = scoreData[SCORE_NAMES[0].key];
@@ -53,7 +55,7 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData }) 
     if (active && payload && payload.length) {
       return (
         <div className="bg-[#1A2230] p-4 rounded-xl border border-[#1E2A3A]">
-          <p className="text-[#8A95A5] text-xs mb-2 font-mono">{label}</p>
+          <p className="text-[#8A95A5] text-xs mb-2 font-mono">{formatTickByRange(label, timeRange)}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {entry.name}: {Number(entry.value).toFixed(1)}
@@ -88,10 +90,8 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData }) 
             fontSize={12}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(v) =>
-              new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-            }
-            interval={Math.max(0, Math.floor(mergedData.length / 8) - 1)}
+            tickFormatter={(v) => formatTickByRange(v, timeRange)}
+            interval={tickIntervalByRange(timeRange)}
           />
           <YAxis
             domain={[0, 100]}
