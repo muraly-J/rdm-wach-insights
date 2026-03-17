@@ -4,6 +4,14 @@ import PredictionChart from './PredictionChart';
 import DeltaBadge from './DeltaBadge';
 import PredictionSkeleton from './PredictionSkeleton';
 import { fetchPredictions, PredictionResponse, PredictionMetric } from '../../api/predictions';
+import MeasurementHistoryChart from './MeasurementHistoryChart';
+import VariableSelector from '../shared/VariableSelector';
+import { fetchMeasurements } from '../../api/client';
+import {
+  ALL_SELECTABLE_METRICS, PREDICTION_CORE_METRICS, MINI_CHART_COLORS,
+  METRIC_META,
+} from '../../constants/metricGroups';
+import type { MeasurementPoint } from '../../types';
 
 const METRICS: { key: PredictionMetric; label: string }[] = [
   { key: 'energy_import', label: 'Energy' },
@@ -24,6 +32,9 @@ export default function PredictionView({ deviceId }: PredictionViewProps) {
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<PredictionMetric>('energy_import');
   const [error, setError] = useState<string | null>(null);
+  const [extraMetrics, setExtraMetrics] = useState<string[]>([]);
+  const [extraMeasurements, setExtraMeasurements] = useState<Record<string, MeasurementPoint[]>>({});
+  const [loadingExtra, setLoadingExtra] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -33,6 +44,22 @@ export default function PredictionView({ deviceId }: PredictionViewProps) {
       .catch((e: Error) => setError(e.message ?? 'Failed to load predictions'))
       .finally(() => setLoading(false));
   }, [deviceId]);
+
+  useEffect(() => {
+    const toFetch = extraMetrics.filter((k) => !(k in extraMeasurements));
+    if (!toFetch.length) return;
+    setLoadingExtra(true);
+    fetchMeasurements(deviceId, toFetch, '7d')
+      .then((res) =>
+        setExtraMeasurements((prev) => ({ ...prev, ...res.measurements }))
+      )
+      .catch(console.error)
+      .finally(() => setLoadingExtra(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extraMetrics]);
+
+  // Clear when device changes
+  useEffect(() => { setExtraMeasurements({}); }, [deviceId]);
 
   if (loading) return <PredictionSkeleton />;
   if (error) return (
@@ -50,7 +77,7 @@ export default function PredictionView({ deviceId }: PredictionViewProps) {
         <h2 className="text-lg font-semibold text-white">
           Predictions — <span className="text-[#00E5A0] font-mono">{deviceId}</span>
         </h2>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           {METRICS.map(({ key, label }) => (
             <button
               key={key}
@@ -64,6 +91,14 @@ export default function PredictionView({ deviceId }: PredictionViewProps) {
               {label}
             </button>
           ))}
+          <span className="w-px h-4 bg-[#1E2A3A]" />
+          <VariableSelector
+            availableMetrics={ALL_SELECTABLE_METRICS}
+            selectedMetrics={extraMetrics}
+            onChange={setExtraMetrics}
+            maxSelectable={8}
+            label="Add Measurements"
+          />
         </div>
       </div>
 
@@ -98,6 +133,26 @@ export default function PredictionView({ deviceId }: PredictionViewProps) {
           );
         })}
       </div>
+
+      {extraMetrics.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-xs font-medium text-[#4A5568] uppercase tracking-wider">
+            Additional Measurements
+          </h3>
+          {extraMetrics.map((key, idx) => (
+            <MeasurementHistoryChart
+              key={key}
+              label={METRIC_META[key]?.label ?? key}
+              unit={METRIC_META[key]?.unit ?? ''}
+              data={extraMeasurements[key] ?? []}
+              color={MINI_CHART_COLORS[idx % MINI_CHART_COLORS.length]}
+              loading={loadingExtra}
+              isCoreMetric={PREDICTION_CORE_METRICS.has(key)}
+              tNow={data?.t_now}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
