@@ -64,6 +64,7 @@ export default function ScoreCardWithSelector({
         predictedData={predictedData}
         scoreData={scoreData}
         chartColor={chartColor}
+        timeRange={timeRange}
         headerAction={
           <VariableSelector
             availableMetrics={availableMetrics}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatTickByRange, tickIntervalByRange, type TimeRange } from '../../../utils/formatTick';
 import {
   LineChart,
   Line,
@@ -18,6 +19,7 @@ interface RawScoreRelationChartProps {
   scoreData: Array<{ timestamp: string; value: number }>;
   chartColor: string;
   headerAction?: React.ReactNode;
+  timeRange: TimeRange;
 }
 
 /**
@@ -45,6 +47,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
   scoreData,
   chartColor,
   headerAction,
+  timeRange,
 }) => {
   // Merge data by timestamp
   const mergedData: any[] = [];
@@ -81,7 +84,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
 
       return (
         <div className="bg-[#1A2230] p-4 rounded-xl border border-[#1E2A3A] shadow-2xl">
-          <p className="text-[#8A95A5] text-xs mb-3 font-mono">{label}</p>
+          <p className="text-[#8A95A5] text-xs mb-3 font-mono">{formatTickByRange(label, timeRange)}</p>
 
           {rawEntry && (
             <div className="mb-2">
@@ -187,7 +190,8 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
             fontSize={11}
             tickLine={false}
             axisLine={false}
-            minTickGap={30}
+            tickFormatter={(v) => formatTickByRange(v, timeRange)}
+            interval={tickIntervalByRange(timeRange)}
           />
 
           {/* Left Y-axis: Raw data */}
