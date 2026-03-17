@@ -1,12 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-import RawScoreRelationChart from './RawScoreRelationChart';
+import ScoreCardWithSelector from './ScoreCardWithSelector';
+import { SCORE_METRIC_GROUPS } from '../../../constants/metricGroups';
 import { ScoreName } from '../../../types';
 
 interface ScoreDerivationSectionProps {
   deviceName: string;
+  deviceId: string;
   rawData: Record<string, any>;
+  timeRange: '24h' | '7d' | '30d';
 }
 
 /**
@@ -20,13 +23,11 @@ const SCORE_NAMES: ScoreName[] = ['energy_anomaly', 'pf_degradation', 'phase_imb
 
 const SCORE_COLORS = ['#3B82F6', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444'];
 
-const RawScoreRelationChartLazy = React.lazy(async () => ({
-  default: RawScoreRelationChart,
-}));
-
 const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
   deviceName,
+  deviceId,
   rawData,
+  timeRange,
 }) => {
   // Raw metric mappings (matching FAIR score names)
   // For energy_anomaly: raw_hourly_delta is the hourly energy consumption
@@ -88,6 +89,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                 {/* Check if data is empty and show appropriate UI */}
                 {(() => {
                   const isEmpty = !scoreData?.rawData?.length || !scoreData?.scoreData?.length;
+                  const group = SCORE_METRIC_GROUPS.find((g) => g.scoreKey === score);
 
                   if (isEmpty) {
                     return (
@@ -118,14 +120,18 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                   }
 
                   return (
-                    <RawScoreRelationChartLazy
-                      scoreName={score.charAt(0).toUpperCase() + score.slice(1)}
+                    <ScoreCardWithSelector
+                      deviceId={deviceId}
+                      scoreName={score.charAt(0).toUpperCase() + score.slice(1).replace(/_/g, ' ')}
+                      scoreKey={score}
                       rawMetric={rawMetrics[score]?.name || 'unknown'}
                       rawUnit={rawMetrics[score]?.unit || ''}
                       rawData={scoreData.rawData}
                       predictedData={scoreData.predictedData}
                       scoreData={scoreData.scoreData}
                       chartColor={SCORE_COLORS[index]}
+                      timeRange={timeRange}
+                      availableMetrics={group?.availableMetrics ?? []}
                     />
                   );
                 })()}

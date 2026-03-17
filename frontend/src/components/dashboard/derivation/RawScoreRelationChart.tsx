@@ -17,6 +17,7 @@ interface RawScoreRelationChartProps {
   predictedData?: Array<{ timestamp: string; value: number }>; // Optional third line for energy anomaly
   scoreData: Array<{ timestamp: string; value: number }>;
   chartColor: string;
+  headerAction?: React.ReactNode;
 }
 
 /**
@@ -43,6 +44,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
   predictedData,
   scoreData,
   chartColor,
+  headerAction,
 }) => {
   // Merge data by timestamp
   const mergedData: any[] = [];
@@ -147,14 +149,17 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
       className="
         card p-6
         hover:border-[#1E2A3A]
-        min-w-[400px] w-[400px] md:min-w-[500px] md:w-[500px]
         transition-all duration-300
+        w-full
       "
     >
       {/* Header (Section 5.5.1) */}
-      <h4 className="text-[18px] font-semibold mb-4 text-white">
-        {scoreName}
-      </h4>
+      <div className="flex items-start justify-between mb-4">
+        <h4 className="text-[18px] font-semibold text-white">
+          {scoreName}
+        </h4>
+        {headerAction && <div className="ml-2 flex-shrink-0">{headerAction}</div>}
+      </div>
 
       {/* Dynamic description based on score type */}
       {scoreName === 'EnergyAnomaly' ? (

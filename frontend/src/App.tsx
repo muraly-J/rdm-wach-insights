@@ -270,7 +270,9 @@ function App() {
                       deviceName={
                         devices.find((d) => d.id === selectedDevice)?.name ?? selectedDevice ?? ''
                       }
+                      deviceId={selectedDevice ?? ''}
                       rawData={rawData.scores}
+                      timeRange={timeRange}
                     />
                   </React.Suspense>
                 )}
