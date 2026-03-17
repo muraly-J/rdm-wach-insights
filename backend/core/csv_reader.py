@@ -157,8 +157,11 @@ def _load_csv(time_range: str = "7d") -> pd.DataFrame:
 
 def _filter_time_range(df: pd.DataFrame, time_range: str) -> pd.DataFrame:
     delta = RANGE_DELTA.get(time_range, RANGE_DELTA['7d'])
-    cutoff = datetime.now(timezone.utc) - delta
     ts = pd.to_datetime(df['timestamp'], utc=True)
+    # Use the latest available timestamp as the reference so that ranges
+    # always return data even when the CSV hasn't been regenerated recently.
+    reference = ts.max() if not ts.empty else pd.Timestamp.now(tz='UTC')
+    cutoff = reference - delta
     return df[ts >= cutoff]
 
 
