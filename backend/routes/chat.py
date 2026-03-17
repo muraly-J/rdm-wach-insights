@@ -110,12 +110,33 @@ def _build_gemini_history(history: list[ChatHistoryItem]) -> list[dict]:
     ]
 
 
+def _sanitize_context(context: Optional[dict]) -> tuple[Optional[int], Optional[str]]:
+    """
+    Extract and validate level and device from a context dict.
+    Returns (level, device) — invalid values become None (silently dropped).
+    """
+    if not context:
+        return None, None
+    raw_level = context.get("level")
+    raw_device = context.get("device")
+    level = (
+        int(raw_level)
+        if str(raw_level).isdigit() and 1 <= int(raw_level) <= 11
+        else None
+    )
+    device = (
+        raw_device
+        if isinstance(raw_device, str) and re.match(r'^e\d{4}$', raw_device)
+        else None
+    )
+    return level, device
+
+
 def _build_system_prompt(context: Optional[dict]) -> str:
     """Inject optional dashboard context (level, device) into the system prompt."""
     prompt = _WACH_SYSTEM_PROMPT
     if context:
-        level = context.get("level")
-        device = context.get("device")
+        level, device = _sanitize_context(context)
         if level or device:
             prompt += "\n\nDashboard background (supplementary context only):"
             if level:
@@ -225,8 +246,7 @@ async def _get_live_context(context: Optional[dict]) -> str:
     if not context:
         return ""
 
-    level = context.get("level")
-    device = context.get("device")
+    level, device = _sanitize_context(context)
 
     if not level and not device:
         return ""
@@ -235,7 +255,7 @@ async def _get_live_context(context: Optional[dict]) -> str:
         from core.influx_client import fetch_latest_hourly_data
 
         loop = asyncio.get_running_loop()
-        level_filter = int(level) if level else None
+        level_filter = level  # already validated int or None
         df = await loop.run_in_executor(
             None,
             partial(
@@ -292,8 +312,7 @@ def _read_csv_context_sync(context: dict) -> str:
     """
     import pandas as pd
 
-    level = context.get("level")
-    device = context.get("device")
+    level, device = _sanitize_context(context)
 
     if not level and not device:
         return ""
