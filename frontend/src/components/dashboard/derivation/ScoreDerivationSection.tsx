@@ -77,65 +77,52 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
               return null;
             }
 
-            return (
-              <React.Suspense
-                key={score}
-                fallback={
-                  <div className="min-w-[400px] w-[400px] md:min-w-[500px] md:w-[500px] card p-6 flex items-center justify-center h-[320px]">
-                    <span className="text-[#8A95A5]">Loading...</span>
+            const isEmpty = !scoreData?.rawData?.length || !scoreData?.scoreData?.length;
+            const group = SCORE_METRIC_GROUPS.find((g) => g.scoreKey === score);
+
+            if (isEmpty) {
+              return (
+                <div key={score} className="min-w-[400px] w-[400px] md:min-w-[500px] md:w-[500px] card p-6 flex items-center justify-center bg-yellow-900/10 border border-yellow-700/30">
+                  <div className="text-center max-w-[280px]">
+                    <svg
+                      className="w-10 h-10 mx-auto mb-2 text-yellow-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                      />
+                    </svg>
+                    <p className="text-yellow-500 font-semibold mb-1 text-sm">
+                      No Data Available
+                    </p>
+                    <p className="text-[#8A95A5] text-xs leading-tight">
+                      {rawMetrics[score]?.name || score}: No valid data points
+                    </p>
                   </div>
-                }
-              >
-                {/* Check if data is empty and show appropriate UI */}
-                {(() => {
-                  const isEmpty = !scoreData?.rawData?.length || !scoreData?.scoreData?.length;
-                  const group = SCORE_METRIC_GROUPS.find((g) => g.scoreKey === score);
+                </div>
+              );
+            }
 
-                  if (isEmpty) {
-                    return (
-                      <div className="min-w-[400px] w-[400px] md:min-w-[500px] md:w-[500px] card p-6 flex items-center justify-center bg-yellow-900/10 border border-yellow-700/30">
-                        <div className="text-center max-w-[280px]">
-                          <svg
-                            className="w-10 h-10 mx-auto mb-2 text-yellow-500"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                            />
-                          </svg>
-                          <p className="text-yellow-500 font-semibold mb-1 text-sm">
-                            No Data Available
-                          </p>
-                          <p className="text-[#8A95A5] text-xs leading-tight">
-                            {rawMetrics[score]?.name || score}: No valid data points
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <ScoreCardWithSelector
-                      deviceId={deviceId}
-                      scoreName={score.charAt(0).toUpperCase() + score.slice(1).replace(/_/g, ' ')}
-                      scoreKey={score}
-                      rawMetric={rawMetrics[score]?.name || 'unknown'}
-                      rawUnit={rawMetrics[score]?.unit || ''}
-                      rawData={scoreData.rawData}
-                      predictedData={scoreData.predictedData}
-                      scoreData={scoreData.scoreData}
-                      chartColor={SCORE_COLORS[index]}
-                      timeRange={timeRange}
-                      availableMetrics={group?.availableMetrics ?? []}
-                    />
-                  );
-                })()}
-              </React.Suspense>
+            return (
+              <ScoreCardWithSelector
+                key={score}
+                deviceId={deviceId}
+                scoreName={score.charAt(0).toUpperCase() + score.slice(1).replace(/_/g, ' ')}
+                scoreKey={score}
+                rawMetric={rawMetrics[score]?.name || 'unknown'}
+                rawUnit={rawMetrics[score]?.unit || ''}
+                rawData={scoreData.rawData}
+                predictedData={scoreData.predictedData}
+                scoreData={scoreData.scoreData}
+                chartColor={SCORE_COLORS[index]}
+                timeRange={timeRange}
+                availableMetrics={group?.availableMetrics ?? []}
+              />
             );
           })}
         </div>
