@@ -27,6 +27,7 @@ from routes.forecast import router as forecast_router
 from routes.dashboard import router as dashboard_router
 from routes.health_scores import router as health_scores_router
 from routes.predictions import router as predictions_router
+from routes.measurements import router as measurements_router
 
 from dotenv import load_dotenv
 from middleware.query_logger import init_db, log_query
@@ -208,6 +209,7 @@ def create_app():
     from routes.chat import router as chat_router
     app.include_router(chat_router, prefix="/api")
     app.include_router(predictions_router, prefix="/api")
+    app.include_router(measurements_router, prefix="/api")
 
     @app.get('/health')
     async def health():
