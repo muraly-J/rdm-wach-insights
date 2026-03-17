@@ -13,8 +13,12 @@ Output:
 
 import json
 import os
+import sys
 import csv
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))  # add backend/ to path
+from config import get_building_name, get_department
 
 
 def generate_ahu_directory(
@@ -50,7 +54,7 @@ def generate_ahu_directory(
 
     # Build markdown
     lines = [
-        "# AHU Directory — Hospital Kuala Lumpur, Women and Children Hospital",
+        f"# AHU Directory — {get_building_name()}, {get_department()}",
         "",
         "This document lists all Air Handling Units (AHUs) across 11 building levels.",
         "Each AHU is identified by a device_id (e.g., e0101 = Level 1, Unit 01).",

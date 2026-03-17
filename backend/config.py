@@ -52,8 +52,8 @@ def get_influx_url() -> str:
 
     Allowed formats:
     - Local development: http://localhost:8086 or http://127.0.0.1:8086
-    - Remote (no TLS):   http://178.128.53.199:8086  (requires INFLUX_SKIP_TLS=true)
-    - Remote (TLS):      https://178.128.53.199:8086
+    - Remote (no TLS):   http://<your-influxdb-host>:8086  (requires INFLUX_SKIP_TLS=true)
+    - Remote (TLS):      https://<your-influxdb-host>:8086
     """
     url = os.getenv("INFLUX_URL")
     if not url:
@@ -77,7 +77,7 @@ def get_influx_url() -> str:
             f"Received: {url}\n\n"
             "For local development, use: http://localhost:8086 or http://127.0.0.1:8086\n"
             "If your InfluxDB server runs plain HTTP (no TLS), set INFLUX_SKIP_TLS=true in .env\n"
-            "For production with TLS, use: https://178.128.53.199:8086"
+            "For production with TLS, use: https://<your-influxdb-host>:8086"
         )
     return url
 
@@ -151,12 +151,12 @@ def get_gemini_embed_model() -> str:
 # ── Building Identity ─────────────────────────────────────────────────────────
 def get_building_name() -> str:
     """Get building/facility name."""
-    return os.getenv("WACH_BUILDING_NAME", "Hospital Kuala Lumpur")
+    return os.getenv("WACH_BUILDING_NAME", "Healthcare Facility")
 
 
 def get_department() -> str:
     """Get department or wing within the building."""
-    return os.getenv("WACH_DEPARTMENT", "Women and Children Hospital")
+    return os.getenv("WACH_DEPARTMENT", "Department")
 
 
 # ── Application Configuration ───────────────────────────────────────────────
