@@ -87,21 +87,69 @@ def _load_ahu_labels() -> dict[str, dict]:
     return _AHU_LABELS
 
 
+def _resample_to_daily(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Collapse hourly rows into one representative row per device per calendar day.
+
+    Strategy: group by (ahu_id, level, date) and take the MEAN of all numeric
+    columns. Text columns (tier, safety_flags) take the last value of the day.
+    This produces the same schema as health_daily.csv so downstream functions
+    need no changes.
+    """
+    if df.empty:
+        return df
+
+    df = df.copy()
+    df['_date'] = pd.to_datetime(df['timestamp'], utc=True).dt.normalize()
+
+    group_keys = ['ahu_id', 'level', '_date']
+    # Identify numeric vs text columns (excluding group keys and timestamp)
+    numeric_cols = [
+        c for c in df.select_dtypes(include='number').columns
+        if c not in group_keys
+    ]
+    text_cols = [
+        c for c in df.columns
+        if c not in group_keys + ['timestamp'] + numeric_cols
+    ]
+
+    agg: dict = {c: 'mean' for c in numeric_cols}
+    agg.update({c: 'last' for c in text_cols})
+
+    daily = df.groupby(group_keys).agg(agg).reset_index()
+    daily = daily.rename(columns={'_date': 'timestamp'})
+    return daily
+
+
 def _load_csv(time_range: str = "7d") -> pd.DataFrame:
     """
     Load the appropriate CSV for the requested time range.
 
-    24h  → health_hourly.csv  (hourly rows, last 3 days)
-    7d   → health_daily.csv   (one row per AHU per day)
-    30d  → health_daily.csv   (one row per AHU per day)
+    24h → health_hourly.csv  (~24 hourly rows per device)
+    7d  → health_hourly.csv  (~168 hourly rows per device)
+    30d → health_hourly.csv resampled to daily (~30 rows per device,
+          using the most recently generated data)
 
-    Falls back to health_all_levels.csv if the daily CSV is missing.
+    Falls back to health_daily.csv / health_all_levels.csv if hourly CSV
+    is unavailable.
     """
-    if time_range == "24h":
-        path = HOURLY_CSV_PATH
-    else:
-        path = DAILY_CSV_PATH if os.path.exists(DAILY_CSV_PATH) else CSV_PATH
+    hourly_ok = os.path.exists(HOURLY_CSV_PATH) and os.path.getsize(HOURLY_CSV_PATH) > 0
 
+    if time_range in ("24h", "7d"):
+        path = HOURLY_CSV_PATH if hourly_ok else (
+            DAILY_CSV_PATH if os.path.exists(DAILY_CSV_PATH) else CSV_PATH
+        )
+        if not os.path.exists(path) or os.path.getsize(path) == 0:
+            return pd.DataFrame()
+        return pd.read_csv(path, parse_dates=['timestamp'])
+
+    # 30d — load hourly and resample to daily for the most current data
+    if hourly_ok:
+        df = pd.read_csv(HOURLY_CSV_PATH, parse_dates=['timestamp'])
+        return _resample_to_daily(df)
+
+    # fallback to pre-built daily CSV
+    path = DAILY_CSV_PATH if os.path.exists(DAILY_CSV_PATH) else CSV_PATH
     if not os.path.exists(path) or os.path.getsize(path) == 0:
         return pd.DataFrame()
     return pd.read_csv(path, parse_dates=['timestamp'])
