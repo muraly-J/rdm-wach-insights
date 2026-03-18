@@ -96,16 +96,29 @@ export interface ScoresResponse {
   }[];
 }
 
+export interface DerivationSeries {
+  col: string;
+  label: string;
+  unit: string;
+  style: 'solid' | 'dashed' | 'bold' | 'ref';
+  group?: string;
+  data: Array<{ timestamp: string; value: number }>;
+}
+
+export interface DerivationReferenceLine {
+  value: number;
+  label: string;
+  color: string;
+}
+
+export interface ScoreDerivation {
+  series: DerivationSeries[];
+  scoreData: Array<{ timestamp: string; value: number }>;
+  referenceLines?: DerivationReferenceLine[];
+}
+
 export interface RawScoreResponse {
-  scores: Record<
-    string,
-    {
-      rawMetric: string;
-      rawUnit: string;
-      rawData: { timestamp: string; value: number }[];
-      scoreData: { timestamp: string; value: number }[];
-    }
-  >;
+  [scoreKey: string]: ScoreDerivation;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -151,4 +164,19 @@ export interface ScoreMetricGroup {
   scoreKey: string;
   scoreLabel: string;
   availableMetrics: MetricOption[];
+}
+
+// ── Delta Forecast Types ──────────────────────────────────────────────────────
+
+export interface DeltaForecastPoint {
+  hour: number;
+  target_time: string;
+  predicted_delta_kwh: number | null;
+}
+
+export interface DeltaForecastResponse {
+  device_id: string;
+  generated_at: string;
+  t_now: string;
+  forecast: DeltaForecastPoint[];
 }
