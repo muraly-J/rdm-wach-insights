@@ -105,9 +105,9 @@ THD_ROLLING_H = 24
 
 # Safety flag thresholds
 SAFETY_FLAGS_DEF = {
-    "THD_CHRONIC_HIGH":  ("composite_thd_24h", ">", 15.0),
-    "IMBALANCE_SEVERE":  ("current_unbalance",  ">", 30.0),
-    "PF_CHRONIC_LOW":    ("power_factor_avg",   "<",  0.50),
+    "THD_CHRONIC_HIGH":  ("composite_thd_24h", ">", 5.0),
+    "IMBALANCE_SEVERE":  ("current_unbalance",  ">", 5.0),
+    "PF_CHRONIC_LOW":    ("power_factor_avg",   "<",  0.85),
     "OVERLOAD_CHRONIC":  ("power_total",        ">",  None),  # computed separately
 }
 
@@ -376,11 +376,11 @@ def compute_safety_flags(baseline):
     pwr_med = baseline.get("power_total",       {}).get("median", np.nan)
     pwr_p95 = baseline.get("power_total",       {}).get("p95",    np.nan)
 
-    if not np.isnan(thd_med) and thd_med > 15.0:
+    if not np.isnan(thd_med) and thd_med > 5.0:
         flags.append("THD_CHRONIC_HIGH")
-    if not np.isnan(imb_med) and imb_med > 30.0:
+    if not np.isnan(imb_med) and imb_med > 5.0:
         flags.append("IMBALANCE_SEVERE")
-    if not np.isnan(pf_med) and pf_med < 0.50:
+    if not np.isnan(pf_med) and pf_med < 0.85:
         flags.append("PF_CHRONIC_LOW")
     if (not np.isnan(pwr_med) and not np.isnan(pwr_p95)
             and pwr_p95 > 0 and pwr_med / pwr_p95 > 0.90):
