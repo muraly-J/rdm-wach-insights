@@ -435,6 +435,14 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
         'raw_power_total', 'raw_energy_import', 'raw_hourly_delta',
         'raw_predicted_delta', 'raw_energy_anomaly_raw',
         'raw_power_factor_avg', 'raw_current_unbalance', 'raw_composite_thd',
+        # New per-phase columns
+        'raw_apparent_power_total',
+        'raw_current_l1', 'raw_current_l2', 'raw_current_l3',
+        'raw_volts_l1_n', 'raw_volts_l2_n', 'raw_volts_l3_n',
+        'raw_current_l1_thd', 'raw_current_l3_thd',
+        'raw_volts_l1_thd', 'raw_volts_l2_thd', 'raw_volts_l3_thd',
+        'raw_nema_voltage_imbalance',
+        'raw_p95_current',
         'safety_flags'
     ]
 
@@ -454,6 +462,16 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
     df_unbalance = _fetch_batched(devices_list, 'current_unbalance', 'last_30d_hourly').sort_index()
     df_l1_thd   = _fetch_batched(devices_list, 'current_l1_thd',   'last_30d_hourly').sort_index()
     df_l3_thd   = _fetch_batched(devices_list, 'current_l3_thd',   'last_30d_hourly').sort_index()
+    df_apparent_power = _fetch_batched(devices_list, 'apparent_power_total', 'last_30d_hourly').sort_index()
+    df_current_l1     = _fetch_batched(devices_list, 'current_l1',           'last_30d_hourly').sort_index()
+    df_current_l2     = _fetch_batched(devices_list, 'current_l2',           'last_30d_hourly').sort_index()
+    df_current_l3     = _fetch_batched(devices_list, 'current_l3',           'last_30d_hourly').sort_index()
+    df_volts_l1_n     = _fetch_batched(devices_list, 'volts_l1_n',           'last_30d_hourly').sort_index()
+    df_volts_l2_n     = _fetch_batched(devices_list, 'volts_l2_n',           'last_30d_hourly').sort_index()
+    df_volts_l3_n     = _fetch_batched(devices_list, 'volts_l3_n',           'last_30d_hourly').sort_index()
+    df_volts_l1_thd   = _fetch_batched(devices_list, 'volts_l1_thd',         'last_30d_hourly').sort_index()
+    df_volts_l2_thd   = _fetch_batched(devices_list, 'volts_l2_thd',         'last_30d_hourly').sort_index()
+    df_volts_l3_thd   = _fetch_batched(devices_list, 'volts_l3_thd',         'last_30d_hourly').sort_index()
 
     def _asof_value(df, ahu_id, ts):
         """Look up nearest-prior value for ahu_id at timestamp ts."""
@@ -479,6 +497,20 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
         if device_data.empty:
             continue
 
+        # Per-AHU P95 of max-phase current
+        p95_current = None
+        try:
+            currents = []
+            for df_c in [df_current_l1, df_current_l2, df_current_l3]:
+                if not df_c.empty and ahu_id in df_c.columns:
+                    currents.append(df_c[ahu_id].dropna())
+            if currents:
+                max_current = pd.concat(currents, axis=1).max(axis=1).dropna()
+                if len(max_current) >= 3:
+                    p95_current = float(max_current.quantile(0.95))
+        except Exception:
+            p95_current = None
+
         for _, row in device_data.iterrows():
             ts = row['timestamp']
             level_val = str(row.get('level', 'Level 1'))
@@ -493,6 +525,29 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
             current_pf = _asof_value(df_pf, ahu_id, ts)
             current_unbalance = _asof_value(df_unbalance, ahu_id, ts)
             current_energy = _asof_value(df_energy, ahu_id, ts)
+
+            # New per-phase lookups
+            apparent_power = _asof_value(df_apparent_power, ahu_id, ts)
+            current_l1     = _asof_value(df_current_l1,     ahu_id, ts)
+            current_l2     = _asof_value(df_current_l2,     ahu_id, ts)
+            current_l3     = _asof_value(df_current_l3,     ahu_id, ts)
+            volts_l1_n     = _asof_value(df_volts_l1_n,     ahu_id, ts)
+            volts_l2_n     = _asof_value(df_volts_l2_n,     ahu_id, ts)
+            volts_l3_n     = _asof_value(df_volts_l3_n,     ahu_id, ts)
+            volts_l1_thd   = _asof_value(df_volts_l1_thd,   ahu_id, ts)
+            volts_l2_thd   = _asof_value(df_volts_l2_thd,   ahu_id, ts)
+            volts_l3_thd   = _asof_value(df_volts_l3_thd,   ahu_id, ts)
+            # current_l1_thd and current_l3_thd already fetched as l1/l3 above
+            current_l1_thd = _asof_value(df_l1_thd, ahu_id, ts)
+            current_l3_thd = _asof_value(df_l3_thd, ahu_id, ts)
+
+            # NEMA voltage imbalance (%)
+            nema_voltage_imbalance = None
+            if all(v is not None for v in [volts_l1_n, volts_l2_n, volts_l3_n]):
+                v_avg = (volts_l1_n + volts_l2_n + volts_l3_n) / 3.0
+                if v_avg > 0:
+                    v_max_dev = max(abs(volts_l1_n - v_avg), abs(volts_l2_n - v_avg), abs(volts_l3_n - v_avg))
+                    nema_voltage_imbalance = round(100.0 * v_max_dev / v_avg, 3)
 
             # Composite THD: average of L1 and L3
             l1 = _asof_value(df_l1_thd, ahu_id, ts)
@@ -539,7 +594,7 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
             if risk_scores.get('phase_imbalance', 0) >= 0.8:
                 safety_flags.append('IMBALANCE_SEVERE')
             if risk_scores.get('power_factor', 0) >= 0.8 and current_pf is not None:
-                if current_pf < 0.50:
+                if current_pf < 0.85:
                     safety_flags.append('PF_CHRONIC_LOW')
 
             record = {
@@ -562,6 +617,20 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
                 'raw_power_factor_avg': current_pf,
                 'raw_current_unbalance': current_unbalance,
                 'raw_composite_thd': current_composite_thd,
+                'raw_apparent_power_total': apparent_power,
+                'raw_current_l1': current_l1,
+                'raw_current_l2': current_l2,
+                'raw_current_l3': current_l3,
+                'raw_volts_l1_n': volts_l1_n,
+                'raw_volts_l2_n': volts_l2_n,
+                'raw_volts_l3_n': volts_l3_n,
+                'raw_current_l1_thd': current_l1_thd,
+                'raw_current_l3_thd': current_l3_thd,
+                'raw_volts_l1_thd': volts_l1_thd,
+                'raw_volts_l2_thd': volts_l2_thd,
+                'raw_volts_l3_thd': volts_l3_thd,
+                'raw_nema_voltage_imbalance': nema_voltage_imbalance,
+                'raw_p95_current': p95_current,
                 'safety_flags': ';'.join(safety_flags) if safety_flags else ''
             }
 
@@ -597,68 +666,26 @@ def save_predictions(predictions_df: pd.DataFrame):
 
 
 def save_health_scores(health_df: pd.DataFrame):
-    """Append health scores to CSV, deduplicating on (timestamp, ahu_id)."""
+    """Save health scores to CSV, overwriting any existing data."""
     log_info(f"Saving health scores to {HEALTH_FILE}...")
-
     if health_df.empty:
         log_error("No data to save!")
         return False
-
     os.makedirs(os.path.dirname(HEALTH_FILE), exist_ok=True)
-
-    if os.path.exists(HEALTH_FILE) and os.path.getsize(HEALTH_FILE) > 0:
-        existing = pd.read_csv(HEALTH_FILE)
-        existing_keys = set(zip(existing['timestamp'].astype(str), existing['ahu_id'].astype(str)))
-        new_rows = health_df[
-            ~health_df.apply(
-                lambda r: (str(r['timestamp']), str(r['ahu_id'])) in existing_keys, axis=1
-            )
-        ]
-        if new_rows.empty:
-            log_info("No new rows to append (all already present)")
-            return True
-        new_rows.to_csv(HEALTH_FILE, mode='a', header=False, index=False)
-        log_info(f"Appended {len(new_rows)} new records to health_all_levels.csv")
-    else:
-        health_df.to_csv(HEALTH_FILE, index=False)
-        log_info(f"Created health_all_levels.csv with {len(health_df)} records")
-
+    health_df.to_csv(HEALTH_FILE, index=False)
+    log_info(f"Wrote {len(health_df)} records to health_all_levels.csv (overwrite)")
     return True
 
 
 def save_hourly_scores(health_df: pd.DataFrame):
-    """
-    Append hourly health scores to CSV (append-only for historical ETL).
-
-    Note: This is a one-shot historical run, so we simply append without deduplication.
-    The hourly file uses (timestamp, ahu_id) as the primary key for 24h chart.
-
-    Args:
-        health_df: DataFrame with health scores
-    """
+    """Save hourly health scores to CSV, overwriting any existing data."""
     log_info(f"Saving hourly health scores to {HOURLY_FILE}...")
-
     if health_df.empty:
         log_error("No data to save!")
         return False
-
     os.makedirs(os.path.dirname(HOURLY_FILE), exist_ok=True)
-
-    if os.path.exists(HOURLY_FILE) and os.path.getsize(HOURLY_FILE) > 0:
-        # Append mode for historical data (no deduplication - one-time run)
-        existing_df = pd.read_csv(HOURLY_FILE, parse_dates=['timestamp'])
-        total_before = len(existing_df)
-
-        # Combine and dedupe on (timestamp, ahu_id) to handle edge cases
-        combined = pd.concat([existing_df, health_df], ignore_index=True)
-        combined = combined.drop_duplicates(subset=['timestamp', 'ahu_id'], keep='last')
-
-        combined.to_csv(HOURLY_FILE, index=False)
-        log_info(f"Appended to hourly file (total: {len(combined)} records)")
-    else:
-        health_df.to_csv(HOURLY_FILE, index=False)
-        log_info(f"Created health_hourly.csv with {len(health_df)} records")
-
+    health_df.to_csv(HOURLY_FILE, index=False)
+    log_info(f"Wrote {len(health_df)} records to health_hourly.csv (overwrite)")
     return True
 
 
