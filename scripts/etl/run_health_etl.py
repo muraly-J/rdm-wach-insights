@@ -416,6 +416,16 @@ def extract_raw_data(metrics_to_fetch=None, level_filter=None):
             "current_unbalance",
             "current_l1_thd",
             "current_l3_thd",
+            "apparent_power_total",
+            "current_l1",
+            "current_l2",
+            "current_l3",
+            "volts_l1_n",
+            "volts_l2_n",
+            "volts_l3_n",
+            "volts_l1_thd",
+            "volts_l2_thd",
+            "volts_l3_thd",
         ]
 
     try:
@@ -512,6 +522,21 @@ def build_baselines(df):
                 n=len(thd_24h_series),
             )
 
+        # Per-AHU P95 of max-phase current (for overload chart reference line)
+        current_cols = ["current_l1", "current_l2", "current_l3"]
+        avail_current_cols = [c for c in current_cols if c in grp.columns]
+        if avail_current_cols:
+            max_current = grp[avail_current_cols].max(axis=1).dropna().values
+            if len(max_current) >= 3:
+                b["max_phase_current"] = dict(
+                    p95=float(np.percentile(max_current, 95)),
+                    n=len(max_current)
+                )
+            else:
+                b["max_phase_current"] = dict(p95=np.nan, n=0)
+        else:
+            b["max_phase_current"] = dict(p95=np.nan, n=0)
+
         baselines[ahu_id] = b
 
     return baselines
@@ -565,6 +590,28 @@ def transform_health_scores(df_raw):
         pf_current = float(row['power_factor_avg']) if pd.notna(row.get('power_factor_avg')) else None
         unbalance_current = float(row['current_unbalance']) if pd.notna(row.get('current_unbalance')) else None
         thd_24h = float(row['composite_thd']) if pd.notna(row.get('composite_thd')) else None
+
+        # Extract new per-phase raw values
+        apparent_power_current = float(row['apparent_power_total']) if pd.notna(row.get('apparent_power_total')) else None
+        current_l1 = float(row['current_l1']) if pd.notna(row.get('current_l1')) else None
+        current_l2 = float(row['current_l2']) if pd.notna(row.get('current_l2')) else None
+        current_l3 = float(row['current_l3']) if pd.notna(row.get('current_l3')) else None
+        volts_l1_n = float(row['volts_l1_n']) if pd.notna(row.get('volts_l1_n')) else None
+        volts_l2_n = float(row['volts_l2_n']) if pd.notna(row.get('volts_l2_n')) else None
+        volts_l3_n = float(row['volts_l3_n']) if pd.notna(row.get('volts_l3_n')) else None
+        current_l1_thd = float(row['current_l1_thd']) if pd.notna(row.get('current_l1_thd')) else None
+        current_l3_thd = float(row['current_l3_thd']) if pd.notna(row.get('current_l3_thd')) else None
+        volts_l1_thd = float(row['volts_l1_thd']) if pd.notna(row.get('volts_l1_thd')) else None
+        volts_l2_thd = float(row['volts_l2_thd']) if pd.notna(row.get('volts_l2_thd')) else None
+        volts_l3_thd = float(row['volts_l3_thd']) if pd.notna(row.get('volts_l3_thd')) else None
+
+        # NEMA voltage imbalance (%)
+        nema_voltage_imbalance = None
+        if all(v is not None for v in [volts_l1_n, volts_l2_n, volts_l3_n]):
+            v_avg = (volts_l1_n + volts_l2_n + volts_l3_n) / 3.0
+            if v_avg > 0:
+                v_max_dev = max(abs(volts_l1_n - v_avg), abs(volts_l2_n - v_avg), abs(volts_l3_n - v_avg))
+                nema_voltage_imbalance = round(100.0 * v_max_dev / v_avg, 3)
 
         # Compute delta_kwh
         ahu_df = df_sorted[df_sorted['ahu_id'] == ahu_id].copy()
@@ -688,6 +735,22 @@ def transform_health_scores(df_raw):
             "raw_current_unbalance": unbalance_current,
             "raw_composite_thd": thd_24h,
 
+            # === New Per-Phase Raw Metrics ===
+            "raw_apparent_power_total": apparent_power_current,
+            "raw_current_l1": current_l1,
+            "raw_current_l2": current_l2,
+            "raw_current_l3": current_l3,
+            "raw_volts_l1_n": volts_l1_n,
+            "raw_volts_l2_n": volts_l2_n,
+            "raw_volts_l3_n": volts_l3_n,
+            "raw_current_l1_thd": current_l1_thd,
+            "raw_current_l3_thd": current_l3_thd,
+            "raw_volts_l1_thd": volts_l1_thd,
+            "raw_volts_l2_thd": volts_l2_thd,
+            "raw_volts_l3_thd": volts_l3_thd,
+            "raw_nema_voltage_imbalance": nema_voltage_imbalance,
+            "raw_p95_current": baseline.get("max_phase_current", {}).get("p95"),
+
             # === Baseline Statistics (30-day) ===
             "baseline_power_median": baseline["power_total"]["median"],
             "baseline_power_rstd": baseline["power_total"]["rstd"],
@@ -802,6 +865,13 @@ def load_to_csv(df_scores, output_path=None):
         # Raw metrics
         "raw_power_total", "raw_energy_import", "raw_power_factor_avg",
         "raw_current_unbalance", "raw_composite_thd",
+        "raw_apparent_power_total",
+        "raw_current_l1", "raw_current_l2", "raw_current_l3",
+        "raw_volts_l1_n", "raw_volts_l2_n", "raw_volts_l3_n",
+        "raw_current_l1_thd", "raw_current_l3_thd",
+        "raw_volts_l1_thd", "raw_volts_l2_thd", "raw_volts_l3_thd",
+        "raw_nema_voltage_imbalance",
+        "raw_p95_current",
 
         # Baseline statistics
         "baseline_power_median", "baseline_power_rstd",
