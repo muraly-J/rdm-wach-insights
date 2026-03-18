@@ -82,6 +82,11 @@ O&G Clinic, ICU, Operation Theatre, Paediatric Wards, and more.
 
 If asked something outside your domain, politely redirect to AHU/energy topics.
 
+FINANCIAL DATA CONSTRAINT: When a "## Financial Impact" section appears in your context,
+you MUST cite the pre-computed figures from that section exactly as given — never
+recalculate costs from live readings. The platform's cost engine uses 30-day CSV history;
+live readings are instantaneous snapshots and will produce different numbers if used for cost arithmetic.
+
 IMPORTANT CONSTRAINT: Only reference real AHU device IDs. Valid device IDs follow the
 format e[LEVEL][NN] where level is 01–11 and NN is the device number within that level
 (e.g., e0101, e0202, e1101). If a user asks about a device ID that does not exist in the
@@ -441,34 +446,42 @@ def _get_financial_context_sync(context: dict) -> str:
     try:
         data = _compute_impact(level, "30d", device)
     except Exception:
+        logger.warning("Financial context computation failed for level=%s device=%s", level, device, exc_info=True)
         return ""
 
-    if not data or data.get("grand_total", 0) == 0 and not data.get("top_ahus"):
+    if not data or (data.get("grand_total", 0) == 0 and not data.get("top_ahus")):
         return ""
 
     cur = data.get("currency", "RM")
-    lines = ["\n\n## Financial Impact (last 30 days)"]
-    lines.append(f"Estimated total cost exposure: **{cur} {data['grand_total']:,.2f}**")
-    lines.append(f"  - Excess energy waste: {cur} {data['excess_energy_cost']:,.2f}")
-    lines.append(f"  - TNB power factor penalty: {cur} {data['pf_penalty_cost']:,.2f}")
-    lines.append(f"  - Maintenance risk exposure (projected): {cur} {data['maintenance_risk']:,.2f}")
+    scope = device if device else f"Level {level} (all AHUs)"
+    lines = [f"\n\n## Financial Impact — {scope} (last 30 days)"]
+    lines.append("IMPORTANT: Use these exact pre-computed figures. Do NOT recalculate costs independently.")
+    lines.append(f"Grand total estimated cost: {cur} {data['grand_total']:,.2f}")
+    lines.append(f"  Breakdown:")
+    lines.append(f"    Excess energy waste:              {cur} {data['excess_energy_cost']:,.2f}")
+    lines.append(f"    TNB power factor penalty:         {cur} {data['pf_penalty_cost']:,.2f}")
+    lines.append(f"    Maintenance risk (projected):     {cur} {data['maintenance_risk']:,.2f}")
 
     top = data.get("top_ahus", [])
     if top:
         if device:
             row = top[0]
-            lines.append(
-                f"  {row['ahu_id']}: health={row['health_index']:.0f}, "
-                f"excess={cur} {row['excess_energy_cost']:,.2f}, "
-                f"PF penalty={cur} {row['pf_penalty_cost']:,.2f}, "
-                f"maint. risk={cur} {row['maintenance_risk']:,.2f}"
-            )
+            lines.append(f"\n  {row['ahu_id']} cost breakdown:")
+            lines.append(f"    Excess energy waste:          {cur} {row['excess_energy_cost']:,.2f}")
+            lines.append(f"    TNB PF penalty:               {cur} {row['pf_penalty_cost']:,.2f}")
+            lines.append(f"    Maintenance risk (projected): {cur} {row['maintenance_risk']:,.2f}")
+            lines.append(f"    TOTAL for {row['ahu_id']}:        {cur} {row['total_cost']:,.2f}")
+            lines.append(f"    Health index: {row['health_index']:.0f}/100")
         else:
-            lines.append(f"Top AHUs by cost (Level {level}):")
-            for row in top[:5]:
+            lines.append(f"\n  Per-AHU breakdown — top {len(top)} by total cost:")
+            for i, row in enumerate(top, 1):
                 lines.append(
-                    f"  - **{row['ahu_id']}**: total={cur} {row['total_cost']:,.2f} "
-                    f"(health={row['health_index']:.0f})"
+                    f"  {i}. {row['ahu_id']}: "
+                    f"total={cur} {row['total_cost']:,.2f} | "
+                    f"excess={cur} {row['excess_energy_cost']:,.2f} | "
+                    f"PF penalty={cur} {row['pf_penalty_cost']:,.2f} | "
+                    f"maint.risk={cur} {row['maintenance_risk']:,.2f} | "
+                    f"health={row['health_index']:.0f}"
                 )
 
     return "\n".join(lines)
