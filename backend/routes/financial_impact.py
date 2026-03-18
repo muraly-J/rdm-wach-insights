@@ -12,7 +12,7 @@ import logging
 import os
 import pandas as pd
 import numpy as np
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -48,7 +48,7 @@ def _load_config() -> dict:
             # Merge with defaults so new fields always present
             return {**DEFAULT_CONFIG, **stored}
         except Exception:
-            pass
+            log.warning("Failed to load financial config from %s, using defaults", CONFIG_PATH, exc_info=True)
     return DEFAULT_CONFIG.copy()
 
 
@@ -59,21 +59,21 @@ def _save_config(cfg: dict):
 
 
 @router.get("/financial-config")
-async def get_financial_config():
+def get_financial_config():
     return _load_config()
 
 
 @router.post("/financial-config")
-async def post_financial_config(config: FinancialConfig):
+def post_financial_config(config: FinancialConfig):
     cfg = config.model_dump()
     _save_config(cfg)
     return cfg
 
 
 @router.get("/financial-impact")
-async def get_financial_impact(level: int, range: str = "30d"):
+async def get_financial_impact(level: int = Query(..., ge=1, le=20), time_range: str = Query(default="30d")):
     try:
-        result = _compute_impact(level, range)
+        result = _compute_impact(level, time_range)
     except Exception as exc:
         log.error("financial-impact level=%s: %s", level, exc, exc_info=True)
         raise HTTPException(status_code=503, detail="Financial impact calculation failed")
@@ -93,12 +93,12 @@ def _compute_impact(level: int, time_range: str) -> dict:
 
     df = _load_csv(time_range=time_range)
     if df.empty:
-        return _empty_response(currency)
+        return _empty_response(currency, level, time_range)
 
     df = df[df['level'] == f"Level {level}"]
     df = _filter_time_range(df, time_range).sort_values('timestamp')
     if df.empty:
-        return _empty_response(currency)
+        return _empty_response(currency, level, time_range)
 
     ahu_rows = []
     for ahu_id, grp in df.groupby('ahu_id'):
@@ -117,6 +117,7 @@ def _compute_impact(level: int, time_range: str) -> dict:
             if pd.notna(avg_pf) and avg_pf < 0.85:
                 steps_below    = (0.85 - avg_pf) / 0.01
                 surcharge_frac = steps_below * 0.015
+                surcharge_frac = min(surcharge_frac, 0.30)  # cap at 30%
                 total_energy   = grp['raw_hourly_delta'].fillna(0).sum()
                 pf_penalty     = round(float(total_energy) * tariff * surcharge_frac, 2)
 
@@ -154,9 +155,9 @@ def _compute_impact(level: int, time_range: str) -> dict:
     }
 
 
-def _empty_response(currency: str) -> dict:
+def _empty_response(currency: str, level: int = 0, time_range: str = "") -> dict:
     return {
-        "currency": currency, "level": 0, "range": "",
+        "currency": currency, "level": level, "range": time_range,
         "grand_total": 0, "excess_energy_cost": 0,
         "pf_penalty_cost": 0, "maintenance_risk": 0,
         "top_ahus": [],
