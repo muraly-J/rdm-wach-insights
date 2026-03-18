@@ -180,3 +180,33 @@ export interface DeltaForecastResponse {
   t_now: string;
   forecast: DeltaForecastPoint[];
 }
+
+// ── Financial Impact Types ────────────────────────────────────────────────────
+
+export interface FinancialConfig {
+  currency: string;
+  tariff_rate: number;
+  max_demand_rate: number;
+  planned_maintenance_cost: number;
+  emergency_multiplier: number;
+}
+
+export interface AHUCost {
+  ahu_id: string;
+  health_index: number;
+  excess_energy_cost: number;
+  pf_penalty_cost: number;
+  maintenance_risk: number;
+  total_cost: number;
+}
+
+export interface FinancialImpact {
+  currency: string;
+  level: number;
+  range: string;
+  grand_total: number;
+  excess_energy_cost: number;
+  pf_penalty_cost: number;
+  maintenance_risk: number;
+  top_ahus: AHUCost[];
+}
