@@ -431,70 +431,67 @@ async def _get_csv_context(context: Optional[dict]) -> str:
         return ""
 
 
-def _get_financial_context_sync(context: dict) -> str:
-    """
-    Compute financial impact for the current context (level + optional device)
-    and return a compact text summary for injection into the system prompt.
-    Synchronous — called via run_in_executor.
-    """
-    from routes.financial_impact import _compute_impact
-
-    level, device = _sanitize_context(context)
-    if not level:
-        return ""
-
-    try:
-        data = _compute_impact(level, "30d", device)
-    except Exception:
-        logger.warning("Financial context computation failed for level=%s device=%s", level, device, exc_info=True)
-        return ""
-
-    if not data or (data.get("grand_total", 0) == 0 and not data.get("top_ahus")):
-        return ""
-
+def _format_financial_context(data: dict, scope: str) -> str:
+    """Format a financial impact dict into a system prompt block."""
     cur = data.get("currency", "RM")
-    scope = device if device else f"Level {level} (all AHUs)"
-    lines = [f"\n\n## Financial Impact — {scope} (last 30 days)"]
-    lines.append("IMPORTANT: Use these exact pre-computed figures. Do NOT recalculate costs independently.")
-    lines.append(f"Grand total estimated cost: {cur} {data['grand_total']:,.2f}")
-    lines.append(f"  Breakdown:")
-    lines.append(f"    Excess energy waste:              {cur} {data['excess_energy_cost']:,.2f}")
-    lines.append(f"    TNB power factor penalty:         {cur} {data['pf_penalty_cost']:,.2f}")
-    lines.append(f"    Maintenance risk (projected):     {cur} {data['maintenance_risk']:,.2f}")
+    lines = [f"\n\n## Financial Impact — {scope} (data from dashboard)"]
+    lines.append("IMPORTANT: These figures come directly from the dashboard the user is looking at.")
+    lines.append("Use them verbatim. Do NOT recalculate or estimate costs from live readings.")
+    lines.append(f"Grand total: {cur} {data['grand_total']:,.2f}")
+    lines.append(f"    Excess energy waste:          {cur} {data['excess_energy_cost']:,.2f}")
+    lines.append(f"    TNB power factor penalty:     {cur} {data['pf_penalty_cost']:,.2f}")
+    lines.append(f"    Maintenance risk (projected): {cur} {data['maintenance_risk']:,.2f}")
 
     top = data.get("top_ahus", [])
     if top:
-        if device:
-            row = top[0]
-            lines.append(f"\n  {row['ahu_id']} cost breakdown:")
-            lines.append(f"    Excess energy waste:          {cur} {row['excess_energy_cost']:,.2f}")
-            lines.append(f"    TNB PF penalty:               {cur} {row['pf_penalty_cost']:,.2f}")
-            lines.append(f"    Maintenance risk (projected): {cur} {row['maintenance_risk']:,.2f}")
-            lines.append(f"    TOTAL for {row['ahu_id']}:        {cur} {row['total_cost']:,.2f}")
-            lines.append(f"    Health index: {row['health_index']:.0f}/100")
-        else:
-            lines.append(f"\n  Per-AHU breakdown — top {len(top)} by total cost:")
-            for i, row in enumerate(top, 1):
-                lines.append(
-                    f"  {i}. {row['ahu_id']}: "
-                    f"total={cur} {row['total_cost']:,.2f} | "
-                    f"excess={cur} {row['excess_energy_cost']:,.2f} | "
-                    f"PF penalty={cur} {row['pf_penalty_cost']:,.2f} | "
-                    f"maint.risk={cur} {row['maintenance_risk']:,.2f} | "
-                    f"health={row['health_index']:.0f}"
-                )
-
+        lines.append(f"\n  Per-AHU breakdown — ranked by total cost:")
+        for i, row in enumerate(top, 1):
+            lines.append(
+                f"  {i}. {row['ahu_id']}: "
+                f"TOTAL={cur} {row['total_cost']:,.2f} | "
+                f"excess={cur} {row['excess_energy_cost']:,.2f} | "
+                f"PF penalty={cur} {row['pf_penalty_cost']:,.2f} | "
+                f"maint.risk={cur} {row['maintenance_risk']:,.2f} | "
+                f"health={row['health_index']:.0f}/100"
+            )
     return "\n".join(lines)
 
 
 async def _get_financial_context(context: Optional[dict]) -> str:
-    """Async wrapper around _get_financial_context_sync."""
+    """
+    Return financial impact context for the system prompt.
+    Prefers data passed directly from the frontend (financial_impact key in context)
+    so the chatbot always sees exactly what the user sees on screen.
+    Falls back to recomputing from CSV only when the frontend data is absent.
+    """
     if not context:
         return ""
+
+    # ── Preferred path: frontend passed the data it already has ──────────────
+    fi = context.get("financial_impact")
+    if fi and isinstance(fi, dict) and fi.get("grand_total") is not None:
+        level = context.get("level", "?")
+        device = context.get("device")
+        scope = device if device else f"Level {level} (all AHUs)"
+        try:
+            return _format_financial_context(fi, scope)
+        except Exception:
+            logger.warning("Failed to format frontend financial_impact context", exc_info=True)
+
+    # ── Fallback: recompute from CSV (may differ due to timing/range) ─────────
+    level, device = _sanitize_context(context)
+    if not level:
+        return ""
     try:
+        from routes.financial_impact import _compute_impact
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, _get_financial_context_sync, context)
+        data = await loop.run_in_executor(None, _compute_impact, level, "30d", device)
+        if not data or (data.get("grand_total", 0) == 0 and not data.get("top_ahus")):
+            return ""
+        scope = device if device else f"Level {level} (all AHUs)"
+        return _format_financial_context(data, scope)
     except Exception:
+        logger.warning("Financial context fallback computation failed for level=%s device=%s", level, device, exc_info=True)
         return ""
 
 

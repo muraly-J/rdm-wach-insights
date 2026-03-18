@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppState, ChatMessage, DashboardData } from '../types';
+import { AppState, ChatMessage, DashboardData, FinancialImpact } from '../types';
 
 // Default chat message for initial bot greeting
 const INITIAL_BOT_MESSAGE: ChatMessage = {
@@ -47,6 +47,10 @@ interface AppStore extends AppState {
 
   // Loading state
   setLoading: (loading: boolean) => void;
+
+  // Financial impact (latest loaded, passed to chat)
+  financialImpact: FinancialImpact | null;
+  setFinancialImpact: (data: FinancialImpact | null) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -78,4 +82,8 @@ export const useAppStore = create<AppStore>((set) => ({
 
   // Loading state
   setLoading: (loading) => set({ isLoading: loading }),
+
+  // Financial impact
+  financialImpact: null,
+  setFinancialImpact: (data) => set({ financialImpact: data }),
 }));

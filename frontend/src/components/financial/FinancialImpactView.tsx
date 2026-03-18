@@ -4,6 +4,7 @@ import { fetchFinancialConfig, fetchFinancialImpact } from '../../api/financial'
 import CostBreakdownCard from './CostBreakdownCard';
 import TopCostAHUsTable from './TopCostAHUsTable';
 import FinancialSettingsDrawer from './FinancialSettingsDrawer';
+import { useAppStore } from '../../store/useAppStore';
 import type { FinancialConfig, FinancialImpact } from '../../types';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 }
 
 const FinancialImpactView: React.FC<Props> = ({ level, range = '30d', deviceId }) => {
+  const setFinancialImpact = useAppStore((s) => s.setFinancialImpact);
   const [config, setConfig]           = React.useState<FinancialConfig | null>(null);
   const [impact, setImpact]           = React.useState<FinancialImpact | null>(null);
   const [loading, setLoading]         = React.useState(true);
@@ -29,6 +31,7 @@ const FinancialImpactView: React.FC<Props> = ({ level, range = '30d', deviceId }
       ]);
       setConfig(cfg);
       setImpact(imp);
+      setFinancialImpact(imp);
     } catch (e: any) {
       setError(e.message ?? 'Failed to load financial data');
     } finally {

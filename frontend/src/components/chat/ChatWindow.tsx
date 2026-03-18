@@ -32,6 +32,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
 
   const selectedLevel = useAppStore((s) => s.selectedLevel);
   const selectedDevice = useAppStore((s) => s.selectedDevice);
+  const financialImpact = useAppStore((s) => s.financialImpact);
   const selectLevel = useAppStore((s) => s.selectLevel);
   const selectDevice = useAppStore((s) => s.selectDevice);
 
@@ -66,6 +67,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
       const { reply, navigate } = await sendChatMessage(text, {
         level: selectedLevel ?? undefined,
         device: selectedDevice ?? undefined,
+        financial_impact: financialImpact ?? undefined,
         history,
       });
       setMessages((prev) => [
