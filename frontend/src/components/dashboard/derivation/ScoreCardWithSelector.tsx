@@ -4,17 +4,15 @@ import VariableSelector from '../../shared/VariableSelector';
 import MetricMiniChart from '../../shared/MetricMiniChart';
 import { fetchMeasurements } from '../../../api/client';
 import { METRIC_META, MINI_CHART_COLORS } from '../../../constants/metricGroups';
-import type { MetricOption, MeasurementPoint } from '../../../types';
+import type { MetricOption, MeasurementPoint, DerivationSeries, DerivationReferenceLine } from '../../../types';
 
 interface ScoreCardWithSelectorProps {
   deviceId: string;
   scoreName: string;
   scoreKey: string;
-  rawMetric: string;
-  rawUnit: string;
-  rawData: Array<{ timestamp: string; value: number }>;
-  predictedData?: Array<{ timestamp: string; value: number }>;
+  series: DerivationSeries[];
   scoreData: Array<{ timestamp: string; value: number }>;
+  referenceLines?: DerivationReferenceLine[];
   chartColor: string;
   timeRange: '24h' | '7d' | '30d';
   availableMetrics: MetricOption[];
@@ -22,7 +20,7 @@ interface ScoreCardWithSelectorProps {
 
 export default function ScoreCardWithSelector({
   deviceId, scoreName, scoreKey,
-  rawMetric, rawUnit, rawData, predictedData, scoreData,
+  series, scoreData, referenceLines,
   chartColor, timeRange, availableMetrics,
 }: ScoreCardWithSelectorProps) {
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
@@ -58,11 +56,9 @@ export default function ScoreCardWithSelector({
     <div className="min-w-[400px] w-[400px] md:min-w-[500px] md:w-[500px] flex flex-col">
       <RawScoreRelationChart
         scoreName={scoreName}
-        rawMetric={rawMetric}
-        rawUnit={rawUnit}
-        rawData={rawData}
-        predictedData={predictedData}
+        series={series}
         scoreData={scoreData}
+        referenceLines={referenceLines}
         chartColor={chartColor}
         timeRange={timeRange}
         headerAction={

@@ -23,21 +23,16 @@ const SCORE_NAMES: ScoreName[] = ['energy_anomaly', 'pf_degradation', 'phase_imb
 
 const SCORE_COLORS = ['#3B82F6', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444'];
 
+const REFERENCE_LINES: Record<string, Array<{ value: number; label: string; color: string }>> = {
+  thd_drift: [{ value: 5.0, label: 'IEEE 519: 5%', color: '#FFB020' }],
+};
+
 const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
   deviceName,
   deviceId,
   rawData,
   timeRange,
 }) => {
-  // Raw metric mappings (matching FAIR score names)
-  // For energy_anomaly: raw_hourly_delta is the hourly energy consumption
-  const rawMetrics: Record<string, { name: string; unit: string }> = {
-    energy_anomaly:  { name: 'raw_hourly_delta',      unit: 'kWh' },
-    pf_degradation:  { name: 'raw_power_factor_avg',   unit: ''    },
-    phase_imbalance: { name: 'raw_current_unbalance',  unit: '%'   },
-    thd_drift:       { name: 'raw_composite_thd',      unit: '%'   },
-    overload:        { name: 'raw_power_total',         unit: 'kW'  },
-  };
 
   return (
     <motion.div
@@ -77,7 +72,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
               return null;
             }
 
-            const isEmpty = !scoreData?.rawData?.length || !scoreData?.scoreData?.length;
+            const isEmpty = !scoreData?.series?.length || !scoreData?.scoreData?.length;
             const group = SCORE_METRIC_GROUPS.find((g) => g.scoreKey === score);
 
             if (isEmpty) {
@@ -101,7 +96,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                       No Data Available
                     </p>
                     <p className="text-[#8A95A5] text-xs leading-tight">
-                      {rawMetrics[score]?.name || score}: No valid data points
+                      {score}: No valid data points
                     </p>
                   </div>
                 </div>
@@ -114,11 +109,9 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                 deviceId={deviceId}
                 scoreName={score.charAt(0).toUpperCase() + score.slice(1).replace(/_/g, ' ')}
                 scoreKey={score}
-                rawMetric={rawMetrics[score]?.name || 'unknown'}
-                rawUnit={rawMetrics[score]?.unit || ''}
-                rawData={scoreData.rawData}
-                predictedData={scoreData.predictedData}
+                series={scoreData.series}
                 scoreData={scoreData.scoreData}
+                referenceLines={scoreData.referenceLines?.length ? scoreData.referenceLines : (REFERENCE_LINES[score] ?? [])}
                 chartColor={SCORE_COLORS[index]}
                 timeRange={timeRange}
                 availableMetrics={group?.availableMetrics ?? []}
