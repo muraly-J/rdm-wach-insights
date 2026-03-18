@@ -702,9 +702,9 @@ def compute_safety_flags(baselines: Dict) -> Dict[str, List[str]]:
     They do NOT affect the hourly health index.
     
     Thresholds:
-      THD_CHRONIC_HIGH   median 24h-THD  > 15%
-      IMBALANCE_SEVERE   median unbalance > 30%
-      PF_CHRONIC_LOW     median PF        < 0.50
+      THD_CHRONIC_HIGH   median 24h-THD  > 5%
+      IMBALANCE_SEVERE   median unbalance > 5%
+      PF_CHRONIC_LOW     median PF        < 0.85
       OVERLOAD_CHRONIC   median power     > 90% of own p95
     """
     flags = {}

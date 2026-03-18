@@ -1587,9 +1587,9 @@ def get_overload_signal(power_data: Dict) -> str:
 # ──────────────────────────────────────────────────────────────────────────────
 
 SAFETY_FLAGS_DEF = {
-    "THD_CHRONIC_HIGH":   ("composite_thd_24h", ">", 15.0),
-    "IMBALANCE_SEVERE":   ("current_unbalance",  ">", 30.0),
-    "PF_CHRONIC_LOW":     ("power_factor_avg",   "<",  0.50),
+    "THD_CHRONIC_HIGH":   ("composite_thd_24h", ">", 5.0),
+    "IMBALANCE_SEVERE":   ("current_unbalance",  ">", 5.0),
+    "PF_CHRONIC_LOW":     ("power_factor_avg",   "<",  0.85),
     "OVERLOAD_CHRONIC":   ("power_total",        ">",  None),  # computed separately
 }
 
@@ -1601,26 +1601,26 @@ def compute_safety_flags(metrics: Dict) -> List[str]:
     Returns list of flag strings for this AHU.
     
     Thresholds (from fair_health_scoring.py SAFETY_FLAGS_DEF):
-      THD_CHRONIC_HIGH   composite_thd_24h > 15.0%
-      IMBALANCE_SEVERE   current_unbalance  > 30.0%
-      PF_CHRONIC_LOW     power_factor_avg   < 0.50
+      THD_CHRONIC_HIGH   composite_thd_24h > 5.0%
+      IMBALANCE_SEVERE   current_unbalance  > 5.0%
+      PF_CHRONIC_LOW     power_factor_avg   < 0.85
       OVERLOAD_CHRONIC   power_total        > 90% of own p95
     """
     flags = []
     
     # THD check
     thd_val = metrics.get("thd", {}).get("composite_24h_mean")
-    if thd_val is not None and thd_val > 15.0:
+    if thd_val is not None and thd_val > 5.0:
         flags.append("THD_CHRONIC_HIGH")
     
     # Imbalance check
     unbal_val = metrics.get("phase_imbalance", {}).get("current")
-    if unbal_val is not None and unbal_val > 30.0:
+    if unbal_val is not None and unbal_val > 5.0:
         flags.append("IMBALANCE_SEVERE")
     
     # PF check
     pf_val = metrics.get("power_factor", {}).get("current")
-    if pf_val is not None and pf_val < 0.50:
+    if pf_val is not None and pf_val < 0.85:
         flags.append("PF_CHRONIC_LOW")
     
     # Overload check: power > 90% of p95
