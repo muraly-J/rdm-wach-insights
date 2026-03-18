@@ -71,18 +71,22 @@ def post_financial_config(config: FinancialConfig):
 
 
 @router.get("/financial-impact")
-async def get_financial_impact(level: int = Query(..., ge=1, le=20), time_range: str = Query(default="30d")):
+async def get_financial_impact(
+    level: int = Query(..., ge=1, le=20),
+    time_range: str = Query(default="30d"),
+    device_id: Optional[str] = Query(default=None),
+):
     try:
-        result = _compute_impact(level, time_range)
+        result = _compute_impact(level, time_range, device_id)
     except Exception as exc:
-        log.error("financial-impact level=%s: %s", level, exc, exc_info=True)
+        log.error("financial-impact level=%s device=%s: %s", level, device_id, exc, exc_info=True)
         raise HTTPException(status_code=503, detail="Financial impact calculation failed")
     return result
 
 
 # ── Calculation helpers ────────────────────────────────────────────────────────
 
-def _compute_impact(level: int, time_range: str) -> dict:
+def _compute_impact(level: int, time_range: str, device_id: Optional[str] = None) -> dict:
     from core.csv_reader import _load_csv, _filter_time_range
 
     cfg = _load_config()
@@ -101,6 +105,11 @@ def _compute_impact(level: int, time_range: str) -> dict:
     df = _filter_time_range(df, time_range).sort_values('timestamp')
     if df.empty:
         return _empty_response(currency, level, time_range)
+
+    if device_id:
+        df = df[df['ahu_id'] == device_id]
+        if df.empty:
+            return _empty_response(currency, level, time_range)
 
     ahu_rows = []
     for ahu_id, grp in df.groupby('ahu_id'):

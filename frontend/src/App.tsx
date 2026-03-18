@@ -290,7 +290,11 @@ function App() {
               {/* Financial Impact Section */}
               {selectedLevel && (
                 <React.Suspense fallback={<div className="card h-48 animate-pulse bg-[#1A2230] rounded-xl" />}>
-                  <FinancialImpactView level={selectedLevel} range={timeRange} />
+                  <FinancialImpactView
+                    level={selectedLevel}
+                    range={timeRange}
+                    deviceId={selectedDevice !== 'all' ? selectedDevice : null}
+                  />
                 </React.Suspense>
               )}
             </motion.main>

@@ -9,9 +9,10 @@ import type { FinancialConfig, FinancialImpact } from '../../types';
 interface Props {
   level: number;
   range?: '24h' | '7d' | '30d';
+  deviceId?: string | null;
 }
 
-const FinancialImpactView: React.FC<Props> = ({ level, range = '30d' }) => {
+const FinancialImpactView: React.FC<Props> = ({ level, range = '30d', deviceId }) => {
   const [config, setConfig]           = React.useState<FinancialConfig | null>(null);
   const [impact, setImpact]           = React.useState<FinancialImpact | null>(null);
   const [loading, setLoading]         = React.useState(true);
@@ -24,7 +25,7 @@ const FinancialImpactView: React.FC<Props> = ({ level, range = '30d' }) => {
     try {
       const [cfg, imp] = await Promise.all([
         fetchFinancialConfig(),
-        fetchFinancialImpact(level, range),
+        fetchFinancialImpact(level, range, deviceId),
       ]);
       setConfig(cfg);
       setImpact(imp);
@@ -33,7 +34,7 @@ const FinancialImpactView: React.FC<Props> = ({ level, range = '30d' }) => {
     } finally {
       setLoading(false);
     }
-  }, [level, range]);
+  }, [level, range, deviceId]);
 
   React.useEffect(() => { load(); }, [load]);
 
@@ -68,7 +69,7 @@ const FinancialImpactView: React.FC<Props> = ({ level, range = '30d' }) => {
             Financial Impact
           </h3>
           <p className="text-[#8A95A5] mt-1 text-sm">
-            Estimated cost of current AHU health issues · Last {range}
+            {deviceId ? `${deviceId} · ` : ''}Estimated cost of current AHU health issues · Last {range}
           </p>
         </div>
         <button
@@ -87,8 +88,10 @@ const FinancialImpactView: React.FC<Props> = ({ level, range = '30d' }) => {
             {cur} {impact.grand_total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-xs text-[#4A5568] mt-1">
-            Across {impact.top_ahus.length} AHUs on Level {level} ·
-            {impact.top_ahus.filter(a => a.health_index < 60).length} at elevated risk
+            {deviceId
+              ? `${deviceId} on Level ${level}`
+              : `Across ${impact.top_ahus.length} AHUs on Level ${level} · ${impact.top_ahus.filter(a => a.health_index < 60).length} at elevated risk`
+            }
           </p>
         </div>
         <div className="text-[#8A95A5] text-xs text-right hidden md:block max-w-[200px]">
