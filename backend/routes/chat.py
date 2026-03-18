@@ -72,6 +72,10 @@ You have knowledge of:
 - Energy anomaly detection and diagnosis
 - HVAC operational best practices
 - Math-based energy and health predictions (1h, 12h, 24h, 1-week horizons) using seasonal-naive forecasting (linear trend for 1h, historical same-hour averages for longer horizons). Δ kWh = predicted energy minus 3-week same-hour baseline.
+- Financial impact of AHU health issues, including three cost categories:
+  - **Excess Energy Cost**: kWh consumed above the predicted baseline × TNB tariff rate (RM/kWh)
+  - **Power Factor Penalty**: TNB surcharge of 1.5% per 0.01 that monthly average PF falls below 0.85
+  - **Maintenance Risk Exposure**: AHUs with health index < 60 risk emergency repairs costing (multiplier − 1) × planned maintenance cost — labelled as a projection
 
 The building has 11 levels (Levels 1–11) serving departments including Emergency,
 O&G Clinic, ICU, Operation Theatre, Paediatric Wards, and more.
@@ -422,6 +426,65 @@ async def _get_csv_context(context: Optional[dict]) -> str:
         return ""
 
 
+def _get_financial_context_sync(context: dict) -> str:
+    """
+    Compute financial impact for the current context (level + optional device)
+    and return a compact text summary for injection into the system prompt.
+    Synchronous — called via run_in_executor.
+    """
+    from routes.financial_impact import _compute_impact
+
+    level, device = _sanitize_context(context)
+    if not level:
+        return ""
+
+    try:
+        data = _compute_impact(level, "30d", device)
+    except Exception:
+        return ""
+
+    if not data or data.get("grand_total", 0) == 0 and not data.get("top_ahus"):
+        return ""
+
+    cur = data.get("currency", "RM")
+    lines = ["\n\n## Financial Impact (last 30 days)"]
+    lines.append(f"Estimated total cost exposure: **{cur} {data['grand_total']:,.2f}**")
+    lines.append(f"  - Excess energy waste: {cur} {data['excess_energy_cost']:,.2f}")
+    lines.append(f"  - TNB power factor penalty: {cur} {data['pf_penalty_cost']:,.2f}")
+    lines.append(f"  - Maintenance risk exposure (projected): {cur} {data['maintenance_risk']:,.2f}")
+
+    top = data.get("top_ahus", [])
+    if top:
+        if device:
+            row = top[0]
+            lines.append(
+                f"  {row['ahu_id']}: health={row['health_index']:.0f}, "
+                f"excess={cur} {row['excess_energy_cost']:,.2f}, "
+                f"PF penalty={cur} {row['pf_penalty_cost']:,.2f}, "
+                f"maint. risk={cur} {row['maintenance_risk']:,.2f}"
+            )
+        else:
+            lines.append(f"Top AHUs by cost (Level {level}):")
+            for row in top[:5]:
+                lines.append(
+                    f"  - **{row['ahu_id']}**: total={cur} {row['total_cost']:,.2f} "
+                    f"(health={row['health_index']:.0f})"
+                )
+
+    return "\n".join(lines)
+
+
+async def _get_financial_context(context: Optional[dict]) -> str:
+    """Async wrapper around _get_financial_context_sync."""
+    if not context:
+        return ""
+    try:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, _get_financial_context_sync, context)
+    except Exception:
+        return ""
+
+
 @router.post("/chat")
 async def chat(body: ChatRequest):
     """
@@ -442,6 +505,11 @@ async def chat(body: ChatRequest):
     csv_ctx = await _get_csv_context(body.context)
     if csv_ctx:
         system_prompt += csv_ctx
+
+    # Financial impact context (level/device cost breakdown)
+    fin_ctx = await _get_financial_context(body.context)
+    if fin_ctx:
+        system_prompt += fin_ctx
 
     # If the user asked about a specific level/device different from the
     # current dashboard context, also inject live data for that target so
