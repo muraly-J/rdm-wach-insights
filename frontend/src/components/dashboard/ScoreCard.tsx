@@ -8,7 +8,7 @@ interface ScoreCardProps {
   trendValue: number;
   data: Array<{ timestamp: string; value: number }>;
   chartColor: string;
-  infoText?: string;
+  infoText?: React.ReactNode;
 }
 
 /**
@@ -39,7 +39,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
       {/* Score label */}
       <h4 className="text-[16px] font-semibold text-[#E8ECF1] mb-4 flex items-center">
         {title}
-        {infoText && <InfoTooltip text={infoText} />}
+        {infoText && <InfoTooltip content={infoText} />}
       </h4>
 
       {/* Current value */}

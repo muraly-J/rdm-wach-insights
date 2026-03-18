@@ -1,14 +1,14 @@
 import React from 'react';
 
 interface InfoTooltipProps {
-  text: string;
+  content: React.ReactNode;
 }
 
 /**
- * InfoTooltip — Small ⓘ icon that shows an explanation card on hover.
- * Place inline next to headings or labels.
+ * InfoTooltip — Small ⓘ icon that shows a rich explanation card on hover.
+ * Accepts any React content (JSX) for structured, multi-section tooltips.
  */
-const InfoTooltip: React.FC<InfoTooltipProps> = ({ text }) => {
+const InfoTooltip: React.FC<InfoTooltipProps> = ({ content }) => {
   const [visible, setVisible] = React.useState(false);
 
   return (
@@ -34,12 +34,12 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ text }) => {
         <div
           className="
             absolute z-50 top-6 left-0
-            w-72 p-3 rounded-xl
+            w-80 p-4 rounded-xl
             bg-[#1A2230] border border-[#1E2A3A] shadow-2xl
             text-xs text-[#8A95A5] leading-relaxed
           "
         >
-          {text}
+          {content}
         </div>
       )}
     </span>

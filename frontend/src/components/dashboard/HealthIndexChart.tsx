@@ -118,7 +118,28 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
       <div className="mb-6">
         <h3 className="font-display text-[24px] font-bold tracking-[-0.01em] flex items-center">
           Health Index
-          <InfoTooltip text="Combined health score for each AHU. 100 = healthy, 0 = critical failure risk. Calculated as a weighted sum of all five indicators: Phase Imbalance (25%), Power Factor (25%), Overload (20%), Energy Anomaly (15%), THD Drift (15%). Higher is better." />
+          <InfoTooltip content={
+            <div className="space-y-2.5">
+              <p className="text-[#E8ECF1] font-semibold text-[11px]">Composite AHU Health Index</p>
+              <p>Weighted sum of five FAIR sub-scores, each normalised 0–100. Higher is healthier.</p>
+              <div>
+                <p className="text-[#E8ECF1] font-medium mb-1">Formula</p>
+                <p className="font-mono bg-[#0B0F14] rounded px-2 py-1 text-[10px]">
+                  HI = 0.25·PF + 0.25·PI + 0.20·OL + 0.15·EA + 0.15·THD
+                </p>
+              </div>
+              <div>
+                <p className="text-[#E8ECF1] font-medium mb-1">Tiers</p>
+                <div className="space-y-0.5">
+                  <p><span className="text-[#00E5A0]">■</span> 80–100 Healthy — normal operation</p>
+                  <p><span className="text-yellow-400">■</span> 60–79 Monitor — watch for drift</p>
+                  <p><span className="text-orange-400">■</span> 40–59 Maintenance Soon — schedule service</p>
+                  <p><span className="text-red-400">■</span> 0–39 Critical — urgent intervention</p>
+                </div>
+              </div>
+              <p className="text-[#4A5568] text-[10px]">Weights follow ASHRAE 180-2012 risk priority for HVAC fault detection.</p>
+            </div>
+          } />
         </h3>
         
         <p className="mt-2 text-sm text-[#8A95A5]">

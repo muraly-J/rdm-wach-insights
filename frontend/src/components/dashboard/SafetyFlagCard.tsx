@@ -5,7 +5,7 @@ interface SafetyFlagCardProps {
   title: string;
   value: number;
   trend: number;
-  info: string;
+  info: React.ReactNode;
   chartColor: string;
   data: Array<{ timestamp: string; value: number }>;
 }
