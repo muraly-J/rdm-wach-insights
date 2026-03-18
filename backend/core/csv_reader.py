@@ -7,7 +7,14 @@ CSV columns used:
   timestamp, ahu_id, level, health_index, tier,
   energy_anomaly, pf_degradation, phase_imbalance, thd_drift, overload,
   raw_power_total, raw_energy_import, raw_power_factor_avg,
-  raw_current_unbalance, raw_composite_thd
+  raw_current_unbalance, raw_composite_thd,
+  raw_hourly_delta, raw_predicted_delta,
+  raw_volts_l1_n, raw_volts_l2_n, raw_volts_l3_n,
+  raw_current_l1, raw_current_l2, raw_current_l3,
+  raw_nema_voltage_imbalance,
+  raw_current_l1_thd, raw_current_l3_thd,
+  raw_volts_l1_thd, raw_volts_l2_thd, raw_volts_l3_thd,
+  raw_apparent_power_total, raw_p95_current
 """
 
 import os
@@ -28,15 +35,40 @@ DAILY_CSV_PATH = os.path.join(
 
 SCORE_COLUMNS = ['energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload', 'health_index']
 
-# Score → (raw column, unit)
-# Note: For energy_anomaly, the raw metric is hourly_delta (energy consumed in one hour)
-#       not cumulative energy_import. The score derivation plot shows hourly_delta vs energy_anomaly.
-SCORE_RAW_MAP = {
-    'energy_anomaly':  ('raw_hourly_delta',      'kWh'),
-    'pf_degradation':  ('raw_power_factor_avg',   ''),
-    'phase_imbalance': ('raw_current_unbalance',  '%'),
-    'thd_drift':       ('raw_composite_thd',      '%'),
-    'overload':        ('raw_power_total',         'kW'),
+# Score → list of {col, label, unit, style, group?}
+# style: "solid" | "dashed" | "bold" | "ref"
+# group: optional grouping hint for the frontend
+SCORE_SERIES_MAP: dict[str, list[dict]] = {
+    "energy_anomaly": [
+        {"col": "raw_hourly_delta",    "label": "Actual δ kWh",    "unit": "kWh", "style": "solid"},
+        {"col": "raw_predicted_delta", "label": "Predicted δ kWh", "unit": "kWh", "style": "dashed"},
+    ],
+    "pf_degradation": [
+        {"col": "raw_power_total",          "label": "Real Power",     "unit": "kW",  "style": "solid"},
+        {"col": "raw_apparent_power_total", "label": "Apparent Power", "unit": "kVA", "style": "dashed"},
+    ],
+    "phase_imbalance": [
+        {"col": "raw_volts_l1_n", "label": "V L1", "unit": "V", "style": "solid", "group": "voltage"},
+        {"col": "raw_volts_l2_n", "label": "V L2", "unit": "V", "style": "solid", "group": "voltage"},
+        {"col": "raw_volts_l3_n", "label": "V L3", "unit": "V", "style": "solid", "group": "voltage"},
+        {"col": "raw_current_l1", "label": "I L1", "unit": "A", "style": "solid", "group": "current"},
+        {"col": "raw_current_l2", "label": "I L2", "unit": "A", "style": "solid", "group": "current"},
+        {"col": "raw_current_l3", "label": "I L3", "unit": "A", "style": "solid", "group": "current"},
+        {"col": "raw_nema_voltage_imbalance", "label": "NEMA V Imbalance", "unit": "%", "style": "bold", "group": "imbalance"},
+    ],
+    "thd_drift": [
+        {"col": "raw_current_l1_thd", "label": "I L1 THD", "unit": "%", "style": "solid",  "group": "current_thd"},
+        {"col": "raw_current_l3_thd", "label": "I L3 THD", "unit": "%", "style": "solid",  "group": "current_thd"},
+        {"col": "raw_volts_l1_thd",   "label": "V L1 THD", "unit": "%", "style": "dashed", "group": "voltage_thd"},
+        {"col": "raw_volts_l2_thd",   "label": "V L2 THD", "unit": "%", "style": "dashed", "group": "voltage_thd"},
+        {"col": "raw_volts_l3_thd",   "label": "V L3 THD", "unit": "%", "style": "dashed", "group": "voltage_thd"},
+    ],
+    "overload": [
+        {"col": "raw_current_l1", "label": "I L1",     "unit": "A", "style": "solid", "group": "current"},
+        {"col": "raw_current_l2", "label": "I L2",     "unit": "A", "style": "solid", "group": "current"},
+        {"col": "raw_current_l3", "label": "I L3",     "unit": "A", "style": "solid", "group": "current"},
+        {"col": "raw_p95_current","label": "P95 Peak", "unit": "A", "style": "ref",   "group": "threshold"},
+    ],
 }
 
 # Debug logging flag - set to True for detailed diagnostics
@@ -238,94 +270,74 @@ def get_score_breakdown(level: int, time_range: str) -> list[dict]:
 
 def get_raw_score_relationship(device_id: str, time_range: str) -> dict:
     """
-    Returns {score_name: {rawMetric, rawUnit, rawData, predictedData, scoreData}}
+    Returns {score_name: {series: [...], scoreData: [...], referenceLines: [...]}}
 
-    For energy_anomaly:
-      - rawData: hourly_delta (raw energy consumed in the hour)
-      - predictedData: predicted_delta (expected consumption based on historical averages)
-      - scoreData: energy_anomaly score (computed deviation)
+    Each series entry: {col, label, unit, style, group?, data: [{timestamp, value}]}
+    referenceLines: optional [{value, label, color}] for chart annotations
 
-    For other scores, predictedData is None.
-
-    Debug output logged when CSV_DEBUG=true environment variable is set.
+    Score values in the CSV are stored in the 0-100 range and are returned as-is.
     """
     df = _load_csv(time_range=time_range)
     if df.empty:
-        if DEBUG_MODE:
-            print(f"[DEBUG] get_raw_score_relationship: CSV empty for time_range={time_range}")
         return {}
-    
+
     df = df[df['ahu_id'] == device_id]
-    if DEBUG_MODE:
-        print(f"[DEBUG] After device filter: {len(df)} rows")
-    
     df = _filter_time_range(df, time_range).sort_values('timestamp')
-    if DEBUG_MODE:
-        print(f"[DEBUG] After time filter: {len(df)} rows")
-    
+
     if df.empty:
-        if DEBUG_MODE:
-            print(f"[DEBUG] No data after filtering: device={device_id}, time_range={time_range}")
         return {}
+
+    # Reference lines per score (static thresholds)
+    REFERENCE_LINES = {
+        "thd_drift": [{"value": 5.0, "label": "IEEE 519: 5%", "color": "#FFB020"}],
+    }
 
     result = {}
-    for score_col, (raw_col, raw_unit) in SCORE_RAW_MAP.items():
-        # Skip if either column is missing
+    for score_col, series_defs in SCORE_SERIES_MAP.items():
         if score_col not in df.columns:
-            print(f"[WARN] Score column '{score_col}' missing from CSV (available: {list(df.columns)[:10]}...)")
             continue
-        if raw_col not in df.columns:
-            print(f"[WARN] Raw column '{raw_col}' missing from CSV")
-            continue
-        
-        # Select only required columns
-        sub = df[['timestamp', score_col, raw_col]].copy()
 
-        # For energy_anomaly, also include predicted_delta for the third line
-        predicted_data = None
-        if score_col == 'energy_anomaly' and 'raw_predicted_delta' in df.columns:
-            pred_sub = df[['timestamp', 'raw_predicted_delta']].copy()
-            pred_sub = pred_sub.dropna(subset=['raw_predicted_delta'])
-            if not pred_sub.empty:
-                # Merge with score data on timestamp
-                merged = sub[['timestamp']].merge(
-                    pred_sub, on='timestamp', how='left'
-                )
-                predicted_data = [
-                    {'timestamp': r['timestamp'].isoformat(), 'value': float(r['raw_predicted_delta'])}
-                    for _, r in merged.iterrows()
-                ]
-        
-        if DEBUG_MODE:
-            print(f"[DEBUG] {score_col}: before dropna={len(sub)}")
-        
-        # Drop rows where either score or raw value is NaN
-        sub = sub.dropna(subset=[score_col, raw_col])
-        
-        if sub.empty:
-            print(f"[WARN] No valid pairs for {score_col}/{raw_col} after dropna")
+        # Build score time series (values already in 0-100 range)
+        score_sub = df[['timestamp', score_col]].dropna(subset=[score_col])
+        if score_sub.empty:
             continue
-        
-        # Sort by timestamp (explicitly)
-        sub = sub.sort_values('timestamp')
-        
+        score_data = [
+            {'timestamp': r['timestamp'].isoformat(), 'value': round(float(r[score_col]), 2)}
+            for _, r in score_sub.iterrows()
+        ]
+
+        # Build each raw series
+        series_out = []
+        for s in series_defs:
+            col = s["col"]
+            if col not in df.columns:
+                # Column not yet in CSV (e.g. new ETL columns not yet run)
+                continue
+            sub = df[['timestamp', col]].dropna(subset=[col])
+            if sub.empty:
+                continue
+            series_entry = {
+                "col": col,
+                "label": s["label"],
+                "unit": s["unit"],
+                "style": s["style"],
+                "data": [
+                    {'timestamp': r['timestamp'].isoformat(), 'value': float(r[col])}
+                    for _, r in sub.iterrows()
+                ],
+            }
+            if "group" in s:
+                series_entry["group"] = s["group"]
+            series_out.append(series_entry)
+
+        if not series_out:
+            # Fallback: skip score if no raw series data at all
+            continue
+
         result[score_col] = {
-            'rawMetric': raw_col,
-            'rawUnit': raw_unit,
-            'rawData': [
-                {'timestamp': r['timestamp'].isoformat(), 'value': float(r[raw_col])}
-                for _, r in sub.iterrows()
-            ],
-            'predictedData': predicted_data,
-            'scoreData': [
-                {'timestamp': r['timestamp'].isoformat(), 'value': float(r[score_col])}
-                for _, r in sub.iterrows()
-            ],
+            "series": series_out,
+            "scoreData": score_data,
+            "referenceLines": REFERENCE_LINES.get(score_col, []),
         }
-        
-        if DEBUG_MODE:
-            print(f"[DEBUG] {score_col}: after dropna={len(result[score_col]['rawData'])}")
-    
-    if DEBUG_MODE:
-        print(f"[DEBUG] get_raw_score_relationship returned {len(result)} scores")
+
     return result
