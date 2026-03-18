@@ -7,182 +7,124 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  ReferenceLine,
   ResponsiveContainer,
+  Legend,
 } from 'recharts';
+import type { DerivationSeries, DerivationReferenceLine } from '../../../types';
 
 interface RawScoreRelationChartProps {
   scoreName: string;
-  rawMetric: string;
-  rawUnit: string;
-  rawData: Array<{ timestamp: string; value: number }>;
-  predictedData?: Array<{ timestamp: string; value: number }>; // Optional third line for energy anomaly
+  series: DerivationSeries[];
   scoreData: Array<{ timestamp: string; value: number }>;
+  referenceLines?: DerivationReferenceLine[];
   chartColor: string;
   headerAction?: React.ReactNode;
   timeRange: TimeRange;
 }
 
+// Color palette for up to 7 left-axis series
+const SERIES_PALETTE = [
+  '#8A95A5', // grey
+  '#60A5FA', // blue
+  '#34D399', // green
+  '#F97316', // orange
+  '#C084FC', // purple
+  '#F472B6', // pink
+  '#FCD34D', // yellow
+];
+
 /**
- * RawScoreRelationChart - Dual-axis chart for score derivation visualization (Section 5.5.1)
+ * RawScoreRelationChart — Dual-axis chart for score derivation visualization
  *
- * Left Y-axis: Raw data value
- * Right Y-axis: Computed score (0-100)
+ * Left Y-axis: Variable-number raw data series (voltages, currents, THD%, etc.)
+ * Right Y-axis: Computed score (0–100)
  * X-axis: Time
  *
- * For energy anomaly, shows 3 lines:
- * - hourly_delta (raw consumption)
- * - predicted_delta (expected consumption from historical avg)
- * - energy_anomaly score
- *
- * For other scores, shows 2 lines (raw + score only)
- *
- * Netflix-style shelf layout with larger, more prominent charts
+ * Supports reference lines (e.g. IEEE 519: 5% for THD, P95 for overload)
  */
 const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
   scoreName,
-  rawMetric,
-  rawUnit,
-  rawData,
-  predictedData,
+  series,
   scoreData,
+  referenceLines = [],
   chartColor,
   headerAction,
   timeRange,
 }) => {
-  // Merge data by timestamp
-  const mergedData: any[] = [];
+  // Merge all series into a single data array keyed by index
+  // Each series maps to key `s0`, `s1`, etc.
+  const mergedData: Record<string, any>[] = [];
 
-  rawData.forEach((point, idx) => {
-    if (!mergedData[idx]) {
-      mergedData[idx] = { timestamp: point.timestamp };
-    }
-    mergedData[idx].rawValue = point.value;
-  });
-
-  // Merge predicted data if available (for energy_anomaly)
-  if (predictedData) {
-    predictedData.forEach((point, idx) => {
+  series.forEach((s, si) => {
+    const key = `s${si}`;
+    s.data.forEach((pt, idx) => {
       if (!mergedData[idx]) {
-        mergedData[idx] = { timestamp: point.timestamp };
+        mergedData[idx] = { timestamp: pt.timestamp };
       }
-      mergedData[idx].predictedValue = point.value;
+      mergedData[idx][key] = pt.value;
     });
-  }
+  });
 
-  scoreData.forEach((point, idx) => {
+  // Merge score data
+  scoreData.forEach((pt, idx) => {
     if (mergedData[idx]) {
-      mergedData[idx].scoreValue = point.value;
+      mergedData[idx].scoreValue = pt.value;
     }
   });
 
-  // Custom tooltip showing both values
+  // Custom tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const rawEntry = payload.find((p: any) => p.dataKey === 'rawValue');
-      const scoreEntry = payload.find((p: any) => p.dataKey === 'scoreValue');
-      const predictedEntry = payload.find((p: any) => p.dataKey === 'predictedValue');
-
-      return (
-        <div className="bg-[#1A2230] p-4 rounded-xl border border-[#1E2A3A] shadow-2xl">
-          <p className="text-[#8A95A5] text-xs mb-3 font-mono">{formatTickByRange(label, timeRange)}</p>
-
-          {rawEntry && (
-            <div className="mb-2">
-              <div
-                className="text-xs text-[#8A95A5]"
-                style={{ color: '#8A95A5' }}
-              >
-                {rawMetric} ({rawUnit})
-              </div>
-              <div
-                className="text-sm font-medium"
-                style={{ color: '#8A95A5' }}
-              >
-                {rawEntry.value.toFixed(2)}
-              </div>
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-[#1A2230] p-4 rounded-xl border border-[#1E2A3A] shadow-2xl max-w-[220px]">
+        <p className="text-[#8A95A5] text-xs mb-3 font-mono">
+          {formatTickByRange(label, timeRange)}
+        </p>
+        {payload.map((entry: any) => {
+          if (entry.dataKey === 'scoreValue') return null;
+          const idx = parseInt(entry.dataKey.replace('s', ''), 10);
+          const s = series[idx];
+          if (!s) return null;
+          return (
+            <div key={entry.dataKey} className="mb-1.5">
+              <span className="text-xs" style={{ color: entry.color }}>
+                {s.label} {s.unit && `(${s.unit})`}:
+              </span>{' '}
+              <span className="text-xs font-medium text-white">
+                {typeof entry.value === 'number' ? entry.value.toFixed(2) : '—'}
+              </span>
             </div>
-          )}
-
-          {/* Show predicted_delta only for energy_anomaly */}
-          {predictedEntry && (
-            <div className="mb-2">
-              <div
-                className="text-xs text-[#8A95A5]"
-                style={{ color: '#60A5FA' }}
-              >
-                predicted_delta (kWh)
-              </div>
-              <div
-                className="text-sm font-medium"
-                style={{ color: '#60A5FA' }}
-              >
-                {predictedEntry.value.toFixed(2)}
-              </div>
-            </div>
-          )}
-
-          {scoreEntry && (
-            <div>
-              <div
-                className="text-xs text-[#8A95A5]"
-                style={{ color: chartColor }}
-              >
-                Score
-              </div>
-              <div
-                className="text-sm font-medium"
-                style={{ color: chartColor }}
-              >
-                {scoreEntry.value.toFixed(1)} / 100
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-    return null;
+          );
+        })}
+        {payload.find((p: any) => p.dataKey === 'scoreValue') && (
+          <div className="mt-2 pt-2 border-t border-[#1E2A3A]">
+            <span className="text-xs" style={{ color: chartColor }}>Score:</span>{' '}
+            <span className="text-xs font-medium" style={{ color: chartColor }}>
+              {payload.find((p: any) => p.dataKey === 'scoreValue').value?.toFixed(1)} / 100
+            </span>
+          </div>
+        )}
+      </div>
+    );
   };
 
-  // YAxis styles
-  const leftAxisStyle = { stroke: '#8A95A5' };
-  const rightAxisStyle = { stroke: chartColor };
-
   return (
-    <div
-      className="
-        card p-6
-        hover:border-[#1E2A3A]
-        transition-all duration-300
-        w-full
-      "
-    >
-      {/* Header (Section 5.5.1) */}
+    <div className="card p-6 hover:border-[#1E2A3A] transition-all duration-300 w-full">
+      {/* Header */}
       <div className="flex items-start justify-between mb-4">
-        <h4 className="text-[18px] font-semibold text-white">
-          {scoreName}
-        </h4>
+        <h4 className="text-[18px] font-semibold text-white">{scoreName}</h4>
         {headerAction && <div className="ml-2 flex-shrink-0">{headerAction}</div>}
       </div>
 
-      {/* Dynamic description based on score type */}
-      {scoreName === 'EnergyAnomaly' ? (
-        <p className="text-[13px] text-[#8A95A5] mb-4 font-mono">
-          hourly_delta → predicted_delta → Score: 0–100
-        </p>
-      ) : (
-        <p className="text-[13px] text-[#8A95A5] mb-4 font-mono">
-          Raw: {rawMetric} ({rawUnit}) → Score: 0–100
-        </p>
-      )}
+      {/* Subtitle: list series */}
+      <p className="text-[13px] text-[#8A95A5] mb-4 font-mono">
+        {series.map((s) => s.label).join(' · ')} → Score 0–100
+      </p>
 
-      {/* Chart - Larger height for shelf layout */}
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={mergedData} margin={{ top: 15, right: 40, left: 0, bottom: 25 }}>
-          <CartesianGrid
-            stroke="#1E2A3A"
-            strokeDasharray="3 3"
-            vertical={false}
-          />
+          <CartesianGrid stroke="#1E2A3A" strokeDasharray="3 3" vertical={false} />
 
           <XAxis
             dataKey="timestamp"
@@ -190,45 +132,75 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
             fontSize={11}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(v) => formatTickByRange(v, timeRange)}
+            tickFormatter={(v) => {
+              if (timeRange === '7d') {
+                const d = new Date(v);
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              }
+              return formatTickByRange(v, timeRange);
+            }}
             interval={tickIntervalByRange(timeRange)}
           />
 
-          {/* Left Y-axis: Raw data */}
+          {/* Left Y-axis: raw series */}
           <YAxis
             yAxisId="left"
             stroke="#8A95A5"
             fontSize={11}
             tickLine={false}
-            axisLine={leftAxisStyle as any}
+            axisLine={{ stroke: '#8A95A5' } as any}
             domain={['auto', 'auto']}
           />
 
-          {/* Right Y-axis: Score */}
+          {/* Right Y-axis: score */}
           <YAxis
             yAxisId="right"
             orientation="right"
             stroke={chartColor}
             fontSize={11}
             tickLine={false}
-            axisLine={rightAxisStyle as any}
+            axisLine={{ stroke: chartColor } as any}
             domain={[0, 100]}
           />
 
           <Tooltip content={<CustomTooltip />} />
 
-          {/* Raw data series (thin line, secondary color) */}
-          <Line
-            yAxisId="left"
-            type="monotone"
-            dataKey="rawValue"
-            stroke="#8A95A5"
-            strokeWidth={2}
-            opacity={0.6}
-            dot={false}
-          />
+          {/* Reference lines (e.g. IEEE 519: 5%) */}
+          {referenceLines.map((rl, i) => (
+            <ReferenceLine
+              key={i}
+              yAxisId="left"
+              y={rl.value}
+              stroke={rl.color}
+              strokeDasharray="4 4"
+              label={{ value: rl.label, fill: rl.color, fontSize: 10, position: 'insideTopRight' }}
+            />
+          ))}
 
-          {/* Score series (thicker line, chart color with fill) */}
+          {/* Raw data series */}
+          {series.map((s, si) => {
+            const key = `s${si}`;
+            const color = SERIES_PALETTE[si % SERIES_PALETTE.length];
+            const strokeWidth = s.style === 'bold' ? 3 : 2;
+            const strokeDasharray = s.style === 'dashed' ? '4 4' : s.style === 'ref' ? '3 3' : undefined;
+            const opacity = s.style === 'ref' ? 0.5 : 0.8;
+            return (
+              <Line
+                key={key}
+                yAxisId="left"
+                type="monotone"
+                dataKey={key}
+                stroke={color}
+                strokeWidth={strokeWidth}
+                strokeDasharray={strokeDasharray}
+                opacity={opacity}
+                dot={false}
+                name={s.label}
+              />
+            );
+          })}
+
+          {/* Score line */}
           <Line
             yAxisId="right"
             type="monotone"
@@ -236,46 +208,27 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
             stroke={chartColor}
             strokeWidth={3}
             dot={false}
+            name="Score"
           />
-
-          {/* Predicted delta line for energy anomaly (third line) */}
-          {predictedData && predictedData.length > 0 && (
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="predictedValue"
-              stroke="#60A5FA"
-              strokeWidth={2}
-              strokeDasharray="4 4"
-              opacity={0.7}
-              dot={false}
-            />
-          )}
         </LineChart>
       </ResponsiveContainer>
 
       {/* Legend */}
-      <div className="flex gap-4 mt-3">
-        <div className="flex items-center gap-2 text-xs">
-          <span
-            className="w-3 h-1 rounded-full"
-            style={{ backgroundColor: '#8A95A5' }}
-          />
-          <span className="text-[#8A95A5]">Raw ({rawMetric})</span>
-        </div>
-        {/* Show predicted_delta legend only for energy anomaly */}
-        {predictedData && predictedData.length > 0 && (
-          <div className="flex items-center gap-2 text-xs">
+      <div className="flex flex-wrap gap-3 mt-3">
+        {series.map((s, si) => (
+          <div key={si} className="flex items-center gap-1.5 text-xs">
             <span
-              className="w-3 h-1 rounded-full"
-              style={{ backgroundColor: '#60A5FA' }}
+              className="inline-block w-4 h-0.5 rounded-full"
+              style={{ backgroundColor: SERIES_PALETTE[si % SERIES_PALETTE.length] }}
             />
-            <span className="text-[#8A95A5]">Predicted</span>
+            <span className="text-[#8A95A5]">
+              {s.label}{s.unit ? ` (${s.unit})` : ''}
+            </span>
           </div>
-        )}
-        <div className="flex items-center gap-2 text-xs">
+        ))}
+        <div className="flex items-center gap-1.5 text-xs">
           <span
-            className="w-3 h-1 rounded-full"
+            className="inline-block w-4 h-0.5 rounded-full"
             style={{ backgroundColor: chartColor }}
           />
           <span className="text-[#8A95A5]">Score</span>
