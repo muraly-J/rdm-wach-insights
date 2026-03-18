@@ -30,6 +30,10 @@ const PredictionView = React.lazy(
   () => import('./components/prediction/PredictionView')
 );
 
+const FinancialImpactView = React.lazy(
+  () => import('./components/financial/FinancialImpactView')
+);
+
 // ZONE D — Chat Widget
 import ChatWidget from './components/chat/ChatWidget';
 
@@ -280,6 +284,13 @@ function App() {
               {selectedDevice && selectedDevice !== 'all' && (
                 <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#1E2A3A] rounded-xl" />}>
                   <PredictionView deviceId={selectedDevice} />
+                </React.Suspense>
+              )}
+
+              {/* Financial Impact Section */}
+              {selectedLevel && (
+                <React.Suspense fallback={<div className="card h-48 animate-pulse bg-[#1A2230] rounded-xl" />}>
+                  <FinancialImpactView level={selectedLevel} range={timeRange} />
                 </React.Suspense>
               )}
             </motion.main>
