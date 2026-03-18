@@ -28,6 +28,7 @@ from routes.dashboard import router as dashboard_router
 from routes.health_scores import router as health_scores_router
 from routes.predictions import router as predictions_router
 from routes.measurements import router as measurements_router
+from routes.delta_forecast import router as delta_forecast_router
 
 from dotenv import load_dotenv
 from middleware.query_logger import init_db, log_query
@@ -40,16 +41,13 @@ RATE_LIMIT        = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
 RATE_WINDOW       = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
 
 
-def _check_rate_limit(ip: str) -> None:
+def _check_rate_limit(ip: str) -> bool:
+    """Returns True if the request should be rate-limited."""
     now  = time.time()
     hits = [t for t in _rate_store[ip] if now - t < RATE_WINDOW]
     hits.append(now)
     _rate_store[ip] = hits
-    if len(hits) > RATE_LIMIT:
-        raise HTTPException(
-            status_code=429,
-            detail={"error": "Too many requests. Please wait a moment before trying again."}
-        )
+    return len(hits) > RATE_LIMIT
 
 
 # ── API Key Authentication Middleware ────────────────────────────────────────
@@ -124,19 +122,25 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
 # ── Rate Limiting Middleware ─────────────────────────────────────────────────
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Rate Limiting Middleware - applied to forecast endpoints."""
-    
+
     async def dispatch(self, request: Request, call_next):
         # Skip rate limiting for health check
         if request.url.path == "/health":
             return await call_next(request)
-        
+
         # Get client IP
         client_ip = request.client.host or "unknown"
-        
+
         # Check rate limit for /api endpoints
+        # NOTE: Must return JSONResponse directly — raising HTTPException inside
+        # BaseHTTPMiddleware is swallowed by Starlette and surfaces as 500.
         if request.url.path.startswith("/api/"):
-            _check_rate_limit(client_ip)
-        
+            if _check_rate_limit(client_ip):
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": {"error": "Too many requests. Please wait a moment before trying again."}}
+                )
+
         return await call_next(request)
 
 
@@ -212,6 +216,7 @@ def create_app():
     app.include_router(chat_router, prefix="/api")
     app.include_router(predictions_router, prefix="/api")
     app.include_router(measurements_router, prefix="/api")
+    app.include_router(delta_forecast_router, prefix="/api")
 
     @app.get('/health')
     async def health():
