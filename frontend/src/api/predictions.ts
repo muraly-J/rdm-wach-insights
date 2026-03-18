@@ -48,3 +48,7 @@ export async function fetchPredictions(
     `/predictions/${deviceId}?horizons=${horizons.join(',')}`
   );
 }
+
+export async function fetchDeltaForecast(deviceId: string): Promise<import('../types').DeltaForecastResponse> {
+  return apiFetch<import('../types').DeltaForecastResponse>(`/device/${deviceId}/delta-forecast`);
+}
