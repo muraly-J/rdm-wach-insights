@@ -87,6 +87,8 @@ def _compute_impact(level: int, time_range: str) -> dict:
 
     cfg = _load_config()
     tariff        = cfg["tariff_rate"]
+    # max_demand_rate is stored but not yet used in calculations
+    # TODO: implement kVA-based demand charge when meter data is available
     planned_cost  = cfg["planned_maintenance_cost"]
     multiplier    = cfg["emergency_multiplier"]
     currency      = cfg["currency"]

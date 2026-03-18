@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { saveFinancialConfig } from '../../api/financial';
 import type { FinancialConfig } from '../../types';
 
@@ -36,11 +37,24 @@ const FinancialSettingsDrawer: React.FC<Props> = ({ config, onClose, onSaved }) 
   };
 
   return (
-    <>
+    <AnimatePresence>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+      <motion.div
+        className="fixed inset-0 bg-black/40 z-40"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+      />
       {/* Drawer */}
-      <div className="fixed right-0 top-0 h-full w-[360px] bg-[#0B0F14] border-l border-[#1E2A3A] z-50 flex flex-col shadow-2xl">
+      <motion.div
+        className="fixed right-0 top-0 h-full w-[360px] bg-[#0B0F14] border-l border-[#1E2A3A] z-50 flex flex-col shadow-2xl"
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      >
         <div className="flex items-center justify-between px-6 py-5 border-b border-[#1E2A3A]">
           <h2 className="font-display text-[18px] font-bold">Financial Settings</h2>
           <button onClick={onClose} className="text-[#8A95A5] hover:text-white transition-colors text-xl">✕</button>
@@ -76,8 +90,8 @@ const FinancialSettingsDrawer: React.FC<Props> = ({ config, onClose, onSaved }) 
             {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
-      </div>
-    </>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 

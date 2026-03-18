@@ -16,5 +16,5 @@ export async function fetchFinancialImpact(
   level: number,
   range: '24h' | '7d' | '30d' = '30d'
 ): Promise<FinancialImpact> {
-  return apiFetch<FinancialImpact>(`/financial-impact?level=${level}&range=${range}`);
+  return apiFetch<FinancialImpact>(`/financial-impact?level=${level}&time_range=${range}`);
 }
