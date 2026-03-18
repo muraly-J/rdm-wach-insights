@@ -9,7 +9,7 @@ Conversational AHU energy analytics for the WACH ward.
 - **Rate Limiting**: Default 20 requests per minute (configurable)
 - **Input Validation**: Device IDs and metrics are strictly validated
 - **Flux Query Sanitization**: Regex injection prevented via escaping
-- **CORS Hardening**: Restricted origins, methods, and headers
+- **CORS Hardening**: Restricted origins, methods, and headers 
 
 See `docs/security/SECURITY_AUDIT_2026.md` for complete security audit details.
 
