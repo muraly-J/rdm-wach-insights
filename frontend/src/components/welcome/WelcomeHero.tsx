@@ -60,7 +60,7 @@ const WelcomeHero: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="
-            font-display text-[56px] font-bold leading-tight
+            font-display text-[32px] sm:text-[56px] font-bold leading-tight
             tracking-[-0.02em]
           "
         >
@@ -74,7 +74,7 @@ const WelcomeHero: React.FC = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
           className="
-            mt-4 text-[18px]
+            mt-4 text-[15px] sm:text-[18px]
             text-[#8A95A5]
             max-w-[600px] mx-auto
           "
