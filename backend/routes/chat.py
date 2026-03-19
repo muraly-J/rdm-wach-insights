@@ -33,10 +33,10 @@ _RAG_COLLECTION = os.getenv("RAG_COLLECTION", "wach_docs")
 
 
 def _get_retriever():
-    """Lazily load retriever — returns None if no documents ingested yet."""
-    from rag.vector_store import VectorStore
-    from rag.retriever import Retriever
+    """Lazily load retriever — returns None if chromadb not installed or no documents ingested."""
     try:
+        from rag.vector_store import VectorStore
+        from rag.retriever import Retriever
         store = VectorStore(persist_dir=_CHROMA_DIR, collection_name=_RAG_COLLECTION)
         if store.count == 0:
             return None
