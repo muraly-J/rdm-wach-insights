@@ -194,7 +194,7 @@ function App() {
           {selectedLevel ? (
             <motion.main
               key={`level-${selectedLevel}`}
-              className="max-w-[1280px] mx-auto px-6 pt-8 pb-24"
+              className="max-w-[1280px] mx-auto px-4 sm:px-6 pt-6 sm:pt-8 pb-16 sm:pb-24"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -301,7 +301,7 @@ function App() {
           ) : (
             <motion.div
               key="no-level"
-              className="max-w-[1280px] mx-auto px-6 py-16 text-center"
+              className="max-w-[1280px] mx-auto px-4 sm:px-6 py-16 text-center"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
