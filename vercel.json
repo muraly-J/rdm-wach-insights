@@ -21,7 +21,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://agreed-myself-houses-harvard.trycloudflare.com/api/$1"
+      "destination": "https://rdm-wach-insights-production.up.railway.app/api/$1"
     },
     {
       "source": "/(.*)",
