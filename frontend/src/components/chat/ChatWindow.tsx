@@ -97,19 +97,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
         w-full sm:w-[400px]
         bg-[#0B0F14]
         rounded-t-[20px] sm:rounded-[20px]
-        overflow-hidden
+        overflow-hidden max-h-[82dvh]
         shadow-2xl border border-[#1E2A3A]
         flex flex-col
       "
-      animate={{
-        height: isMinimized
-          ? 'auto'
-          : typeof window !== 'undefined' && window.innerWidth < 640
-            ? Math.min(560, Math.floor(window.innerHeight * 0.82))
-            : 560,
-        opacity: 1,
-        scale: 1,
-      }}
+      animate={{ height: isMinimized ? 'auto' : 560, opacity: 1, scale: 1 }}
       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
       initial={{ opacity: 0, scale: 0.9 }}
       exit={{ opacity: 0, scale: 0.9 }}
