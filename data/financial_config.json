@@ -1,0 +1,7 @@
+{
+  "currency": "RM",
+  "tariff_rate": 0.365,
+  "max_demand_rate": 30.3,
+  "planned_maintenance_cost": 500.0,
+  "emergency_multiplier": 3.0
+}
