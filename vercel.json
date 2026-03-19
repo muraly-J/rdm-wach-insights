@@ -1,4 +1,5 @@
 {
+  "framework": null,
   "buildCommand": "cd frontend && npm ci && npm run build",
   "outputDirectory": "frontend/dist",
   "installCommand": "cd frontend && npm ci",
@@ -20,7 +21,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://necessary-bent-sol-geology.trycloudflare.com/api/$1"
+      "destination": "https://agreed-myself-houses-harvard.trycloudflare.com/api/$1"
     },
     {
       "source": "/(.*)",
