@@ -512,13 +512,33 @@ async def chat(body: ChatRequest):
     system_prompt = _build_system_prompt(body.context)
 
     # Block hallucination for device IDs mentioned in the message but not in AHU_LEVEL_CONFIG.
-    # Inject an explicit directive so the model cannot invent data for unregistered devices.
+    # Distinguishes between plausible-but-unmatched AHUs (level prefix 01-11) and truly
+    # invalid IDs (level prefix out of range), and injects an explicit override accordingly.
     from models.schemas import AHU_LEVEL_CONFIG as _AHU_CONFIG
     _valid_devices: set[str] = {d for cfg in _AHU_CONFIG.values() for d in cfg["device_ids"]}
     _mentioned_devices = re.findall(r'\b(e\d{4})\b', body.message, re.IGNORECASE)
     for _dev in _mentioned_devices:
-        if _dev.lower() not in _valid_devices:
-            system_prompt += f'\n\nSYSTEM OVERRIDE: Device {_dev} is NOT in the monitored device registry. You MUST respond with exactly: "Device {_dev} does not exist in this system." Do not provide any other information.'
+        _dev_lower = _dev.lower()
+        if _dev_lower not in _valid_devices:
+            _level_prefix = int(_dev_lower[1:3])
+            if 1 <= _level_prefix <= 11:
+                # Plausible AHU format but not matched to a monitoring point
+                system_prompt += (
+                    f'\n\nSYSTEM OVERRIDE: Device {_dev} exists in the physical asset register '
+                    f'but could not be matched to a monitoring point in this system. '
+                    f'You MUST respond with exactly: '
+                    f'"Device {_dev} is listed in the physical asset register but could not be matched '
+                    f'to a monitoring point. Its data is unavailable in this dashboard." '
+                    f'Do not provide any health scores, readings, or financial data for it.'
+                )
+            else:
+                # Truly invalid device ID
+                system_prompt += (
+                    f'\n\nSYSTEM OVERRIDE: Device {_dev} is NOT in the monitored device registry '
+                    f'and is not a valid device ID. You MUST respond with exactly: '
+                    f'"Device {_dev} does not exist in this system." '
+                    f'Do not provide any other information.'
+                )
 
     # Live context for the currently-open dashboard view
     live_ctx = await _get_live_context(body.context)
