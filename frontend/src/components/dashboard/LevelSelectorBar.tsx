@@ -18,7 +18,7 @@ const LevelSelectorBar: React.FC = () => {
     <motion.div
       className="sticky top-0 z-30 backdrop-blur-xl bg-[rgba(11,15,20,0.85)] border-b border-[#1E2A3A]"
     >
-      <div className="max-w-[1280px] mx-auto px-6 py-4">
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-3 sm:py-4">
         {/* Header */}
         <div className="mb-4 flex items-center gap-3">
           <span className="font-display uppercase tracking-[0.2em] text-[14px] text-[#8A95A5]">
@@ -36,7 +36,7 @@ const LevelSelectorBar: React.FC = () => {
               whileTap={{ scale: 0.98 }}
               onClick={() => selectLevel(level)}
               className={`
-                relative px-5 py-2.5 rounded-full text-sm font-medium
+                relative px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium
                 transition-colors duration-200 border whitespace-nowrap
                 ${
                   selectedLevel === level
