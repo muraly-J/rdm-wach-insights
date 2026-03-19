@@ -189,7 +189,7 @@ def _extract_navigate_target(message: str) -> Optional[dict]:
 
 
 _PREDICTION_PATTERN = re.compile(
-    r'\b(predict\w*|forecast\w*|next|upcoming|future|ahead|will be|expect\w*|projection|estimate)\b',
+    r'\b(predict\w*|forecast\w*|next|upcoming|future|ahead|will\b|tomorrow|expect\w*|projection|estimate|spike)\b',
     re.IGNORECASE,
 )
 
