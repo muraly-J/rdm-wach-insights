@@ -24,7 +24,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 from typing import Optional
 
-from llm.gemini_client import GeminiClient
+from llm.client_factory import get_chat_client
 from models.schemas import ChatHistoryItem
 from config import get_building_name, get_department
 
@@ -575,7 +575,7 @@ async def chat(body: ChatRequest):
     ]
 
     try:
-        client = GeminiClient()
+        client = get_chat_client()
         reply = await client.generate_chat_response(
             messages=full_messages,
             system_instruction=system_prompt,

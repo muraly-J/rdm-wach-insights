@@ -1,11 +1,14 @@
 {
+  "buildCommand": "cd frontend && npm ci && npm run build",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "cd frontend && npm ci",
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://rdm-wach-insights.vercel.app"
+          "value": "https://demo-wach-insight.vercel.app"
         },
         {
           "key": "Access-Control-Allow-Credentials",
