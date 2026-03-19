@@ -26,6 +26,7 @@ class QwenClient:
         self._client = OpenAI(
             base_url=get_lms_base_url(),
             api_key=get_lms_api_key(),
+            timeout=5.0,  # fail fast instead of hanging 60s when LM Studio is unreachable
         )
         self._model = get_lms_model()
         logger.info(f"QwenClient initialised — model={self._model}, base_url={get_lms_base_url()}")
@@ -44,17 +45,21 @@ class QwenClient:
         messages.append({"role": "user", "content": prompt})
 
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            partial(
-                self._client.chat.completions.create,
-                model=self._model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_output_tokens,
-            ),
-        )
-        return response.choices[0].message.content
+        try:
+            response = await loop.run_in_executor(
+                None,
+                partial(
+                    self._client.chat.completions.create,
+                    model=self._model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_output_tokens,
+                ),
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.warning(f"LM Studio unreachable: {e}")
+            return "Local LM Studio is not available in this environment."
 
     async def generate_chat_response(
         self,
@@ -77,14 +82,18 @@ class QwenClient:
             oai_messages.append({"role": role, "content": content})
 
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            partial(
-                self._client.chat.completions.create,
-                model=self._model,
-                messages=oai_messages,
-                temperature=temperature,
-                max_tokens=max_output_tokens,
-            ),
-        )
-        return response.choices[0].message.content
+        try:
+            response = await loop.run_in_executor(
+                None,
+                partial(
+                    self._client.chat.completions.create,
+                    model=self._model,
+                    messages=oai_messages,
+                    temperature=temperature,
+                    max_tokens=max_output_tokens,
+                ),
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.warning(f"LM Studio unreachable: {e}")
+            return "Local LM Studio is not available in this environment."
