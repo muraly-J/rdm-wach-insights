@@ -109,14 +109,14 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
 
   return (
     <motion.div
-      className="card p-6"
+      className="card p-4 sm:p-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
     >
       {/* Header (Section 5.2) */}
       <div className="mb-6">
-        <h3 className="font-display text-[24px] font-bold tracking-[-0.01em] flex items-center">
+        <h3 className="font-display text-[20px] sm:text-[24px] font-bold tracking-[-0.01em] flex items-center">
           Health Index
           <InfoTooltip content={
             <div className="space-y-2.5">
