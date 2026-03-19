@@ -5,6 +5,7 @@ import FloatingParticles from './FloatingParticles';
 import AHUWireframeSVG from './AHUWireframeSVG';
 import CapabilityPills from './CapabilityPills';
 import ScrollCTA from './ScrollCTA';
+import AHUCoverageDisclaimer from './AHUCoverageDisclaimer';
 
 /**
  * WelcomeHero - Full-viewport section (Section 3.1)
@@ -97,6 +98,9 @@ const WelcomeHero: React.FC = () => {
         >
           Note: Scores are model-derived estimates and should complement — not replace — physical inspections.
         </motion.p>
+
+        {/* AHU coverage gap disclaimer */}
+        <AHUCoverageDisclaimer />
       </div>
 
       {/* Scroll CTA (Section 3.2) */}
