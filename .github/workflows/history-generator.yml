@@ -1,0 +1,70 @@
+name: History Generator
+
+on:
+  # Manual trigger only — run this whenever there is a data gap
+  workflow_dispatch:
+    inputs:
+      level:
+        description: 'Level to process (1-11) or "all" for all levels'
+        required: false
+        default: 'all'
+      dry_run:
+        description: 'Dry run (show plan without executing)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  generate-history:
+    name: Generate Full Historical ETL
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      INFLUX_URL: ${{ secrets.INFLUX_URL }}
+      INFLUX_TOKEN: ${{ secrets.INFLUX_TOKEN }}
+      INFLUX_ORG: ${{ secrets.INFLUX_ORG }}
+      INFLUX_SKIP_TLS: "true"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run History Generator
+        run: |
+          echo "=========================================="
+          echo "History Generator started — $(date -u)"
+          echo "Level: ${{ github.event.inputs.level }}"
+          echo "Dry run: ${{ github.event.inputs.dry_run }}"
+          echo "=========================================="
+
+          ARGS="--level ${{ github.event.inputs.level }} --verbose"
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+
+          python scripts/etl/history_generator.py $ARGS
+
+          echo "=========================================="
+          echo "History Generator finished — $(date -u)"
+          echo "=========================================="
+
+      - name: Upload generated CSVs as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: history-csvs-${{ github.run_number }}
+          path: |
+            data/predictions.csv
+            data/health_all_levels.csv
+            data/health_hourly.csv
+          retention-days: 14
