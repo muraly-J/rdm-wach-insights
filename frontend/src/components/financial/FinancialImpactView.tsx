@@ -66,9 +66,9 @@ const FinancialImpactView: React.FC<Props> = ({ level, range = '30d', deviceId }
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h3 className="font-display text-[28px] font-bold tracking-[-0.01em]">
+          <h3 className="font-display text-[22px] sm:text-[28px] font-bold tracking-[-0.01em]">
             Financial Impact
           </h3>
           <p className="text-[#8A95A5] mt-1 text-sm">
@@ -87,7 +87,7 @@ const FinancialImpactView: React.FC<Props> = ({ level, range = '30d', deviceId }
       <div className="card p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <p className="text-[#8A95A5] text-sm mb-1">Estimated monthly savings opportunity</p>
-          <div className="text-[42px] font-bold font-mono text-[#00E5A0]">
+          <div className="text-[30px] sm:text-[42px] font-bold font-mono text-[#00E5A0]">
             {cur} {impact.grand_total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-xs text-[#4A5568] mt-1">
