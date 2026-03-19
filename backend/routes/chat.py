@@ -189,7 +189,7 @@ def _extract_navigate_target(message: str) -> Optional[dict]:
 
 
 _PREDICTION_PATTERN = re.compile(
-    r'\b(predict|predicted|forecast|next|upcoming|future|ahead|will be|expect|expected|projection|estimate)\b',
+    r'\b(predict\w*|forecast\w*|next|upcoming|future|ahead|will be|expect\w*|projection|estimate)\b',
     re.IGNORECASE,
 )
 
@@ -542,6 +542,11 @@ async def chat(body: ChatRequest):
 
     # Prediction context: if the message asks about future values,
     # inject predicted measurements and scores for the mentioned device/level.
+    # Fall back to the dashboard context level when no explicit target is mentioned.
+    if _is_prediction_query(body.message) and nav_target is None:
+        ctx_level, _ = _sanitize_context(body.context)
+        if ctx_level:
+            nav_target = {"level": ctx_level}
     if _is_prediction_query(body.message) and nav_target:
         horizon_match = re.search(r'(\d+)\s*(h|hour|day|week)', body.message, re.IGNORECASE)
         horizon_hint = "24h"
