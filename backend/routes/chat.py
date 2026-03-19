@@ -62,7 +62,7 @@ Your responses should be:
 You have knowledge of:
 - AHU electrical health scoring (0-100 scale):
   - **Healthy**: 80–100 — normal operation
-  - **Monitor**: 60–79 — watch for degradation
+  - **Monitor**: 60–79 — watch for degradation (a score of 79.9 or below is Monitor, never Healthy)
   - **Maintenance Soon**: 40–59 — schedule service
   - **Critical**: 0–39 — urgent intervention needed
 - FAIR scoring components: Energy Anomaly (15%), Power Factor Degradation (25%),
@@ -541,8 +541,8 @@ async def chat(body: ChatRequest):
                 system_prompt += "\n\n## Computed Health Scores (mentioned in query)" + extra_csv.split("## Computed Health Scores", 1)[-1]
 
     # Prediction context: if the message asks about future values,
-    # inject predicted measurements and scores for the mentioned device.
-    if _is_prediction_query(body.message) and nav_target and nav_target.get("device"):
+    # inject predicted measurements and scores for the mentioned device/level.
+    if _is_prediction_query(body.message) and nav_target:
         horizon_match = re.search(r'(\d+)\s*(h|hour|day|week)', body.message, re.IGNORECASE)
         horizon_hint = "24h"
         if horizon_match:
@@ -553,10 +553,21 @@ async def chat(body: ChatRequest):
                 horizon_hint = "24h"
             elif unit in ("week",):
                 horizon_hint = "168h"
-        pred_ctx = await _get_prediction_context(nav_target["device"], horizon_hint)
-        if pred_ctx:
-            system_prompt += pred_ctx
-        # Signal the frontend to show the prediction view
+        if nav_target.get("device"):
+            # Device-scoped: inject prediction for the specific AHU
+            pred_ctx = await _get_prediction_context(nav_target["device"], horizon_hint)
+            if pred_ctx:
+                system_prompt += pred_ctx
+        elif nav_target.get("level"):
+            # Level-scoped: sample up to 2 AHUs from the level for representative predictions
+            from models.schemas import AHU_LEVEL_CONFIG
+            level_num = nav_target["level"]
+            sample_devices = AHU_LEVEL_CONFIG.get(level_num, {}).get("device_ids", [])[:2]
+            for did in sample_devices:
+                pred_ctx = await _get_prediction_context(did, horizon_hint)
+                if pred_ctx:
+                    system_prompt += pred_ctx
+        # Signal the frontend to show the prediction view (device- or level-scoped)
         nav_target["view"] = "prediction"
 
     # Inject RAG context if documents have been ingested (best-effort, never blocks chat)
