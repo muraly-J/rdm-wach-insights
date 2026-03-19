@@ -1,16 +1,15 @@
 # Chatbot Failure Analysis — WACH AI
 **Date:** 2026-03-19
-**Model:** Qwen (local, LM Studio) / fallback: Gemini 2.0 Flash
-**Status:** Template — fill in actual results when LM Studio is running with a Qwen model loaded on port 1234.
+**Model:** Qwen3-8B (local, LM Studio) via `qwen/qwen3-8b`
+**Backend:** `http://localhost:8081` → Cloudflare tunnel → `https://demo-wach-insight.vercel.app`
 
 ---
 
 ## Executive Summary
 
-> TODO: After running the 10 test queries below, summarise:
-> - Overall pass rate (X/10)
-> - Top 2–3 failure categories
-> - Whether the chatbot is demo-ready
+**Pass rate: 7/10 (70%)** — 5 clean PASS, 2 PARTIAL PASS, 2 FAIL
+
+The chatbot handles device-specific queries, financial impact, and off-topic deflection well. Two hard failures block full demo readiness: vague level-scoped forecast queries return no data, and level-scoped navigation omits the `view` key needed to route the frontend to the predictions panel. Two minor inconsistencies (a tier label off-by-one and a bracket formatting deviation) are low severity but should be fixed before a customer demo.
 
 ---
 
@@ -18,29 +17,27 @@
 
 | # | Category | Query | Expected | Actual | Pass? | Root Cause |
 |---|----------|-------|----------|--------|-------|------------|
-| 1 | Level health | "what's wrong with level 5?" | Lists worst AHUs on L5 with health scores | — | — | — |
-| 2 | Level health | "what is the health index on level 3?" | L3 average health + worst/best AHUs | — | — | — |
-| 3 | Device-specific | "how is AHU e0202 performing?" | Health index, FAIR scores, tier for e0202 | — | — | — |
-| 4 | Device-specific | "is e0501 at risk?" | Health score + tier for e0501 | — | — | — |
-| 5 | Forecast | "will energy spike tomorrow?" | Prediction context injected, Δ kWh mentioned | — | — | — |
-| 6 | Forecast | "predict health of e0303 in 24 hours" | Predicted HI + FAIR scores for e0303 at +24h | — | — | — |
-| 7 | Financial | "what's the cost impact of poor health on level 3?" | Excess energy, PF penalty, maintenance risk totals | — | — | — |
-| 8 | Navigation | "take me to level 7 predictions" | navigate field: {level: 7, view: "prediction"} | — | — | — |
-| 9 | Off-topic | "what's the weather today?" | Polite redirect to AHU/energy topics | — | — | — |
-| 10 | Invalid device | "how is AHU e9999 doing?" | "Device e9999 does not exist in this system." | — | — | — |
+| 1 | Level health | "what's wrong with level 5?" | Worst AHUs on L5 with health scores + flags | Listed worst AHUs, FAIR flags, RM totals | ✅ PASS | — |
+| 2 | Level health | "what is the health index on level 3?" | L3 average + worst/best AHU lists | Gives average (79.3) but mislabels it "Healthy" (threshold is 80); no separate best/worst list | ⚠️ PARTIAL | Tier label off-by-one; best list omitted |
+| 3 | Device-specific | "how is AHU e0202 performing?" | Health index, FAIR scores, tier for e0202 | 89.8/100 Healthy, phase imbalance + THD flagged, navigate includes device | ✅ PASS | — |
+| 4 | Device-specific | "is e0501 at risk?" | Health score + tier + risk assessment | 87.4/100 Healthy, IMBALANCE_SEVERE + PF_CHRONIC_LOW, RM cost cited | ✅ PASS | — |
+| 5 | Forecast | "will energy spike tomorrow?" | Δ kWh figure or directional prediction | Admits no forecast data available; no Δ kWh injected | ❌ FAIL | Forecast context not injected for level-scoped vague queries |
+| 6 | Forecast | "predict health of e0303 in 24 hours" | Predicted HI + FAIR scores, navigate with view=prediction | 71.9/100 predicted, +37.57 kWh, navigate `{level:3, device:"e0303", view:"prediction"}` | ✅ PASS | — |
+| 7 | Financial | "what's the cost impact of poor health on level 3?" | Excess energy, PF penalty, maintenance risk with RM figures | RM 215.77 total: PF penalty RM 132.82, excess energy RM 82.95, maintenance RM 0.00 | ✅ PASS | — |
+| 8 | Navigation | "take me to level 7 predictions" | navigate = `{level:7, view:"prediction"}` | navigate = `{level:7}` — `view` key missing | ❌ FAIL | Router only emits `view` for device-scoped prediction queries, not level-scoped |
+| 9 | Off-topic | "what's the weather today?" | Polite redirect to AHU/energy topics | Redirects cleanly, no weather data provided | ✅ PASS | — |
+| 10 | Invalid device | "how is AHU e9999 doing?" | "Device e9999 does not exist in this system." | "Device [e9999] does not exist in this system." — brackets around ID | ⚠️ PARTIAL | Minor format deviation; functionally correct |
 
 ---
 
 ## Failure Categories
 
-When filling in results, classify each failure by root cause:
-
-1. **RAG miss** — Relevant docs exist in vector store but were not retrieved
-2. **Hallucination** — Model invented data not present in the context
-3. **Context missing** — Financial/health data was not injected into the system prompt
-4. **Navigation failure** — `navigate` field wrong, missing, or pointing to wrong level/device
-5. **Prompt confusion** — System prompt ambiguous or model misinterpreted instructions
-6. **LM Studio issue** — Connection refused, model loading, or context window cutoff
+| Category | Count | Queries |
+|----------|-------|---------|
+| Context missing — forecast not injected for level scope | 1 | Q5 |
+| Navigation failure — `view` key missing for level-scoped intent | 1 | Q8 |
+| Label inconsistency — tier mislabelled at boundary score | 1 | Q2 |
+| Format deviation — device ID wrapped in brackets | 1 | Q10 |
 
 ---
 
@@ -48,34 +45,33 @@ When filling in results, classify each failure by root cause:
 
 ### P1 — Critical (blocks demo)
 
-> TODO: List issues that cause wrong/missing responses for core use cases (health scores, device queries).
-
-- [ ] TBD after testing
+- [ ] **Q8: Level-scoped navigation missing `view` key**
+  `_extract_navigate_target()` in `backend/routes/chat.py` only sets `nav_target["view"] = "prediction"` when a device is matched. Add a branch: if the message matches a prediction-intent pattern AND a level is matched (but no device), also set `view = "prediction"`.
+  Fix location: `backend/routes/chat.py` → prediction query block (~line 560).
 
 ### P2 — High
 
-> TODO: Issues that degrade UX but don't break the demo.
+- [ ] **Q5: Forecast context not injected for level-scoped energy questions**
+  When no device is mentioned in a prediction query, the system skips prediction context injection entirely. Should fall back to a level-aggregate forecast or at minimum route the user to the predictions panel (`view: "prediction"`).
+  Fix location: `backend/routes/chat.py` → the `_is_prediction_query` block (~line 545).
 
-- [ ] TBD after testing
+- [ ] **Q2: Tier label boundary — 79.3 called "Healthy"**
+  The model interpolates tier labels from the system prompt. Add an explicit note: "A score below 80 is Monitor, not Healthy, even if close to the boundary."
+  Fix location: `backend/routes/chat.py` → `_WACH_SYSTEM_PROMPT`.
 
 ### P3 — Nice to have
 
-> TODO: Polish items for after the demo.
-
-- [ ] TBD after testing
+- [ ] **Q10: Device ID bracket formatting**
+  Model returns `Device [e9999] does not exist...` instead of `Device e9999 does not exist...`. Add to system prompt: "Do not wrap the device ID in brackets."
 
 ---
 
 ## Recommended Actions
 
-> TODO: After filling in the test results, add 3–5 actionable recommendations here.
-
-### Common Qwen-specific issues to check:
-- **Slow response** (>10s): Normal for local inference. Consider reducing `max_output_tokens` from 2048 to 512 for quicker replies.
-- **Context window cutoff**: LM Studio default is often 4096 tokens. Increase to 8192+ in model settings if responses truncate.
-- **`ConnectionRefusedError`**: LM Studio local server not started. Enable it in LM Studio → Local Server tab.
-- **Empty reply**: Model still loading in LM Studio. Wait for model to fully initialise before sending requests.
-- **Hallucinated AHU IDs**: Verify the system prompt constraint about valid device ID format is being respected.
+1. **Fix P1 (Q8) before any demo** — navigation is a key UX feature; missing `view` key breaks the predictions panel routing.
+2. **Fix P2 (Q5) for the energy forecasting pitch** — if energy trend questions are in the demo script, level-scoped forecast data must be injected.
+3. **Add a tier boundary note to the system prompt** (Q2) — one sentence, prevents misleading tier labels.
+4. **Bracket fix for Q10** is cosmetic — fine to leave for post-demo cleanup.
 
 ---
 
@@ -84,8 +80,9 @@ When filling in results, classify each failure by root cause:
 | Variable | Value |
 |----------|-------|
 | `LLM_BACKEND` | `qwen` |
-| `LMS_MODEL` | (fill in model name from LM Studio) |
+| `LMS_MODEL` | `qwen/qwen3-8b` |
 | `LMS_BASE_URL` | `http://localhost:1234/v1` |
 | `EMBED_BACKEND` | `qwen` |
 | Backend port | 8081 |
-| Frontend | `http://localhost:3000` or `https://demo-wach-insight.vercel.app` |
+| Tunnel | `https://agreed-myself-houses-harvard.trycloudflare.com` |
+| Frontend | `https://demo-wach-insight.vercel.app` |
