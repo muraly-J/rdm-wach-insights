@@ -35,7 +35,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
   const trendIcon = trendValue >= 0 ? '↑' : '↓';
 
   return (
-    <div className="card p-6 transition-all duration-0.25s ease hover:border-[#1E2A3A]">
+    <div className="card p-4 sm:p-6 transition-all duration-0.25s ease hover:border-[#1E2A3A]">
       {/* Score label */}
       <h4 className="text-[16px] font-semibold text-[#E8ECF1] mb-4 flex items-center">
         {title}
@@ -44,7 +44,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
 
       {/* Current value */}
       <div className="flex items-baseline gap-2 mb-3">
-        <span className={`font-mono text-[36px] font-bold ${numberColor}`}>
+        <span className={`font-mono text-[28px] sm:text-[36px] font-bold ${numberColor}`}>
           {value.toFixed(1)}
         </span>
         <span className="text-[#8A95A5] text-sm">/ 100</span>
