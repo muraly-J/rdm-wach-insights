@@ -27,6 +27,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+logger = logging.getLogger(__name__)
+
+from backend.utils.error_handler import handle_forecast_error
+
 router = APIRouter()
 
 
@@ -105,7 +115,7 @@ def _fetch_power_history(device_id: str, hours: int) -> pd.Series:
         df = df.resample("15min").mean().ffill()
         return df
     except Exception as e:
-        print(f"[forecast] _fetch_power_history failed: {e}")
+        logger.error(f"_fetch_power_history failed: {e}")
         return pd.Series(dtype=float)
     finally:
         client.close()
@@ -142,7 +152,7 @@ def _fetch_latest_electrical(device_id: str) -> dict:
                     if val is not None and not math.isnan(float(val)):
                         metrics[metric] = float(val)
     except Exception as e:
-        print(f"[forecast] _fetch_latest_electrical failed: {e}")
+        logger.error(f"_fetch_latest_electrical failed: {e}")
     finally:
         client.close()
 
@@ -295,6 +305,7 @@ async def get_forecast(request: Request, device_id: str):
 
     model_path = FORECAST_DEVICES[device_id]
     if not os.path.exists(model_path):
+        logger.error(f"Forecast model file not found for device {device_id}: {model_path}")
         raise HTTPException(
             status_code=500,
             detail={"error": "Forecast model not available for this device."}
@@ -304,12 +315,22 @@ async def get_forecast(request: Request, device_id: str):
     try:
         model = joblib.load(model_path)
     except Exception as e:
-        logging.getLogger(__name__).error("Model load error device=%s: %s", device_id, e, exc_info=True)
+        logger.error("Model load error device=%s: %s", device_id, e, exc_info=True)
         raise HTTPException(status_code=500, detail={"error": "Forecast service temporarily unavailable."})
 
     # 2. Fetch 7 days of history for chart
-    history_7d = _fetch_power_history(device_id, hours=168)
+    try:
+        history_7d = _fetch_power_history(device_id, hours=168)
+    except Exception as e:
+        logger.error(f"Failed to fetch history for {device_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Could not retrieve historical data. Please try again in a moment."
+            }
+        )
     if history_7d.empty or len(history_7d) < 97:
+        logger.warning(f"Not enough historical data for {device_id}: {len(history_7d)} points")
         raise HTTPException(
             status_code=500,
             detail={
@@ -320,18 +341,36 @@ async def get_forecast(request: Request, device_id: str):
         )
 
     # 3. Fetch latest electrical measurements
-    electrical = _fetch_latest_electrical(device_id)
+    try:
+        electrical = _fetch_latest_electrical(device_id)
+    except Exception as e:
+        logger.error(f"Failed to fetch electrical data for {device_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Could not retrieve latest measurements. Please try again in a moment."
+            }
+        )
 
     # 4. Generate forecast
     try:
         forecast = _build_forecast(device_id, model, history_7d, electrical)
     except ValueError as e:
-        logging.getLogger(__name__).error("Forecast error device=%s: %s", device_id, e, exc_info=True)
+        logger.error("Forecast error device=%s: %s", device_id, e, exc_info=True)
         raise HTTPException(status_code=500, detail={"error": "Forecast service temporarily unavailable."})
 
     # 5. Build summary
-    recent_avg = float(history_7d.tail(96).mean())  # last 24h average
-    summary = _build_summary(device_id, forecast, recent_avg)
+    try:
+        recent_avg = float(history_7d.tail(96).mean())  # last 24h average
+        summary = _build_summary(device_id, forecast, recent_avg)
+    except Exception as e:
+        logger.error(f"Failed to build summary for {device_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Could not generate summary. Please try again in a moment."
+            }
+        )
 
     # 6. Format history for chart — downsample to max 672 points (7d × 4/hr × 24)
     history_data = [

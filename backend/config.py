@@ -11,6 +11,9 @@ This module handles:
 
 import os
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ── Base paths ────────────────────────────────────────────────────────────────
@@ -31,7 +34,7 @@ def load_env_files():
     for env_path in env_locations:
         if env_path.exists():
             load_dotenv(env_path)
-            print(f"[config] Loaded environment from {env_path}")
+            logger.info(f"Loaded environment from {env_path}")
 
 
 # ── InfluxDB Configuration ────────────────────────────────────────────────────
@@ -167,7 +170,7 @@ def get_app_env() -> str:
 
 def get_cors_origins() -> list[str]:
     """Get allowed CORS origins as a list."""
-    raw = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+    raw = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173,https://rdm-wach-insights.vercel.app")
     return [o.strip() for o in raw.split(",") if o.strip()]
 
 
@@ -202,6 +205,14 @@ def get_exports_dir() -> Path:
 def init_config():
     """Initialize configuration and validate requirements."""
     load_env_files()
+
+    # Validate required settings
+    try:
+        get_influx_token()
+    except ValueError as e:
+        if get_app_env() == "production":
+            raise
+        logger.warning(str(e))
 
     # Ensure directories exist
     get_data_dir().mkdir(parents=True, exist_ok=True)

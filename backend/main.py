@@ -13,7 +13,15 @@ Backend and frontend communicate via /api endpoints.
 import os
 import sys
 import time
+import logging
 from collections import defaultdict
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.dirname(__file__))
 from fastapi import FastAPI, HTTPException, Request
@@ -156,13 +164,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers['Referrer-Policy']           = 'strict-origin-when-cross-origin'
         response.headers['Permissions-Policy']        = 'camera=(), microphone=(), geolocation=()'
 
-        # --- CSP: Allow only same-origin (localhost) ---
+        # --- CSP: Allow same-origin + Vercel/Cloudflare for production ---
         csp = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline'; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
-            "connect-src 'self'; "
+            f"connect-src 'self' https://rdm-wach-insights.vercel.app https://*.vercel.app https://*.trycloudflare.com; "
             "img-src 'self' data:; "
             "frame-ancestors 'none';"
         )
@@ -241,6 +249,6 @@ app = create_app()
 
 try:
     init_db()
-    print("[Startup] Query logging initialized")
+    logger.info("[Startup] Query logging initialized")
 except Exception as e:
-    print(f"[Startup] Warning: Could not initialize query logger: {e}")
+    logger.warning(f"[Startup] Warning: Could not initialize query logger: {e}")

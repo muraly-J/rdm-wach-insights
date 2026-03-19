@@ -31,6 +31,10 @@ _TOKEN  = get_influx_token() or ""  # Empty token will cause InfluxDB to fail, b
 _ORG    = get_influx_org() or "wach"
 _BUCKET = get_influx_bucket() or "wach_bucket_3"
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # Resample granularity per time range — keeps charts readable
 _RESAMPLE_MAP = {
     "last_24h":  "5min",
@@ -196,7 +200,7 @@ def fetch_ranking(
         return df
 
     except Exception as e:
-        print(f"[influx_client] fetch_ranking failed: {e}")
+        logger.error(f"fetch_ranking failed: {e}")
         return pd.DataFrame(columns=["device_id", "value"])
     finally:
         client.close()
@@ -259,7 +263,7 @@ def _execute_and_clean(
         return df
 
     except Exception as e:
-        print(f"[influx_client] query failed: {e}")
+        logger.error(f"query failed: {e}")
         return pd.DataFrame()
     finally:
         client.close()

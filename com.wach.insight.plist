@@ -29,7 +29,7 @@
   <key>ProgramArguments</key>
   <array>
       <string>/bin/bash</string>
-      <string>/Users/rdmasia/Documents/JINENDRA/rdm-wach-insights/launchd_start.sh</string>
+      <string>/Users/rdmasia/wach-insight/launchd_start.sh</string>
   </array>
   
   <!-- ── Throttle Interval ─────────────────────────────────────────────────── -->
@@ -38,13 +38,13 @@
 
   <!-- ── Working directory (project root) ──────────────────────────────── -->
   <key>WorkingDirectory</key>
-  <string>/Users/rdmasia/Documents/JINENDRA/rdm-wach-insights</string>
+  <string>/Users/rdmasia/wach-insight</string>
 
   <!-- ── Environment ───────────────────────────────────────────────────── -->
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key>
-    <string>/Users/rdmasia/Documents/JINENDRA/rdm-wach-insights/venv/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <string>/Users/rdmasia/wach-insight/venv/bin:/usr/local/bin:/usr/bin:/bin</string>
   </dict>
 
   <!-- ── Logging ────────────────────────────────────────────────────────── -->

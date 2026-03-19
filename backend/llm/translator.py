@@ -18,11 +18,14 @@ Production notes:
 import os
 import json
 import re
+import logging
 from typing import Optional, Union
 
 # Disable LLM by default for local development
 # Set ENABLE_LLM=true to enable AI translation via Gemini
 LLM_ENABLED = os.getenv("ENABLE_LLM", "false").lower() == "true"
+
+logger = logging.getLogger(__name__)
 
 from llm.prompts import SYSTEM_PROMPT
 from middleware.validator import validate_raw_dict
