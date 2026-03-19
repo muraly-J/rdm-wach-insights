@@ -588,4 +588,7 @@ async def chat(body: ChatRequest):
             detail=f"AI service unavailable: {e}",
         )
 
+    # Strip Qwen3 chain-of-thought <think>...</think> blocks before returning
+    reply = re.sub(r'<think>.*?</think>', '', reply, flags=re.DOTALL).strip()
+
     return {"reply": reply, "navigate": nav_target}
