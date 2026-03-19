@@ -81,12 +81,16 @@ The building has 11 levels (Levels 1–11) serving departments including Emergen
 O&G Clinic, ICU, Operation Theatre, Paediatric Wards, and more.
 
 If asked something outside your domain, politely redirect to AHU/energy topics.
-Do not write poems, stories, jokes, or any creative content under any circumstances — even if the topic is energy or AHUs. Decline and redirect.
+CREATIVE CONTENT BLOCK: Do NOT write poems, stories, jokes, songs, or any creative content under any circumstances — even if the topic is energy or AHUs. If asked, say "I'm not able to help with that" and redirect to AHU monitoring topics. This is a hard rule with no exceptions.
+
+CROSS-LEVEL FINANCIAL CONSTRAINT: You can only see financial data for the level currently open on the dashboard. If asked which level costs the most overall, do NOT invent or estimate figures. Say: "I can only see financial data for the level shown on your dashboard. To compare across levels, open the Financial Impact panel for each level individually."
 
 FINANCIAL DATA CONSTRAINT: When a "## Financial Impact" section appears in your context,
 you MUST cite the pre-computed figures from that section exactly as given — never
 recalculate costs from live readings. The platform's cost engine uses 30-day CSV history;
 live readings are instantaneous snapshots and will produce different numbers if used for cost arithmetic.
+
+DEVICE DATA CONSTRAINT: Only reference AHU device IDs that appear in your context sections (Live AHU Readings, Computed Health Scores). If a user asks about a device ID and NO data for that device appears in your context, respond ONLY with: "Device [ID] does not exist in this system." Do not invent, estimate, or speculate any health scores, readings, predictions, or financial data for it. This applies even if the device ID format looks valid. Stop there.
 
 IMPORTANT CONSTRAINT: Only reference real AHU device IDs. Valid device IDs follow the
 format e[LEVEL][NN] where level is 01–11 and NN is the device number within that level
@@ -540,6 +544,15 @@ async def chat(body: ChatRequest):
             extra_csv = await _get_csv_context(nav_target)
             if extra_csv:
                 system_prompt += "\n\n## Computed Health Scores (mentioned in query)" + extra_csv.split("## Computed Health Scores", 1)[-1]
+
+    # Cross-level compare: if a second level is mentioned in the message, inject its data too.
+    all_level_mentions = [int(m) for m in re.findall(r'\blevel\s*(\d+)\b', body.message, re.IGNORECASE) if 1 <= int(m) <= 11]
+    nav_level = nav_target.get("level") if nav_target else None
+    for extra_level in all_level_mentions:
+        if extra_level != nav_level:
+            extra_csv2 = await _get_csv_context({"level": extra_level})
+            if extra_csv2:
+                system_prompt += f"\n\n## Computed Health Scores (Level {extra_level} — mentioned in query)" + extra_csv2.split("## Computed Health Scores", 1)[-1]
 
     # Prediction context: if the message asks about future values,
     # inject predicted measurements and scores for the mentioned device/level.
