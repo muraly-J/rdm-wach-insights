@@ -23,10 +23,12 @@ class QwenClient:
     """Async wrapper for LM Studio / Qwen via OpenAI-compatible API."""
 
     def __init__(self):
+        import os
+        timeout = float(os.getenv("LMS_TIMEOUT", "60.0"))
         self._client = OpenAI(
             base_url=get_lms_base_url(),
             api_key=get_lms_api_key(),
-            timeout=5.0,  # fail fast instead of hanging 60s when LM Studio is unreachable
+            timeout=timeout,
         )
         self._model = get_lms_model()
         logger.info(f"QwenClient initialised — model={self._model}, base_url={get_lms_base_url()}")
