@@ -46,7 +46,7 @@ const DashboardGate: React.FC = () => {
         </span>
         
         <motion.h2
-          className="font-display text-[36px] font-bold leading-tight tracking-[-0.02em]"
+          className="font-display text-[24px] sm:text-[36px] font-bold leading-tight tracking-[-0.02em]"
           style={{ opacity: textOpacity }}
         >
           AHU Health Overview
