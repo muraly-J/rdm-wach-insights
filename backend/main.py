@@ -170,7 +170,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "script-src 'self' 'unsafe-inline'; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
-            f"connect-src 'self' https://rdm-wach-insights.vercel.app https://*.vercel.app https://*.trycloudflare.com; "
+            "connect-src 'self' https://*.vercel.app https://*.railway.app; "
             "img-src 'self' data:; "
             "frame-ancestors 'none';"
         )
