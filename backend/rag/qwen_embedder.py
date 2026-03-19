@@ -8,16 +8,24 @@ Model downloads ~300MB to ~/.cache/huggingface/ on first use.
 
 import asyncio
 import logging
-from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
 
 _MODEL_NAME = "Qwen/Qwen3-Embedding-0.6B"
-_model: SentenceTransformer | None = None
+_model = None
+
+try:
+    from sentence_transformers import SentenceTransformer
+    _ST_AVAILABLE = True
+except ImportError:
+    _ST_AVAILABLE = False
+    logger.warning("sentence-transformers not installed — local embeddings unavailable")
 
 
-def _get_model() -> SentenceTransformer:
+def _get_model():
     global _model
+    if not _ST_AVAILABLE:
+        raise RuntimeError("sentence-transformers is not installed in this environment")
     if _model is None:
         logger.info(f"Loading embedding model {_MODEL_NAME}...")
         _model = SentenceTransformer(_MODEL_NAME, trust_remote_code=True)
