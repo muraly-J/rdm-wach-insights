@@ -511,6 +511,15 @@ async def chat(body: ChatRequest):
     gemini_history = _build_gemini_history(body.history)
     system_prompt = _build_system_prompt(body.context)
 
+    # Block hallucination for device IDs mentioned in the message but not in AHU_LEVEL_CONFIG.
+    # Inject an explicit directive so the model cannot invent data for unregistered devices.
+    from models.schemas import AHU_LEVEL_CONFIG as _AHU_CONFIG
+    _valid_devices: set[str] = {d for cfg in _AHU_CONFIG.values() for d in cfg["device_ids"]}
+    _mentioned_devices = re.findall(r'\b(e\d{4})\b', body.message, re.IGNORECASE)
+    for _dev in _mentioned_devices:
+        if _dev.lower() not in _valid_devices:
+            system_prompt += f'\n\nSYSTEM OVERRIDE: Device {_dev} is NOT in the monitored device registry. You MUST respond with exactly: "Device {_dev} does not exist in this system." Do not provide any other information.'
+
     # Live context for the currently-open dashboard view
     live_ctx = await _get_live_context(body.context)
     if live_ctx:
