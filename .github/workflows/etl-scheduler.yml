@@ -1,0 +1,60 @@
+name: ETL Scheduler
+
+on:
+  schedule:
+    # Runs every 30 minutes
+    - cron: '0,30 * * * *'
+  # Allow manual trigger from GitHub UI for testing
+  workflow_dispatch:
+
+jobs:
+  run-etl:
+    name: Run Prediction + Health ETL
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      INFLUX_URL: ${{ secrets.INFLUX_URL }}
+      INFLUX_TOKEN: ${{ secrets.INFLUX_TOKEN }}
+      INFLUX_ORG: ${{ secrets.INFLUX_ORG }}
+      INFLUX_SKIP_TLS: "true"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Prediction ETL
+        run: |
+          echo "=========================================="
+          echo "Starting Prediction ETL — $(date -u)"
+          echo "=========================================="
+          python scripts/etl/run_prediction_etl.py --level all
+          echo "Prediction ETL finished — $(date -u)"
+
+      - name: Run Health Scoring ETL
+        run: |
+          echo "=========================================="
+          echo "Starting Health Scoring ETL — $(date -u)"
+          echo "=========================================="
+          python scripts/etl/run_health_etl.py --level all
+          echo "Health Scoring ETL finished — $(date -u)"
+
+      - name: Upload ETL outputs as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: etl-outputs-${{ github.run_number }}
+          path: |
+            data/predictions.csv
+            data/health_all_levels.csv
+            data/health_hourly.csv
+          retention-days: 7
