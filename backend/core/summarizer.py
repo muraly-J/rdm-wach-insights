@@ -19,12 +19,6 @@ import re
 import pandas as pd
 from typing import Dict, Any, Optional
 
-from backend.config import get_lms_base_url, get_lms_model, get_lms_api_key
-from openai import AsyncOpenAI
-
-_LMS_BASE_URL = get_lms_base_url()
-_LMS_MODEL    = get_lms_model()
-_LMS_API_KEY  = get_lms_api_key()
 
 # ── Metric labels ─────────────────────────────────────────────────────────────
 _METRIC_LABELS = {
@@ -203,32 +197,26 @@ async def generate_summary(
     else:
         context = _build_ranking_context(data, metric, metric_label, range_label)
 
+    system_prompt = (
+        "You are a hospital electrical systems analyst. "
+        "Your job is to write a clear 2-4 sentence summary for a non-technical hospital administrator. "
+        "IMPORTANT RULES:\n"
+        "- If the context includes a VALUE ALERT, you MUST mention the specific device and the problem in plain English, and include the recommended action.\n"
+        "- If there is no alert, describe what the data shows and whether it looks normal.\n"
+        "- Always be specific: name the device IDs, use the actual numbers.\n"
+        "- Do not use bullet points. Do not start with 'The data shows' or 'Based on'.\n"
+        "- Write as if briefing a facilities manager who needs to decide whether to act."
+    )
     try:
-        client = AsyncOpenAI(base_url=_LMS_BASE_URL, api_key=_LMS_API_KEY)
-        response = await client.chat.completions.create(
-            model=_LMS_MODEL,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a hospital electrical systems analyst. "
-                        "Your job is to write a clear 2-4 sentence summary for a non-technical hospital administrator. "
-                        "IMPORTANT RULES:\n"
-                        "- If the context includes a VALUE ALERT, you MUST mention the specific device and the problem in plain English, and include the recommended action.\n"
-                        "- If there is no alert, describe what the data shows and whether it looks normal.\n"
-                        "- Always be specific: name the device IDs, use the actual numbers.\n"
-                        "- Do not use bullet points. Do not start with 'The data shows' or 'Based on'.\n"
-                        "- Write as if briefing a facilities manager who needs to decide whether to act."
-                    ),
-                },
-                {"role": "user", "content": context},
-            ],
+        from llm.gemini_client import GeminiClient
+        client = GeminiClient()
+        text = await client.generate_text(
+            prompt=context,
+            system_instruction=system_prompt,
             temperature=0.3,
-            max_tokens=200,
+            max_output_tokens=300,
         )
-        text = response.choices[0].message.content or ""
-        # Strip any thinking tags from qwen3
-        text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+        text = text.strip() if text else ""
         return text if text else _fallback_summary(query_type, metric, metric_label, range_label, data)
 
     except Exception:

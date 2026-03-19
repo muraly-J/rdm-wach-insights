@@ -13,13 +13,16 @@ Strategy:
 """
 
 import os
+import logging
 import math
 import joblib
 import numpy as np
 import pandas as pd
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, HTTPException
+from pathlib import Path
+from fastapi import APIRouter, HTTPException, Request
 from influxdb_client import InfluxDBClient
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -36,16 +39,47 @@ from backend.utils.error_handler import handle_forecast_error
 
 router = APIRouter()
 
+
+# ── Path Parameter Validation ────────────────────────────────────────────────
+_DEVICE_ID_PATTERN = re.compile(r'^e\d{4}$')
+
+
+def _validate_device_id(device_id: str) -> bool:
+    """Validate device ID format."""
+    return bool(_DEVICE_ID_PATTERN.match(device_id))
+
+
 _URL    = os.getenv("INFLUX_URL")
 _TOKEN  = os.getenv("INFLUX_TOKEN")
 _ORG    = os.getenv("INFLUX_ORG")
 _BUCKET = os.getenv("INFLUX_BUCKET")
 
 # Supported devices and their model paths
+# Models are located in paraquet_data/models/saved/ at project root
+# Path resolution: backend/routes/forecast.py -> .. -> .. -> .. = project_root
+_FILE_PATH = Path(__file__).resolve()
+PROJECT_ROOT = _FILE_PATH.parent.parent.parent  # up 3 levels from backend/routes/forecast.py
+MODEL_DIR = PROJECT_ROOT / "paraquet_data" / "models" / "saved"
+
+# Try multiple locations for models
+MODEL_PATHS = [
+    MODEL_DIR,
+]
+
+MODEL_BASE_PATH = None
+for path in MODEL_PATHS:
+    if path.exists() and (path / "raw_data_e0202_model.pkl").exists():
+        MODEL_BASE_PATH = path
+        break
+
+if MODEL_BASE_PATH is None:
+    # Final fallback to model dir if nothing else works
+    MODEL_BASE_PATH = MODEL_DIR
+
 FORECAST_DEVICES = {
-    "e0202": "paraquet_data/models/saved/raw_data_e0202_model.pkl",
-    "e0207": "paraquet_data/models/saved/raw_data_e0207_model.pkl",
-    "e0211": "paraquet_data/models/saved/raw_data_e0211_model.pkl",
+    "e0202": str(MODEL_BASE_PATH / "raw_data_e0202_model.pkl"),
+    "e0207": str(MODEL_BASE_PATH / "raw_data_e0207_model.pkl"),
+    "e0211": str(MODEL_BASE_PATH / "raw_data_e0211_model.pkl"),
 }
 
 # Modal 'table' value observed across all training parquet files
@@ -244,11 +278,22 @@ def _build_summary(
     )
 
 
-@router.get("/api/forecast/{device_id}")
-async def get_forecast(device_id: str):
+@router.get("/forecast/{device_id}")
+async def get_forecast(request: Request, device_id: str):
     """
     Returns 7-day historical power_total + 24-hour forecast for a supported device.
     """
+    # 1. Validate device ID format (path parameter validation)
+    if not _validate_device_id(device_id):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": f"Invalid device ID format: '{device_id}'",
+                "suggestion": "Device IDs must match pattern 'eXXXX' (e.g., e0202, e0207)"
+            }
+        )
+    
+    # 2. Check if device is in supported list
     if device_id not in FORECAST_DEVICES:
         raise HTTPException(
             status_code=400,
@@ -263,22 +308,15 @@ async def get_forecast(device_id: str):
         logger.error(f"Forecast model file not found for device {device_id}: {model_path}")
         raise HTTPException(
             status_code=500,
-            detail={
-                "error": "Forecast service is temporarily unavailable. Please try again later."
-            }
+            detail={"error": "Forecast model not available for this device."}
         )
 
     # 1. Load model
     try:
         model = joblib.load(model_path)
     except Exception as e:
-        logger.error(f"Failed to load forecast model for {device_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "Failed to load forecast model. Please try again later."
-            }
-        )
+        logger.error("Model load error device=%s: %s", device_id, e, exc_info=True)
+        raise HTTPException(status_code=500, detail={"error": "Forecast service temporarily unavailable."})
 
     # 2. Fetch 7 days of history for chart
     try:
@@ -318,11 +356,8 @@ async def get_forecast(device_id: str):
     try:
         forecast = _build_forecast(device_id, model, history_7d, electrical)
     except ValueError as e:
-        logger.error(f"Forecast generation failed for {device_id}: {e}")
-        raise HTTPException(status_code=500, detail={"error": str(e)})
-    except Exception as e:
-        logger.error(f"Unexpected forecast error for {device_id}: {e}")
-        raise handle_forecast_error(e, device_id)
+        logger.error("Forecast error device=%s: %s", device_id, e, exc_info=True)
+        raise HTTPException(status_code=500, detail={"error": "Forecast service temporarily unavailable."})
 
     # 5. Build summary
     try:

@@ -6,6 +6,7 @@ POST /api/query — main endpoint with security hardening:
 - Session ID validation
 - LLM output allowlist validation (prevents injection via structured output)
 """
+import logging
 import re
 import time
 import uuid
@@ -18,14 +19,13 @@ from pydantic import BaseModel, validator
 
 logger = logging.getLogger(__name__)
 
-from backend.llm.translator import translate_query
-from backend.middleware.validator import validate_structured_query
-from backend.middleware.query_logger import log_query
-from backend.core.influx_client import fetch_time_series, fetch_ranking
-from backend.core.charts import build_chart
-from backend.core.summarizer import summarize
-from backend.models.schemas import ALLOWED_METRICS, ALLOWED_DEVICES, QueryType
-from backend.utils.error_handler import handle_query_error, handle_llm_error
+from llm.translator import translate_query
+from middleware.validator import validate_structured_query
+from middleware.query_logger import log_query
+from core.influx_client import fetch_time_series, fetch_ranking
+from core.charts import build_chart
+from core.summarizer import summarize
+from models.schemas import ALLOWED_METRICS, ALLOWED_DEVICES, QueryType
 
 router = APIRouter()
 
@@ -129,8 +129,8 @@ def _validate_llm_output(structured) -> None:
         elif did_str not in ALLOWED_DEVICES:
             errors.append(f"Unrecognised device: '{did_str}'")
 
-    if len(structured.device_ids) > 50:
-        errors.append("Too many device_ids requested (max 50).")
+    if len(structured.device_ids) > 100:
+        errors.append("Too many device_ids requested (max 100).")
 
     # top_n — only relevant for ranking queries, must be a small positive int
     if structured.top_n is not None:
@@ -249,17 +249,21 @@ async def handle_query(request: Request, body: QueryRequest):
                 metric=structured.metric,
                 time_range=structured.time_range,
                 device_ids=structured.device_ids,
-                top_n=structured.top_n or 10,
+                top_n=structured.top_n,  # Pass through None for all devices
             )
     except Exception as e:
+        logging.getLogger(__name__).error("Query processing error: %s", e, exc_info=True)
         log_query(
             session_id=session_id,
             user_query=body.user_query,
             structured_query=structured.model_dump(),
             execution_status='influx_error',
-            error_detail=str(e)
+            error_detail="An error occurred processing your query."
         )
-        raise handle_query_error(e, session_id)
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "Could not retrieve data. Please try again in a moment."}
+        )
 
     # 7. Build chart + summary
     try:

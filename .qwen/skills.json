@@ -1,0 +1,16 @@
+{
+  "skills": [
+    {
+      "name": "python",
+      "description": "Execute Python scripts and commands for backend operations, InfluxDB queries, and data processing"
+    },
+    {
+      "name": "node",
+      "description": "Execute Node.js commands for frontend build, test, and development"
+    },
+    {
+      "name": "csv",
+      "description": "Read and analyze CSV files for health score data and metrics"
+    }
+  ]
+}

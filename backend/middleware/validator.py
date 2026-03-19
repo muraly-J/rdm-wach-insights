@@ -13,7 +13,7 @@ Responsibilities:
 
 from dataclasses import dataclass, field
 from typing import Union
-from backend.models.schemas import (
+from models.schemas import (
     StructuredQuery,
     ALLOWED_METRICS,
     ALLOWED_TIME_RANGES,

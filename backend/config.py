@@ -38,9 +38,51 @@ def load_env_files():
 
 
 # ── InfluxDB Configuration ────────────────────────────────────────────────────
+def get_influx_skip_tls() -> bool:
+    """Return True if INFLUX_SKIP_TLS=true, meaning HTTP is allowed for non-localhost hosts.
+
+    Use this when InfluxDB is running without TLS (plain HTTP) on a remote server.
+    Only set this if the connection is on a trusted private network.
+    """
+    return os.getenv("INFLUX_SKIP_TLS", "false").lower() == "true"
+
+
 def get_influx_url() -> str:
-    """Get InfluxDB URL."""
-    return os.getenv("INFLUX_URL", "http://localhost:8086")
+    """Get InfluxDB URL.
+
+    HTTP is allowed for localhost and when INFLUX_SKIP_TLS=true.
+    Otherwise HTTPS is required for non-localhost hosts.
+
+    Allowed formats:
+    - Local development: http://localhost:8086 or http://127.0.0.1:8086
+    - Remote (no TLS):   http://<your-influxdb-host>:8086  (requires INFLUX_SKIP_TLS=true)
+    - Remote (TLS):      https://<your-influxdb-host>:8086
+    """
+    url = os.getenv("INFLUX_URL")
+    if not url:
+        raise ValueError(
+            "INFLUX_URL environment variable is required. "
+            "Set to your InfluxDB URL (e.g., http://localhost:8086 or https://cloud.influxdata.com)."
+        )
+
+    # Always allow HTTP for localhost
+    if url.startswith("http://localhost") or url.startswith("http://127.0.0.1"):
+        return url
+
+    # Allow HTTP for remote hosts only when explicitly opted in
+    if url.startswith("http://") and get_influx_skip_tls():
+        return url
+
+    # For other hosts, require HTTPS
+    if not url.startswith("https://"):
+        raise ValueError(
+            "INFLUX_URL must use HTTPS for secure communication. "
+            f"Received: {url}\n\n"
+            "For local development, use: http://localhost:8086 or http://127.0.0.1:8086\n"
+            "If your InfluxDB server runs plain HTTP (no TLS), set INFLUX_SKIP_TLS=true in .env\n"
+            "For production with TLS, use: https://<your-influxdb-host>:8086"
+        )
+    return url
 
 
 def get_influx_token() -> str:
@@ -48,7 +90,8 @@ def get_influx_token() -> str:
     token = os.getenv("INFLUX_TOKEN")
     if not token:
         raise ValueError(
-            "INFLUX_TOKEN is required. Set it in your .env file or environment."
+            "INFLUX_TOKEN environment variable is required. "
+            "Set to a valid InfluxDB API token with read access."
         )
     return token
 
@@ -76,7 +119,47 @@ def get_lms_model() -> str:
 
 def get_lms_api_key() -> str:
     """Get LM Studio API key (placeholder for lm-studio)."""
-    return os.getenv("LMS_API_KEY", "lm-studio")
+    api_key = os.getenv("LMS_API_KEY")
+    if not api_key:
+        # Return default placeholder for local development without LLM
+        return "lm-studio-placeholder"
+    # Allow lm-studio placeholder for local development without valid API
+    if api_key == "lm-studio":
+        return "lm-studio-placeholder"
+    return api_key
+
+
+# ── Gemini Configuration ──────────────────────────────────────────────────────
+def get_gemini_api_key() -> str:
+    """Get Google AI Studio API key."""
+    key = os.getenv("GEMINI_API_KEY")
+    if not key:
+        raise ValueError(
+            "GEMINI_API_KEY environment variable is required. "
+            "Get a key from https://aistudio.google.com/app/apikey"
+        )
+    return key
+
+
+def get_gemini_model() -> str:
+    """Get Gemini generative model name."""
+    return os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+
+
+def get_gemini_embed_model() -> str:
+    """Get Gemini embedding model name."""
+    return os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
+
+
+# ── Building Identity ─────────────────────────────────────────────────────────
+def get_building_name() -> str:
+    """Get building/facility name."""
+    return os.getenv("WACH_BUILDING_NAME", "Healthcare Facility")
+
+
+def get_department() -> str:
+    """Get department or wing within the building."""
+    return os.getenv("WACH_DEPARTMENT", "Department")
 
 
 # ── Application Configuration ───────────────────────────────────────────────
@@ -87,7 +170,7 @@ def get_app_env() -> str:
 
 def get_cors_origins() -> list[str]:
     """Get allowed CORS origins as a list."""
-    raw = os.getenv("CORS_ORIGINS", "http://localhost:5173,https://rdm-wach-insights.vercel.app")
+    raw = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173,https://rdm-wach-insights.vercel.app")
     return [o.strip() for o in raw.split(",") if o.strip()]
 
 
@@ -122,7 +205,7 @@ def get_exports_dir() -> Path:
 def init_config():
     """Initialize configuration and validate requirements."""
     load_env_files()
-    
+
     # Validate required settings
     try:
         get_influx_token()
@@ -130,7 +213,7 @@ def init_config():
         if get_app_env() == "production":
             raise
         logger.warning(str(e))
-    
+
     # Ensure directories exist
     get_data_dir().mkdir(parents=True, exist_ok=True)
     get_exports_dir().mkdir(parents=True, exist_ok=True)

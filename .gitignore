@@ -233,3 +233,42 @@ secrets.json
 # =========================
 documentation/startup.md
 .vercel
+.aider*
+
+# =========================
+# Security: env backups and failed configs
+# =========================
+.env.bak*
+.env.failed*
+.env.backup
+
+# =========================
+# Databases and query logs
+# =========================
+*.sqlite3
+*.db
+backend/data/chroma/
+backend/data/query_logs*
+
+# =========================
+# Trained ML models
+# =========================
+paraquet_data/models/saved/*.pkl
+paraquet_data/models/saved/*.joblib
+
+# =========================
+# Audit and test artifacts
+# =========================
+data/audit_results*.json
+
+# =========================
+# Code backup files
+# =========================
+*.bak
+*.bak2
+*.bak3
+
+# =========================
+# Tarballs that may contain secrets
+# =========================
+*_backup*.tar.gz
