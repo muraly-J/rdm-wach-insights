@@ -376,7 +376,7 @@ def fetch_raw_metrics_for_levels(levels, time_range="all_time", delay=3):
 
                     records.append({
                         "timestamp": ts.isoformat(),
-                        "ahu_id": ahu_id,
+                        "device_id": ahu_id,
                         "level": f"Level {level}",
                         "power_total": power,
                         "energy_import": energy,
@@ -406,7 +406,7 @@ def fetch_raw_metrics_for_levels(levels, time_range="all_time", delay=3):
         return pd.DataFrame()
     
     df = pd.DataFrame(all_records)
-    df = df.sort_values(["timestamp", "ahu_id"]).reset_index(drop=True)
+    df = df.sort_values(["timestamp", "device_id"]).reset_index(drop=True)
     
     return df
 
@@ -472,7 +472,7 @@ def compute_risk_scores_for_levels(df, save_intermediate=True):
     
     # Compute 24h rolling mean of THD per AHU
     df['thd_24h_mean'] = (
-        df.groupby('ahu_id')['composite_thd']
+        df.groupby('device_id')['composite_thd']
           .transform(lambda s: s.rolling(THD_ROLLING_H, min_periods=1).mean())
     )
     
@@ -480,13 +480,13 @@ def compute_risk_scores_for_levels(df, save_intermediate=True):
     print("\nComputing robust baselines (median + MAD)...")
     
     ahu_baselines = {}
-    ahu_ids = sorted(df['ahu_id'].unique())
+    ahu_ids = sorted(df['device_id'].unique())
     
     for i, ahu_id in enumerate(ahu_ids):
         if (i+1) % 10 == 0:
             print(f"  [{i+1}/{len(ahu_ids)}] Processing {ahu_id}...")
         
-        ahu_df = df[df['ahu_id'] == ahu_id].copy()
+        ahu_df = df[df['device_id'] == ahu_id].copy()
         ahu_df = ahu_df.sort_values('timestamp').reset_index(drop=True)
         
         # Compute statistics
@@ -574,7 +574,7 @@ def compute_risk_scores_for_levels(df, save_intermediate=True):
             print(f"  Processing timestamp {ts_idx+1}/{len(grouped)}...")
         
         for _, row in ts_df.iterrows():
-            ahu_id = row['ahu_id']
+            ahu_id = row['device_id']
             baseline = ahu_baselines[ahu_id]
             
             # Get values
@@ -585,7 +585,7 @@ def compute_risk_scores_for_levels(df, save_intermediate=True):
             thd_24h = float(row['thd_24h_mean']) if pd.notna(row['thd_24h_mean']) else None
             
             # Compute delta_kwh from previous row in current AHU's time series
-            ahu_df = df[df['ahu_id'] == ahu_id].copy()
+            ahu_df = df[df['device_id'] == ahu_id].copy()
             ahu_df = ahu_df.sort_values('timestamp').reset_index(drop=True)
             
             # Find current row position and get previous energy value
@@ -668,7 +668,7 @@ def compute_risk_scores_for_levels(df, save_intermediate=True):
             # Build result row
             results.append({
                 "timestamp": row['timestamp'],
-                "ahu_id": ahu_id,
+                "device_id": ahu_id,
                 "level": row.get('level', f"Level {ahu_id[1:3]}"),
                 "health_index": round(health_index, 1),
                 "tier": tier,
@@ -731,13 +731,13 @@ def generate_all_levels_health_csv(levels, time_range="all_time", output_dir=Non
     df_raw.to_csv(raw_path, index=False)
     print(f"\n✓ Saved raw metrics: {raw_path} ({len(df_raw)} rows)")
     print(f"  Levels: {sorted(df_raw['level'].unique().tolist())}")
-    print(f"  Devices: {df_raw['ahu_id'].nunique()}")
+    print(f"  Devices: {df_raw['device_id'].nunique()}")
     
     # Compute health scores
     df_scores = compute_risk_scores_for_levels(df_raw)
     
     # Sort and save
-    df_scores = df_scores.sort_values(["timestamp", "ahu_id"]).reset_index(drop=True)
+    df_scores = df_scores.sort_values(["timestamp", "device_id"]).reset_index(drop=True)
     df_scores.to_csv(health_path, index=False)
     
     print(f"\n✓ Saved {len(df_scores)} records to {health_path}")
@@ -748,7 +748,7 @@ def generate_all_levels_health_csv(levels, time_range="all_time", output_dir=Non
     print("SUMMARY")
     print("="*60)
     
-    total_ahus = df_scores['ahu_id'].nunique()
+    total_ahus = df_scores['device_id'].nunique()
     print(f"  Total AHUs: {total_ahus}")
     print(f"  Hours of data: {df_scores['timestamp'].nunique()}")
     
@@ -766,7 +766,7 @@ def generate_all_levels_health_csv(levels, time_range="all_time", output_dir=Non
     print(f"\n  By Level:")
     for level in sorted(df_scores['level'].unique()):
         level_data = df_scores[df_scores['level'] == level]
-        print(f"    {level}: {len(level_data)} records, {level_data['ahu_id'].nunique()} devices")
+        print(f"    {level}: {len(level_data)} records, {level_data['device_id'].nunique()} devices")
     
     return df_scores
 
@@ -829,7 +829,7 @@ def generate_anomaly_summary(df_scores, output_dir=None):
     anomalies = []
     
     for _, row in latest_data.iterrows():
-        ahu_id = row['ahu_id']
+        ahu_id = row['device_id']
         
         # Get z-scores
         z_scores = {
@@ -875,7 +875,7 @@ def generate_anomaly_summary(df_scores, output_dir=None):
             safety_list = []
         
         anomaly_record = {
-            "ahu_id": ahu_id,
+            "device_id": ahu_id,
             "level": row.get('level', 'Unknown'),
             "health_index": round(row['health_index'], 1),
             "tier": row.get('tier', 'Unknown'),

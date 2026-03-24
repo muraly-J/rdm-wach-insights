@@ -12,7 +12,7 @@ def test_multiple_rows_per_device():
     if df.empty:
         print("SKIP: CSV empty, run historical ETL first")
         return
-    device_counts = df.groupby('ahu_id').size()
+    device_counts = df.groupby('device_id').size()
     multi_row_devices = (device_counts > 1).sum()
     total_devices = len(device_counts)
     print(f"Devices with >1 row: {multi_row_devices}/{total_devices}")

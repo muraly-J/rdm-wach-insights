@@ -462,7 +462,7 @@ def build_baselines(df):
     """
     baselines = {}
 
-    for ahu_id, grp in df.groupby("ahu_id"):
+    for ahu_id, grp in df.groupby("device_id"):
         grp = grp.sort_values("timestamp")
         b   = {}
 
@@ -563,7 +563,7 @@ def transform_health_scores(df_raw):
     results = []
 
     # Build per-AHU baselines
-    print(f"Building baselines for {df_raw['ahu_id'].nunique()} AHUs...")
+    print(f"Building baselines for {df_raw['device_id'].nunique()} AHUs...")
     ahu_baselines = build_baselines(df_raw)
 
     # Compute safety flags
@@ -575,13 +575,13 @@ def transform_health_scores(df_raw):
     # Process each row
     print(f"Computing scores for {len(df_raw)} records...")
 
-    df_sorted = df_raw.sort_values(['ahu_id', 'timestamp']).reset_index(drop=True)
+    df_sorted = df_raw.sort_values(['device_id', 'timestamp']).reset_index(drop=True)
 
     for idx, row in df_sorted.iterrows():
         if (idx + 1) % 100 == 0:
             print(f"  Processing record {idx+1}/{len(df_raw)}...")
 
-        ahu_id = row['ahu_id']
+        ahu_id = row['device_id']
         baseline = ahu_baselines[ahu_id]
 
         # Get current values
@@ -614,7 +614,7 @@ def transform_health_scores(df_raw):
                 nema_voltage_imbalance = round(100.0 * v_max_dev / v_avg, 3)
 
         # Compute delta_kwh
-        ahu_df = df_sorted[df_sorted['ahu_id'] == ahu_id].copy()
+        ahu_df = df_sorted[df_sorted['device_id'] == ahu_id].copy()
         ahu_df = ahu_df.sort_values('timestamp').reset_index(drop=True)
 
         curr_pos = ahu_df[ahu_df['timestamp'] == row['timestamp']].index.tolist()
@@ -714,7 +714,7 @@ def transform_health_scores(df_raw):
         # Build result row with diagnostic columns
         results.append({
             "timestamp": row['timestamp'],
-            "ahu_id": ahu_id,
+            "device_id": ahu_id,
             "level": row.get('level', f"Level {ahu_id[1:3]}"),
 
             # === Health Index ===
@@ -857,7 +857,7 @@ def load_to_csv(df_scores, output_path=None):
     # All columns to include (all diagnostic columns)
     required_cols = [
         # Core columns
-        "timestamp", "ahu_id", "level", "health_index", "tier",
+        "timestamp", "device_id", "level", "health_index", "tier",
 
         # Component scores
         "energy_anomaly", "pf_degradation", "phase_imbalance", "thd_drift", "overload",
@@ -969,8 +969,8 @@ def save_hourly_health(health_df: pd.DataFrame):
 
             # Deduplicate on timestamp + ahu_id, keep last (most recent)
             combined = combined.drop_duplicates(
-                subset=['timestamp', 'ahu_id'], keep='last'
-            ).sort_values(['timestamp', 'ahu_id'])
+                subset=['timestamp', 'device_id'], keep='last'
+            ).sort_values(['timestamp', 'device_id'])
 
             combined.to_csv(OUTPUT_HOURLY_FILE, index=False)
             print(f"[OK] Appended {len(health_df)} new hourly records (total: {len(combined)})")
@@ -1024,7 +1024,7 @@ def print_safety_flags_summary(df_scores):
                         if flag.strip():
                             flag_counts[flag] = flag_counts.get(flag, 0) + 1
 
-            total_ahus = df_scores['ahu_id'].nunique()
+            total_ahus = df_scores['device_id'].nunique()
 
             print(f"Total unique AHUs: {total_ahus}")
             print(f"\nSafety Flags Distribution:")

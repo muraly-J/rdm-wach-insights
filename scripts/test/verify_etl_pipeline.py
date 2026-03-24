@@ -14,7 +14,7 @@ def verify_raw_metrics_schema():
     df = pd.read_csv('data/level1_raw_metrics_24h.csv', nrows=0)
     
     expected = [
-        'timestamp', 'ahu_id', 'power_total', 'energy_import',
+        'timestamp', 'device_id', 'power_total', 'energy_import',
         'power_factor_avg', 'current_unbalance', 'current_l1_thd', 'current_l3_thd'
     ]
     
@@ -29,7 +29,7 @@ def verify_health_scores_schema():
     df = pd.read_csv('data/level1_hourly_health_24h.csv', nrows=0)
     
     expected = [
-        'timestamp', 'ahu_id', 'level', 'health_index', 'tier',
+        'timestamp', 'device_id', 'level', 'health_index', 'tier',
         'energy_anomaly', 'pf_degradation', 'phase_imbalance',
         'thd_drift', 'overload', 'power_total', 'power_factor',
         'unbalance_pct', 'thd_24h', 'delta_kwh', 'data_quality_flag',
@@ -219,8 +219,8 @@ def verify_raw_to_health_match():
     )
     
     # Verify same timestamps and AHUs
-    raw_set = set(zip(df_raw['timestamp'], df_raw['ahu_id']))
-    health_set = set(zip(df_health['timestamp'], df_health['ahu_id']))
+    raw_set = set(zip(df_raw['timestamp'], df_raw['device_id']))
+    health_set = set(zip(df_health['timestamp'], df_health['device_id']))
     
     assert raw_set == health_set, "Timestamp/AHU mismatch"
     
@@ -231,15 +231,15 @@ def verify_ahu_coverage():
     """Verify all AHUs are present."""
     df_health = pd.read_csv('data/level1_hourly_health_24h.csv')
     
-    unique_ahus = df_health['ahu_id'].nunique()
+    unique_ahus = df_health['device_id'].nunique()
     
     # Allow for missing AHUs (e.g., e0112 may be excluded)
     assert unique_ahus >= 20, f"Expected at least 20 AHUs, got {unique_ahus}"
     
     print(f"\n--- AHU Coverage ---")
     print(f"  Unique AHUs: {unique_ahus}")
-    for ahu in sorted(df_health['ahu_id'].unique()):
-        count = (df_health['ahu_id'] == ahu).sum()
+    for ahu in sorted(df_health['device_id'].unique()):
+        count = (df_health['device_id'] == ahu).sum()
         print(f"  {ahu}: {count} rows")
     
     print("✓ Level 1 AHUs present and complete")

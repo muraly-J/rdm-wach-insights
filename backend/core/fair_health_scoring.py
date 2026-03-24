@@ -197,14 +197,14 @@ def load_prediction_deltas(ahu_ids: List[str]) -> Dict[str, float]:
     try:
         df = pd.read_csv(PREDICTIONS_FILE)
 
-        if 'ahu_id' not in df.columns or 'energy_anomaly' not in df.columns:
+        if 'device_id' not in df.columns or 'energy_anomaly' not in df.columns:
             return {ahu_id: 0.0 for ahu_id in ahu_ids}
 
         # Get latest energy anomaly per AHU (use most recent row for each device)
         result = {}
         for ahu_id in ahu_ids:
-            if ahu_id in df['ahu_id'].values:
-                rows = df[df['ahu_id'] == ahu_id]
+            if ahu_id in df['device_id'].values:
+                rows = df[df['device_id'] == ahu_id]
                 if len(rows) > 0:
                     # Use the most recent anomaly (last row)
                     latest_anomaly = rows.iloc[-1]['energy_anomaly']
@@ -626,7 +626,7 @@ def build_baselines(df: pd.DataFrame) -> Dict:
     """
     baselines = {}
     
-    for ahu_id, grp in df.groupby("ahu_id"):
+    for ahu_id, grp in df.groupby("device_id"):
         grp = grp.sort_values("timestamp")
         b   = {}
         
@@ -786,7 +786,7 @@ def generate_fleet_risk_assessment_fair(
     combined = pd.DataFrame()
     for ahu_id in ahu_ids:
         row = {
-            "ahu_id": ahu_id,
+            "device_id": ahu_id,
             "timestamp": df_power.index[-1],
             "power_total": float(df_power[ahu_id].iloc[-1]) if ahu_id in df_power.columns else None,
             "energy_import": float(df_energy[ahu_id].iloc[-1]) if ahu_id in df_energy.columns else None,
@@ -805,7 +805,7 @@ def generate_fleet_risk_assessment_fair(
         # Update combined DataFrame with prediction deltas
         for ahu_id in ahu_ids:
             if ahu_id in pred_deltas:
-                combined.loc[combined['ahu_id'] == ahu_id, 'delta_kwh'] = pred_deltas[ahu_id]
+                combined.loc[combined['device_id'] == ahu_id, 'delta_kwh'] = pred_deltas[ahu_id]
         
         # Also store the source indicator
         combined['delta_source'] = 'prediction'
@@ -816,7 +816,7 @@ def generate_fleet_risk_assessment_fair(
                 if ahu_id in df_energy.columns and len(df_energy) >= 2:
                     sorted_df = df_energy[[ahu_id]].sort_index()
                     delta = sorted_df[ahu_id].diff().iloc[-1]
-                    combined.loc[combined['ahu_id'] == ahu_id, 'delta_kwh'] = float(delta) if not pd.isna(delta) else None
+                    combined.loc[combined['device_id'] == ahu_id, 'delta_kwh'] = float(delta) if not pd.isna(delta) else None
         combined['delta_source'] = 'hour_diff'
 
     # Build per-AHU baselines
@@ -835,22 +835,22 @@ def generate_fleet_risk_assessment_fair(
         baseline = baselines[ahu_id]
         
         # Get latest values
-        power_current = combined.loc[combined['ahu_id'] == ahu_id, 'power_total'].values
+        power_current = combined.loc[combined['device_id'] == ahu_id, 'power_total'].values
         power_current = float(power_current[0]) if len(power_current) > 0 else None
         
-        energy_current = combined.loc[combined['ahu_id'] == ahu_id, 'energy_import'].values
+        energy_current = combined.loc[combined['device_id'] == ahu_id, 'energy_import'].values
         energy_current = float(energy_current[0]) if len(energy_current) > 0 else None
         
-        pf_current = combined.loc[combined['ahu_id'] == ahu_id, 'power_factor_avg'].values
+        pf_current = combined.loc[combined['device_id'] == ahu_id, 'power_factor_avg'].values
         pf_current = float(pf_current[0]) if len(pf_current) > 0 else None
         
-        unbal_current = combined.loc[combined['ahu_id'] == ahu_id, 'current_unbalance'].values
+        unbal_current = combined.loc[combined['device_id'] == ahu_id, 'current_unbalance'].values
         unbal_current = float(unbal_current[0]) if len(unbal_current) > 0 else None
         
-        thd_24h = combined.loc[combined['ahu_id'] == ahu_id, 'thd_24h'].values
+        thd_24h = combined.loc[combined['device_id'] == ahu_id, 'thd_24h'].values
         thd_24h = float(thd_24h[0]) if len(thd_24h) > 0 else None
         
-        delta_kwh = combined.loc[combined['ahu_id'] == ahu_id, 'delta_kwh'].values
+        delta_kwh = combined.loc[combined['device_id'] == ahu_id, 'delta_kwh'].values
         delta_kwh = float(delta_kwh[0]) if len(delta_kwh) > 0 else None
         
         # Build history series for each metric
@@ -922,7 +922,7 @@ def generate_fleet_risk_assessment_fair(
         
         # Build assessment
         assessment = {
-            "ahu_id": ahu_id,
+            "device_id": ahu_id,
             "timestamp": datetime.now().isoformat(),
             "health_index": round(health_index, 1),
             "health_tier": tier,
@@ -1146,15 +1146,15 @@ def generate_fleet_summary(assessments: List[Dict]) -> Dict[str, Any]:
     return {
         "tier_distribution": tier_counts,
         "top_5_lowest_health_index": [
-            {"ahu_id": a["ahu_id"], "health_index": a["health_index"]}
+            {"device_id": a["device_id"], "health_index": a["health_index"]}
             for a in sorted_by_health[:5]
         ],
         "top_5_rising_risk": [
-            {"ahu_id": a["ahu_id"], "overload_score": a["risk_scores"]["overload"]}
+            {"device_id": a["device_id"], "overload_score": a["risk_scores"]["overload"]}
             for a in rising_risk
         ],
         "top_5_improved": [
-            {"ahu_id": a["ahu_id"], "health_index": a["health_index"]}
+            {"device_id": a["device_id"], "health_index": a["health_index"]}
             for a in improved
         ],
         "data_quality_issues_count": len(data_quality_issues),

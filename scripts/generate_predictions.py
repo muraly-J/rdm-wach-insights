@@ -46,7 +46,7 @@ def run(devices: list[str], mode: str) -> None:
             now_ts = result["t_now"]
             row = {
                 "timestamp": now_ts,
-                "ahu_id": device_id,
+                "device_id": device_id,
                 "level": level_str,
                 "delta_kwh": result["horizons"].get("1h", {}).get("delta_kwh"),
             }
@@ -63,7 +63,7 @@ def run(devices: list[str], mode: str) -> None:
         return
 
     df_new = pd.DataFrame(rows)
-    cols = ["timestamp", "ahu_id", "level", "delta_kwh", "pred_1h", "pred_12h", "pred_24h", "pred_168h"]
+    cols = ["timestamp", "device_id", "level", "delta_kwh", "pred_1h", "pred_12h", "pred_24h", "pred_168h"]
     df_new = df_new.reindex(columns=cols)
 
     if mode == "append" and OUT_PATH.exists():

@@ -59,7 +59,7 @@ def test_csv_integrity() -> bool:
         str(list(df.columns[:6]))
     )
 
-    # predictions.csv: expect ~121 rows (one per AHU), column is ahu_id
+    # predictions.csv: expect ~121 rows (one per AHU), column is device_id
     path = DATA_DIR / "predictions.csv"
     preds = pd.read_csv(path)
     ok &= check(
@@ -68,8 +68,8 @@ def test_csv_integrity() -> bool:
         f"{len(preds)} rows"
     )
     ok &= check(
-        "predictions.csv has ahu_id column",
-        "ahu_id" in preds.columns,
+        "predictions.csv has device_id column",
+        "device_id" in preds.columns,
         str(list(preds.columns[:5]))
     )
 

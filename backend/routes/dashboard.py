@@ -108,7 +108,7 @@ async def dashboard_ranking(
         # Get top 5 best (highest health index)
         best = [
             {
-                "ahu_id": a["ahu_id"],
+                "device_id": a["device_id"],
                 "index": round(a["health_index"], 1),
                 "tier": a.get("health_tier", "Unknown"),
                 "level": a.get("level", f"Level {level}")
@@ -119,7 +119,7 @@ async def dashboard_ranking(
         # Get top 5 worst (lowest health index)
         worst = [
             {
-                "ahu_id": a["ahu_id"],
+                "device_id": a["device_id"],
                 "index": round(a["health_index"], 1),
                 "tier": a.get("health_tier", "Unknown"),
                 "level": a.get("level", f"Level {level}")
@@ -239,7 +239,7 @@ async def dashboard_trend(
         from datetime import datetime
 
         for assessment in assessments:
-            ahu_id = assessment.get("ahu_id")
+            ahu_id = assessment.get("device_id")
             timestamp_str = assessment.get("timestamp")
 
             # Parse timestamp
@@ -267,7 +267,7 @@ async def dashboard_trend(
             # For daily aggregation, we'd need to compute from raw hourly data
             series.append({
                 "timestamp": timestamp_str,
-                "ahu_id": ahu_id,
+                "device_id": ahu_id,
                 "health_index": health_index,
                 "energy_anomaly": round(energy_anomaly, 4),
                 "pf_degradation": round(pf_degradation, 4),
@@ -277,7 +277,7 @@ async def dashboard_trend(
             })
 
         # Sort by timestamp for consistent ordering
-        series.sort(key=lambda x: (x["timestamp"], x["ahu_id"]))
+        series.sort(key=lambda x: (x["timestamp"], x["device_id"]))
 
         # For 7d/30d ranges, we would aggregate hourly data to daily averages
         # This requires fetching raw hourly data from InfluxDB
@@ -286,14 +286,14 @@ async def dashboard_trend(
         return {
             "level": level,
             "range": range,
-            "ahus": [a["ahu_id"] for a in assessments],
+            "ahus": [a["device_id"] for a in assessments],
             "series": series,
             "latest_snapshot": {
-                a["ahu_id"]: round(a["health_index"], 1)
+                a["device_id"]: round(a["health_index"], 1)
                 for a in assessments
             },
             "safety_flags": {
-                a["ahu_id"]: [
+                a["device_id"]: [
                     {"flag_id": f.strip(), "label": FLAG_LABELS.get(f.strip(), "Safety Issue"), "severity": "High" if f.strip() in ["THD_CHRONIC_HIGH", "OVERLOAD_CHRONIC"] else ("Moderate" if f.strip() == "PF_CHRONIC_LOW" else "High")}
                     for f in a.get("safety_flags", "").split(",")
                     if f.strip()
@@ -399,7 +399,7 @@ async def dashboard_trend_csv(
         rows = []
 
         for assessment in assessments:
-            ahu_id = assessment.get("ahu_id")
+            ahu_id = assessment.get("device_id")
             timestamp_str = assessment.get("timestamp")
 
             # Parse timestamp
@@ -422,7 +422,7 @@ async def dashboard_trend_csv(
 
             rows.append({
                 "timestamp": timestamp_str,
-                "ahu_id": ahu_id,
+                "device_id": ahu_id,
                 "health_index": health_index,
                 "energy_anomaly": round(energy_anomaly, 4),
                 "pf_degradation": round(pf_degradation, 4),
@@ -432,14 +432,14 @@ async def dashboard_trend_csv(
             })
 
         # Sort by timestamp then ahu_id
-        rows.sort(key=lambda x: (x["timestamp"], x["ahu_id"]))
+        rows.sort(key=lambda x: (x["timestamp"], x["device_id"]))
 
         # Generate CSV content
         import csv
         import io
 
         output = io.StringIO()
-        fieldnames = ["timestamp", "ahu_id", "health_index",
+        fieldnames = ["timestamp", "device_id", "health_index",
                       "energy_anomaly", "pf_degradation", "phase_imbalance",
                       "thd_drift", "overload"]
         writer = csv.DictWriter(output, fieldnames=fieldnames)
@@ -538,7 +538,7 @@ async def dashboard_summary(
             metric_data = []
             for _, row in recent_data.tail(50).iterrows():
                 metric_data.append({
-                    "device_id": row.get("ahu_id", "unknown"),
+                    "device_id": row.get("device_id", "unknown"),
                     "value": float(row.get("health_index", 100)),
                     "timestamp": str(row.get("timestamp", ""))
                 })
@@ -564,7 +564,7 @@ async def dashboard_summary(
             metric_data = []
             for _, row in recent_data.tail(50).iterrows():
                 metric_data.append({
-                    "device_id": row.get("ahu_id", "unknown"),
+                    "device_id": row.get("device_id", "unknown"),
                     "value": float(row.get("energy_anomaly", 0.0)),
                     "timestamp": str(row.get("timestamp", ""))
                 })
@@ -589,7 +589,7 @@ async def dashboard_summary(
             metric_data = []
             for _, row in recent_data.tail(50).iterrows():
                 metric_data.append({
-                    "device_id": row.get("ahu_id", "unknown"),
+                    "device_id": row.get("device_id", "unknown"),
                     "value": float(row.get("pf_degradation", 0.0)),
                     "timestamp": str(row.get("timestamp", ""))
                 })
@@ -614,7 +614,7 @@ async def dashboard_summary(
             metric_data = []
             for _, row in recent_data.tail(50).iterrows():
                 metric_data.append({
-                    "device_id": row.get("ahu_id", "unknown"),
+                    "device_id": row.get("device_id", "unknown"),
                     "value": float(row.get("phase_imbalance", 0.0)),
                     "timestamp": str(row.get("timestamp", ""))
                 })
@@ -639,7 +639,7 @@ async def dashboard_summary(
             metric_data = []
             for _, row in recent_data.tail(50).iterrows():
                 metric_data.append({
-                    "device_id": row.get("ahu_id", "unknown"),
+                    "device_id": row.get("device_id", "unknown"),
                     "value": float(row.get("thd_drift", 0.0)),
                     "timestamp": str(row.get("timestamp", ""))
                 })
@@ -664,7 +664,7 @@ async def dashboard_summary(
             metric_data = []
             for _, row in recent_data.tail(50).iterrows():
                 metric_data.append({
-                    "device_id": row.get("ahu_id", "unknown"),
+                    "device_id": row.get("device_id", "unknown"),
                     "value": float(row.get("overload", 0.0)),
                     "timestamp": str(row.get("timestamp", ""))
                 })
@@ -687,7 +687,7 @@ async def dashboard_summary(
         return {
             "level": level,
             "range": range,
-            "ahu_id": ahu_id,
+            "device_id": ahu_id,
             "summaries": summaries
         }
 
@@ -760,7 +760,7 @@ async def dashboard_safety_flags(
         # Extract safety flags from assessments
         safety_flags_list = []
         for assessment in assessments:
-            ahu_id = assessment.get("ahu_id")
+            ahu_id = assessment.get("device_id")
             safety_flags_str = assessment.get("safety_flags", "")
             
             # Parse flags from comma-separated string
@@ -792,7 +792,7 @@ async def dashboard_safety_flags(
                     })
 
             safety_flags_list.append({
-                "ahu_id": ahu_id,
+                "device_id": ahu_id,
                 "flags": flags_info
             })
 

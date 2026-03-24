@@ -593,7 +593,7 @@ def fetch_latest_hourly_data(
                                     level = f"Level {int(level_code)}"
 
                                     records.append({
-                                        "ahu_id": ahu_id,
+                                        "device_id": ahu_id,
                                         "level": level,
                                         "metric": metric,
                                         "value": float(val),
@@ -620,7 +620,7 @@ def fetch_latest_hourly_data(
 
     # Pivot to wide format (one row per AHU, one column per metric)
     df_wide = df.pivot_table(
-        index=["ahu_id", "level"],
+        index=["device_id", "level"],
         columns="metric",
         values="value"
     ).reset_index()
@@ -644,7 +644,7 @@ def fetch_latest_hourly_data(
     
     # Extract timestamps from the last row of each AHU
     timestamps = {}
-    for ahu_id in df_wide["ahu_id"]:
+    for ahu_id in df_wide["device_id"]:
         if ahu_id in df_power.columns and not pd.isna(df_power[ahu_id].iloc[-1]):
             timestamps[ahu_id] = df_power.index[-1].isoformat()
         else:
@@ -657,7 +657,7 @@ def fetch_latest_hourly_data(
             else:
                 timestamps[ahu_id] = None
 
-    df_wide["timestamp"] = df_wide["ahu_id"].map(timestamps)
+    df_wide["timestamp"] = df_wide["device_id"].map(timestamps)
 
     # Compute composite_thd from max of L1 and L3 THD
     has_composite = False
@@ -666,7 +666,7 @@ def fetch_latest_hourly_data(
         has_composite = True
 
     # Reorder columns for cleaner output
-    col_order = ["timestamp", "ahu_id", "level"] + metrics_to_fetch
+    col_order = ["timestamp", "device_id", "level"] + metrics_to_fetch
     if has_composite:
         col_order.append("composite_thd")
     df_wide = df_wide[[c for c in col_order if c in df_wide.columns]]

@@ -62,7 +62,7 @@ def analyze_by_level(df):
     levels = sorted(df['level'].unique())
     for level in levels:
         level_data = df[df['level'] == level]
-        ahus = level_data['ahu_id'].nunique()
+        ahus = level_data['device_id'].nunique()
         
         # Health stats
         hi = level_data['health_index']
@@ -90,7 +90,7 @@ def analyze_top_worst(df, n=5):
     worst = df.nsmallest(n, 'health_index')
     
     for _, row in worst.iterrows():
-        print(f"  {row['ahu_id']} (Level {row['level']})")
+        print(f"  {row['device_id']} (Level {row['level']})")
         print(f"    Health Index: {row['health_index']:.1f}")
         print(f"    Tier: {row['tier']}")
         
@@ -137,7 +137,7 @@ def analyze_safety_flags(df):
     print(f"  Total AHUs with flags: {len(all_flags)}")
     print(f"  Flag Count:")
     
-    total_ahus = df['ahu_id'].nunique()
+    total_ahus = df['device_id'].nunique()
     for flag, count in sorted_flags:
         pct = 100 * count / total_ahus
         print(f"    {flag}: {count} AHUs ({pct:.1f}%)")
@@ -193,7 +193,7 @@ def generate_report(range_name="24h", output_dir=None):
     
     print(f"\nData Summary:")
     print(f"  Total Rows: {len(df)}")
-    print(f"  Unique AHUs: {df['ahu_id'].nunique()}")
+    print(f"  Unique AHUs: {df['device_id'].nunique()}")
     print(f"  Levels: {sorted(df['level'].unique())}")
     
     # Time range
@@ -234,7 +234,7 @@ def generate_report(range_name="24h", output_dir=None):
         
         print("\n## Data Summary")
         print(f"- **Total Rows:** {len(df)}")
-        print(f"- **Unique AHUs:** {df['ahu_id'].nunique()}")
+        print(f"- **Unique AHUs:** {df['device_id'].nunique()}")
         print(f"- **Levels:** {sorted(df['level'].unique())}")
         print(f"- **Time Range:** {ts_min} to {ts_max}")
         
@@ -250,7 +250,7 @@ def generate_report(range_name="24h", output_dir=None):
         print("\n## Top 5 Worst AHUs")
         worst = df.nsmallest(5, 'health_index')
         for _, row in worst.iterrows():
-            print(f"- {row['ahu_id']} (Level {row['level']}): {row['health_index']:.1f} ({row['tier']})")
+            print(f"- {row['device_id']} (Level {row['level']}): {row['health_index']:.1f} ({row['tier']})")
         
         # Safety flags - need to count unique AHUs per flag
         print("\n## Safety Flags")
@@ -268,7 +268,7 @@ def generate_report(range_name="24h", output_dir=None):
                         if flag.strip():
                             flag_counts[flag] = flag_counts.get(flag, 0) + 1
             
-            total_ahus_latest = latest_df['ahu_id'].nunique()
+            total_ahus_latest = latest_df['device_id'].nunique()
             for flag, count in sorted(flag_counts.items(), key=lambda x: -x[1]):
                 pct = 100 * count / total_ahus_latest if total_ahus_latest > 0 else 0
                 print(f"- **{flag}:** {count} AHUs ({pct:.1f}%)")

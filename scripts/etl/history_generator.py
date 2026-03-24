@@ -266,7 +266,7 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
 
     # Columns for predictions output (new format with hourly deltas)
     columns = [
-        'timestamp', 'ahu_id', 'level',
+        'timestamp', 'device_id', 'level',
         'energy_current', 'hourly_delta', 'predicted_delta', 'energy_anomaly',
         'yesterday_kwh', 'delta_yesterday',
         'last_week_kwh', 'delta_last_week',
@@ -364,7 +364,7 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
                 # Build row
                 row = {
                     'timestamp': ts,
-                    'ahu_id': device_id,
+                    'device_id': device_id,
                     'level': DEVICE_TO_LEVEL.get(device_id, 'N/A'),
                     'energy_current': float(energy_current) if pd.notna(energy_current) else None,
                     'hourly_delta': float(hourly_delta) if hourly_delta is not None else None,
@@ -394,7 +394,7 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
         return pd.DataFrame(columns=columns)
 
     df_predictions = pd.DataFrame(all_predictions, columns=columns)
-    df_predictions = df_predictions.sort_values(['timestamp', 'ahu_id'])
+    df_predictions = df_predictions.sort_values(['timestamp', 'device_id'])
 
     log_info(f"Generated {len(df_predictions)} prediction records")
 
@@ -423,13 +423,13 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
     log_info("=" * 70)
 
     # Get unique devices
-    devices = predictions_df['ahu_id'].unique()
+    devices = predictions_df['device_id'].unique()
 
     log_info(f"Processing {len(devices)} devices...")
 
     # Health scoring columns — must match run_health_etl.py output format
     health_columns = [
-        'timestamp', 'ahu_id', 'level',
+        'timestamp', 'device_id', 'level',
         'health_index', 'tier',
         'energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload',
         'raw_power_total', 'raw_energy_import', 'raw_hourly_delta',
@@ -452,7 +452,7 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
     log_info("Fetching all metrics from InfluxDB...")
 
     # Fetch energy at latest timestamp
-    devices_with_data = predictions_df['ahu_id'].unique()
+    devices_with_data = predictions_df['device_id'].unique()
 
     # Fetch all metrics in batches to avoid InfluxDB connection drops
     devices_list = list(devices_with_data)
@@ -492,7 +492,7 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
         log_info(f"Computing health scores for {ahu_id} ({processed}/{len(devices)})...")
 
         # Get ALL rows for this device sorted by timestamp
-        device_data = predictions_df[predictions_df['ahu_id'] == ahu_id].sort_values('timestamp')
+        device_data = predictions_df[predictions_df['device_id'] == ahu_id].sort_values('timestamp')
 
         if device_data.empty:
             continue
@@ -599,7 +599,7 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
 
             record = {
                 'timestamp': ts,
-                'ahu_id': ahu_id,
+                'device_id': ahu_id,
                 'level': level_val,
                 'health_index': result['health_index'],
                 'tier': result['health_tier'],
@@ -643,7 +643,7 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=health_columns)
 
     df_health = pd.DataFrame(all_health_records, columns=health_columns)
-    df_health = df_health.sort_values(['timestamp', 'ahu_id'])
+    df_health = df_health.sort_values(['timestamp', 'device_id'])
 
     log_info(f"Generated {len(df_health)} health records")
 

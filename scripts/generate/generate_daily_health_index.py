@@ -90,7 +90,7 @@ def generate_daily_health_index(level=1, time_range="last_24h", output_dir=None)
     # Build rows with all required fields
     rows = []
     for assessment in assessments:
-        ahu_id = assessment.get("ahu_id")
+        ahu_id = assessment.get("device_id")
         timestamp_str = assessment.get("timestamp")
         health_index = round(assessment.get("health_index", 100), 1)
 
@@ -104,7 +104,7 @@ def generate_daily_health_index(level=1, time_range="last_24h", output_dir=None)
 
         rows.append({
             "timestamp": timestamp_str,
-            "ahu_id": ahu_id,
+            "device_id": ahu_id,
             "health_index": health_index,
             "energy_score": energy_score,
             "pf_score": pf_score,
@@ -114,7 +114,7 @@ def generate_daily_health_index(level=1, time_range="last_24h", output_dir=None)
         })
 
     # Sort by timestamp then ahu_id for consistent ordering
-    rows.sort(key=lambda x: (x["timestamp"], x["ahu_id"]))
+    rows.sort(key=lambda x: (x["timestamp"], x["device_id"]))
 
     # Determine output filename based on time range
     if "24h" in time_range:
@@ -142,7 +142,7 @@ def generate_daily_health_index(level=1, time_range="last_24h", output_dir=None)
 
     # Write CSV
     fieldnames = [
-        "timestamp", "ahu_id", "health_index",
+        "timestamp", "device_id", "health_index",
         "energy_score", "pf_score", "imbalance_score",
         "thd_score", "overload_score"
     ]
@@ -330,7 +330,7 @@ def generate_hourly_series(level=1, hours_back=24):
 
                     all_rows.append({
                         "timestamp": target_hour.isoformat(),
-                        "ahu_id": ahu_id,
+                        "device_id": ahu_id,
                         "health_index": round(health_index, 1),
                         "energy_score": round(penalties[0] if len(penalties) > 0 and "energy" in str(penalties[0]) else 0, 4),
                         "pf_score": round(penalties[1] if len(penalties) > 1 else 0, 4),
@@ -345,7 +345,7 @@ def generate_hourly_series(level=1, hours_back=24):
                 continue
 
     # Sort by timestamp then ahu_id
-    all_rows.sort(key=lambda x: (x["timestamp"], x["ahu_id"]))
+    all_rows.sort(key=lambda x: (x["timestamp"], x["device_id"]))
 
     # Output file
     output_dir = Path("backend/data")
@@ -355,7 +355,7 @@ def generate_hourly_series(level=1, hours_back=24):
     output_file = output_dir / f"ahu_health_hourly_level{level}_{timestamp_now}.csv"
 
     fieldnames = [
-        "timestamp", "ahu_id", "health_index",
+        "timestamp", "device_id", "health_index",
         "energy_score", "pf_score", "imbalance_score",
         "thd_score", "overload_score"
     ]

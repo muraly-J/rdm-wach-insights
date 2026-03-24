@@ -89,7 +89,7 @@ def extract_prediction_data(device_ids, reference_time=None):
         records = []
         for ahu_id, values in raw_data.items():
             record = {
-                'ahu_id': ahu_id,
+                'device_id': ahu_id,
                 'energy_current': values.get('energy_current'),
                 'yesterday_kwh': values.get('yesterday_kwh'),
                 'last_week_kwh': values.get('last_week_kwh'),
@@ -113,7 +113,7 @@ def extract_prediction_data(device_ids, reference_time=None):
         # Show sample of fetched values
         print("\n    Sample data:")
         for i, row in df.head(3).iterrows():
-            print(f"      {row['ahu_id']}: current={row['energy_current']:.2f}, "
+            print(f"      {row['device_id']}: current={row['energy_current']:.2f}, "
                   f"yesterday={row['yesterday_kwh']:.2f}, "
                   f"last_week={row['last_week_kwh']:.2f}, "
                   f"two_weeks={row['two_weeks_kwh']:.2f}")
@@ -234,11 +234,11 @@ def transform_predictions(df_raw):
         return DEVICE_TO_LEVEL.get(ahu_id, "Unknown")
 
     # Apply level to dataframe
-    df['level'] = df['ahu_id'].apply(get_level)
+    df['level'] = df['device_id'].apply(get_level)
 
     # Reorder columns for cleaner output
     col_order = [
-        'timestamp', 'ahu_id', 'level',
+        'timestamp', 'device_id', 'level',
         'energy_current', 'hourly_delta', 'predicted_delta', 'energy_anomaly',
         'yesterday_kwh', 'delta_yesterday',
         'last_week_kwh', 'delta_last_week',
@@ -325,7 +325,7 @@ def load_to_csv(df_predictions, output_path=None, dry_run=False):
         print(f"[OK] Preview of {len(df_predictions)} rows:")
         print("\n    First 5 rows:")
         for i, row in df_predictions.head(5).iterrows():
-            print(f"      {row['ahu_id']}: E={row.get('energy_current', 'N/A'):.2f}, "
+            print(f"      {row['device_id']}: E={row.get('energy_current', 'N/A'):.2f}, "
                   f"δ={row.get('hourly_delta', 'N/A'):.2f}, "
                   f"ŷ_δ={row.get('predicted_delta', 'N/A'):.2f}, "
                   f"Δ={row.get('energy_anomaly', 'N/A'):.2f}")
@@ -336,7 +336,7 @@ def load_to_csv(df_predictions, output_path=None, dry_run=False):
 
     # Define columns in order (new format with hourly deltas)
     required_cols = [
-        "timestamp", "ahu_id", "level",
+        "timestamp", "device_id", "level",
         "energy_current", "hourly_delta", "predicted_delta", "energy_anomaly",
         "yesterday_kwh", "delta_yesterday",
         "last_week_kwh", "delta_last_week",
@@ -383,7 +383,7 @@ def validate_level_results(df_results: pd.DataFrame, level_num: int) -> bool:
     from models.schemas import get_devices_by_level
     
     expected_device_ids = get_devices_by_level(level_num)
-    actual_device_ids = df_results['ahu_id'].unique().tolist()
+    actual_device_ids = df_results['device_id'].unique().tolist()
     
     expected_count = len(expected_device_ids)
     actual_count = len(actual_device_ids)
@@ -485,7 +485,7 @@ def run_prediction_etl(level_filter=None, output_path=None, dry_run=False, sched
         # All levels mode - validate each level separately
         for level_num in sorted(AHU_LEVEL_CONFIG.keys()):
             level_devices = AHU_LEVEL_CONFIG[level_num]["device_ids"]
-            df_level = df_predictions[df_predictions['ahu_id'].isin(level_devices)]
+            df_level = df_predictions[df_predictions['device_id'].isin(level_devices)]
             if not validate_level_results(df_level, level_num):
                 all_valid = False
     

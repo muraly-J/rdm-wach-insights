@@ -268,7 +268,7 @@ def _predict_fair_scores(
     """
     # Build baseline df with required columns
     baseline_df = df.copy()
-    baseline_df["ahu_id"] = device_id
+    baseline_df["device_id"] = device_id
     baseline_df["timestamp"] = baseline_df.index
     baseline_df["delta_kwh"] = baseline_df["energy_import"].diff().fillna(0.0)
 

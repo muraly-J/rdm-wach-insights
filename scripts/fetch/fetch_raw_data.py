@@ -91,7 +91,7 @@ def fetch_level1_raw_data_chunk(level1_devices, start_date, end_date):
                     # Find existing record for this timestamp/ahu
                     found = False
                     for rec in records:
-                        if rec["timestamp"] == ts.isoformat() and rec["ahu_id"] == ahu_id:
+                        if rec["timestamp"] == ts.isoformat() and rec["device_id"] == ahu_id:
                             rec[f"{metric}"] = value
                             found = True
                             break
@@ -100,7 +100,7 @@ def fetch_level1_raw_data_chunk(level1_devices, start_date, end_date):
                         # Create new record with None for other metrics
                         rec = {
                             "timestamp": ts.isoformat(),
-                            "ahu_id": ahu_id,
+                            "device_id": ahu_id,
                         }
                         # Initialize all metrics to None
                         for m, _ in metrics_to_fetch:
@@ -204,7 +204,7 @@ def fetch_level1_raw_data(time_range: str = "all_time"):
         return df
 
     # Sort by timestamp then ahu_id
-    df = df.sort_values(["timestamp", "ahu_id"]).reset_index(drop=True)
+    df = df.sort_values(["timestamp", "device_id"]).reset_index(drop=True)
 
     print(f"  Total records: {len(df)}")
 
@@ -258,7 +258,7 @@ def main():
     # Summary
     print(f"\nSummary:")
     print(f"  Date range: {df['timestamp'].min()} to {df['timestamp'].max()}")
-    print(f"  AHUs: {len(df['ahu_id'].unique())}")
+    print(f"  AHUs: {len(df['device_id'].unique())}")
 
     # Also save CSV for easy inspection
     csv_path = output_path.replace('.parquet', '.csv')

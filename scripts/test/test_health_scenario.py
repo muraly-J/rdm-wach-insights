@@ -175,7 +175,7 @@ def scenario_prediction_chart_accessible() -> bool:
 # ─────────────────────────────────────────────────────────────
 def scenario_energy_anomaly_coherence() -> bool:
     """
-    predictions.csv stores the energy anomaly baseline per AHU (column: ahu_id).
+    predictions.csv stores the energy anomaly baseline per AHU (column: device_id).
     The health scores API should include an energy_anomaly component score (0–1)
     for a device that has a corresponding row in predictions.csv.
     """
@@ -183,20 +183,20 @@ def scenario_energy_anomaly_coherence() -> bool:
 
     preds = pd.read_csv(DATA_DIR / "predictions.csv")
 
-    # predictions.csv uses 'ahu_id', not 'device_id'
-    if "ahu_id" not in preds.columns:
-        print(f"  [{SKIP}] predictions.csv missing 'ahu_id' column — see GAP-003 in INTEGRATION_BUGS.md")
+    # predictions.csv uses 'device_id', not 'device_id'
+    if "device_id" not in preds.columns:
+        print(f"  [{SKIP}] predictions.csv missing 'device_id' column — see GAP-003 in INTEGRATION_BUGS.md")
         return True
 
-    valid = preds.dropna(subset=["ahu_id"])
+    valid = preds.dropna(subset=["device_id"])
     if valid.empty:
-        print(f"  [{SKIP}] No valid ahu_id rows in predictions.csv")
+        print(f"  [{SKIP}] No valid device_id rows in predictions.csv")
         return True
 
     # Pick a stable device: prefer e0202 since it also has XGBoost model
-    preferred = valid[valid["ahu_id"] == "e0202"]
+    preferred = valid[valid["device_id"] == "e0202"]
     sample_row   = preferred.iloc[0] if not preferred.empty else valid.iloc[0]
-    device_id    = sample_row["ahu_id"]
+    device_id    = sample_row["device_id"]
     level_num    = int(str(device_id)[1:3])  # e.g. e0202 → level 2
 
     try:

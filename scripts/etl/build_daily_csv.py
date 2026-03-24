@@ -65,7 +65,7 @@ def main():
 
     print(f"Reading {SOURCE} ...")
     df = pd.read_csv(SOURCE, parse_dates=["timestamp"])
-    print(f"  Loaded {len(df):,} rows, {df['ahu_id'].nunique()} AHUs")
+    print(f"  Loaded {len(df):,} rows, {df['device_id'].nunique()} AHUs")
 
     # Normalise to UTC, extract date (midnight UTC = start of that day)
     df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
@@ -84,7 +84,7 @@ def main():
             agg_cols[col] = "mean"
 
     daily = (
-        df.groupby(["date", "ahu_id", "level"], as_index=False)
+        df.groupby(["date", "device_id", "level"], as_index=False)
         .agg(agg_cols)
     )
 
@@ -99,11 +99,11 @@ def main():
     numeric_cols = [c for c in numeric_cols if c in daily.columns]
     daily[numeric_cols] = daily[numeric_cols].round(4)
 
-    daily = daily.sort_values(["timestamp", "ahu_id"]).reset_index(drop=True)
+    daily = daily.sort_values(["timestamp", "device_id"]).reset_index(drop=True)
     daily.to_csv(OUTPUT, index=False)
 
     print(f"[OK] Written to {OUTPUT}")
-    print(f"     Rows: {len(daily):,}, Days: {daily['timestamp'].nunique()}, AHUs: {daily['ahu_id'].nunique()}")
+    print(f"     Rows: {len(daily):,}, Days: {daily['timestamp'].nunique()}, AHUs: {daily['device_id'].nunique()}")
 
 
 if __name__ == "__main__":

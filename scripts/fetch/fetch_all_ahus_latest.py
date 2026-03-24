@@ -86,7 +86,7 @@ def main():
 
         for level in sorted(AHU_LEVEL_CONFIG.keys()):
             level_prefix = f"e{str(level).zfill(2)}"
-            level_count = len(df[df["ahu_id"].str.startswith(level_prefix)])
+            level_count = len(df[df["device_id"].str.startswith(level_prefix)])
             print(f"  Level {level}: {level_count} AHUs")
 
         total_ahus = sum(len(config["device_ids"]) for config in AHU_LEVEL_CONFIG.values())

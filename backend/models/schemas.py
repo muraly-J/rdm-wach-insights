@@ -329,7 +329,7 @@ class SingleAHURiskAssessment(BaseModel):
     
     Example output:
     {
-      "ahu_id": "wach_e0101",
+      "device_id": "wach_e0101",
       "timestamp": "2026-02-23T14:00:00+08:00",
       "health_index": 84,
       "health_tier": "Healthy",

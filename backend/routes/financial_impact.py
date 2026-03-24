@@ -107,12 +107,12 @@ def _compute_impact(level: int, time_range: str, device_id: Optional[str] = None
         return _empty_response(currency, level, time_range)
 
     if device_id:
-        df = df[df['ahu_id'] == device_id]
+        df = df[df['device_id'] == device_id]
         if df.empty:
             return _empty_response(currency, level, time_range)
 
     ahu_rows = []
-    for ahu_id, grp in df.groupby('ahu_id'):
+    for ahu_id, grp in df.groupby('device_id'):
         grp = grp.sort_values('timestamp')
 
         # 1. Excess energy cost
@@ -139,7 +139,7 @@ def _compute_impact(level: int, time_range: str, device_id: Optional[str] = None
         total = round(excess_cost + pf_penalty + maintenance_risk, 2)
 
         ahu_rows.append({
-            "ahu_id":            ahu_id,
+            "device_id":            ahu_id,
             "health_index":      round(latest_hi, 1),
             "excess_energy_cost": excess_cost,
             "pf_penalty_cost":   pf_penalty,

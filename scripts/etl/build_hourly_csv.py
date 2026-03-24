@@ -43,7 +43,7 @@ def main():
 
     print(f"Reading {SOURCE} ...")
     df = pd.read_csv(SOURCE, parse_dates=["timestamp"])
-    print(f"  Loaded {len(df):,} rows, {df['ahu_id'].nunique()} AHUs")
+    print(f"  Loaded {len(df):,} rows, {df['device_id'].nunique()} AHUs")
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=KEEP_DAYS)
     ts = pd.to_datetime(df["timestamp"], utc=True)
@@ -56,7 +56,7 @@ def main():
 
     df_filtered.to_csv(OUTPUT, index=False)
     print(f"[OK] Written to {OUTPUT}")
-    print(f"     Rows: {len(df_filtered):,}, AHUs: {df_filtered['ahu_id'].nunique()}")
+    print(f"     Rows: {len(df_filtered):,}, AHUs: {df_filtered['device_id'].nunique()}")
 
 
 if __name__ == "__main__":

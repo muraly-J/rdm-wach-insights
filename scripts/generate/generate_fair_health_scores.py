@@ -435,7 +435,7 @@ def fetch_raw_metrics(level=1, time_range="all_time"):
                 
                 records.append({
                     "timestamp": ts.isoformat(),
-                    "ahu_id": ahu_id,
+                    "device_id": ahu_id,
                     "power_total": power,
                     "energy_import": energy,
                     "power_factor_avg": pf,
@@ -451,7 +451,7 @@ def fetch_raw_metrics(level=1, time_range="all_time"):
         return df
     
     # Sort by timestamp then ahu_id
-    df = df.sort_values(["timestamp", "ahu_id"]).reset_index(drop=True)
+    df = df.sort_values(["timestamp", "device_id"]).reset_index(drop=True)
     
     return df
 
@@ -473,7 +473,7 @@ def compute_fair_health_scores(df):
     
     # Compute 24h rolling mean of THD (for proper baseline comparison)
     df["thd_24h_mean"] = (
-        df.groupby("ahu_id")["composite_thd"]
+        df.groupby("device_id")["composite_thd"]
           .transform(lambda s: s.rolling(THD_ROLLING_H, min_periods=1).mean())
     )
     
@@ -482,8 +482,8 @@ def compute_fair_health_scores(df):
     
     # Pre-compute per-AHU statistics
     ahu_baselines = {}
-    for ahu_id in df['ahu_id'].unique():
-        ahu_df = df[df['ahu_id'] == ahu_id].copy()
+    for ahu_id in df['device_id'].unique():
+        ahu_df = df[df['device_id'] == ahu_id].copy()
         
         # Power
         power_vals = ahu_df['power_total'].dropna().values
@@ -525,13 +525,13 @@ def compute_fair_health_scores(df):
     
     # Process each AHU separately
     results = []
-    ahu_ids = sorted(df['ahu_id'].unique())
+    ahu_ids = sorted(df['device_id'].unique())
     
     for i, ahu_id in enumerate(ahu_ids):
         if i % 5 == 0:
             print(f"  [{i+1}/{len(ahu_ids)}] Processing {ahu_id}...")
         
-        ahu_df = df[df['ahu_id'] == ahu_id].copy()
+        ahu_df = df[df['device_id'] == ahu_id].copy()
         ahu_df = ahu_df.sort_values('timestamp').reset_index(drop=True)
         
         baseline = ahu_baselines[ahu_id]
@@ -613,7 +613,7 @@ def compute_fair_health_scores(df):
             
             results.append({
                 "timestamp": row['timestamp'],
-                "ahu_id": ahu_id,
+                "device_id": ahu_id,
                 "level": f"Level {row.get('level', 1)}",
                 "health_index": round(health_index, 1),
                 "tier": tier,
@@ -676,14 +676,14 @@ def generate_all_time_ranges(output_dir=None):
         df_scores = compute_fair_health_scores(df_raw)
         
         # Save final output
-        df_scores = df_scores.sort_values(["timestamp", "ahu_id"]).reset_index(drop=True)
+        df_scores = df_scores.sort_values(["timestamp", "device_id"]).reset_index(drop=True)
         df_scores.to_csv(output_path, index=False)
         
         print(f"\n✓ Saved {len(df_scores)} records to {output_path}")
         
         # Summary
         print(f"\nSummary for {range_name}:")
-        print(f"  AHUs: {df_scores['ahu_id'].nunique()}")
+        print(f"  AHUs: {df_scores['device_id'].nunique()}")
         print(f"  Hours: {df_scores['timestamp'].nunique()}")
         print(f"  Health Index: [{df_scores['health_index'].min():.1f}, {df_scores['health_index'].max():.1f}]")
         print(f"  Health Tiers: {dict(df_scores['tier'].value_counts())}")

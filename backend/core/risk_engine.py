@@ -8,7 +8,7 @@ interpretable risk assessment system that requires no training data.
 
 Output Schema (per AHU):
 {
-  "ahu_id": "wach_e0101",
+  "device_id": "wach_e0101",
   "timestamp": "2026-02-23T14:00:00+08:00",
   "health_index": 84,
   "health_tier": "Healthy",
@@ -1047,7 +1047,7 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, An
         Dict with metric values and historical data
     """
     metrics = {
-        "ahu_id": ahu_id,
+        "device_id": ahu_id,
         "timestamp": datetime.now().isoformat(),
     }
     
@@ -1059,7 +1059,7 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> Dict[str, An
     )
     
     if df.empty:
-        return {"ahu_id": ahu_id, "error": "No data available", "data_quality": {"missing_data_pct": 100.0}}
+        return {"device_id": ahu_id, "error": "No data available", "data_quality": {"missing_data_pct": 100.0}}
     
     # Get latest value
     latest = df.iloc[-1] if len(df) > 0 else None
@@ -1252,7 +1252,7 @@ def fetch_fleet_metrics(time_range: str = "last_30d") -> pd.DataFrame:
             continue
         
         fleet_data.append({
-            "ahu_id": ahu_id,
+            "device_id": ahu_id,
             "power_current": metrics["power"]["current"],
             "energy_current": metrics["energy"]["current"],
             "pf_current": metrics["power_factor"]["current"],
@@ -1373,7 +1373,7 @@ def generate_fleet_risk_assessment(
         level = get_level_from_ahu_id(ahu_id) if cluster_by_level else "Fleet"
         
         assessments.append({
-            "ahu_id": ahu_id,
+            "device_id": ahu_id,
             "timestamp": datetime.now().isoformat(),
             "health_index": health_index,
             "health_tier": health_tier,
@@ -1479,15 +1479,15 @@ def generate_fleet_summary(assessments: List[Dict]) -> Dict[str, Any]:
     return {
         "tier_distribution": tier_counts,
         "top_5_lowest_health_index": [
-            {"ahu_id": a["ahu_id"], "health_index": a["health_index"]}
+            {"device_id": a["device_id"], "health_index": a["health_index"]}
             for a in sorted_by_health[:5]
         ],
         "top_5_rising_risk": [
-            {"ahu_id": a["ahu_id"], "overload_score": a["risk_scores"]["overload"]["score"]}
+            {"device_id": a["device_id"], "overload_score": a["risk_scores"]["overload"]["score"]}
             for a in rising_risk
         ],
         "top_5_improved": [
-            {"ahu_id": a["ahu_id"], "health_index": a["health_index"]}
+            {"device_id": a["device_id"], "health_index": a["health_index"]}
             for a in improved
         ],
         "data_quality_issues_count": len(data_quality_issues),
@@ -1733,7 +1733,7 @@ async def get_ahu_risk_details(ahu_id: str, time_range: str = "last_30d") -> Dic
     health_index, health_tier = calculate_ahu_health_index(risk_scores)
     
     return {
-        "ahu_id": ahu_id,
+        "device_id": ahu_id,
         "timestamp": datetime.now().isoformat(),
         "health_index": health_index,
         "health_tier": health_tier,
