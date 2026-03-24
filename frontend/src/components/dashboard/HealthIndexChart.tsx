@@ -147,7 +147,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
         </p>
       </div>
 
-      {/* Chart container */}
+      {/* Chart container — legend rendered outside so it never eats into chart height */}
       <div className="h-[200px] sm:h-[280px] lg:h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -156,7 +156,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
             strokeDasharray="3 3"
             vertical={false}
           />
-          
+
           <XAxis
             dataKey="timestamp"
             stroke="#8A95A5"
@@ -165,7 +165,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
             axisLine={false}
             interval={Math.max(0, Math.floor(data.length / 8) - 1)}
           />
-          
+
           <YAxis
             domain={[0, 100]}
             stroke="#8A95A5"
@@ -174,13 +174,8 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
             axisLine={false}
             interval={Math.max(0, Math.floor(data.length / 8) - 1)}
           />
-          
+
           <Tooltip content={<CustomTooltip />} />
-          
-          <Legend
-            wrapperStyle={{ paddingTop: 10 }}
-            content={<CustomLegend />}
-          />
 
           {/* Render area for each device */}
           {devices.map((device, index) => (
@@ -197,6 +192,9 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
         </AreaChart>
       </ResponsiveContainer>
       </div>
+
+      {/* Legend outside the fixed-height div so it never squishes the chart */}
+      <CustomLegend payload={devices.map((device, index) => ({ value: device.name, color: getColor(index) }))} />
     </motion.div>
   );
 };

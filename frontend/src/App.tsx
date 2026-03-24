@@ -228,12 +228,14 @@ function App() {
                 </div>
               )}
 
-              {/* Device selector sub-bar */}
-              <DeviceSelector
-                devices={devices}
-                selectedDevice={selectedDevice}
-                onSelectDevice={selectDevice}
-              />
+              {/* Device selector sub-bar — sticky below LevelSelectorBar (~100px) */}
+              <div className="sticky top-[100px] z-20 bg-[#0B0F14] -mx-4 sm:-mx-6 px-4 sm:px-6 pb-2 pt-1">
+                <DeviceSelector
+                  devices={devices}
+                  selectedDevice={selectedDevice}
+                  onSelectDevice={selectDevice}
+                />
+              </div>
 
               {/* Health Index Chart */}
               <div className="mb-8">
