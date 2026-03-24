@@ -1,7 +1,7 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from routes.chat import _build_gemini_history, _MAX_HISTORY
+from routes.chat import _build_gemini_history, _MAX_HISTORY, _MAX_HISTORY_CONTENT_LEN
 
 
 def _make_item(role: str, content: str):
@@ -19,7 +19,7 @@ def test_max_history_is_six():
     """Only last 6 turns are passed to the LLM."""
     items = [_make_item("user", f"msg {i}") for i in range(20)]
     result = _build_gemini_history(items)
-    assert len(result) == 6
+    assert len(result) == _MAX_HISTORY
     assert result[-1]["parts"][0] == "msg 19"
 
 
@@ -28,7 +28,7 @@ def test_bot_reply_truncated_to_400_chars():
     long_reply = "e0301: 0.9%\n" * 50  # 600+ chars
     items = [_make_item("model", long_reply)]
     result = _build_gemini_history(items)
-    assert len(result[0]["parts"][0]) <= 403  # 400 + "…"
+    assert len(result[0]["parts"][0]) == _MAX_HISTORY_CONTENT_LEN + 1
     assert result[0]["parts"][0].endswith("…")
 
 
