@@ -12,8 +12,8 @@ interface BotMessageProps {
   onClearChat?: () => void
 }
 
-// Matches patterns like "e0301: 0.9%" or "e0508: 11.6 kW" or "e0202: 64.6%"
-const DEVICE_VALUE_RE = /\b(e\d{4})\b[^:\n]{0,20}:\s*([\d.]+)\s*(%|kW|kWh|A|V|Hz)?/gi
+// Matches "e0301: 0.9%" (list format) or "| e0303 | 4.0 |" (markdown table format)
+const DEVICE_VALUE_RE = /\b(e\d{4})\b[^:\n|]{0,20}[:|]\s*([\d.]+)\s*(%|kW|kWh|A|V|Hz)?/gi
 
 function extractChartData(
   text: string,
