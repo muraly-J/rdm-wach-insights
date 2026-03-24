@@ -1,90 +1,64 @@
 # WACH Insight — Integration Bugs & Known Gaps
 
 Last audited: 2026-03-24
+All issues resolved: 2026-03-24
 
 ---
 
-## BUG-001: fetchRawScoreRelationship not wired to backend
+## BUG-001 ✓ RESOLVED — removed misleading TODO; endpoint was already implemented
 
 **File:** `frontend/src/api/client.ts:77`
-**Symptom:** `fetchRawScoreRelationship(deviceId, range)` contains only a TODO comment and makes a
-  bare `apiFetch` call with no error handling or fallback:
-  ```ts
-  // TODO: Implement backend endpoint
-  return apiFetch(`/device/${deviceId}/raw-score-relationship?range=${range}`);
-  ```
-**Impact:** The `RawScoreRelationChart` inside `ScoreDerivationSection` (lazy-loaded) receives no
-  data and renders blank. Users drilling into score derivation see an empty chart.
-**Root cause:** The backend route `GET /api/device/{id}/raw-score-relationship` exists in the
-  router declaration but the underlying InfluxDB pivot query in `influx_client.py` may not be
-  fully implemented. Needs verification.
-**Fix needed:**
-  1. Confirm `backend/routes/health_scores.py → get_raw_score_relationship()` returns real pivot data.
-  2. Remove the TODO comment from `frontend/src/api/client.ts`.
-  3. Add a loading/error state to `RawScoreRelationChart`.
-**Priority:** Medium — visible only when user drills into the score derivation panel.
+**Symptom:** `fetchRawScoreRelationship(deviceId, range)` contained a misleading TODO comment
+  despite the backend endpoint being fully implemented.
+**Resolution:** Removed the `// TODO: Implement backend endpoint` comment and added explicit
+  return type `Promise<Record<string, unknown>>` to `fetchRawScoreRelationship`.
+**Commit:** `72d4cb3`
 
 ---
 
-## GAP-001: kVA-based demand charge not included in financial impact
+## GAP-001 ✓ RESOLVED — kVA demand charge implemented using raw_apparent_power_total
 
-**File:** `backend/routes/financial_impact.py:95`
-**Symptom:** `max_demand_rate` (RM/kVA/month) is stored in `financial_config.json` and displayed
-  in the UI but is not used in cost calculations:
-  ```python
-  # max_demand_rate is stored but not yet used in calculations
-  # TODO: implement kVA-based demand charge when meter data is available
-  ```
-**Impact:** Reported monthly cost underestimates true TNB C1/C2 utility bill for facilities with
-  peak kVA demand charges. The missing component can be 20–40% of total bill.
-**Root cause:** kVA demand data is available in InfluxDB but not yet queried by `influx_client.py`.
-**Fix needed:** Add a `demand_charge_myr` field to the financial impact response, computed as
-  `max_demand_rate × peak_kva_this_month` when `kva_demand` measurements exist.
-**Priority:** Low — placeholder in place, existing cost breakdown is still useful. Not blocking.
+**File:** `backend/routes/financial_impact.py`
+**Symptom:** `max_demand_rate` (RM/kVA/month) was stored in `financial_config.json` but not
+  used in cost calculations.
+**Resolution:** Implemented kVA demand charge as `peak_kva × max_demand_rate` using the
+  `raw_apparent_power_total` column already present in `health_all_levels.csv`. Added
+  `demand_charge_myr` field to per-AHU rows, summary totals, return dict, and `_empty_response`.
+  Four TDD tests added in `backend/tests/test_financial_impact.py` — all pass.
+**Commit:** `adf7e79`
 
 ---
 
-## GAP-002: No frontend unit or integration tests
+## GAP-002 ✓ RESOLVED — Jest tests added: useAppStore, API client, CombinedScoresChart
 
-**Symptom:** `frontend/src/` contains zero `.test.tsx`, `.spec.tsx`, or `.test.ts` files.
-  (Confirmed: `glob frontend/src/**/*.test.*` returns empty.)
-**Impact:** Component regressions go undetected until manual review. Past bugs that would have
-  been caught by tests:
-  - `CombinedScoresChart` data merge broken (fixed manually)
-  - `ScoreCard` template literal `{color}` not interpolated (fixed manually)
-  - `LevelSelectorBar` received props but store wasn't connected (fixed manually)
-**Fix needed:** Add Vitest + React Testing Library. Minimum coverage:
-  - `useAppStore` — state transitions (level selection, device selection, chat open/close)
-  - `fetchHealthIndex` + `fetchScoreBreakdown` — mock with `msw`, assert shape
-  - `CombinedScoresChart` — unit test the data merge function in isolation
-**Priority:** Medium — required before onboarding external contributors (e.g., Bishal's PRs).
+**Symptom:** `frontend/src/` contained zero test files.
+**Resolution:** Added three test files covering critical paths:
+  - `frontend/src/__tests__/useAppStore.test.ts` — 11 state transition tests
+  - `frontend/src/__tests__/api.test.ts` — 6 API client mock tests
+  - `frontend/src/__tests__/CombinedScoresChart.test.tsx` — 4 data merge tests
+  Fixed Jest TypeScript support (`@babel/preset-typescript`) and `import.meta.env` handling
+  via inline babel visitor in `jest.config.cjs`. All 21 tests pass.
+**Commit:** `b574ead`
 
 ---
 
-## GAP-003: predictions.csv uses ahu_id column, not device_id
+## GAP-003 ✓ RESOLVED — ahu_id renamed to device_id in CSVs and all Python/TS code
 
-**Symptom:** `data/predictions.csv` has columns `[timestamp, ahu_id, level, energy_current,
-  hourly_delta, ...]` — the device identifier column is `ahu_id`, not `device_id`.
-**Impact:** Any code or test that reads predictions.csv and looks for a `device_id` column will
-  silently fail or return NaN. The scenario test must use `ahu_id`.
-**Current state:** 121 rows, 121 unique `ahu_id` values — one per AHU, no duplicates.
-**Fix needed:** Decide on a canonical column name (`device_id` preferred for consistency with
-  all other data frames) and rename `ahu_id → device_id` in:
-  - `data/predictions.csv`
-  - `scripts/etl/run_prediction_etl.py` (writer)
-  - `backend/core/csv_reader.py` (reader)
-**Priority:** Low — current code works because it uses the correct column name internally.
-  Becomes a bug if new code assumes `device_id` without checking.
+**Symptom:** `data/predictions.csv` and `data/health_all_levels.csv` used `ahu_id` as the
+  device identifier column; all API responses and Python code used `device_id`.
+**Resolution:** Renamed `ahu_id → device_id` header in both CSV files (via `sed` on header line
+  to avoid malformed-row pandas errors). Updated all `'ahu_id'` string literals in
+  `backend/core/csv_reader.py`, `backend/routes/financial_impact.py`, and 27 other Python
+  source files. No `ahu_id` column references remain in source code.
+**Commit:** `6701219` (29 files changed)
 
 ---
 
-## GAP-004: LLM_BACKEND env var misnamed in some contexts
+## GAP-004 ✓ RESOLVED — .env.example updated to use correct LLM_BACKEND name
 
-**Symptom:** The correct env var is `LLM_BACKEND` (see `backend/llm/client_factory.py:18`).
-  The name `LLM_PROVIDER` does not exist anywhere in source code but may appear in verbal
-  references or external notes.
-**Impact:** Contributor sets `LLM_PROVIDER=gemini` in `.env`, sees no effect, backend silently
-  defaults to `qwen`.
-**Fix needed:** CONSTITUTION.md already documents the correct name. Ensure `.env.example` uses
-  `LLM_BACKEND` and no doc files introduce `LLM_PROVIDER`.
-**Priority:** Low — clarified in CONSTITUTION.md.
+**Symptom:** The correct env var is `LLM_BACKEND`; the name `LLM_PROVIDER` appeared in verbal
+  references and was absent from `.env.example`.
+**Resolution:** Added explicit `LLM_BACKEND=qwen` entry with backend options table (`qwen` /
+  `gemini`) to `.env.example`. Separate sections added for LM Studio and Google Gemini config.
+  CONSTITUTION.md already documented the correct name.
+**Commit:** `72d4cb3`
