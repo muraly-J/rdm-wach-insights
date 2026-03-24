@@ -294,7 +294,7 @@ const ExpandableHealthRankings: React.FC<ExpandableHealthRankingsProps> = ({
 
       {/* Collapsed State - Summary Only */}
       {!expanded && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3 sm:gap-4">
           {/* Best Average Card */}
           <div className="card p-4 border border-[#00E5A0]/20 bg-[#00E5A0]/5">
             <p className="text-xs text-[#8A95A5] uppercase tracking-wide mb-1">Best AHUs Avg</p>
