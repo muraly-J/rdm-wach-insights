@@ -55,7 +55,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
         onClick={handleSend}
         disabled={!input.trim()}
         className="
-          w-8 h-8 rounded-full
+          w-11 h-11 rounded-full flex-shrink-0
           bg-[#00E5A0]
           text-[#0B0F14]
           flex items-center justify-center

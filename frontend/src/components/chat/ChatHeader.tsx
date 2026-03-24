@@ -38,7 +38,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ isOpen, onClose, isMinimized, o
           onClick={onMinimize}
           title={isMinimized ? 'Expand' : 'Minimize'}
           className="
-            w-8 h-8 rounded-full hover:bg-[#1E2A3A]
+            w-11 h-11 rounded-full hover:bg-[#1E2A3A]
             flex items-center justify-center
           "
         >
@@ -59,7 +59,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ isOpen, onClose, isMinimized, o
         <button
           onClick={onClose}
           className="
-            w-8 h-8 rounded-full hover:bg-[#1E2A3A]
+            w-11 h-11 rounded-full hover:bg-[#1E2A3A]
             flex items-center justify-center
           "
         >

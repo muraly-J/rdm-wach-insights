@@ -100,7 +100,7 @@ const BotMessage: React.FC<BotMessageProps> = ({
                     text-[#00E5A0]
                     border border-[#00E5A0]/30
                     rounded-full
-                    px-3 py-1
+                    px-3 py-2.5 min-h-[44px]
                     hover:bg-[#00E5A0]/10
                     transition-colors duration-150
                   "
@@ -118,7 +118,7 @@ const BotMessage: React.FC<BotMessageProps> = ({
                     text-[#00E5A0]
                     border border-[#00E5A0]/30
                     rounded-full
-                    px-3 py-1
+                    px-3 py-2.5 min-h-[44px]
                     hover:bg-[#00E5A0]/10
                     transition-colors duration-150
                   "
@@ -137,7 +137,7 @@ const BotMessage: React.FC<BotMessageProps> = ({
                     text-[#8A95A5]
                     border border-[#8A95A5]/20
                     rounded-full
-                    px-3 py-1
+                    px-3 py-2.5 min-h-[44px]
                     hover:bg-[#8A95A5]/10
                     hover:text-[#E8ECF1]
                     transition-colors duration-150
