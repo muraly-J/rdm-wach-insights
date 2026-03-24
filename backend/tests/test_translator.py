@@ -78,8 +78,12 @@ def test_show_level_expands_devices():
 
 
 def test_prediction_query_does_not_crash():
-    """Prediction queries should not crash even before QueryType.prediction is wired up."""
+    """Before Task 5: prediction queries fall through to time_series gracefully.
+    After Task 5 wires QueryType.prediction, update this to assert time_series → prediction.
+    """
     from llm.translator import _parse_query_rules
+    from models.schemas import QueryType
     q, err = _parse_query_rules("forecast power for e0101 next week")
-    # Should not crash. May return time_series for now — that's OK.
-    assert q is not None or err is not None  # either a result or a clean error, not a crash
+    # Before Task 5: falls through to time_series (is_prediction computed but not yet routed)
+    assert q is not None
+    assert q.query_type == QueryType.time_series
