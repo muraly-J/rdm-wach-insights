@@ -98,9 +98,11 @@ format e[LEVEL][NN] where level is 01–11 and NN is the device number within th
 system (such as e9999, e0150, e1250, or any ID outside the valid ranges), respond ONLY
 with: "Device [ID] does not exist in this system." Do not speculate, do not provide any
 health scores, readings, predictions, or context for it, and do not mention any similar
-device IDs. Stop there."""
+device IDs. Stop there.
+DEDUPLICATION RULE: When listing devices, never repeat the same device ID more than once per response. Deduplicate all device lists before responding."""
 
-_MAX_HISTORY = 10  # Keep last N turns to stay within token limits
+_MAX_HISTORY = 6  # was 10 — reduced to prevent stale data dumps polluting context
+_MAX_HISTORY_CONTENT_LEN = 400  # bot replies truncated; user msgs kept full
 
 
 class ChatRequest(BaseModel):
@@ -117,9 +119,21 @@ class ChatRequest(BaseModel):
 
 
 def _build_gemini_history(history: list[ChatHistoryItem]) -> list[dict]:
-    """Convert our ChatHistoryItem list to Gemini's {role, parts} format."""
+    """
+    Convert ChatHistoryItem list to LLM {role, parts} format.
+
+    Bot replies are truncated to _MAX_HISTORY_CONTENT_LEN chars to prevent
+    stale data dumps (device readings, CSV tables) from dominating LLM context
+    after many turns. User messages are passed through unchanged.
+    """
+    def _trim(item: ChatHistoryItem) -> str:
+        text = item.content
+        if item.role == "model" and len(text) > _MAX_HISTORY_CONTENT_LEN:
+            return text[:_MAX_HISTORY_CONTENT_LEN] + "…"
+        return text
+
     return [
-        {"role": item.role, "parts": [item.content]}
+        {"role": item.role, "parts": [_trim(item)]}
         for item in history[-_MAX_HISTORY:]
     ]
 
