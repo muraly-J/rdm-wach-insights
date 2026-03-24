@@ -286,6 +286,25 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
             # Default to 10 for ranking queries (top/bottom N)
             top_n = 10
 
+    # ── Confidence gate ─────────────────────────────────────────────────────────
+    # If we understood nothing from the query, return a helpful error rather than
+    # silently defaulting to e0101/power_total garbage.
+    understood_anything = (
+        bool(devices)           # explicit device ID (e0101)
+        or bool(levels_expanded)  # level mention
+        or is_ranking             # ranking keyword
+        or is_prediction          # prediction keyword
+        or is_health_index        # health index keyword
+        or any(kw in query_lower for kw in metric_map)  # recognised metric
+    )
+
+    if not understood_anything:
+        return None, (
+            "I couldn't understand that query. Try asking something like: "
+            "'show power for e0101', 'top 10 AHUs by energy level 3', "
+            "'forecast power for level 5', or 'health index level 2'."
+        )
+
     # Build structured query
     try:
         device_ids = []  # Initialize to avoid undefined variable error

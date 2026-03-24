@@ -115,3 +115,20 @@ def test_metric_plus_level_with_time_stays_timeseries():
     assert err is None
     assert q is not None
     assert q.query_type == QueryType.time_series
+
+
+def test_unrecognised_query_returns_error():
+    """Completely unrelated queries should return an error, not silent default data."""
+    from llm.translator import _parse_query_rules
+    q, err = _parse_query_rules("what is the weather today")
+    assert q is None
+    assert err is not None
+    assert "try asking" in err.lower() or "understand" in err.lower() or "couldn't" in err.lower()
+
+
+def test_empty_query_returns_error():
+    """Empty string should return an error."""
+    from llm.translator import _parse_query_rules
+    q, err = _parse_query_rules("")
+    assert q is None
+    assert err is not None
