@@ -279,7 +279,7 @@ function App() {
 
               {/* Prediction View (single-device mode only) */}
               {selectedDevice && selectedDevice !== 'all' && (
-                <div id="prediction-section" className="scroll-mt-26">
+                <div id="prediction-section" className="scroll-mt-24.5">
                   <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#1E2A3A] rounded-xl" />}>
                     <PredictionView deviceId={selectedDevice} />
                   </React.Suspense>
