@@ -157,6 +157,11 @@ def get_building_name() -> str:
     return os.getenv("WACH_BUILDING_NAME", "Healthcare Facility")
 
 
+def get_hospital_id() -> str:
+    """Get hospital/facility identifier used for multi-tenant routing."""
+    return os.getenv("HOSPITAL_ID", "wach")
+
+
 def get_department() -> str:
     """Get department or wing within the building."""
     return os.getenv("WACH_DEPARTMENT", "Department")

@@ -29,7 +29,7 @@ warnings.filterwarnings("ignore")
 _URL    = get_influx_url()
 _TOKEN  = get_influx_token() or ""  # Empty token will cause InfluxDB to fail, but we'll catch it
 _ORG    = get_influx_org() or "wach"
-_BUCKET = get_influx_bucket() or "wach_bucket_3"
+_BUCKET = get_influx_bucket()
 
 import logging
 
