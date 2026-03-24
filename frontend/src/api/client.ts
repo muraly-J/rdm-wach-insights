@@ -73,8 +73,7 @@ export async function fetchScoreBreakdown(
 export async function fetchRawScoreRelationship(
   deviceId: string,
   range: '24h' | '7d' | '30d'
-) {
-  // TODO: Implement backend endpoint
+): Promise<Record<string, unknown>> {
   return apiFetch(`/device/${deviceId}/raw-score-relationship?range=${range}`);
 }
 
