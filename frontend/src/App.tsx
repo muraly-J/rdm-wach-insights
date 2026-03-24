@@ -1,5 +1,5 @@
-import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import React from 'react';
 import { formatTickByRange } from './utils/formatTick';
 
 // ZONE A — Welcome Hero
@@ -9,16 +9,14 @@ import WelcomeHero from './components/welcome/WelcomeHero';
 import DashboardGate from './components/dashboard/DashboardGate';
 
 // ZONE C — Dashboard Components
-import LevelSelectorBar from './components/dashboard/LevelSelectorBar';
+import CombinedScoresChart from './components/dashboard/CombinedScoresChart';
 import DeviceSelector from './components/dashboard/DeviceSelector';
 import HealthIndexChart from './components/dashboard/HealthIndexChart';
+import LevelSelectorBar from './components/dashboard/LevelSelectorBar';
 import ScoreCardsGrid from './components/dashboard/ScoreCardsGrid';
-import CombinedScoresChart from './components/dashboard/CombinedScoresChart';
 
 // Health Rankings and Safety Flags
 import ExpandableHealthRankings from './components/dashboard/ExpandableHealthRankings';
-import HealthRankSection from './components/dashboard/HealthRankSection';
-import SafetyFlagsCombinedCard, { type SafetyFlag } from './components/dashboard/SafetyFlagsCombinedCard';
 
 // Score Derivation (lazy-loaded — Section 12)
 const ScoreDerivationSection = React.lazy(
@@ -38,11 +36,11 @@ const FinancialImpactView = React.lazy(
 import ChatWidget from './components/chat/ChatWidget';
 
 // State
-import { useAppStore, TimeRange } from './store/useAppStore';
+import { TimeRange, useAppStore } from './store/useAppStore';
 
 // API
-import { fetchHealthIndex, fetchScoreBreakdown, fetchRawScoreRelationship, fetchDashboardSafetyFlags } from './api/client';
-import type { HealthIndexResponse, ScoresResponse, RawScoreResponse, RankingResponse } from './types';
+import { fetchHealthIndex, fetchRawScoreRelationship, fetchScoreBreakdown } from './api/client';
+import type { HealthIndexResponse, RawScoreResponse, ScoresResponse } from './types';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -206,11 +204,10 @@ function App() {
                   <button
                     key={range}
                     onClick={() => setTimeRange(range)}
-                    className={`px-3 py-1 rounded text-sm border transition-colors ${
-                      timeRange === range
+                    className={`px-3 py-1 rounded text-sm border transition-colors ${timeRange === range
                         ? 'bg-[#1E2A3A] border-[#3B82F6] text-white'
                         : 'bg-transparent border-[#1E2A3A] text-[#8A95A5] hover:border-[#3B82F6]'
-                    }`}
+                      }`}
                   >
                     {range}
                   </button>
@@ -282,7 +279,7 @@ function App() {
 
               {/* Prediction View (single-device mode only) */}
               {selectedDevice && selectedDevice !== 'all' && (
-                <div id="prediction-section" className="scroll-mt-20">
+                <div id="prediction-section" className="scroll-mt-16">
                   <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#1E2A3A] rounded-xl" />}>
                     <PredictionView deviceId={selectedDevice} />
                   </React.Suspense>
