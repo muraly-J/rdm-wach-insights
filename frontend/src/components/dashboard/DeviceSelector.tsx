@@ -26,7 +26,7 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         <span
           className="
             font-display uppercase tracking-[0.2em]
-            text-[13px] text-[#8A95A5]
+            text-xs text-[#8A95A5]
           "
         >
           DEVICE
@@ -41,7 +41,7 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
           whileTap={{ scale: 0.98 }}
           onClick={() => onSelectDevice(allDevicesOption.id)}
           className={`
-            px-4 py-2 text-xs font-medium rounded-full transition-all duration-0.25s
+            px-4 py-3 min-h-[44px] sm:py-2 sm:min-h-0 text-xs font-medium rounded-full transition-all duration-0.25s flex items-center justify-center
             border relative
             ${selectedDevice === null || selectedDevice === 'all'
               ? 'bg-[#00E5A0] text-[#0B0F14] border-0'
@@ -61,7 +61,7 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
             whileTap={{ scale: 0.98 }}
             onClick={() => onSelectDevice(device.id)}
             className={`
-              px-4 py-2 text-xs font-medium rounded-full transition-all duration-0.25s
+              px-4 py-3 min-h-[44px] sm:py-2 sm:min-h-0 text-xs font-medium rounded-full transition-all duration-0.25s flex items-center justify-center
               border relative
               ${selectedDevice === device.id
                 ? 'bg-[#00E5A0] text-[#0B0F14] border-0'

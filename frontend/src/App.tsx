@@ -204,7 +204,7 @@ function App() {
                   <button
                     key={range}
                     onClick={() => setTimeRange(range)}
-                    className={`px-3 py-1 rounded text-sm border transition-colors ${timeRange === range
+                    className={`px-4 py-2.5 min-h-[44px] sm:py-1.5 sm:min-h-0 rounded text-sm border transition-colors ${timeRange === range
                       ? 'bg-[#1E2A3A] border-[#3B82F6] text-white'
                       : 'bg-transparent border-[#1E2A3A] text-[#8A95A5] hover:border-[#3B82F6]'
                       }`}
