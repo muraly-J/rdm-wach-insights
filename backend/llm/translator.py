@@ -240,11 +240,38 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
     else:
         query_type = QueryType.ranking if is_ranking else QueryType.time_series
 
+    # Partial match: metric + level, no explicit devices, no time intent → ranking
+    time_keywords = {
+        'today', '24h', 'week', '7d', 'month', '30 days',
+        'all time', 'entire', 'trend', 'over time', 'history', 'past'
+    }
+    has_time_intent = any(kw in query_lower for kw in time_keywords)
+
+    # Check if a metric keyword was mentioned (even if it didn't match the metric_map exactly)
+    # This includes both full metric_map keys and common metric-related words
+    metric_mention_keywords = {
+        'power', 'apparent', 'reactive', 'energy', 'current', 'voltage',
+        'volts', 'frequency', 'thd', 'unbalance', 'imbalance', 'factor',
+        'consumption', 'usage', 'import', 'export'
+    }
+    # Also include all keys from metric_map
+    metric_mention_keywords.update(metric_map.keys())
+    explicitly_named_metric = any(kw in query_lower for kw in metric_mention_keywords)
+
+    if (
+        query_type == QueryType.time_series  # only upgrade time_series, not override special types
+        and levels_expanded          # a level was mentioned
+        and not devices              # no specific device IDs like e0101
+        and explicitly_named_metric  # user actually named a metric
+        and not has_time_intent      # no time context implies "compare now"
+    ):
+        query_type = QueryType.ranking
+
     # Determine top_n for ranking queries
     # If user asks for "all", "every", or "whole" devices, don't limit
     # If user says "compare" without specifying count, assume they want all devices
     top_n = None
-    if is_ranking:
+    if query_type == QueryType.ranking:
         # Check for "top N" pattern (e.g., "top 5", "top 10")
         top_n_match = re.search(r'top\s+(\d+)', query_lower)
         if top_n_match:
@@ -265,7 +292,7 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
 
         # Check if query asks for "all levels" or "across all levels"
         # In that case, device_ids should be empty (meaning ALL devices for ranking)
-        if is_ranking:
+        if query_type == QueryType.ranking:
             has_all_levels = any(phrase in query_lower for phrase in [
                 'all levels', 'across all', 'all ahus', 'all devices',
                 'every level', 'entire building', 'building-wide'
@@ -296,7 +323,7 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
 
         # Check if query asks for "all levels" or "across all levels"
         # In that case, device_ids should be empty (meaning ALL devices for ranking)
-        if is_ranking and not levels_expanded:
+        if query_type == QueryType.ranking and not levels_expanded:
             has_all_levels = any(phrase in query_lower for phrase in [
                 'all levels', 'across all', 'all ahus', 'all devices',
                 'every level', 'entire building', 'building-wide'

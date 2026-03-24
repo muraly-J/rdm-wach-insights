@@ -94,3 +94,24 @@ def test_health_index_query_detected():
     assert err is None
     assert q is not None
     assert q.query_type == QueryType.health_index
+
+
+def test_metric_plus_level_implies_ranking():
+    """'power level 1' should be a ranking query (bar chart of all Level 1 AHUs)."""
+    from llm.translator import _parse_query_rules
+    from models.schemas import QueryType
+    q, err = _parse_query_rules("power level 1")
+    assert err is None
+    assert q is not None
+    assert q.query_type == QueryType.ranking
+    assert len(q.device_ids) > 0  # Level 1 devices should be expanded
+
+
+def test_metric_plus_level_with_time_stays_timeseries():
+    """'power level 1 last week' should remain a time_series query."""
+    from llm.translator import _parse_query_rules
+    from models.schemas import QueryType
+    q, err = _parse_query_rules("power level 1 last week")
+    assert err is None
+    assert q is not None
+    assert q.query_type == QueryType.time_series
