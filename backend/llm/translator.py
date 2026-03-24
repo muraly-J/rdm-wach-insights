@@ -162,21 +162,37 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
     # NOTE: The current implementation only supports current_l1_thd (not l3) due to keyword matching
     # limitations. For more complex mappings, use the full metric name or LLM translation.
     metric_map = {
-        # Full underscore names (matched first to avoid partial matches)
-        'apparent_power_total': 'apparent_power_total',
-        'power_factor_avg':   'power_factor_avg',
-        'reactive_power_total': 'reactive_power_total',
-        # Common space-based variations
-        'apparent power':     'apparent_power_total',
-        'power factor':       'power_factor_avg',
-        'reactive power':     'reactive_power_total',
-        # Base patterns
-        'power_total':        'power_total',
-        'energy_import':      'energy_import',
-        'current_avg':        'current_avg',
-        'volts_l_n_avg':      'volts_l_n_avg',
-        'unbalance':          'current_unbalance',
-        'thd':                'current_l1_thd',
+        # Full underscore names first (most specific)
+        'apparent_power_total':  'apparent_power_total',
+        'power_factor_avg':      'power_factor_avg',
+        'reactive_power_total':  'reactive_power_total',
+        'current_l1_thd':        'current_l1_thd',
+        'current_l3_thd':        'current_l3_thd',
+        'volts_unbalance':       'volts_unbalance',
+        'current_unbalance':     'current_unbalance',
+        # Natural-language phrases (multi-word before single-word — order matters for substring matching)
+        'phase imbalance':       'current_unbalance',
+        'phase unbalance':       'current_unbalance',
+        'voltage unbalance':     'volts_unbalance',
+        'voltage imbalance':     'volts_unbalance',
+        'apparent power':        'apparent_power_total',
+        'power factor':          'power_factor_avg',
+        'reactive power':        'reactive_power_total',
+        'thd l3':                'current_l3_thd',
+        'thd l1':                'current_l1_thd',
+        'energy consumption':    'energy_import',
+        'energy usage':          'energy_import',
+        'energy import':         'energy_import',
+        # Single keywords (last, least specific)
+        'power_total':           'power_total',
+        'energy_import':         'energy_import',
+        'current_avg':           'current_avg',
+        'volts_l_n_avg':         'volts_l_n_avg',
+        'voltage':               'volts_l_n_avg',
+        'current':               'current_avg',
+        'energy':                'energy_import',
+        'thd':                   'current_l1_thd',
+        'unbalance':             'current_unbalance',
     }
 
     for keyword, metric in metric_map.items():

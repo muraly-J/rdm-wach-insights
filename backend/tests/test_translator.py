@@ -37,3 +37,17 @@ async def test_gemini_translation_returns_structured_query():
     assert error is None
     assert query is not None
     assert query.query_type is not None
+
+
+@pytest.mark.parametrize("query,expected_metric", [
+    ("show phase imbalance for e0101", "current_unbalance"),
+    ("voltage unbalance level 3", "volts_unbalance"),
+    ("thd l3 for e0101", "current_l3_thd"),
+    ("show energy consumption level 5", "energy_import"),
+    ("voltage readings e0201", "volts_l_n_avg"),
+])
+def test_metric_patterns(query, expected_metric):
+    from llm.translator import _parse_query_rules
+    q, err = _parse_query_rules(query)
+    assert err is None
+    assert q.metric == expected_metric
