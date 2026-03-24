@@ -113,10 +113,10 @@ Component details (use these when explaining scores):
 2. Power Factor Degradation (25% weight) — raw field: "PF=" (power factor 0–1)
    Measures how far PF has fallen below this device's own historical baseline, and whether it is trending further down. A low absolute PF (e.g. 0.5) can still score Healthy if 0.5 has always been this device's normal. PF penalties are suppressed when load is below 60% of the device's own median power.
 
-3. Phase Imbalance (25% weight) — raw field: "PhaseImbalance=" (current unbalance %)
+3. Phase Imbalance (25% weight) — raw field: "phase imbalance=" (current unbalance %)
    Measures whether current unbalance has risen above this device's own baseline and is trending upward. A device with 4% chronic unbalance may score Healthy because 4% is its stable norm. The NEMA MG-1 <2% standard is a safety flag threshold, not the scoring threshold. A device flagged for severe imbalance can still be Healthy if imbalance is not drifting.
 
-4. THD Drift (15% weight) — raw field: "THDcurrent=" (composite current THD %, max of L1 and L3)
+4. THD Drift (15% weight) — raw field: "current THD=" (composite current THD %, max of L1 and L3)
    Uses a 24-hour rolling mean of composite current THD, compared to this device's own median THD baseline. Voltage THDs (L1, L2, L3) are separate and typically stay below 5%; always specify "current THD" vs "voltage THD" when citing values. A device with 80% current THD can be Healthy if that is its stable historical baseline and not rising.
 
 5. Overload (20% weight) — raw field: "Power=" (kW, same as energy anomaly)
@@ -343,9 +343,9 @@ async def _get_live_context(context: Optional[dict]) -> str:
             if pf is not None:
                 parts.append(f"PF={pf:.3f}")
             if thd is not None:
-                parts.append(f"THDcurrent={thd:.1f}%")
+                parts.append(f"current THD={thd:.1f}%")
             if unbalance is not None:
-                parts.append(f"PhaseImbalance={unbalance:.1f}%")
+                parts.append(f"phase imbalance={unbalance:.1f}%")
             lines.append("- " + " ".join(parts))
 
         return "\n".join(lines)
@@ -402,6 +402,22 @@ def _read_csv_context_sync(context: dict) -> str:
               .reset_index()
     )
 
+    _FLAG_MAP = {
+        "THD_CHRONIC_HIGH": "chronically high THD",
+        "CHRONIC_HIGH": "chronically high",
+        "CHRONIC_LOW": "chronically low",
+        "IMBALANCE_SEVERE": "severe imbalance",
+        "PF_CHRONIC_LOW": "chronic low power factor",
+    }
+
+    def _translate_flags(raw) -> str:
+        if not raw or str(raw).strip() in ("", "nan"):
+            return ""
+        return ", ".join(
+            _FLAG_MAP.get(f.strip(), f.strip())
+            for f in str(raw).split(",") if f.strip()
+        )
+
     lines = ["\n\n## Computed Health Scores (ETL — latest snapshot)"]
 
     if device:
@@ -427,8 +443,9 @@ def _read_csv_context_sync(context: dict) -> str:
         if ol is not None and not pd.isna(ol): score_parts.append(f"Overload={ol:.1f}")
         if score_parts:
             lines.append(f"  - FAIR Scores: {', '.join(score_parts)}")
-        if flags and str(flags).strip() and str(flags).strip() != "nan":
-            lines.append(f"  - Safety Flags: {flags}")
+        translated = _translate_flags(flags)
+        if translated:
+            lines.append(f"  - Safety Flags: {translated}")
     else:
         # Level summary: all AHUs sorted by health index
         latest_sorted = latest.sort_values("health_index")
@@ -441,7 +458,8 @@ def _read_csv_context_sync(context: dict) -> str:
             hi = row.get("health_index")
             tier = row.get("tier", "")
             flags = row.get("safety_flags", "")
-            flag_str = f" ⚠ {flags}" if flags and str(flags).strip() and str(flags).strip() != "nan" else ""
+            translated = _translate_flags(flags)
+            flag_str = f" [{translated}]" if translated else ""
             hi_str = f"{hi:.1f}" if hi is not None and not pd.isna(hi) else "?"
             lines.append(f"    - **{row['ahu_id']}**: {hi_str}/100 ({tier}){flag_str}")
 
