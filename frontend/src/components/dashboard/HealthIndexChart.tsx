@@ -101,7 +101,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
 
   if (!data || data.length === 0) {
     return (
-      <div className="card p-6 h-[320px] flex items-center justify-center">
+      <div className="card p-4 sm:p-6 h-[200px] sm:h-[320px] flex items-center justify-center">
         <span className="text-[#8A95A5]">No health index data available</span>
       </div>
     );
@@ -148,7 +148,8 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
       </div>
 
       {/* Chart container */}
-      <ResponsiveContainer width="100%" height={320}>
+      <div className="h-[200px] sm:h-[280px] lg:h-[320px]">
+      <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
           <CartesianGrid
             stroke="#1E2A3A"
@@ -195,6 +196,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
           ))}
         </AreaChart>
       </ResponsiveContainer>
+      </div>
     </motion.div>
   );
 };

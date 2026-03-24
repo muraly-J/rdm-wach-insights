@@ -69,19 +69,20 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
 
   if (mergedData.length === 0) {
     return (
-      <div className="card p-6 mb-8 h-[320px] flex items-center justify-center">
+      <div className="card p-4 sm:p-6 mb-6 sm:mb-8 h-[200px] sm:h-[320px] flex items-center justify-center">
         <span className="text-[#8A95A5]">No score data available</span>
       </div>
     );
   }
 
   return (
-    <div className="card p-6 mb-8">
-      <h3 className="font-display text-[24px] font-bold mb-6 tracking-[-0.01em]">
+    <div className="card p-4 sm:p-6 mb-6 sm:mb-8">
+      <h3 className="font-display text-lg sm:text-[24px] font-bold mb-4 sm:mb-6 tracking-[-0.01em]">
         Five-Score Overview
       </h3>
 
-      <ResponsiveContainer width="100%" height={320}>
+      <div className="h-[220px] sm:h-[280px] lg:h-[320px]">
+      <ResponsiveContainer width="100%" height="100%">
         <LineChart data={mergedData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
           <CartesianGrid stroke="#1E2A3A" strokeDasharray="3 3" vertical={false} />
           <XAxis
@@ -117,6 +118,7 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
           ))}
         </LineChart>
       </ResponsiveContainer>
+      </div>
 
       <p className="text-xs text-[#8A95A5] mt-4 text-center">
         Click legend items to toggle individual scores
