@@ -90,10 +90,9 @@ def _compute_impact(level: int, time_range: str, device_id: Optional[str] = None
     from core.csv_reader import _load_csv, _filter_time_range
 
     cfg = _load_config()
-    tariff        = cfg["tariff_rate"]
-    # max_demand_rate is stored but not yet used in calculations
-    # TODO: implement kVA-based demand charge when meter data is available
-    planned_cost  = cfg["planned_maintenance_cost"]
+    tariff           = cfg["tariff_rate"]
+    max_demand_rate  = cfg.get("max_demand_rate", 0.0)
+    planned_cost     = cfg["planned_maintenance_cost"]
     multiplier    = cfg["emergency_multiplier"]
     currency      = cfg["currency"]
 
@@ -136,15 +135,22 @@ def _compute_impact(level: int, time_range: str, device_id: Optional[str] = None
         latest_hi = float(grp['health_index'].dropna().iloc[-1]) if 'health_index' in grp.columns and not grp['health_index'].dropna().empty else 100.0
         maintenance_risk = round(planned_cost * (multiplier - 1), 2) if latest_hi < 60 else 0.0
 
-        total = round(excess_cost + pf_penalty + maintenance_risk, 2)
+        # 4. kVA demand charge (TNB: max_demand_rate RM/kVA/month × peak kVA in period)
+        demand_charge = 0.0
+        if max_demand_rate > 0 and 'raw_apparent_power_total' in grp.columns:
+            peak_kva = float(grp['raw_apparent_power_total'].dropna().max() or 0.0)
+            demand_charge = round(peak_kva * max_demand_rate, 2)
+
+        total = round(excess_cost + pf_penalty + maintenance_risk + demand_charge, 2)
 
         ahu_rows.append({
-            "device_id":            ahu_id,
-            "health_index":      round(latest_hi, 1),
+            "device_id":          ahu_id,
+            "health_index":       round(latest_hi, 1),
             "excess_energy_cost": excess_cost,
-            "pf_penalty_cost":   pf_penalty,
-            "maintenance_risk":  maintenance_risk,
-            "total_cost":        total,
+            "pf_penalty_cost":    pf_penalty,
+            "maintenance_risk":   maintenance_risk,
+            "demand_charge_myr":  demand_charge,
+            "total_cost":         total,
         })
 
     ahu_rows.sort(key=lambda r: r["total_cost"], reverse=True)
@@ -152,17 +158,19 @@ def _compute_impact(level: int, time_range: str, device_id: Optional[str] = None
     total_excess      = round(sum(r["excess_energy_cost"] for r in ahu_rows), 2)
     total_pf          = round(sum(r["pf_penalty_cost"]    for r in ahu_rows), 2)
     total_maintenance = round(sum(r["maintenance_risk"]   for r in ahu_rows), 2)
-    grand_total       = round(total_excess + total_pf + total_maintenance, 2)
+    total_demand      = round(sum(r["demand_charge_myr"]  for r in ahu_rows), 2)
+    grand_total       = round(total_excess + total_pf + total_maintenance + total_demand, 2)
 
     return {
-        "currency":          currency,
-        "level":             level,
-        "range":             time_range,
-        "grand_total":       grand_total,
+        "currency":           currency,
+        "level":              level,
+        "range":              time_range,
+        "grand_total":        grand_total,
         "excess_energy_cost": total_excess,
-        "pf_penalty_cost":   total_pf,
-        "maintenance_risk":  total_maintenance,
-        "top_ahus":          ahu_rows[:10],
+        "pf_penalty_cost":    total_pf,
+        "maintenance_risk":   total_maintenance,
+        "demand_charge_myr":  total_demand,
+        "top_ahus":           ahu_rows[:10],
     }
 
 
@@ -171,5 +179,6 @@ def _empty_response(currency: str, level: int = 0, time_range: str = "") -> dict
         "currency": currency, "level": level, "range": time_range,
         "grand_total": 0, "excess_energy_cost": 0,
         "pf_penalty_cost": 0, "maintenance_risk": 0,
+        "demand_charge_myr": 0,
         "top_ahus": [],
     }
