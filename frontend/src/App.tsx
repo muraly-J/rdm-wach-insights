@@ -198,22 +198,6 @@ function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
-              {/* Time range picker */}
-              <div className="flex gap-2 justify-end mb-4">
-                {TIME_RANGES.map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => setTimeRange(range)}
-                    className={`px-4 py-2.5 min-h-[44px] sm:py-1.5 sm:min-h-0 rounded text-sm border transition-colors ${timeRange === range
-                      ? 'bg-[#1E2A3A] border-[#3B82F6] text-white'
-                      : 'bg-transparent border-[#1E2A3A] text-[#8A95A5] hover:border-[#3B82F6]'
-                      }`}
-                  >
-                    {range}
-                  </button>
-                ))}
-              </div>
-
               {/* Loading indicator */}
               {isLoading && (
                 <div className="flex justify-center py-4">
@@ -228,13 +212,31 @@ function App() {
                 </div>
               )}
 
-              {/* Device selector sub-bar — sticky below LevelSelectorBar (~100px) */}
+              {/* Sticky sub-bar: device selector + time range */}
               <div className="sticky top-[100px] z-20 bg-[#0B0F14] -mx-4 sm:-mx-6 px-4 sm:px-6 pb-2 pt-1">
-                <DeviceSelector
-                  devices={devices}
-                  selectedDevice={selectedDevice}
-                  onSelectDevice={selectDevice}
-                />
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <DeviceSelector
+                      devices={devices}
+                      selectedDevice={selectedDevice}
+                      onSelectDevice={selectDevice}
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-1 flex-shrink-0">
+                    {TIME_RANGES.map((range) => (
+                      <button
+                        key={range}
+                        onClick={() => setTimeRange(range)}
+                        className={`px-4 py-2.5 min-h-[44px] sm:py-1.5 sm:min-h-0 rounded text-sm border transition-colors ${timeRange === range
+                          ? 'bg-[#1E2A3A] border-[#3B82F6] text-white'
+                          : 'bg-transparent border-[#1E2A3A] text-[#8A95A5] hover:border-[#3B82F6]'
+                          }`}
+                      >
+                        {range}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Health Index Chart */}
