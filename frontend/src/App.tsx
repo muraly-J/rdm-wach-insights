@@ -205,8 +205,8 @@ function App() {
                     key={range}
                     onClick={() => setTimeRange(range)}
                     className={`px-3 py-1 rounded text-sm border transition-colors ${timeRange === range
-                        ? 'bg-[#1E2A3A] border-[#3B82F6] text-white'
-                        : 'bg-transparent border-[#1E2A3A] text-[#8A95A5] hover:border-[#3B82F6]'
+                      ? 'bg-[#1E2A3A] border-[#3B82F6] text-white'
+                      : 'bg-transparent border-[#1E2A3A] text-[#8A95A5] hover:border-[#3B82F6]'
                       }`}
                   >
                     {range}
@@ -279,7 +279,7 @@ function App() {
 
               {/* Prediction View (single-device mode only) */}
               {selectedDevice && selectedDevice !== 'all' && (
-                <div id="prediction-section" className="scroll-mt-16">
+                <div id="prediction-section" className="scroll-mt-24">
                   <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#1E2A3A] rounded-xl" />}>
                     <PredictionView deviceId={selectedDevice} />
                   </React.Suspense>
