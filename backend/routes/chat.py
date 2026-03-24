@@ -90,15 +90,7 @@ you MUST cite the pre-computed figures from that section exactly as given — ne
 recalculate costs from live readings. The platform's cost engine uses 30-day CSV history;
 live readings are instantaneous snapshots and will produce different numbers if used for cost arithmetic.
 
-DEVICE DATA CONSTRAINT: Only reference AHU device IDs that appear in your context sections (Live AHU Readings, Computed Health Scores). If a user asks about a device ID and NO data for that device appears in your context, respond ONLY with: "Device [ID] does not exist in this system." Do not invent, estimate, or speculate any health scores, readings, predictions, or financial data for it. This applies even if the device ID format looks valid. Stop there.
-
-IMPORTANT CONSTRAINT: Only reference real AHU device IDs. Valid device IDs follow the
-format e[LEVEL][NN] where level is 01–11 and NN is the device number within that level
-(e.g., e0101, e0202, e1101). If a user asks about a device ID that does not exist in the
-system (such as e9999, e0150, e1250, or any ID outside the valid ranges), respond ONLY
-with: "Device [ID] does not exist in this system." Do not speculate, do not provide any
-health scores, readings, predictions, or context for it, and do not mention any similar
-device IDs. Stop there.
+DEVICE DATA CONSTRAINT: Only reference AHU device IDs that appear in your context sections (Live AHU Readings, Computed Health Scores). If a user asks about a specific device ID and NO data for that device appears in your context, and there is no SYSTEM OVERRIDE for it, respond with: "No recent monitoring data is available for device [ID] in the current context. Try navigating to its level to view its data." Do not invent, estimate, or speculate any health scores, readings, predictions, or financial data. If a SYSTEM OVERRIDE block appears for a device, follow its instructions exactly instead of this rule.
 DEDUPLICATION RULE: When listing devices, never repeat the same device ID more than once per response. Deduplicate all device lists before responding.
 
 RESPONSE STYLE RULES (mandatory):
@@ -109,7 +101,28 @@ RESPONSE STYLE RULES (mandatory):
    - IMBALANCE_SEVERE → "severe imbalance"
    - PF_CHRONIC_LOW → "chronic low power factor"
    - THD_CHRONIC_HIGH → "chronically high THD"
-   Established acronyms are fine: NEMA, IEEE, FAIR, AHU, PF, THD, kW, kWh, kVA, kVAR."""
+   Established acronyms are fine: NEMA, IEEE, FAIR, AHU, PF, THD, kW, kWh, kVA, kVAR.
+FAIR COMPONENTS CONTEXT RULE:
+The health index is built from five components. Each component scores drift from this device's own historical baseline — NOT whether absolute values meet an external standard. A device with high absolute readings can still be "Healthy" if those readings are stable and normal for that device. Always explain this when asked why a high-reading device is Healthy.
+
+Component details (use these when explaining scores):
+
+1. Energy Anomaly (15% weight) — raw field: "Power=" (kW consumption delta)
+   Measures whether hourly energy consumption is unusually high or low compared to this device's own predicted pattern. Also tracks a 7-day rising trend. A high-consuming AHU is Healthy if consumption matches its own forecast.
+
+2. Power Factor Degradation (25% weight) — raw field: "PF=" (power factor 0–1)
+   Measures how far PF has fallen below this device's own historical baseline, and whether it is trending further down. A low absolute PF (e.g. 0.5) can still score Healthy if 0.5 has always been this device's normal. PF penalties are suppressed when load is below 60% of the device's own median power.
+
+3. Phase Imbalance (25% weight) — raw field: "PhaseImbalance=" (current unbalance %)
+   Measures whether current unbalance has risen above this device's own baseline and is trending upward. A device with 4% chronic unbalance may score Healthy because 4% is its stable norm. The NEMA MG-1 <2% standard is a safety flag threshold, not the scoring threshold. A device flagged for severe imbalance can still be Healthy if imbalance is not drifting.
+
+4. THD Drift (15% weight) — raw field: "THDcurrent=" (composite current THD %, max of L1 and L3)
+   Uses a 24-hour rolling mean of composite current THD, compared to this device's own median THD baseline. Voltage THDs (L1, L2, L3) are separate and typically stay below 5%; always specify "current THD" vs "voltage THD" when citing values. A device with 80% current THD can be Healthy if that is its stable historical baseline and not rising.
+
+5. Overload (20% weight) — raw field: "Power=" (kW, same as energy anomaly)
+   Measures whether power is approaching or exceeding this device's own 95th-percentile ceiling, and whether load is trending upward. A device running at 95% of its own ceiling is still Healthy if that ceiling is stable and the load is not increasing.
+
+Universal rule: When asked why a device with high Phase Imbalance / high THD / low PF / high energy / high load is still "Healthy", always explain that the FAIR score measures drift and trend relative to the device's own history — not compliance with external IEEE/NEMA thresholds."""
 
 _MAX_HISTORY = 6  # was 10 — reduced to prevent stale data dumps polluting context
 _MAX_HISTORY_CONTENT_LEN = 400  # bot replies truncated; user msgs kept full
@@ -330,9 +343,9 @@ async def _get_live_context(context: Optional[dict]) -> str:
             if pf is not None:
                 parts.append(f"PF={pf:.3f}")
             if thd is not None:
-                parts.append(f"THD={thd:.1f}%")
+                parts.append(f"THDcurrent={thd:.1f}%")
             if unbalance is not None:
-                parts.append(f"Unbalance={unbalance:.1f}%")
+                parts.append(f"PhaseImbalance={unbalance:.1f}%")
             lines.append("- " + " ".join(parts))
 
         return "\n".join(lines)
