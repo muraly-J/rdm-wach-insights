@@ -42,7 +42,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
     if (target.view === 'prediction') {
       setTimeout(() => {
         document.getElementById('prediction-section')?.scrollIntoView({ behavior: 'smooth' });
-      }, 400);
+      }, 600);
     }
   };
 

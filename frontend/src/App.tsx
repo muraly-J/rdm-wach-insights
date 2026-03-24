@@ -282,9 +282,11 @@ function App() {
 
               {/* Prediction View (single-device mode only) */}
               {selectedDevice && selectedDevice !== 'all' && (
-                <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#1E2A3A] rounded-xl" />}>
-                  <PredictionView deviceId={selectedDevice} />
-                </React.Suspense>
+                <div id="prediction-section">
+                  <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#1E2A3A] rounded-xl" />}>
+                    <PredictionView deviceId={selectedDevice} />
+                  </React.Suspense>
+                </div>
               )}
 
               {/* Financial Impact Section */}

@@ -242,6 +242,40 @@ def _is_prediction_query(message: str) -> bool:
     return bool(_PREDICTION_PATTERN.search(message))
 
 
+def _prediction_fallback_from_csv(device_id: str, horizon: str) -> str:
+    """
+    When InfluxDB data is insufficient for a math-based prediction, fall back to
+    the latest CSV health score and instruct the LLM to answer using it as a proxy.
+    """
+    try:
+        import pandas as pd
+        project_root = Path(__file__).parent.parent.parent
+        csv_path = project_root / "data" / "health_all_levels.csv"
+        if not csv_path.exists():
+            return ""
+        df = pd.read_csv(csv_path, parse_dates=["timestamp"])
+        subset = df[df["device_id"] == device_id]
+        if subset.empty:
+            return ""
+        row = subset.sort_values("timestamp").iloc[-1]
+        hi = row.get("health_index")
+        tier = row.get("tier", "")
+        if hi is None or pd.isna(hi):
+            return ""
+        lines = [f"\n\n## Prediction Context ({device_id}, +{horizon})"]
+        lines.append("Note: Insufficient InfluxDB time-series history for a math-based forecast.")
+        lines.append(f"Current Health Index: {float(hi):.1f}/100 ({tier}) — use as best available proxy.")
+        lines.append(
+            "INSTRUCTION: Answer the prediction question directly using the current health index as a baseline. "
+            "State the current health level and note that, absent significant operational changes, "
+            "the device is likely to remain in a similar range over the requested horizon. "
+            "Do NOT give a generic greeting or refuse to answer."
+        )
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
 def _get_prediction_context_sync(device_id: str, horizon: str = "1h") -> str:
     """
     Compute prediction for device_id and return a compact text summary
@@ -257,7 +291,7 @@ def _get_prediction_context_sync(device_id: str, horizon: str = "1h") -> str:
         h_key = horizon_map.get(horizon.replace(" ", "").lower(), "24h")
         result = compute_predictions(device_id, horizons=[h_key])
         if result is None:
-            return ""
+            return _prediction_fallback_from_csv(device_id, h_key)
 
         h_data = result["horizons"].get(h_key, {})
         hi = h_data.get("predicted_health_index", "?")
@@ -649,7 +683,9 @@ async def chat(body: ChatRequest):
     if _is_prediction_query(body.message) and nav_target:
         horizon_match = re.search(r'(\d+)\s*(h|hour|day|week)', body.message, re.IGNORECASE)
         horizon_hint = "24h"
-        if horizon_match:
+        if re.search(r'\btomorrow\b', body.message, re.IGNORECASE):
+            horizon_hint = "24h"
+        elif horizon_match:
             n, unit = horizon_match.group(1), horizon_match.group(2).lower()
             if unit in ("h", "hour"):
                 horizon_hint = f"{n}h"

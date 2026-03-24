@@ -73,7 +73,7 @@ def test_score_values_are_0_to_100(csv_has_data):
 
 def test_raw_score_relationship_has_raw_and_score(csv_has_data):
     df = csv_has_data
-    device_id = df['ahu_id'].iloc[0]
+    device_id = df['device_id'].iloc[0]
     result = get_raw_score_relationship(device_id=device_id, time_range="7d")
     assert isinstance(result, dict)
     if result:
