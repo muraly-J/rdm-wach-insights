@@ -9,6 +9,7 @@ Load any Qwen model in LM Studio and enable the local server.
 
 import asyncio
 import logging
+import re
 from functools import partial
 from typing import Optional
 
@@ -17,6 +18,13 @@ from openai import OpenAI
 from config import get_lms_base_url, get_lms_model, get_lms_api_key
 
 logger = logging.getLogger(__name__)
+
+_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+
+
+def _strip_think(text: str) -> str:
+    """Remove Qwen3 chain-of-thought blocks before returning to the user."""
+    return _THINK_RE.sub("", text).strip()
 
 
 class QwenClient:
@@ -58,7 +66,7 @@ class QwenClient:
                     max_tokens=max_output_tokens,
                 ),
             )
-            return response.choices[0].message.content
+            return _strip_think(response.choices[0].message.content)
         except Exception as e:
             logger.warning(f"LM Studio unreachable: {e}")
             return "Local LM Studio is not available in this environment."
@@ -95,7 +103,7 @@ class QwenClient:
                     max_tokens=max_output_tokens,
                 ),
             )
-            return response.choices[0].message.content
+            return _strip_think(response.choices[0].message.content)
         except Exception as e:
             logger.warning(f"LM Studio unreachable: {e}")
             return "Local LM Studio is not available in this environment."
