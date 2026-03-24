@@ -218,15 +218,27 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
         'devices have', 'comparison', 'comparing'
     ])
 
-    # Prediction intent detection (query_type wired in Task 5 when QueryType.prediction is added)
+    # Prediction intent detection
     prediction_keywords = {
         'predict', 'forecast', 'next', 'upcoming', 'future',
         'ahead', 'will', 'tomorrow', 'expect', 'projection', 'estimate', 'spike'
     }
     is_prediction = any(kw in query_lower for kw in prediction_keywords)
-    # TODO(Task 5): set query_type = QueryType.prediction when is_prediction is True
 
-    query_type = QueryType.ranking if is_ranking else QueryType.time_series
+    # Health index intent detection
+    health_index_keywords = {
+        'health index', 'health score', 'fair score', 'ahu score',
+        'health trend', 'score trend', 'overall health'
+    }
+    is_health_index = any(kw in query_lower for kw in health_index_keywords)
+
+    # Route special query types
+    if is_health_index:
+        query_type = QueryType.health_index
+    elif is_prediction:
+        query_type = QueryType.prediction
+    else:
+        query_type = QueryType.ranking if is_ranking else QueryType.time_series
 
     # Determine top_n for ranking queries
     # If user asks for "all", "every", or "whole" devices, don't limit

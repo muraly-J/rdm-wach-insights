@@ -54,14 +54,13 @@ def test_metric_patterns(query, expected_metric):
 
 
 def test_health_index_query_does_not_silently_return_power_total():
-    """Guard: health index queries should not silently default to power_total.
-    This test is a forward-looking stub — update to assert q.query_type == QueryType.health_index
-    once Task 5 adds QueryType.health_index.
-    """
+    """Health index queries should route to health_index type, not silently return power_total."""
     from llm.translator import _parse_query_rules
+    from models.schemas import QueryType
     q, err = _parse_query_rules("show health index for level 3")
-    # Until Task 5: either returns an error OR returns something other than power_total
-    assert q is None or q.metric != "power_total"
+    assert err is None
+    assert q is not None
+    assert q.query_type == QueryType.health_index  # Not power_total garbage
 
 
 def test_show_level_expands_devices():
@@ -77,13 +76,21 @@ def test_show_level_expands_devices():
     assert set(q.device_ids) == set(expected_level_3_devices)
 
 
-def test_prediction_query_does_not_crash():
-    """Before Task 5: prediction queries fall through to time_series gracefully.
-    After Task 5 wires QueryType.prediction, update this to assert time_series → prediction.
-    """
+def test_prediction_query_detected():
+    """Prediction queries should now route to QueryType.prediction."""
     from llm.translator import _parse_query_rules
     from models.schemas import QueryType
     q, err = _parse_query_rules("forecast power for e0101 next week")
-    # Before Task 5: falls through to time_series (is_prediction computed but not yet routed)
+    assert err is None
     assert q is not None
-    assert q.query_type == QueryType.time_series
+    assert q.query_type == QueryType.prediction
+
+
+def test_health_index_query_detected():
+    """Health index queries should route to QueryType.health_index."""
+    from llm.translator import _parse_query_rules
+    from models.schemas import QueryType
+    q, err = _parse_query_rules("show health index for level 3")
+    assert err is None
+    assert q is not None
+    assert q.query_type == QueryType.health_index

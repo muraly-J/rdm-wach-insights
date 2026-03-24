@@ -14,6 +14,7 @@ Both return a ChartPayload dict that the FastAPI route sends directly to React.
 import io
 import pandas as pd
 from typing import List, Dict, Any, Optional
+from models.schemas import QueryType
 
 
 # ── Recharts line chart (time series) ────────────────────────────────────────
@@ -158,6 +159,18 @@ def build_chart(df: pd.DataFrame, structured: Dict[str, Any]) -> Dict[str, Any]:
         time_range = structured.get('time_range')
         top_n      = structured.get('top_n', 10)
 
+    if qtype in ('prediction', QueryType.prediction):
+        return {
+            "chart_type": "prediction",
+            "redirect": "prediction_view",
+            "message": "Use the prediction panel to see forecast data for this device.",
+        }
+    if qtype in ('health_index', QueryType.health_index):
+        return {
+            "chart_type": "health_index",
+            "redirect": "health_index_view",
+            "message": "Use the health index chart to see score trends.",
+        }
     if qtype == 'time_series':
         return build_line_chart(df, metric, time_range)
     else:

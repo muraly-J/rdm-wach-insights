@@ -217,8 +217,10 @@ def get_level_for_device(ahu_id: str) -> str:
 # ── Query types ───────────────────────────────────────────────────────────────
 
 class QueryType(str, Enum):
-    time_series = "time_series"   # single device, metric over time  → line chart
-    ranking     = "ranking"       # top-N devices by metric           → bar chart
+    time_series  = "time_series"   # single device, metric over time  → line chart
+    ranking      = "ranking"       # top-N devices by metric           → bar chart
+    prediction   = "prediction"    # forecast query → redirect to prediction panel
+    health_index = "health_index"  # health score query → redirect to health index chart
 
 
 # ── Structured query (output of LLM + validated by middleware) ────────────────
