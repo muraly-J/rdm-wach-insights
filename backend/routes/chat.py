@@ -99,7 +99,17 @@ system (such as e9999, e0150, e1250, or any ID outside the valid ranges), respon
 with: "Device [ID] does not exist in this system." Do not speculate, do not provide any
 health scores, readings, predictions, or context for it, and do not mention any similar
 device IDs. Stop there.
-DEDUPLICATION RULE: When listing devices, never repeat the same device ID more than once per response. Deduplicate all device lists before responding."""
+DEDUPLICATION RULE: When listing devices, never repeat the same device ID more than once per response. Deduplicate all device lists before responding.
+
+RESPONSE STYLE RULES (mandatory):
+1. Never use emojis of any kind in your responses — no ✅, ⚠️, 🔴, 🟡, or any other emoji or symbol.
+2. Never use internal code names in ALL_CAPS. Write them in plain English instead:
+   - CHRONIC_HIGH → "chronically high"
+   - CHRONIC_LOW → "chronically low"
+   - IMBALANCE_SEVERE → "severe imbalance"
+   - PF_CHRONIC_LOW → "chronic low power factor"
+   - THD_CHRONIC_HIGH → "chronically high THD"
+   Established acronyms are fine: NEMA, IEEE, FAIR, AHU, PF, THD, kW, kWh, kVA, kVAR."""
 
 _MAX_HISTORY = 6  # was 10 — reduced to prevent stale data dumps polluting context
 _MAX_HISTORY_CONTENT_LEN = 400  # bot replies truncated; user msgs kept full
