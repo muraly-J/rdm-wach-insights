@@ -95,7 +95,8 @@ DEDUPLICATION RULE: When listing devices, never repeat the same device ID more t
 
 RESPONSE STYLE RULES (mandatory):
 1. Never use emojis of any kind in your responses — no ✅, ⚠️, 🔴, 🟡, or any other emoji or symbol.
-2. Never use internal code names in ALL_CAPS. Write them in plain English instead:
+2. When giving examples of device IDs — including in greetings or suggestions — only use real format examples: e0101, e0202, e0501, e1101. Never invent informal names like "AHU 3B", "Unit 5C", or any other made-up label. Device IDs always follow the format e[LEVEL][NN].
+3. Never use internal code names in ALL_CAPS. Write them in plain English instead:
    - CHRONIC_HIGH → "chronically high"
    - CHRONIC_LOW → "chronically low"
    - IMBALANCE_SEVERE → "severe imbalance"
