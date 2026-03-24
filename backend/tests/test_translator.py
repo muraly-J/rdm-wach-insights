@@ -62,3 +62,24 @@ def test_health_index_query_does_not_silently_return_power_total():
     q, err = _parse_query_rules("show health index for level 3")
     # Until Task 5: either returns an error OR returns something other than power_total
     assert q is None or q.metric != "power_total"
+
+
+def test_show_level_expands_devices():
+    """Existing behaviour — confirm level expansion still works."""
+    from llm.translator import _parse_query_rules
+    from models.schemas import AHU_LEVEL_CONFIG
+
+    q, err = _parse_query_rules("show level 3 power")
+    assert err is None
+    assert len(q.device_ids) > 0
+    # All devices should match the configured level 3 devices
+    expected_level_3_devices = AHU_LEVEL_CONFIG[3]['device_ids']
+    assert set(q.device_ids) == set(expected_level_3_devices)
+
+
+def test_prediction_query_does_not_crash():
+    """Prediction queries should not crash even before QueryType.prediction is wired up."""
+    from llm.translator import _parse_query_rules
+    q, err = _parse_query_rules("forecast power for e0101 next week")
+    # Should not crash. May return time_series for now — that's OK.
+    assert q is not None or err is not None  # either a result or a clean error, not a crash

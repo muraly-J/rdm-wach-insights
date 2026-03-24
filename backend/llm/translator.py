@@ -214,9 +214,17 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
     # Determine query type
     # Check for ranking keywords - queries that rank/compare devices
     is_ranking = any(word in query_lower for word in [
-        'rank', 'top', 'compare', 'worst', 'lowest', 'highest', 
+        'rank', 'top', 'compare', 'worst', 'lowest', 'highest',
         'devices have', 'comparison', 'comparing'
     ])
+
+    # Prediction intent detection
+    _PREDICTION_KEYWORDS = {
+        'predict', 'forecast', 'next', 'upcoming', 'future',
+        'ahead', 'will', 'tomorrow', 'expect', 'projection', 'estimate', 'spike'
+    }
+    is_prediction = any(kw in query_lower for kw in _PREDICTION_KEYWORDS)
+
     query_type = QueryType.ranking if is_ranking else QueryType.time_series
 
     # Determine top_n for ranking queries
