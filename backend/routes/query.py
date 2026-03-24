@@ -14,6 +14,8 @@ import logging
 from collections import defaultdict
 from typing import Optional
 
+import pandas as pd
+
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel, validator
 
@@ -90,7 +92,7 @@ def _check_injection(text: str) -> None:
 # If the LLM is manipulated into returning anything outside these sets,
 # the request is rejected before it ever reaches InfluxDB.
 
-_ALLOWED_QUERY_TYPES = {qt.value for qt in QueryType}  # {"time_series", "ranking"}
+_ALLOWED_QUERY_TYPES = {qt.value for qt in QueryType}  # {"time_series", "ranking", "prediction", "health_index"}
 
 _ALLOWED_TIME_RANGES = {"last_24h", "last_7d", "last_30d", "all_time"}
 
@@ -236,7 +238,17 @@ async def handle_query(request: Request, body: QueryRequest):
         )
         raise HTTPException(status_code=422, detail={"error": validation_error})
 
-    # 6. Fetch data from InfluxDB
+    # 6. Short-circuit: redirect query types don't need InfluxDB data
+    if structured.query_type in (QueryType.prediction, QueryType.health_index):
+        chart = build_chart(pd.DataFrame(), structured)
+        return {
+            **structured.model_dump(),
+            "chart": chart,
+            "summary": None,
+            "csv_available": False,
+        }
+
+    # 7. Fetch data from InfluxDB
     try:
         if structured.query_type == 'time_series':
             df = fetch_time_series(
@@ -265,7 +277,7 @@ async def handle_query(request: Request, body: QueryRequest):
             detail={"error": "Could not retrieve data. Please try again in a moment."}
         )
 
-    # 7. Build chart + summary
+    # 8. Build chart + summary
     try:
         chart   = build_chart(df, structured)
         summary = await summarize(df, structured)

@@ -159,13 +159,13 @@ def build_chart(df: pd.DataFrame, structured: Dict[str, Any]) -> Dict[str, Any]:
         time_range = structured.get('time_range')
         top_n      = structured.get('top_n', 10)
 
-    if qtype in ('prediction', QueryType.prediction):
+    if qtype == QueryType.prediction:
         return {
             "chart_type": "prediction",
             "redirect": "prediction_view",
             "message": "Use the prediction panel to see forecast data for this device.",
         }
-    if qtype in ('health_index', QueryType.health_index):
+    if qtype == QueryType.health_index:
         return {
             "chart_type": "health_index",
             "redirect": "health_index_view",
