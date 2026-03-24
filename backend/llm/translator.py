@@ -155,12 +155,13 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
             if 1 <= level_num <= 11:
                 levels_expanded.append(f"{level_num:02d}")
     # Extract metric keywords
-    # Order matters! Check more specific patterns first to avoid ambiguous matches.
-    # For example, "apparent_power_total" contains both "apparent" and "power",
-    # so we must check "apparent power" before just "power".
-    # Also, "current_l1_thd" contains both "current" and "thd", so check specific patterns first.
-    # NOTE: The current implementation only supports current_l1_thd (not l3) due to keyword matching
-    # limitations. For more complex mappings, use the full metric name or LLM translation.
+    # Order matters — first match wins. The dict is organised in three tiers:
+    #   1. Full underscore names (most specific) — e.g. 'current_l3_thd'
+    #   2. Multi-word natural-language phrases   — e.g. 'phase imbalance', 'thd l3'
+    #   3. Single-keyword aliases (least specific) — e.g. 'thd', 'voltage', 'current'
+    # Within tier 3, if a query contains multiple single keywords (e.g. "current voltage"),
+    # the first matching key wins. This is a known limitation — ambiguous single-keyword
+    # combinations resolve to the first alphabetically-earlier key in insertion order.
     metric_map = {
         # Full underscore names first (most specific)
         'apparent_power_total':  'apparent_power_total',

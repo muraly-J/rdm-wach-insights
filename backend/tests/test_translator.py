@@ -51,3 +51,14 @@ def test_metric_patterns(query, expected_metric):
     q, err = _parse_query_rules(query)
     assert err is None
     assert q.metric == expected_metric
+
+
+def test_health_index_query_does_not_silently_return_power_total():
+    """Guard: health index queries should not silently default to power_total.
+    This test is a forward-looking stub — update to assert q.query_type == QueryType.health_index
+    once Task 5 adds QueryType.health_index.
+    """
+    from llm.translator import _parse_query_rules
+    q, err = _parse_query_rules("show health index for level 3")
+    # Until Task 5: either returns an error OR returns something other than power_total
+    assert q is None or q.metric != "power_total"
