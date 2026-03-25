@@ -15,7 +15,7 @@ import AHUCoverageDisclaimer from './AHUCoverageDisclaimer';
  */
 const WelcomeHero: React.FC = () => {
   return (
-    <section className="relative h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative h-full flex items-center justify-center overflow-hidden">
       {/* Radial gradient background mesh (Section 3.1) */}
       <div
         className="absolute inset-0 z-0"
