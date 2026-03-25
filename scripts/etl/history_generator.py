@@ -767,6 +767,7 @@ def save_hourly_scores(health_df: pd.DataFrame):
 
 def main():
     """Main entry point - runs ETL pipeline once."""
+    start_time = datetime.now()
     parser = argparse.ArgumentParser(
         description="Full Historical ETL Pipeline (One-Shot)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
