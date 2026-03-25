@@ -254,7 +254,7 @@ def _prediction_fallback_from_csv(device_id: str, horizon: str) -> str:
         if not csv_path.exists():
             return ""
         df = pd.read_csv(csv_path, parse_dates=["timestamp"])
-        subset = df[df["device_id"] == device_id]
+        subset = df[df["ahu_id"] == device_id]
         if subset.empty:
             return ""
         row = subset.sort_values("timestamp").iloc[-1]
@@ -357,13 +357,13 @@ async def _get_live_context(context: Optional[dict]) -> str:
 
         # If a specific device is requested, filter to that device
         if device:
-            df = df[df["device_id"] == device]
+            df = df[df["ahu_id"] == device]
             if df.empty:
                 return ""
 
         lines = ["\n\n## Live AHU Readings (current snapshot)"]
         for _, row in df.iterrows():
-            ahu_id = row.get("device_id", "?")
+            ahu_id = row.get("ahu_id", "?")
             pf = row.get("power_factor_avg")
             power = row.get("power_total")
             thd = row.get("composite_thd") or max(
@@ -419,7 +419,7 @@ def _read_csv_context_sync(context: dict) -> str:
 
     # Filter to the relevant level/device
     if device:
-        subset = df[df["device_id"] == device]
+        subset = df[df["ahu_id"] == device]
     elif level:
         level_str = f"Level {level}"
         subset = df[df["level"] == level_str]
@@ -432,7 +432,7 @@ def _read_csv_context_sync(context: dict) -> str:
     # Take the most recent snapshot per AHU
     latest = (
         subset.sort_values("timestamp")
-              .groupby("device_id", sort=False)
+              .groupby("ahu_id", sort=False)
               .last()
               .reset_index()
     )
@@ -467,7 +467,7 @@ def _read_csv_context_sync(context: dict) -> str:
         ol = row.get("overload")
         flags = row.get("safety_flags", "")
 
-        lines.append(f"**{row['device_id']}** ({row.get('level', '')}):")
+        lines.append(f"**{row['ahu_id']}** ({row.get('level', '')}):")
         if hi is not None and not pd.isna(hi):
             lines.append(f"  - Health Index: **{hi:.1f}/100** ({tier})")
         score_parts = []
@@ -496,7 +496,7 @@ def _read_csv_context_sync(context: dict) -> str:
             translated = _translate_flags(flags)
             flag_str = f" [{translated}]" if translated else ""
             hi_str = f"{hi:.1f}" if hi is not None and not pd.isna(hi) else "?"
-            lines.append(f"    - **{row['device_id']}**: {hi_str}/100 ({tier}){flag_str}")
+            lines.append(f"    - **{row['ahu_id']}**: {hi_str}/100 ({tier}){flag_str}")
 
         # Best 5
         best = latest_sorted.tail(5).iloc[::-1]
@@ -505,7 +505,7 @@ def _read_csv_context_sync(context: dict) -> str:
             hi = row.get("health_index")
             tier = row.get("tier", "")
             hi_str = f"{hi:.1f}" if hi is not None and not pd.isna(hi) else "?"
-            lines.append(f"    - **{row['device_id']}**: {hi_str}/100 ({tier})")
+            lines.append(f"    - **{row['ahu_id']}**: {hi_str}/100 ({tier})")
 
         # Level average
         avg_hi = latest_sorted["health_index"].mean()
@@ -542,7 +542,7 @@ def _format_financial_context(data: dict, scope: str) -> str:
         lines.append(f"\n  Per-AHU breakdown — ranked by total cost:")
         for i, row in enumerate(top, 1):
             lines.append(
-                f"  {i}. {row['device_id']}: "
+                f"  {i}. {row['ahu_id']}: "
                 f"TOTAL={cur} {row['total_cost']:,.2f} | "
                 f"excess={cur} {row['excess_energy_cost']:,.2f} | "
                 f"PF penalty={cur} {row['pf_penalty_cost']:,.2f} | "

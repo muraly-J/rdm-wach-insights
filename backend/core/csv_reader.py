@@ -207,12 +207,12 @@ def get_health_index_series(level: int, device_id: str | None, time_range: str) 
         return []
     df = df[df['level'] == f"Level {level}"]
     if device_id:
-        df = df[df['device_id'] == device_id]
+        df = df[df['ahu_id'] == device_id]
     df = _filter_time_range(df, time_range).sort_values('timestamp')
 
     labels = _load_ahu_labels()
     result = []
-    for ahu_id, group in df.groupby('device_id'):
+    for ahu_id, group in df.groupby('ahu_id'):
         meta = labels.get(str(ahu_id), {})
         result.append({
             'id': ahu_id,
@@ -241,7 +241,7 @@ def get_score_breakdown(level: int, time_range: str) -> list[dict]:
 
     labels = _load_ahu_labels()
     result = []
-    for ahu_id, group in df.groupby('device_id'):
+    for ahu_id, group in df.groupby('ahu_id'):
         scores = {}
         for col in SCORE_COLUMNS:
             if col not in group.columns:
@@ -281,7 +281,7 @@ def get_raw_score_relationship(device_id: str, time_range: str) -> dict:
     if df.empty:
         return {}
 
-    df = df[df['device_id'] == device_id]
+    df = df[df['ahu_id'] == device_id]
     df = _filter_time_range(df, time_range).sort_values('timestamp')
 
     if df.empty:
