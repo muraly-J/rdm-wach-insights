@@ -144,7 +144,7 @@ def _compute_impact(level: int, time_range: str, device_id: Optional[str] = None
         total = round(excess_cost + pf_penalty + maintenance_risk + demand_charge, 2)
 
         ahu_rows.append({
-            "device_id":          ahu_id,
+            "ahu_id":             ahu_id,
             "health_index":       round(latest_hi, 1),
             "excess_energy_cost": excess_cost,
             "pf_penalty_cost":    pf_penalty,

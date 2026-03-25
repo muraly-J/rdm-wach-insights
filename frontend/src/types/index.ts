@@ -212,6 +212,19 @@ export interface FinancialImpact {
   top_ahus: AHUCost[];
 }
 
+// ── AHU Heatmap Types ─────────────────────────────────────────────────────
+
+export interface AHUHeatmapHour {
+  hour: number;
+  avg_health: number | null;
+}
+
+export interface AHUHeatmapResponse {
+  ahu_id: string;
+  range: string;
+  hours: AHUHeatmapHour[];
+}
+
 // ── Site Summary Types ─────────────────────────────────────────────────────
 
 export interface LevelHealthTile {

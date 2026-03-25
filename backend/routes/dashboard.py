@@ -808,3 +808,59 @@ async def dashboard_safety_flags(
     except Exception as e:
         logging.getLogger(__name__).error("Dashboard error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")
+
+
+@router.get("/ahu-heatmap")
+async def ahu_heatmap(
+    ahu_id: str = Query(..., description="AHU device ID, e.g. e0101"),
+    range: str = Query(default="7d", description="Time range: 24h, 7d, or 30d"),
+):
+    """
+    Return average health index per hour-of-day (0–23) for a specific AHU.
+
+    Used to render a 6×4 heatmap of best/worst periods in the frontend.
+    Each entry represents the mean health index observed at that UTC hour
+    across the requested time window.
+
+    Returns:
+        { ahu_id, range, hours: [{hour: 0, avg_health: 87.2}, ...] }  (24 entries)
+    """
+    try:
+        valid_ranges = ["24h", "7d", "30d"]
+        if range not in valid_ranges:
+            raise HTTPException(status_code=400, detail=f"Range must be one of: {', '.join(valid_ranges)}")
+
+        from core.csv_reader import _load_csv, _filter_time_range
+
+        df = await asyncio.to_thread(_load_csv, time_range=range)
+        if df.empty:
+            raise HTTPException(status_code=404, detail="No health data available")
+
+        df = df[df["ahu_id"] == ahu_id]
+        if df.empty:
+            raise HTTPException(status_code=404, detail=f"No data found for AHU {ahu_id}")
+
+        df = _filter_time_range(df, range)
+        if df.empty:
+            raise HTTPException(status_code=404, detail=f"No data in range for AHU {ahu_id}")
+
+        df["_hour"] = pd.to_datetime(df["timestamp"], utc=True).dt.hour
+        hourly = (
+            df.groupby("_hour")["health_index"]
+            .mean()
+            .round(1)
+            .reset_index()
+            .rename(columns={"_hour": "hour", "health_index": "avg_health"})
+        )
+
+        # Ensure all 24 hours present (fill missing with None)
+        hour_map = {int(row["hour"]): float(row["avg_health"]) for _, row in hourly.iterrows()}
+        hours = [{"hour": h, "avg_health": hour_map.get(h)} for h in range(24)]
+
+        return {"ahu_id": ahu_id, "range": range, "hours": hours}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.getLogger(__name__).error("ahu-heatmap error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")

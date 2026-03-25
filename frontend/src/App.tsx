@@ -18,6 +18,7 @@ import ScoreCardsGrid from './components/dashboard/ScoreCardsGrid';
 
 // Health Rankings and Safety Flags
 import ExpandableHealthRankings from './components/dashboard/ExpandableHealthRankings';
+import AHUHeatmap from './components/dashboard/AHUHeatmap';
 
 // Score Derivation (lazy-loaded — Section 12)
 const ScoreDerivationSection = React.lazy(
@@ -268,14 +269,36 @@ function App() {
               {/* Five-Score Cards */}
               <ScoreCardsGrid scoreData={scoreCardData} />
 
-              {/* Expandable Health Rankings */}
+              {/* Rankings or AHU Heatmap (toggle based on device selection) */}
               {selectedLevel && (
                 <div id="section-rankings" style={{ scrollMarginTop: '56px' }}>
-                  <ExpandableHealthRankings
-                    level={selectedLevel}
-                    timeRange={timeRange}
-                    scoresData={scoresData || undefined}
-                  />
+                  <AnimatePresence mode="wait">
+                    {selectedDevice && selectedDevice !== 'all' ? (
+                      <motion.div
+                        key={`heatmap-${selectedDevice}`}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                      >
+                        <AHUHeatmap ahuId={selectedDevice} />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="rankings"
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                      >
+                        <ExpandableHealthRankings
+                          level={selectedLevel}
+                          timeRange={timeRange}
+                          scoresData={scoresData || undefined}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
 
