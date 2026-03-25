@@ -46,8 +46,20 @@ jobs:
           echo "=========================================="
           echo "Starting Health Scoring ETL — $(date -u)"
           echo "=========================================="
-          python scripts/etl/run_health_etl.py --level all
+          python scripts/etl/run_health_etl.py --level all --output-hourly
           echo "Health Scoring ETL finished — $(date -u)"
+
+      - name: Commit updated CSVs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/predictions.csv data/health_all_levels.csv data/health_hourly.csv
+          if git diff --staged --quiet; then
+            echo "No CSV changes to commit."
+          else
+            git commit -m "chore(data): update ETL outputs [skip ci]"
+            git push
+          fi
 
       - name: Upload ETL outputs as artifacts
         if: always()
