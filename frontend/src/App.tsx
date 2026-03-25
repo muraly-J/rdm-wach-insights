@@ -3,15 +3,18 @@ import React from 'react';
 import { formatTickByRange } from './utils/formatTick';
 
 // ZONE A — Welcome Hero
-import WelcomeHero from './components/welcome/WelcomeHero';
-
-// ZONE B — Dashboard Gate
-import DashboardGate from './components/dashboard/DashboardGate';
+import HeroScrollWrapper from './components/welcome/HeroScrollWrapper';
 
 // ZONE C — Dashboard Components
 import CombinedScoresChart from './components/dashboard/CombinedScoresChart';
-import DashboardControls from './components/dashboard/DashboardControls';
 import HealthIndexChart from './components/dashboard/HealthIndexChart';
+
+// Nav
+import SiteNavBar from './components/nav/SiteNavBar';
+
+// Site Summary
+import SiteSummaryView from './components/summary/SiteSummaryView';
+import { generateSiteSummaryData } from './mocks/generateMockData';
 import ScoreCardsGrid from './components/dashboard/ScoreCardsGrid';
 
 // Health Rankings and Safety Flags
@@ -56,7 +59,7 @@ interface ScoreEntry {
 // ──────────────────────────────────────────────────────────────────────────────
 
 function App() {
-  const { selectedLevel, selectedDevice, timeRange } = useAppStore();
+  const { selectedLevel, selectedDevice, timeRange, setSiteSummaryData } = useAppStore();
 
   // ── API State ────────────────────────────────────────────────────────────────
   const [healthData, setHealthData] = React.useState<HealthIndexResponse | null>(null);
@@ -94,6 +97,11 @@ function App() {
       .then((data) => setRawData(data as RawScoreResponse))
       .catch(() => setRawData(null));
   }, [selectedDevice, timeRange]);
+
+  // ── Load site summary data on mount ─────────────────────────────────────────
+  React.useEffect(() => {
+    setSiteSummaryData(generateSiteSummaryData());
+  }, []);
 
   // ── Devices list derived from health data ────────────────────────────────────
   const devices = React.useMemo(
@@ -173,16 +181,13 @@ function App() {
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#E8ECF1]">
-      {/* ZONE A — Welcome Hero (100 vh) */}
-      <WelcomeHero />
-
-      {/* ZONE B — Dashboard Gate */}
-      <DashboardGate />
+      {/* ZONE A — Hero (collapses to nav on scroll) */}
+      <HeroScrollWrapper />
 
       {/* ZONE C — Dashboard */}
       <div id="dashboard">
         {/* Unified controls strip */}
-        <DashboardControls devices={devices} />
+        <SiteNavBar devices={devices} />
 
         {/* Dashboard content — only shown when a level is selected */}
         <AnimatePresence mode="wait">
@@ -210,7 +215,7 @@ function App() {
               )}
 
               {/* Health Index Chart */}
-              <div className="mb-8">
+              <div id="section-health-index" style={{ scrollMarginTop: '56px' }} className="mb-8">
                 <HealthIndexChart data={healthChartData} devices={chartDevices} />
               </div>
 
@@ -219,11 +224,13 @@ function App() {
 
               {/* Expandable Health Rankings */}
               {selectedLevel && (
-                <ExpandableHealthRankings
-                  level={selectedLevel}
-                  timeRange={timeRange}
-                  scoresData={scoresData || null}
-                />
+                <div id="section-rankings" style={{ scrollMarginTop: '56px' }}>
+                  <ExpandableHealthRankings
+                    level={selectedLevel}
+                    timeRange={timeRange}
+                    scoresData={scoresData || null}
+                  />
+                </div>
               )}
 
               {/* Combined Scores Chart */}
@@ -232,28 +239,30 @@ function App() {
               {/* Score Derivation (single-device mode only) */}
               <AnimatePresence>
                 {showDerivation && rawData && (
-                  <React.Suspense
-                    fallback={
-                      <div className="card p-6 h-40 flex items-center justify-center">
-                        <span className="text-[#8A95A5]">Loading derivation charts…</span>
-                      </div>
-                    }
-                  >
-                    <ScoreDerivationSection
-                      deviceName={
-                        devices.find((d) => d.id === selectedDevice)?.name ?? selectedDevice ?? ''
+                  <div id="section-score-derivation" style={{ scrollMarginTop: '56px' }}>
+                    <React.Suspense
+                      fallback={
+                        <div className="card p-6 h-40 flex items-center justify-center">
+                          <span className="text-[#8A95A5]">Loading derivation charts…</span>
+                        </div>
                       }
-                      deviceId={selectedDevice ?? ''}
-                      rawData={rawData.scores}
-                      timeRange={timeRange}
-                    />
-                  </React.Suspense>
+                    >
+                      <ScoreDerivationSection
+                        deviceName={
+                          devices.find((d) => d.id === selectedDevice)?.name ?? selectedDevice ?? ''
+                        }
+                        deviceId={selectedDevice ?? ''}
+                        rawData={rawData.scores}
+                        timeRange={timeRange}
+                      />
+                    </React.Suspense>
+                  </div>
                 )}
               </AnimatePresence>
 
               {/* Prediction View (single-device mode only) */}
               {selectedDevice && selectedDevice !== 'all' && (
-                <div id="prediction-section" className="scroll-mt-16">
+                <div id="section-predictions" style={{ scrollMarginTop: '56px' }}>
                   <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#1E2A3A] rounded-xl" />}>
                     <PredictionView deviceId={selectedDevice} />
                   </React.Suspense>
@@ -262,26 +271,20 @@ function App() {
 
               {/* Financial Impact Section */}
               {selectedLevel && (
-                <React.Suspense fallback={<div className="card h-48 animate-pulse bg-[#1A2230] rounded-xl" />}>
-                  <FinancialImpactView
-                    level={selectedLevel}
-                    range={timeRange}
-                    deviceId={selectedDevice !== 'all' ? selectedDevice : null}
-                  />
-                </React.Suspense>
+                <div id="section-financial" style={{ scrollMarginTop: '56px' }}>
+                  <React.Suspense fallback={<div className="card h-48 animate-pulse bg-[#1A2230] rounded-xl" />}>
+                    <FinancialImpactView
+                      level={selectedLevel}
+                      range={timeRange}
+                      deviceId={selectedDevice !== 'all' ? selectedDevice : null}
+                    />
+                  </React.Suspense>
+                </div>
               )}
             </motion.main>
           ) : (
-            <motion.div
-              key="no-level"
-              className="max-w-[1280px] mx-auto px-4 sm:px-6 py-16 text-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <p className="text-[#8A95A5] text-lg">
-                Select a building level above to start exploring AHU health data.
-              </p>
+            <motion.div key="no-level">
+              <SiteSummaryView />
             </motion.div>
           )}
         </AnimatePresence>
