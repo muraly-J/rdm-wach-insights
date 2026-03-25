@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppState, ChatMessage, DashboardData, FinancialImpact } from '../types';
+import { AppState, ChatMessage, DashboardData, FinancialImpact, SiteSummaryData } from '../types';
 
 // Default chat message for initial bot greeting
 const INITIAL_BOT_MESSAGE: ChatMessage = {
@@ -51,6 +51,14 @@ interface AppStore extends AppState {
   // Financial impact (latest loaded, passed to chat)
   financialImpact: FinancialImpact | null;
   setFinancialImpact: (data: FinancialImpact | null) => void;
+
+  // Hamburger menu
+  hamburgerOpen: boolean;
+  toggleHamburger: () => void;
+
+  // Site summary
+  siteSummaryData: SiteSummaryData | null;
+  setSiteSummaryData: (d: SiteSummaryData) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -86,4 +94,12 @@ export const useAppStore = create<AppStore>((set) => ({
   // Financial impact
   financialImpact: null,
   setFinancialImpact: (data) => set({ financialImpact: data }),
+
+  // Hamburger menu
+  hamburgerOpen: false,
+  toggleHamburger: () => set((state) => ({ hamburgerOpen: !state.hamburgerOpen })),
+
+  // Site summary
+  siteSummaryData: null,
+  setSiteSummaryData: (d) => set({ siteSummaryData: d }),
 }));
