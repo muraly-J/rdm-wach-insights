@@ -47,15 +47,17 @@ def _build_spotlight(assessment: dict, cost_lookup: dict) -> dict:
 
 
 @router.get("/site/summary")
-async def get_site_summary(range: str = Query(default="7d")):
+async def get_site_summary(range: str = Query(default="7d", alias="range")):
     """
     Return a site-wide summary for the dashboard hero panel.
 
     Query params:
       range: "24h" | "7d" (default) | "30d"
     """
+    # Avoid shadowing Python's built-in range() — rename param for use below
+    time_range_param = range
     try:
-        internal_range = RANGE_MAP.get(range, "last_7d")
+        internal_range = RANGE_MAP.get(time_range_param, "last_7d")
 
         # ── Step 1: Fleet health assessment ──────────────────────────────────
         from core.risk_engine import generate_fleet_risk_assessment
@@ -107,7 +109,7 @@ async def get_site_summary(range: str = Query(default="7d")):
 
         for level_num in range(1, 12):
             try:
-                impact = _compute_impact(level=level_num, time_range=range)
+                impact = _compute_impact(level=level_num, time_range=time_range_param)
                 grand_total += impact.get("grand_total", 0.0)
                 all_top_ahus.extend(impact.get("top_ahus", []))
             except Exception as exc:
@@ -131,11 +133,11 @@ async def get_site_summary(range: str = Query(default="7d")):
         # ── Step 7: Trend deltas ──────────────────────────────────────────────
         from core.csv_reader import _load_csv, _filter_time_range
 
-        df_full = _load_csv(time_range=range)
+        df_full = _load_csv(time_range=time_range_param)
         trend_deltas = []
 
         if not df_full.empty:
-            df_full = _filter_time_range(df_full, range)
+            df_full = _filter_time_range(df_full, time_range_param)
             df_full = df_full.sort_values("timestamp")
 
             mid_ts = df_full["timestamp"].quantile(0.5)
