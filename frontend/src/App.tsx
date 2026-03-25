@@ -217,7 +217,7 @@ function App() {
 
               {/* Health Index Chart */}
               <div id="section-health-index" style={{ scrollMarginTop: '56px' }} className="mb-8">
-                <HealthIndexChart data={healthChartData} devices={chartDevices} />
+                <HealthIndexChart data={healthChartData as Array<{ [key: string]: number; timestamp: string }>} devices={chartDevices} />
               </div>
 
               {/* Five-Score Cards */}
@@ -229,7 +229,7 @@ function App() {
                   <ExpandableHealthRankings
                     level={selectedLevel}
                     timeRange={timeRange}
-                    scoresData={scoresData || null}
+                    scoresData={scoresData || undefined}
                   />
                 </div>
               )}
