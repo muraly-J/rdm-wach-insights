@@ -13,6 +13,10 @@ on:
         required: false
         type: boolean
         default: false
+      batch_days:
+        description: 'InfluxDB fetch window size in days (default: 30)'
+        required: false
+        default: '30'
 
 jobs:
   generate-history:
@@ -48,7 +52,7 @@ jobs:
           echo "Dry run: ${{ github.event.inputs.dry_run }}"
           echo "=========================================="
 
-          ARGS="--level ${{ github.event.inputs.level }} --verbose"
+          ARGS="--level ${{ github.event.inputs.level }} --verbose --batch-days ${{ github.event.inputs.batch_days }}"
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
             ARGS="$ARGS --dry-run"
           fi

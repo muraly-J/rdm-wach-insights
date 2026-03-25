@@ -269,6 +269,65 @@ def _execute_and_clean(
         client.close()
 
 
+def get_earliest_data_timestamp() -> "datetime | None":
+    """
+    Return the earliest _time available in the InfluxDB bucket across all WACH
+    devices.  Returns a UTC-aware datetime, or None if the query fails.
+    """
+    from datetime import timezone as _tz
+    flux_query = f'''
+    from(bucket: "{_BUCKET}")
+      |> range(start: -3y)
+      |> filter(fn: (r) => r._measurement =~ /^wach_e\\d{{4}}_/)
+      |> keep(columns: ["_time"])
+      |> sort(columns: ["_time"], desc: false)
+      |> limit(n: 1)
+    '''
+    client = _get_client()
+    try:
+        tables = client.query_api().query(flux_query)
+        for table in tables:
+            for record in table.records:
+                t = record.get_time()
+                if t:
+                    return t if t.tzinfo else t.replace(tzinfo=_tz.utc)
+    except Exception as e:
+        logger.error(f"get_earliest_data_timestamp failed: {e}")
+    finally:
+        client.close()
+    return None
+
+
+def fetch_time_series_window(
+    device_ids: list[str],
+    metric: str,
+    start_dt: "datetime",
+    stop_dt: "datetime",
+) -> pd.DataFrame:
+    """
+    Like fetch_time_series but accepts explicit UTC start/stop datetimes
+    instead of a named time-range key.  Always resamples to 1 h.
+    """
+    _validate_device_ids(device_ids)
+    _validate_metric(metric)
+
+    start_iso = start_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+    stop_iso  = stop_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    sanitized_ids = [re.escape(did) for did in device_ids]
+    devices_regex = "|".join(sanitized_ids)
+
+    flux_query = f'''
+    from(bucket: "{_BUCKET}")
+      |> range(start: {start_iso}, stop: {stop_iso})
+      |> filter(fn: (r) => r._measurement =~ /^wach_({devices_regex})_{metric}$/)
+      |> pivot(rowKey:["_time"], columnKey: ["_measurement"], valueColumn: "_value")
+      |> sort(columns: ["_time"])
+    '''
+
+    return _execute_and_clean(flux_query, device_ids, metric, "1h")
+
+
 def get_available_devices(time_range: str = "last_30d") -> list[str]:
     """
     Get list of devices that have data in the specified time range.

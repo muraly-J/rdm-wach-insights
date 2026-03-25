@@ -22,7 +22,7 @@ Author: WACH Insight Team
 import sys
 import os
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 # Add backend to path for imports (scripts/etl → .. → scripts → .. → backend)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
@@ -109,6 +109,59 @@ def _fetch_batched(devices: list, metric: str, time_range: str, batch_size: int 
     if not frames:
         return pd.DataFrame()
     return pd.concat(frames, axis=1).sort_index()
+
+
+def _fetch_full_history(
+    devices: list,
+    metric: str,
+    start_dt: datetime,
+    end_dt: datetime,
+    batch_days: int = 30,
+    device_batch_size: int = 20,
+) -> pd.DataFrame:
+    """
+    Fetch metric data for all devices from start_dt to end_dt by splitting the
+    time range into windows of batch_days days and device groups of
+    device_batch_size.  Concatenates and deduplicates all windows before
+    returning a single DataFrame indexed by UTC time.
+    """
+    from core.influx_client import fetch_time_series_window
+
+    total_days = max(1, (end_dt - start_dt).days)
+    total_windows = math.ceil(total_days / batch_days)
+    frames = []
+    window_start = start_dt
+    window_num = 0
+
+    while window_start < end_dt:
+        window_end = min(window_start + timedelta(days=batch_days), end_dt)
+        window_num += 1
+        log_info(f"  [{metric}] window {window_num}/{total_windows}: "
+                 f"{window_start.date()} → {window_end.date()}")
+
+        dev_chunks = [
+            devices[i:i + device_batch_size]
+            for i in range(0, len(devices), device_batch_size)
+        ]
+        for di, chunk in enumerate(dev_chunks):
+            try:
+                df_chunk = fetch_time_series_window(chunk, metric, window_start, window_end)
+                if not df_chunk.empty:
+                    frames.append(df_chunk)
+            except Exception as e:
+                log_error(
+                    f"  [{metric}] window {window_num} device-batch {di + 1} failed: {e}"
+                )
+
+        window_start = window_end
+
+    if not frames:
+        return pd.DataFrame()
+
+    combined = pd.concat(frames, axis=0)
+    # Remove any duplicate timestamps from overlapping window edges
+    combined = combined[~combined.index.duplicated(keep='last')].sort_index()
+    return combined
 
 
 def sigmoid_score(raw: float) -> float:
@@ -234,7 +287,12 @@ def compute_ahu_health_score(
         return None
 
 
-def run_prediction_etl_historical(start_time: datetime, end_time: datetime = None, devices: list = None) -> pd.DataFrame:
+def run_prediction_etl_historical(
+    start_time: datetime,
+    end_time: datetime = None,
+    devices: list = None,
+    batch_days: int = 30,
+) -> pd.DataFrame:
     """
     Run Prediction ETL for full historical period.
 
@@ -246,9 +304,10 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
     Where δ(t−nh) = E(t−nh) - E(t−nh-1h)
 
     Args:
-        start_time: Start timestamp
-        end_time: End timestamp
-        devices: Optional list of device IDs to restrict processing (level filter)
+        start_time:  Earliest data timestamp (UTC-aware datetime).
+        end_time:    Latest data timestamp (defaults to now).
+        devices:     Optional device list; defaults to all devices.
+        batch_days:  Width of each InfluxDB time-fetch window in days.
 
     Returns:
         DataFrame with predictions and energy values
@@ -262,11 +321,10 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
 
     if devices is None:
         devices = get_all_devices()
-    total_devices = len(devices)
 
     # Columns for predictions output (new format with hourly deltas)
     columns = [
-        'timestamp', 'device_id', 'level',
+        'timestamp', 'ahu_id', 'level',
         'energy_current', 'hourly_delta', 'predicted_delta', 'energy_anomaly',
         'yesterday_kwh', 'delta_yesterday',
         'last_week_kwh', 'delta_last_week',
@@ -275,11 +333,13 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
 
     all_predictions = []
 
-    # Fetch energy_import in batches to avoid InfluxDB connection drops
-    log_info(f"Fetching energy_import for {len(devices)} devices (batched)...")
+    # Fetch energy_import across the full history in time-batched windows
+    log_info(f"Fetching energy_import for {len(devices)} devices "
+             f"from {start_time.date()} → {end_time.date()} "
+             f"(batch_days={batch_days})...")
 
     try:
-        df = _fetch_batched(devices, 'energy_import', 'last_30d_hourly')
+        df = _fetch_full_history(devices, 'energy_import', start_time, end_time, batch_days)
 
         if df.empty:
             log_error("No energy data fetched!")
@@ -364,7 +424,7 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
                 # Build row
                 row = {
                     'timestamp': ts,
-                    'device_id': device_id,
+                    'ahu_id': device_id,
                     'level': DEVICE_TO_LEVEL.get(device_id, 'N/A'),
                     'energy_current': float(energy_current) if pd.notna(energy_current) else None,
                     'hourly_delta': float(hourly_delta) if hourly_delta is not None else None,
@@ -394,14 +454,19 @@ def run_prediction_etl_historical(start_time: datetime, end_time: datetime = Non
         return pd.DataFrame(columns=columns)
 
     df_predictions = pd.DataFrame(all_predictions, columns=columns)
-    df_predictions = df_predictions.sort_values(['timestamp', 'device_id'])
+    df_predictions = df_predictions.sort_values(['timestamp', 'ahu_id'])
 
     log_info(f"Generated {len(df_predictions)} prediction records")
 
     return df_predictions
 
 
-def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
+def run_health_etl_historical(
+    predictions_df: pd.DataFrame,
+    start_dt: datetime = None,
+    end_dt: datetime = None,
+    batch_days: int = 30,
+) -> pd.DataFrame:
     """
     Run Health Scoring ETL using historical predictions.
 
@@ -414,6 +479,9 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
 
     Args:
         predictions_df: DataFrame from prediction ETL
+        start_dt:       Start of data window (used for time-batched fetches)
+        end_dt:         End of data window (defaults to now)
+        batch_days:     Width of each InfluxDB time-fetch window in days
 
     Returns:
         DataFrame with health scores and safety flags
@@ -423,13 +491,13 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
     log_info("=" * 70)
 
     # Get unique devices
-    devices = predictions_df['device_id'].unique()
+    devices = predictions_df['ahu_id'].unique()
 
     log_info(f"Processing {len(devices)} devices...")
 
     # Health scoring columns — must match run_health_etl.py output format
     health_columns = [
-        'timestamp', 'device_id', 'level',
+        'timestamp', 'ahu_id', 'level',
         'health_index', 'tier',
         'energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload',
         'raw_power_total', 'raw_energy_import', 'raw_hourly_delta',
@@ -448,30 +516,38 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
 
     all_health_records = []
 
-    # Fetch all metrics for ALL devices
-    log_info("Fetching all metrics from InfluxDB...")
+    if end_dt is None:
+        end_dt = datetime.now(timezone.utc)
+    if start_dt is None:
+        # Fall back to 30-day window if caller didn't provide start
+        start_dt = end_dt - timedelta(days=30)
 
-    # Fetch energy at latest timestamp
-    devices_with_data = predictions_df['device_id'].unique()
+    # Fetch all metrics for ALL devices across the full history window
+    log_info(f"Fetching all metrics from InfluxDB "
+             f"({start_dt.date()} → {end_dt.date()}, batch_days={batch_days})...")
 
-    # Fetch all metrics in batches to avoid InfluxDB connection drops
+    devices_with_data = predictions_df['ahu_id'].unique()
     devices_list = list(devices_with_data)
-    df_power    = _fetch_batched(devices_list, 'power_total',      'last_30d_hourly').sort_index()
-    df_energy   = _fetch_batched(devices_list, 'energy_import',    'last_30d_hourly').sort_index()
-    df_pf       = _fetch_batched(devices_list, 'power_factor_avg', 'last_30d_hourly').sort_index()
-    df_unbalance = _fetch_batched(devices_list, 'current_unbalance', 'last_30d_hourly').sort_index()
-    df_l1_thd   = _fetch_batched(devices_list, 'current_l1_thd',   'last_30d_hourly').sort_index()
-    df_l3_thd   = _fetch_batched(devices_list, 'current_l3_thd',   'last_30d_hourly').sort_index()
-    df_apparent_power = _fetch_batched(devices_list, 'apparent_power_total', 'last_30d_hourly').sort_index()
-    df_current_l1     = _fetch_batched(devices_list, 'current_l1',           'last_30d_hourly').sort_index()
-    df_current_l2     = _fetch_batched(devices_list, 'current_l2',           'last_30d_hourly').sort_index()
-    df_current_l3     = _fetch_batched(devices_list, 'current_l3',           'last_30d_hourly').sort_index()
-    df_volts_l1_n     = _fetch_batched(devices_list, 'volts_l1_n',           'last_30d_hourly').sort_index()
-    df_volts_l2_n     = _fetch_batched(devices_list, 'volts_l2_n',           'last_30d_hourly').sort_index()
-    df_volts_l3_n     = _fetch_batched(devices_list, 'volts_l3_n',           'last_30d_hourly').sort_index()
-    df_volts_l1_thd   = _fetch_batched(devices_list, 'volts_l1_thd',         'last_30d_hourly').sort_index()
-    df_volts_l2_thd   = _fetch_batched(devices_list, 'volts_l2_thd',         'last_30d_hourly').sort_index()
-    df_volts_l3_thd   = _fetch_batched(devices_list, 'volts_l3_thd',         'last_30d_hourly').sort_index()
+
+    def _fh(metric):
+        return _fetch_full_history(devices_list, metric, start_dt, end_dt, batch_days).sort_index()
+
+    df_power          = _fh('power_total')
+    df_energy         = _fh('energy_import')
+    df_pf             = _fh('power_factor_avg')
+    df_unbalance      = _fh('current_unbalance')
+    df_l1_thd         = _fh('current_l1_thd')
+    df_l3_thd         = _fh('current_l3_thd')
+    df_apparent_power = _fh('apparent_power_total')
+    df_current_l1     = _fh('current_l1')
+    df_current_l2     = _fh('current_l2')
+    df_current_l3     = _fh('current_l3')
+    df_volts_l1_n     = _fh('volts_l1_n')
+    df_volts_l2_n     = _fh('volts_l2_n')
+    df_volts_l3_n     = _fh('volts_l3_n')
+    df_volts_l1_thd   = _fh('volts_l1_thd')
+    df_volts_l2_thd   = _fh('volts_l2_thd')
+    df_volts_l3_thd   = _fh('volts_l3_thd')
 
     def _asof_value(df, ahu_id, ts):
         """Look up nearest-prior value for ahu_id at timestamp ts."""
@@ -492,7 +568,7 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
         log_info(f"Computing health scores for {ahu_id} ({processed}/{len(devices)})...")
 
         # Get ALL rows for this device sorted by timestamp
-        device_data = predictions_df[predictions_df['device_id'] == ahu_id].sort_values('timestamp')
+        device_data = predictions_df[predictions_df['ahu_id'] == ahu_id].sort_values('timestamp')
 
         if device_data.empty:
             continue
@@ -599,7 +675,7 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
 
             record = {
                 'timestamp': ts,
-                'device_id': ahu_id,
+                'ahu_id': ahu_id,
                 'level': level_val,
                 'health_index': result['health_index'],
                 'tier': result['health_tier'],
@@ -643,7 +719,7 @@ def run_health_etl_historical(predictions_df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=health_columns)
 
     df_health = pd.DataFrame(all_health_records, columns=health_columns)
-    df_health = df_health.sort_values(['timestamp', 'device_id'])
+    df_health = df_health.sort_values(['timestamp', 'ahu_id'])
 
     log_info(f"Generated {len(df_health)} health records")
 
@@ -724,6 +800,13 @@ Output:
         help="Show verbose output"
     )
 
+    parser.add_argument(
+        '--batch-days',
+        type=int,
+        default=30,
+        help="Width of each InfluxDB time-fetch window in days (default: 30)"
+    )
+
     args = parser.parse_args()
 
     if args.dry_run:
@@ -731,16 +814,18 @@ Output:
         log_info("DRY-RUN MODE - Showing plan only")
         log_info("=" * 70)
         log_info("Step 1: Prediction ETL")
-        log_info(f"  - Fetch energy_import data for all AHUs (t, t-1h, t-24h, t-25h, t-168h, t-169h, t-336h, t-337h)")
+        log_info(f"  - Query InfluxDB for earliest available data timestamp")
+        log_info(f"  - Fetch energy_import in {args.batch_days}-day batches from earliest → now")
         log_info(f"  - Compute hourly_delta(t) = E(t) - E(t-1h)")
         log_info(f"  - Compute predicted_delta(t) = avg(δ(t−24h), δ(t−168h), δ(t−336h))")
         log_info(f"  - Compute energy_anomaly = hourly_delta(t) − predicted_delta(t)")
         log_info(f"  - Output: data/predictions.csv")
         log_info("")
         log_info("Step 2: Health Scoring ETL")
+        log_info(f"  - Fetch all 16 raw metrics in {args.batch_days}-day batches")
         log_info(f"  - Compute FAIR health scores for all devices")
         log_info(f"  - Apply safety flags for engineering audit")
-        log_info(f"  - Output: data/health_all_levels.csv")
+        log_info(f"  - Output: data/health_all_levels.csv + data/health_hourly.csv")
         log_info("")
         devices = get_all_devices()
         log_info(f"Estimated devices to process: {len(devices)} AHUs across all levels")
@@ -748,13 +833,14 @@ Output:
         return
 
     # Start ETL
-    start_time = datetime.now()
+    run_start = datetime.now()
 
     log_info("=" * 70)
     log_info("WACH Insight Historical ETL Pipeline")
     log_info("=" * 70)
-    log_info(f"Started at: {start_time.isoformat()}")
+    log_info(f"Started at: {run_start.isoformat()}")
     log_info(f"Level filter: {args.level}")
+    log_info(f"Batch window: {args.batch_days} days")
 
     devices = get_all_devices()
     if args.level != 'all':
@@ -763,15 +849,32 @@ Output:
 
     log_info(f"Devices to process: {len(devices)} AHUs")
 
+    # Discover the earliest available data timestamp in InfluxDB
+    from core.influx_client import get_earliest_data_timestamp
+    log_info("")
+    log_info("Querying InfluxDB for earliest available data timestamp...")
+    earliest_ts = get_earliest_data_timestamp()
+    if earliest_ts is None:
+        log_info("Could not determine earliest timestamp; defaulting to 365 days ago")
+        earliest_ts = datetime.now(timezone.utc) - timedelta(days=365)
+    else:
+        log_info(f"Earliest data found: {earliest_ts.isoformat()}")
+
+    end_ts = datetime.now(timezone.utc)
+    total_days = (end_ts - earliest_ts).days
+    log_info(f"Full history span: {total_days} days "
+             f"({earliest_ts.date()} → {end_ts.date()})")
+
     # Step 1: Prediction ETL
     log_info("")
     log_info("Phase 1: Running Prediction ETL")
     log_info("-" * 50)
 
     predictions_df = run_prediction_etl_historical(
-        start_time=datetime.now(timezone.utc) - pd.Timedelta(days=365),
-        end_time=datetime.now(timezone.utc),
+        start_time=earliest_ts,
+        end_time=end_ts,
         devices=devices,
+        batch_days=args.batch_days,
     )
 
     if predictions_df.empty:
@@ -784,7 +887,12 @@ Output:
     log_info("Phase 2: Running Health Scoring ETL")
     log_info("-" * 50)
 
-    health_df = run_health_etl_historical(predictions_df)
+    health_df = run_health_etl_historical(
+        predictions_df,
+        start_dt=earliest_ts,
+        end_dt=end_ts,
+        batch_days=args.batch_days,
+    )
 
     if health_df.empty:
         log_error("Health Scoring ETL produced no data!")
