@@ -146,7 +146,7 @@ const PanelItem: React.FC<{
 
 // ── DashboardControls ──────────────────────────────────────────────────────
 const DashboardControls: React.FC<DashboardControlsProps> = ({ devices }) => {
-  const { selectedLevel, selectLevel, selectedDevice, selectDevice, timeRange, setTimeRange } =
+  const { selectedLevel, selectLevel, clearLevel, selectedDevice, selectDevice, timeRange, setTimeRange } =
     useAppStore();
 
   const [openPanel, setOpenPanel] = React.useState<OpenPanel>(null);
@@ -174,7 +174,7 @@ const DashboardControls: React.FC<DashboardControlsProps> = ({ devices }) => {
     : devices;
 
   // Segment display values
-  const lvlValue = selectedLevel !== null ? String(selectedLevel) : '—';
+  const lvlValue = selectedLevel !== null ? `L${selectedLevel}` : 'All';
   const devValue =
     selectedDevice && selectedDevice !== 'all' ? selectedDevice : 'All';
   const devIsActive = Boolean(selectedDevice && selectedDevice !== 'all');
@@ -201,6 +201,15 @@ const DashboardControls: React.FC<DashboardControlsProps> = ({ devices }) => {
               isOpen={openPanel === 'level'}
               onClick={() => togglePanel('level')}
             >
+              <PanelItem
+                key="all"
+                label="All Levels"
+                selected={selectedLevel === null}
+                onClick={() => {
+                  clearLevel();
+                  setOpenPanel(null);
+                }}
+              />
               {LEVELS.map((lvl) => (
                 <PanelItem
                   key={lvl}
