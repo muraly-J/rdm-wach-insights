@@ -57,6 +57,7 @@ export interface AppState {
   chatMessages: ChatMessage[];
   dashboardData: DashboardData | null;
   isLoading: boolean;
+  heroVisible: boolean;                 // Hero overlay visibility (not persisted)
 }
 
 // Chat types (from spec Section 6)

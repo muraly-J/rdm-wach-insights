@@ -17,6 +17,7 @@ export const initialState: AppState = {
   chatMessages: [INITIAL_BOT_MESSAGE],
   dashboardData: null,
   isLoading: false,
+  heroVisible: true,
 };
 
 export type TimeRange = '24h' | '7d' | '30d';
@@ -24,7 +25,8 @@ export type TimeRange = '24h' | '7d' | '30d';
 // Zustand store (from spec Section 8.1)
 interface AppStore extends AppState {
   // Level selection
-  selectLevel: (level: number) => void;
+  selectLevel: (level: number | null) => void;
+  clearLevel: () => void;
 
   // Device selection
   selectDevice: (deviceId: string | null) => void;
@@ -59,6 +61,10 @@ interface AppStore extends AppState {
   // Site summary
   siteSummaryData: SiteSummaryData | null;
   setSiteSummaryData: (d: SiteSummaryData) => void;
+
+  // Hero visibility
+  heroVisible: boolean;
+  setHeroVisible: (visible: boolean) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -70,6 +76,7 @@ export const useAppStore = create<AppStore>((set) => ({
 
   // Level selection
   selectLevel: (level) => set({ selectedLevel: level, selectedDevice: null }),
+  clearLevel: () => set({ selectedLevel: null, selectedDevice: null }),
 
   // Device selection
   selectDevice: (deviceId) => set({ selectedDevice: deviceId }),
@@ -102,4 +109,7 @@ export const useAppStore = create<AppStore>((set) => ({
   // Site summary
   siteSummaryData: null,
   setSiteSummaryData: (d) => set({ siteSummaryData: d }),
+
+  // Hero visibility
+  setHeroVisible: (visible) => set({ heroVisible: visible }),
 }));
