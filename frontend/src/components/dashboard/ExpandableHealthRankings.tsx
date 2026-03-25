@@ -296,7 +296,16 @@ const ExpandableHealthRankings: React.FC<ExpandableHealthRankingsProps> = ({
       {!expanded && (
         <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3 sm:gap-4">
           {/* Best Average Card */}
-          <div className="card p-4 border border-[#00E5A0]/20 bg-[#00E5A0]/5">
+          <div
+            className="card p-4"
+            style={{
+              background: 'rgba(0,229,160,0.05)',
+              backdropFilter: 'blur(12px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+              border: '1px solid rgba(0,229,160,0.20)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 40px rgba(0,0,0,0.30)',
+            }}
+          >
             <p className="text-xs text-[#8A95A5] uppercase tracking-wide mb-1">Best AHUs Avg</p>
             <div className="flex items-baseline gap-2">
               <span className="text-[#00E5A0] font-mono text-2xl font-bold">
@@ -307,7 +316,16 @@ const ExpandableHealthRankings: React.FC<ExpandableHealthRankingsProps> = ({
           </div>
 
           {/* Worst Average Card */}
-          <div className="card p-4 border border-[#FF4D6A]/20 bg-[#FF4D6A]/5">
+          <div
+            className="card p-4"
+            style={{
+              background: 'rgba(255,77,106,0.05)',
+              backdropFilter: 'blur(12px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+              border: '1px solid rgba(255,77,106,0.20)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 40px rgba(0,0,0,0.30)',
+            }}
+          >
             <p className="text-xs text-[#8A95A5] uppercase tracking-wide mb-1">Worst AHUs Avg</p>
             <div className="flex items-baseline gap-2">
               <span className="text-[#FF4D6A] font-mono text-2xl font-bold">

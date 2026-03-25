@@ -99,9 +99,17 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
     );
   };
 
+  const glassStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.04)',
+    backdropFilter: 'blur(20px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 40px rgba(0,0,0,0.30)',
+  };
+
   if (!data || data.length === 0) {
     return (
-      <div className="card p-4 sm:p-6 h-[200px] sm:h-[320px] flex items-center justify-center">
+      <div className="card p-4 sm:p-6 h-[200px] sm:h-[320px] flex items-center justify-center" style={glassStyle}>
         <span className="text-[#8A95A5]">No health index data available</span>
       </div>
     );
@@ -110,6 +118,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
   return (
     <motion.div
       className="card p-4 sm:p-6"
+      style={glassStyle}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}

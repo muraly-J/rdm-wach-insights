@@ -67,16 +67,24 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
     return null;
   };
 
+  const glassStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.04)',
+    backdropFilter: 'blur(20px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 40px rgba(0,0,0,0.30)',
+  };
+
   if (mergedData.length === 0) {
     return (
-      <div className="card p-4 sm:p-6 mb-6 sm:mb-8 h-[200px] sm:h-[320px] flex items-center justify-center">
+      <div className="card p-4 sm:p-6 mb-6 sm:mb-8 h-[200px] sm:h-[320px] flex items-center justify-center" style={glassStyle}>
         <span className="text-[#8A95A5]">No score data available</span>
       </div>
     );
   }
 
   return (
-    <div className="card p-4 sm:p-6 mb-6 sm:mb-8">
+    <div className="card p-4 sm:p-6 mb-6 sm:mb-8" style={glassStyle}>
       <h3 className="font-display text-lg sm:text-[24px] font-bold mb-4 sm:mb-6 tracking-[-0.01em]">
         Five-Score Overview
       </h3>

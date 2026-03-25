@@ -45,7 +45,16 @@ const SafetyFlagCard: React.FC<SafetyFlagCardProps> = ({
   const numberColor = getRiskColor(value);
 
   return (
-    <div className="card p-6">
+    <div
+      className="card p-6"
+      style={{
+        background: 'rgba(255,255,255,0.04)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 40px rgba(0,0,0,0.30)',
+      }}
+    >
       {/* Header row */}
       <div className="flex items-start justify-between mb-4">
         <div>
