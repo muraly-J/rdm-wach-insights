@@ -1,3 +1,4 @@
+import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -22,6 +23,15 @@ export default function HamburgerMenu() {
   const hamburgerOpen = useAppStore((s) => s.hamburgerOpen);
   const toggleHamburger = useAppStore((s) => s.toggleHamburger);
   const selectedLevel = useAppStore((s) => s.selectedLevel);
+
+  React.useEffect(() => {
+    if (!hamburgerOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') toggleHamburger();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [hamburgerOpen, toggleHamburger]);
 
   function handleNavClick(sectionId: string) {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -59,6 +69,9 @@ export default function HamburgerMenu() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ duration: 0.3, ease: drawerEase }}
+            role="dialog"
+            aria-modal={true}
+            aria-label="Navigation menu"
             style={{
               position: 'fixed',
               top: 0,
@@ -92,9 +105,10 @@ export default function HamburgerMenu() {
                 flexShrink: 0,
               }}
             >
-              <button
+              <motion.button
                 onClick={toggleHamburger}
                 aria-label="Close menu"
+                whileHover={{ color: '#E8ECF1', scale: 1.1 }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -104,17 +118,10 @@ export default function HamburgerMenu() {
                   lineHeight: 1,
                   padding: '4px 6px',
                   borderRadius: 6,
-                  transition: 'color 0.15s',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.color = '#E8ECF1';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.color = '#8A95A5';
                 }}
               >
                 ✕
-              </button>
+              </motion.button>
             </div>
 
             {/* Nav items */}
@@ -147,18 +154,8 @@ export default function HamburgerMenu() {
                     border: 'none',
                     cursor: 'pointer',
                     fontFamily: 'DM Sans, sans-serif',
-                    transition: 'background 0.15s, color 0.15s',
                   }}
-                  onMouseEnter={(e) => {
-                    const btn = e.currentTarget as HTMLButtonElement;
-                    btn.style.background = '#1A2230';
-                    btn.style.color = '#00E5A0';
-                  }}
-                  onMouseLeave={(e) => {
-                    const btn = e.currentTarget as HTMLButtonElement;
-                    btn.style.background = 'transparent';
-                    btn.style.color = '#E8ECF1';
-                  }}
+                  whileHover={{ backgroundColor: '#1A2230', color: '#00E5A0' }}
                 >
                   {item.label}
                 </motion.button>
