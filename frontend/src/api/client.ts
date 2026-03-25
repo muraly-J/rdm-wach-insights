@@ -2,7 +2,7 @@
 // ========================
 // Fetch wrappers for all endpoints with error handling
 
-import { LevelsResponse, HealthIndexResponse, ScoresResponse, MeasurementsResponse } from '../types';
+import { LevelsResponse, HealthIndexResponse, ScoresResponse, MeasurementsResponse, SiteSummaryData } from '../types';
 
 // API base URL (Vite proxy configuration in vite.config.js)
 const API_BASE = '/api';
@@ -134,4 +134,13 @@ export async function fetchMeasurements(
 ): Promise<MeasurementsResponse> {
   const params = new URLSearchParams({ metrics: metrics.join(','), range });
   return apiFetch<MeasurementsResponse>(`/device/${deviceId}/measurements?${params}`);
+}
+
+/**
+ * GET /api/site/summary — Site-wide aggregated summary across all levels
+ */
+export async function fetchSiteSummary(
+  range: '24h' | '7d' | '30d' = '7d'
+): Promise<SiteSummaryData> {
+  return apiFetch<SiteSummaryData>(`/site/summary?range=${range}`);
 }

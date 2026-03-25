@@ -14,7 +14,6 @@ import SiteNavBar from './components/nav/SiteNavBar';
 
 // Site Summary
 import SiteSummaryView from './components/summary/SiteSummaryView';
-import { generateSiteSummaryData } from './mocks/generateMockData';
 import ScoreCardsGrid from './components/dashboard/ScoreCardsGrid';
 
 // Health Rankings and Safety Flags
@@ -41,7 +40,7 @@ import ChatWidget from './components/chat/ChatWidget';
 import { useAppStore } from './store/useAppStore';
 
 // API
-import { fetchHealthIndex, fetchRawScoreRelationship, fetchScoreBreakdown } from './api/client';
+import { fetchHealthIndex, fetchRawScoreRelationship, fetchScoreBreakdown, fetchSiteSummary } from './api/client';
 import type { HealthIndexResponse, RawScoreResponse, ScoresResponse } from './types';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -100,8 +99,10 @@ function App() {
 
   // ── Load site summary data on mount ─────────────────────────────────────────
   React.useEffect(() => {
-    setSiteSummaryData(generateSiteSummaryData());
-  }, [setSiteSummaryData]);
+    fetchSiteSummary(timeRange === '24h' ? '24h' : timeRange === '30d' ? '30d' : '7d')
+      .then(setSiteSummaryData)
+      .catch((err) => console.error('[SiteSummary] Failed to load:', err));
+  }, [timeRange, setSiteSummaryData]);
 
   // ── Devices list derived from health data ────────────────────────────────────
   const devices = React.useMemo(
