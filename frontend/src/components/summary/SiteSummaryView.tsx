@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import KPIStrip from './KPIStrip';
 import SpotlightCards from './SpotlightCards';
 import LevelHeatMap from './LevelHeatMap';
@@ -5,7 +6,13 @@ import TrendDeltas from './TrendDeltas';
 
 export default function SiteSummaryView() {
   return (
-    <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-8">
+    <motion.div
+      className="max-w-[1280px] mx-auto px-4 sm:px-6 py-8"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+    >
       {/* Header */}
       <div style={{ marginBottom: '28px' }}>
         <h2
@@ -28,6 +35,6 @@ export default function SiteSummaryView() {
       <SpotlightCards />
       <LevelHeatMap />
       <TrendDeltas />
-    </div>
+    </motion.div>
   );
 }

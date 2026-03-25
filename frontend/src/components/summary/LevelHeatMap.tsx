@@ -1,3 +1,4 @@
+import React, { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -18,10 +19,10 @@ export default function LevelHeatMap() {
   const selectLevel = useAppStore((s) => s.selectLevel);
   if (!data) return null;
 
-  function handleTileClick(level: number) {
+  const handleTileClick = useCallback((level: number) => {
     selectLevel(level);
     document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' });
-  }
+  }, [selectLevel]);
 
   return (
     <div style={{ marginBottom: '2rem' }}>

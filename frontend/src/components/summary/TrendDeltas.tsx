@@ -30,7 +30,7 @@ export default function TrendDeltas() {
       <div className="flex flex-wrap gap-3 mb-8">
         {data.trendDeltas.map((delta, i) => {
           const color = getDeltaColor(delta);
-          const arrow = delta.value > 0 ? '↑' : '↓';
+          const arrow = delta.direction === 'up' ? '↑' : '↓';
 
           return (
             <motion.div
