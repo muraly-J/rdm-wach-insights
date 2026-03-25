@@ -181,13 +181,7 @@ const DashboardControls: React.FC<DashboardControlsProps> = ({ devices }) => {
   const devIsDisabled = selectedLevel === null;
 
   return (
-    <div
-      ref={containerRef}
-      className="sticky top-0 z-30 backdrop-blur-xl"
-      style={{ background: 'rgba(11,15,20,0.85)', borderBottom: '1px solid #1E2A3A' }}
-    >
-      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-2.5">
-        <div>
+    <div ref={containerRef}>
           {/* Unified pill strip */}
           <div
             style={{
@@ -312,8 +306,6 @@ const DashboardControls: React.FC<DashboardControlsProps> = ({ devices }) => {
               ))}
             </DropdownSegment>
           </div>
-        </div>
-      </div>
     </div>
   );
 };
