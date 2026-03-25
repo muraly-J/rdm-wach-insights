@@ -159,31 +159,37 @@ export default function HamburgerMenu() {
                 gap: 2,
               }}
             >
-              {visibleItems.map((item, index) => (
-                <motion.button
-                  key={item.label}
-                  initial={{ opacity: 0, x: 16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05, duration: 0.2 }}
-                  onClick={() => handleNavClick(item)}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '12px 12px',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: '#E8ECF1',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontFamily: 'DM Sans, sans-serif',
-                  }}
-                  whileHover={{ backgroundColor: 'rgba(0,229,160,0.08)', color: '#00E5A0' }}
-                >
-                  {item.label}
-                </motion.button>
-              ))}
+              {visibleItems.map((item, index) => {
+                const deviceSelected = selectedDevice !== null && selectedDevice !== 'all';
+                const label = item.label === 'Health Rankings' && deviceSelected
+                  ? 'Hourly Heatmap'
+                  : item.label;
+                return (
+                  <motion.button
+                    key={item.label}
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05, duration: 0.2 }}
+                    onClick={() => handleNavClick(item)}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '12px 12px',
+                      borderRadius: 8,
+                      fontSize: 14,
+                      fontWeight: 500,
+                      color: '#E8ECF1',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontFamily: 'DM Sans, sans-serif',
+                    }}
+                    whileHover={{ backgroundColor: 'rgba(0,229,160,0.08)', color: '#00E5A0' }}
+                  >
+                    {label}
+                  </motion.button>
+                );
+              })}
             </nav>
 
             {/* Bottom wordmark */}

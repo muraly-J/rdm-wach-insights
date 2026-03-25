@@ -348,15 +348,6 @@ const AHUHeatmap: React.FC<Props> = ({ ahuId }) => {
               })}
             </div>
 
-            {/* Hour-of-day axis labels */}
-            <div className="grid grid-cols-6 gap-2 mt-1.5">
-              {[0, 4, 8, 12, 16, 20].map((h) => (
-                <div key={h} className="text-center text-[9px] text-[#4A5568] font-mono">
-                  {formatHour(h)}
-                </div>
-              ))}
-            </div>
-
             {/* Best / worst callout */}
             {(bestHour || worstHour) && (
               <div className="mt-4 grid grid-cols-2 gap-3">

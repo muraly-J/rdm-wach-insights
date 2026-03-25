@@ -625,149 +625,112 @@ def _extract_tw_range(message: str) -> str:
 
 async def _get_time_window_context(device_id: str, time_range: str = "last_7d") -> str:
     """
-    Fetch all raw measurements available in health_all_levels.csv for device_id
-    over time_range, compute mean per UTC hour-of-day (0–23), and return a compact
-    markdown table for injection into the system prompt.
+    Read all columns from health_hourly.csv for device_id over time_range,
+    group by UTC hour-of-day (mean), and return a markdown table injected into
+    the system prompt.
 
-    CSV raw_ column → InfluxDB metric mapping (17 direct + 1 derived):
-      raw_power_total          → power_total
-      raw_energy_import        → energy_import
-      raw_power_factor_avg     → power_factor_avg
-      raw_current_unbalance    → current_unbalance
-      raw_current_l1_thd       → current_l1_thd  \\
-      raw_current_l3_thd       → current_l3_thd  / → composite_thd = max(L1, L3)
-      raw_volts_l1_n           → volts_l1_n
-      raw_volts_l2_n           → volts_l2_n
-      raw_volts_l3_n           → volts_l3_n
-      raw_current_l1           → current_l1
-      raw_current_l2           → current_l2
-      raw_current_l3           → current_l3
-      raw_nema_voltage_imbalance → volts_unbalance
-      raw_volts_l1_thd         → volts_l1_thd
-      raw_volts_l2_thd         → volts_l2_thd
-      raw_volts_l3_thd         → volts_l3_thd
-      raw_apparent_power_total → apparent_power_total
-      raw_hourly_delta, raw_predicted_delta, raw_p95_current → SKIP (ETL/prediction artefacts)
+    Uses the CSV (same source as dashboard) rather than live InfluxDB queries
+    to avoid the latency of 17+ concurrent remote HTTP connections. The CSV is
+    refreshed hourly from InfluxDB by the ETL, so it reflects current data.
 
+    Includes FAIR scores (health_index, energy_anomaly, …) AND all raw_ sensor
+    columns (raw_power_total, raw_current_l1, raw_volts_l1_n, …) — the full row.
     Always returns "" on any exception — never blocks chat.
     """
     try:
         import pandas as pd
-        from core.influx_client import fetch_time_series
+        from core.csv_reader import HOURLY_CSV_PATH, _filter_time_range
 
-        METRICS = [
-            "power_total",
-            "energy_import",
-            "power_factor_avg",
-            "current_unbalance",
-            "current_l1_thd",
-            "current_l3_thd",
-            "volts_l1_n",
-            "volts_l2_n",
-            "volts_l3_n",
-            "current_l1",
-            "current_l2",
-            "current_l3",
-            "volts_unbalance",
-            "volts_l1_thd",
-            "volts_l2_thd",
-            "volts_l3_thd",
-            "apparent_power_total",
-        ]
-        COL_LABELS = {
-            "power_total":          "Power(kW)",
-            "energy_import":        "Energy(kWh)",
-            "power_factor_avg":     "PF",
-            "apparent_power_total": "Apparent(kVA)",
-            "current_l1":           "I L1(A)",
-            "current_l2":           "I L2(A)",
-            "current_l3":           "I L3(A)",
-            "current_unbalance":    "I Imbalance(%)",
-            "current_l1_thd":       "I L1 THD(%)",
-            "current_l3_thd":       "I L3 THD(%)",
-            "composite_thd":        "Composite THD(%)",
-            "volts_l1_n":           "V L1-N(V)",
-            "volts_l2_n":           "V L2-N(V)",
-            "volts_l3_n":           "V L3-N(V)",
-            "volts_unbalance":      "V Imbalance(%)",
-            "volts_l1_thd":         "V L1 THD(%)",
-            "volts_l2_thd":         "V L2 THD(%)",
-            "volts_l3_thd":         "V L3 THD(%)",
-        }
+        # Map the _extract_tw_range keys to csv_reader range strings
+        RANGE_MAP = {"last_7d": "7d", "last_24h": "24h", "last_30d": "30d"}
+        csv_range = RANGE_MAP.get(time_range, "7d")
 
         loop = asyncio.get_running_loop()
 
-        results = await asyncio.gather(
-            *[
-                loop.run_in_executor(
-                    None,
-                    partial(fetch_time_series, [device_id], metric, time_range),
+        def _build_table() -> str:
+            df = pd.read_csv(HOURLY_CSV_PATH, parse_dates=["timestamp"])
+            df = df[df["ahu_id"] == device_id]
+            df = _filter_time_range(df, csv_range)
+            if df.empty:
+                return ""
+
+            df = df.copy()
+            df["_hour"] = pd.to_datetime(df["timestamp"], utc=True).dt.hour
+
+            # All meaningful columns: FAIR scores + every raw_ sensor column
+            INCLUDE = [
+                "health_index",
+                "energy_anomaly", "pf_degradation", "phase_imbalance", "thd_drift", "overload",
+                "raw_power_total", "raw_energy_import", "raw_power_factor_avg",
+                "raw_current_unbalance", "raw_composite_thd",
+                "raw_hourly_delta", "raw_predicted_delta",
+                "raw_volts_l1_n", "raw_volts_l2_n", "raw_volts_l3_n",
+                "raw_current_l1", "raw_current_l2", "raw_current_l3",
+                "raw_nema_voltage_imbalance",
+                "raw_current_l1_thd", "raw_current_l3_thd",
+                "raw_volts_l1_thd", "raw_volts_l2_thd", "raw_volts_l3_thd",
+                "raw_apparent_power_total", "raw_p95_current",
+            ]
+            available = [c for c in INCLUDE if c in df.columns]
+            hourly = df.groupby("_hour")[available].mean().round(2)
+
+            COL_LABELS: dict[str, str] = {
+                "health_index":              "Health",
+                "energy_anomaly":            "EnergyAnomaly",
+                "pf_degradation":            "PFDeg",
+                "phase_imbalance":           "PhaseImbalance",
+                "thd_drift":                 "THDDrift",
+                "overload":                  "Overload",
+                "raw_power_total":           "Power(kW)",
+                "raw_energy_import":         "Energy(kWh)",
+                "raw_power_factor_avg":      "PF",
+                "raw_current_unbalance":     "I Imbalance(%)",
+                "raw_composite_thd":         "Composite THD(%)",
+                "raw_hourly_delta":          "Δ kWh",
+                "raw_predicted_delta":       "Predicted Δ kWh",
+                "raw_volts_l1_n":            "V L1-N(V)",
+                "raw_volts_l2_n":            "V L2-N(V)",
+                "raw_volts_l3_n":            "V L3-N(V)",
+                "raw_current_l1":            "I L1(A)",
+                "raw_current_l2":            "I L2(A)",
+                "raw_current_l3":            "I L3(A)",
+                "raw_nema_voltage_imbalance":"V NEMA Imbalance(%)",
+                "raw_current_l1_thd":        "I L1 THD(%)",
+                "raw_current_l3_thd":        "I L3 THD(%)",
+                "raw_volts_l1_thd":          "V L1 THD(%)",
+                "raw_volts_l2_thd":          "V L2 THD(%)",
+                "raw_volts_l3_thd":          "V L3 THD(%)",
+                "raw_apparent_power_total":  "Apparent(kVA)",
+                "raw_p95_current":           "P95 I(A)",
+            }
+
+            present = [c for c in available if c in hourly.columns]
+            if not present:
+                return ""
+
+            header_cols = " | ".join(COL_LABELS.get(c, c) for c in present)
+            separator   = " | ".join("---" for _ in present)
+
+            lines = [
+                f"\n\n## On-Demand Sensor Readings — {device_id} (hourly averages, {csv_range})",
+                "Hourly means from the dashboard CSV. UTC hours — for Malaysia local time add 8 hours.",
+                "Use this table to explain why FAIR scores or health index change at specific times of day.",
+                f"| UTC Hour | {header_cols} |",
+                f"| --- | {separator} |",
+            ]
+            for hour in range(24):
+                if hour not in hourly.index:
+                    continue
+                row = hourly.loc[hour]
+                values = " | ".join(
+                    f"{row[c]:.2f}" if pd.notna(row[c]) else "—"
+                    for c in present
                 )
-                for metric in METRICS
-            ],
-            return_exceptions=True,
-        )
+                lines.append(f"| {hour:02d}:00 | {values} |")
 
-        frames: dict[str, pd.Series] = {}
-        for metric, result in zip(METRICS, results):
-            if isinstance(result, Exception) or result is None or result.empty:
-                continue
-            if device_id not in result.columns:
-                continue
-            frames[metric] = result[device_id]
+            return "\n".join(lines)
 
-        if not frames:
-            return ""
-
-        combined = pd.DataFrame(frames)
-        combined.index = pd.to_datetime(combined.index, utc=True)
-
-        # Derive composite_thd = max(current_l1_thd, current_l3_thd) per row
-        if "current_l1_thd" in combined.columns and "current_l3_thd" in combined.columns:
-            combined["composite_thd"] = combined[["current_l1_thd", "current_l3_thd"]].max(axis=1)
-        elif "current_l1_thd" in combined.columns:
-            combined["composite_thd"] = combined["current_l1_thd"]
-        elif "current_l3_thd" in combined.columns:
-            combined["composite_thd"] = combined["current_l3_thd"]
-
-        combined["_hour"] = combined.index.hour
-        hourly = combined.groupby("_hour").mean()
-
-        DISPLAY_ORDER = [
-            "power_total", "energy_import", "power_factor_avg", "apparent_power_total",
-            "current_l1", "current_l2", "current_l3",
-            "current_unbalance",
-            "current_l1_thd", "current_l3_thd", "composite_thd",
-            "volts_l1_n", "volts_l2_n", "volts_l3_n",
-            "volts_unbalance",
-            "volts_l1_thd", "volts_l2_thd", "volts_l3_thd",
-        ]
-        present = [m for m in DISPLAY_ORDER if m in hourly.columns]
-        if not present:
-            return ""
-
-        header_cols = " | ".join(COL_LABELS[m] for m in present)
-        separator   = " | ".join("---" for _ in present)
-
-        lines = [
-            f"\n\n## On-Demand Sensor Readings — {device_id} (hourly averages, {time_range})",
-            "These are real hourly averages from InfluxDB, grouped by UTC hour of day.",
-            "For local time (Malaysia UTC+8), add 8 hours to the UTC hour shown.",
-            "Use this table to explain why FAIR scores and health index change at specific times of day.",
-            f"| UTC Hour | {header_cols} |",
-            f"| --- | {separator} |",
-        ]
-        for hour in range(24):
-            if hour not in hourly.index:
-                continue
-            row = hourly.loc[hour]
-            values = " | ".join(
-                f"{row[m]:.2f}" if pd.notna(row[m]) else "—"
-                for m in present
-            )
-            lines.append(f"| {hour:02d}:00 | {values} |")
-
-        return "\n".join(lines)
+        return await loop.run_in_executor(None, _build_table)
 
     except Exception:
         return ""
