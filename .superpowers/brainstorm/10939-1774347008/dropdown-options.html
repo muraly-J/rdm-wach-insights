@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Controls — Design Options</title>
+<script src="/helper.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0B0F14;
+    color: #E8ECF1;
+    font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; color: #E8ECF1; }
+  .subtitle { color: #8A95A5; font-size: 13px; margin-bottom: 28px; }
+
+  /* ── Option cards ── */
+  .options { display: flex; flex-direction: column; gap: 24px; }
+  .option {
+    border: 2px solid #1E2A3A;
+    border-radius: 16px;
+    padding: 20px 24px 24px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+  .option:hover { border-color: #00E5A0; }
+  .option.selected { border-color: #00E5A0; box-shadow: 0 0 0 1px #00E5A066; }
+  .option.selected::after {
+    content: '✓ Selected';
+    position: absolute; top: 14px; right: 18px;
+    font-size: 11px; font-weight: 700; color: #00E5A0; letter-spacing: 0.05em;
+  }
+  .option-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #8A95A5; margin-bottom: 14px;
+  }
+  .option-name {
+    font-size: 15px; font-weight: 700; color: #E8ECF1; margin-bottom: 4px;
+  }
+  .option-desc {
+    font-size: 12px; color: #8A95A5; margin-bottom: 16px; line-height: 1.5;
+  }
+
+  /* ── Mockup shell ── */
+  .mockup {
+    background: #0B0F14;
+    border: 1px solid #1E2A3A;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  /* ─────────────────────────────────────────────
+     OPTION A — Compact minimal dropdowns
+  ───────────────────────────────────────────── */
+  .bar-a {
+    background: rgba(11,15,20,0.92);
+    border-bottom: 1px solid #1E2A3A;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    backdrop-filter: blur(12px);
+  }
+  .drop-a {
+    display: flex; align-items: center; gap: 6px;
+    background: #111820;
+    border: 1px solid #1E2A3A;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 13px;
+    color: #E8ECF1;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    white-space: nowrap;
+  }
+  .drop-a:hover { border-color: #00E5A0; }
+  .drop-a .val { font-weight: 600; }
+  .drop-a .chev { color: #8A95A5; font-size: 10px; margin-left: 2px; }
+  .drop-a.accent { border-color: #00E5A0; color: #00E5A0; }
+  .drop-a.accent .chev { color: #00E5A066; }
+  .divider-a { width: 1px; height: 18px; background: #1E2A3A; margin: 0 2px; }
+
+  /* ─────────────────────────────────────────────
+     OPTION B — Labeled floating tiles
+  ───────────────────────────────────────────── */
+  .bar-b {
+    background: rgba(11,15,20,0.92);
+    border-bottom: 1px solid #1E2A3A;
+    padding: 12px 20px;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    backdrop-filter: blur(12px);
+  }
+  .drop-b {
+    display: flex; flex-direction: column;
+    background: #111820;
+    border: 1px solid #1E2A3A;
+    border-radius: 10px;
+    padding: 6px 12px 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    min-width: 90px;
+  }
+  .drop-b:hover { border-color: #00E5A0; background: #141D28; }
+  .drop-b.accent { border-color: #00E5A040; background: rgba(0,229,160,0.05); }
+  .drop-b .lbl { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8A95A5; margin-bottom: 3px; }
+  .drop-b .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .drop-b .val { font-size: 13px; font-weight: 700; color: #E8ECF1; }
+  .drop-b.accent .val { color: #00E5A0; }
+  .drop-b .chev { font-size: 9px; color: #8A95A5; }
+
+  /* ─────────────────────────────────────────────
+     OPTION C — Unified pill control strip
+  ───────────────────────────────────────────── */
+  .bar-c {
+    background: rgba(11,15,20,0.92);
+    border-bottom: 1px solid #1E2A3A;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    backdrop-filter: blur(12px);
+  }
+  .strip {
+    display: flex;
+    align-items: center;
+    background: #111820;
+    border: 1px solid #1E2A3A;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .drop-c {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: #8A95A5;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+  .drop-c:hover { color: #E8ECF1; background: #1A2330; }
+  .drop-c.accent { color: #00E5A0; }
+  .drop-c .lbl-c { font-size: 10px; color: #4A5568; margin-right: 1px; }
+  .drop-c .val { font-weight: 600; }
+  .drop-c .chev { font-size: 9px; opacity: 0.5; }
+  .sep { width: 1px; height: 20px; background: #1E2A3A; flex-shrink: 0; }
+  .spacer { flex: 1; }
+
+  /* Shared: fake content rows */
+  .fake-content { padding: 14px 20px; display: flex; flex-direction: column; gap: 6px; }
+  .fake-row { height: 8px; border-radius: 4px; background: #1A2230; }
+  .fake-row.short { width: 40%; }
+  .fake-row.medium { width: 65%; }
+  .fake-row.full { width: 100%; }
+</style>
+</head>
+<body>
+
+<h2>Dashboard Controls — 3 Design Directions</h2>
+<p class="subtitle">All three are sticky bars replacing the current level pills + device chips. Click to select your favourite.</p>
+
+<div class="options">
+
+  <!-- OPTION A -->
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="option-label">Option A</div>
+    <div class="option-name">Compact Minimal</div>
+    <div class="option-desc">Small borderless dropdowns in a tight row. Clean, low visual weight. Feels like a pro tool (Figma / Linear style).</div>
+    <div class="mockup">
+      <div class="bar-a">
+        <div class="drop-a accent">
+          <span class="val">Level 4</span>
+          <span class="chev">▾</span>
+        </div>
+        <div class="divider-a"></div>
+        <div class="drop-a">
+          <span class="val">e0413</span>
+          <span class="chev">▾</span>
+        </div>
+        <div class="divider-a"></div>
+        <div class="drop-a">
+          <span class="val">30d</span>
+          <span class="chev">▾</span>
+        </div>
+      </div>
+      <div class="fake-content">
+        <div class="fake-row full"></div>
+        <div class="fake-row medium"></div>
+        <div class="fake-row short"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION B -->
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="option-label">Option B</div>
+    <div class="option-name">Labeled Tiles</div>
+    <div class="option-desc">Each dropdown has a small uppercase label above the value. More structured and self-explanatory — good if users are unfamiliar with what each control does.</div>
+    <div class="mockup">
+      <div class="bar-b">
+        <div class="drop-b accent">
+          <span class="lbl">Level</span>
+          <div class="row">
+            <span class="val">Level 4</span>
+            <span class="chev">▾</span>
+          </div>
+        </div>
+        <div class="drop-b">
+          <span class="lbl">Device</span>
+          <div class="row">
+            <span class="val">e0413</span>
+            <span class="chev">▾</span>
+          </div>
+        </div>
+        <div class="drop-b">
+          <span class="lbl">Range</span>
+          <div class="row">
+            <span class="val">30 days</span>
+            <span class="chev">▾</span>
+          </div>
+        </div>
+      </div>
+      <div class="fake-content">
+        <div class="fake-row full"></div>
+        <div class="fake-row medium"></div>
+        <div class="fake-row short"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION C -->
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="option-label">Option C</div>
+    <div class="option-name">Unified Strip</div>
+    <div class="option-desc">All three controls live inside one pill-shaped container, separated by dividers. Feels like a single cohesive selector — like a breadcrumb bar with dropdowns.</div>
+    <div class="mockup">
+      <div class="bar-c">
+        <div class="strip">
+          <div class="drop-c accent">
+            <span class="lbl-c">LVL</span>
+            <span class="val">4</span>
+            <span class="chev">▾</span>
+          </div>
+          <div class="sep"></div>
+          <div class="drop-c">
+            <span class="lbl-c">DEV</span>
+            <span class="val">e0413</span>
+            <span class="chev">▾</span>
+          </div>
+          <div class="sep"></div>
+          <div class="drop-c">
+            <span class="lbl-c">RANGE</span>
+            <span class="val">30d</span>
+            <span class="chev">▾</span>
+          </div>
+        </div>
+      </div>
+      <div class="fake-content">
+        <div class="fake-row full"></div>
+        <div class="fake-row medium"></div>
+        <div class="fake-row short"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
