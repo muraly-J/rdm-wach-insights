@@ -99,9 +99,41 @@ function App() {
 
   // ── Load site summary data on mount ─────────────────────────────────────────
   React.useEffect(() => {
-    fetchSiteSummary(timeRange === '24h' ? '24h' : timeRange === '30d' ? '30d' : '7d')
-      .then(setSiteSummaryData)
-      .catch((err) => console.error('[SiteSummary] Failed to load:', err));
+    const range = timeRange === '24h' ? '24h' : timeRange === '30d' ? '30d' : '7d';
+    console.log('[App] Fetching site summary data with range:', range);
+    fetchSiteSummary(range)
+      .then((data) => {
+        console.log('[App] Site summary data received:', data);
+        setSiteSummaryData(data);
+      })
+      .catch((err) => {
+        console.error('[App] Failed to load site summary:', err);
+        // Set a default empty object for debugging
+        setSiteSummaryData({
+          totalAHUs: 0,
+          avgSiteHealth: 0,
+          ahusInAlert: 0,
+          estMonthlyCostMYR: 0,
+          starAHU: {
+            id: 'e0101',
+            name: 'AHU-L1-01',
+            level: 1,
+            healthScore: 0,
+            monthlyCostMYR: 0,
+            safetyFlags: 0
+          },
+          criticalAHU: {
+            id: 'e0101',
+            name: 'AHU-L1-01',
+            level: 1,
+            healthScore: 0,
+            monthlyCostMYR: 0,
+            safetyFlags: 0
+          },
+          levelTiles: [],
+          trendDeltas: []
+        });
+      });
   }, [timeRange, setSiteSummaryData]);
 
   // ── Devices list derived from health data ────────────────────────────────────
