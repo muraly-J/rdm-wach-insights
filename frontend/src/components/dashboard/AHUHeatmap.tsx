@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
+import { apiFetch } from '../../api/client';
 
 interface HourEntry {
   hour: number;
@@ -17,8 +18,10 @@ interface Props {
   ahuId: string;
 }
 
+const SHADOW_NONE = '0 0 0px rgba(0,0,0,0)';
+
 function healthColor(score: number | null): { bg: string; text: string; glow: string } {
-  if (score === null) return { bg: '#1A2230', text: '#3A4455', glow: 'none' };
+  if (score === null) return { bg: '#1A2230', text: '#3A4455', glow: SHADOW_NONE };
   if (score >= 80) return { bg: '#00E5A0', text: '#0B0F14', glow: '0 0 14px rgba(0,229,160,0.45)' };
   if (score >= 60) return { bg: '#F59E0B', text: '#0B0F14', glow: '0 0 14px rgba(245,158,11,0.45)' };
   if (score >= 40) return { bg: '#F97316', text: '#0B0F14', glow: '0 0 14px rgba(249,115,22,0.45)' };
@@ -53,11 +56,7 @@ const AHUHeatmap: React.FC<Props> = ({ ahuId }) => {
     setLoading(true);
     setError(null);
     setData(null);
-    fetch(`/api/dashboard/ahu-heatmap?ahu_id=${encodeURIComponent(ahuId)}&range=${timeRange}`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
+    apiFetch<HeatmapData>(`/dashboard/ahu-heatmap?ahu_id=${encodeURIComponent(ahuId)}&range=${timeRange}`)
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -143,7 +142,7 @@ const AHUHeatmap: React.FC<Props> = ({ ahuId }) => {
                     className="relative aspect-square rounded-lg cursor-default select-none"
                     style={{
                       backgroundColor: bg,
-                      boxShadow: isHov ? glow : 'none',
+                      boxShadow: isHov ? glow : SHADOW_NONE,
                     }}
                     initial={{ opacity: 0, scale: 0.7 }}
                     animate={{ opacity: 1, scale: 1 }}
