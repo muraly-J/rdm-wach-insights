@@ -35,7 +35,7 @@ const FinancialImpactView = React.lazy(
 import ChatWidget from './components/chat/ChatWidget';
 
 // State
-import { TimeRange, useAppStore } from './store/useAppStore';
+import { useAppStore } from './store/useAppStore';
 
 // API
 import { fetchHealthIndex, fetchRawScoreRelationship, fetchScoreBreakdown } from './api/client';
