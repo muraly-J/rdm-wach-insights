@@ -217,7 +217,8 @@ function App() {
 
               {/* Health Index Chart */}
               <div id="section-health-index" style={{ scrollMarginTop: '56px' }} className="mb-8">
-                <HealthIndexChart data={healthChartData as Array<{ [key: string]: number; timestamp: string }>} devices={chartDevices} />
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <HealthIndexChart data={healthChartData as any} devices={chartDevices} />
               </div>
 
               {/* Five-Score Cards */}
