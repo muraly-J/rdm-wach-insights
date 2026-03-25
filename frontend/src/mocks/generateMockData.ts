@@ -12,6 +12,7 @@ import {
   HealthIndexData,
   ScoreName,
   ScoreWithTrend,
+  SiteSummaryData,
   TimeSeriesData,
 } from '../types';
 
@@ -232,7 +233,7 @@ export async function simulateBotResponse(userMessage: string): Promise<string> 
   return new Promise((resolve) => {
     setTimeout(() => {
       const lower = userMessage.toLowerCase();
-      
+
       if (lower.includes('health') || lower.includes('score')) {
         resolve(
           "The current health index for this device is **78/100** (Healthy tier). " +
@@ -265,6 +266,53 @@ export async function simulateBotResponse(userMessage: string): Promise<string> 
       }
     }, 800); // Simulate network delay
   });
+}
+
+/**
+ * Generate site-wide summary data
+ */
+export function generateSiteSummaryData(): SiteSummaryData {
+  return {
+    totalAHUs: 77,
+    avgSiteHealth: 68,
+    ahusInAlert: 12,
+    estMonthlyCostMYR: 4210,
+    starAHU: {
+      id: 'e0306',
+      name: 'AHU-L3-06',
+      level: 3,
+      healthScore: 94,
+      monthlyCostMYR: 128,
+      safetyFlags: 0,
+    },
+    criticalAHU: {
+      id: 'e0703',
+      name: 'AHU-L7-03',
+      level: 7,
+      healthScore: 38,
+      monthlyCostMYR: 1140,
+      safetyFlags: 4,
+    },
+    levelTiles: [
+      { level: 1,  avgHealth: 82, ahuCount: 14 },
+      { level: 2,  avgHealth: 74, ahuCount: 10 },
+      { level: 3,  avgHealth: 88, ahuCount: 11 },
+      { level: 4,  avgHealth: 51, ahuCount: 9  },
+      { level: 5,  avgHealth: 67, ahuCount: 8  },
+      { level: 6,  avgHealth: 91, ahuCount: 7  },
+      { level: 7,  avgHealth: 45, ahuCount: 5  },
+      { level: 8,  avgHealth: 78, ahuCount: 4  },
+      { level: 9,  avgHealth: 62, ahuCount: 3  },
+      { level: 10, avgHealth: 55, ahuCount: 3  },
+      { level: 11, avgHealth: 83, ahuCount: 3  },
+    ],
+    trendDeltas: [
+      { label: 'Energy', value: -4.2, unit: '%',   direction: 'down' },
+      { label: 'Health', value: 2.1,  unit: 'pts', direction: 'up'   },
+      { label: 'Cost',   value: -310, unit: 'MYR', direction: 'down' },
+      { label: 'Alerts', value: -2,   unit: '',    direction: 'down' },
+    ],
+  };
 }
 
 // Exports for type safety
