@@ -17,12 +17,13 @@ function getHealthBg(health: number): string {
 export default function LevelHeatMap() {
   const data = useAppStore((s) => s.siteSummaryData);
   const selectLevel = useAppStore((s) => s.selectLevel);
-  if (!data) return null;
 
   const handleTileClick = useCallback((level: number) => {
     selectLevel(level);
     document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' });
   }, [selectLevel]);
+
+  if (!data) return null;
 
   return (
     <div style={{ marginBottom: '2rem' }}>
