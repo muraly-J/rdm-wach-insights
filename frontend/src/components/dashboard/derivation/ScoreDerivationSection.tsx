@@ -107,7 +107,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
               <ScoreCardWithSelector
                 key={score}
                 deviceId={deviceId}
-                scoreName={score.charAt(0).toUpperCase() + score.slice(1).replace(/_/g, ' ')}
+                scoreName={score.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                 scoreKey={score}
                 series={scoreData.series}
                 scoreData={scoreData.scoreData}

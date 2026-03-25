@@ -3,9 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { apiFetch } from '../../api/client';
 
+interface HourScores {
+  energy_anomaly: number | null;
+  pf_degradation: number | null;
+  phase_imbalance: number | null;
+  thd_drift: number | null;
+  overload: number | null;
+}
+
 interface HourEntry {
   hour: number;
   avg_health: number | null;
+  scores: HourScores;
 }
 
 interface HeatmapData {
@@ -20,12 +29,20 @@ interface Props {
 
 const SHADOW_NONE = '0 0 0px rgba(0,0,0,0)';
 
-function healthColor(score: number | null): { bg: string; text: string; glow: string } {
-  if (score === null) return { bg: '#1A2230', text: '#3A4455', glow: SHADOW_NONE };
-  if (score >= 80) return { bg: '#00E5A0', text: '#0B0F14', glow: '0 0 14px rgba(0,229,160,0.45)' };
-  if (score >= 60) return { bg: '#F59E0B', text: '#0B0F14', glow: '0 0 14px rgba(245,158,11,0.45)' };
-  if (score >= 40) return { bg: '#F97316', text: '#0B0F14', glow: '0 0 14px rgba(249,115,22,0.45)' };
-  return { bg: '#EF4444', text: '#ffffff', glow: '0 0 14px rgba(239,68,68,0.45)' };
+function healthColor(score: number | null): { bg: string; text: string; glow: string; accent: string } {
+  if (score === null) return { bg: '#1A2230', text: '#3A4455', glow: SHADOW_NONE, accent: '#3A4455' };
+  if (score >= 80) return { bg: '#00E5A0', text: '#0B0F14', glow: '0 0 18px rgba(0,229,160,0.55)', accent: '#00E5A0' };
+  if (score >= 60) return { bg: '#F59E0B', text: '#0B0F14', glow: '0 0 18px rgba(245,158,11,0.55)', accent: '#F59E0B' };
+  if (score >= 40) return { bg: '#F97316', text: '#0B0F14', glow: '0 0 18px rgba(249,115,22,0.55)', accent: '#F97316' };
+  return { bg: '#EF4444', text: '#ffffff', glow: '0 0 18px rgba(239,68,68,0.55)', accent: '#EF4444' };
+}
+
+function scoreColor(score: number | null): string {
+  if (score === null) return '#3A4455';
+  if (score >= 80) return '#00E5A0';
+  if (score >= 60) return '#F59E0B';
+  if (score >= 40) return '#F97316';
+  return '#EF4444';
 }
 
 function healthLabel(score: number | null): string {
@@ -42,8 +59,161 @@ function formatHour(h: number): string {
   return h < 12 ? `${h} AM` : `${h - 12} PM`;
 }
 
-const ROWS = 4;
-const COLS = 6;
+const SCORE_LABELS: { key: keyof HourScores; label: string }[] = [
+  { key: 'energy_anomaly',  label: 'Energy Anomaly' },
+  { key: 'pf_degradation',  label: 'PF Degradation' },
+  { key: 'phase_imbalance', label: 'Phase Imbalance' },
+  { key: 'thd_drift',       label: 'THD Drift' },
+  { key: 'overload',        label: 'Overload' },
+];
+
+/** Tooltip — diagnostic readout panel */
+function HoverTooltip({ entry, bg }: { entry: HourEntry; bg: string }) {
+  const isLeft = entry.hour >= 18; // flip to left side for last 6 cells
+  const isTop  = entry.hour >= 12; // flip above for bottom row
+
+  return (
+    <motion.div
+      className="absolute z-30 pointer-events-none"
+      style={{
+        bottom: isTop ? 'calc(100% + 10px)' : undefined,
+        top: !isTop ? 'calc(100% + 10px)' : undefined,
+        right: isLeft ? 0 : undefined,
+        left: !isLeft ? 0 : undefined,
+        minWidth: 220,
+      }}
+      initial={{ opacity: 0, y: isTop ? 6 : -6, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: isTop ? 6 : -6, scale: 0.96 }}
+      transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div
+        style={{
+          background: 'rgba(9, 14, 22, 0.97)',
+          border: `1px solid ${bg}40`,
+          borderRadius: 12,
+          boxShadow: `0 20px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04), 0 0 24px ${bg}18`,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Header strip */}
+        <div
+          style={{
+            background: `linear-gradient(135deg, ${bg}18 0%, transparent 100%)`,
+            borderBottom: `1px solid ${bg}25`,
+            padding: '10px 14px 8px',
+          }}
+        >
+          <div className="flex items-baseline justify-between gap-3">
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                color: '#8A95A5',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {formatHour(entry.hour)}
+            </span>
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 18,
+                fontWeight: 700,
+                color: bg,
+                letterSpacing: '-0.02em',
+                lineHeight: 1,
+              }}
+            >
+              {entry.avg_health !== null ? entry.avg_health.toFixed(1) : '—'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <span
+              style={{
+                fontSize: 10,
+                color: `${bg}CC`,
+                fontFamily: 'var(--font-display)',
+                fontWeight: 600,
+              }}
+            >
+              {healthLabel(entry.avg_health)}
+            </span>
+            <span style={{ fontSize: 9, color: '#4A5568', fontFamily: 'var(--font-mono)' }}>
+              HEALTH INDEX
+            </span>
+          </div>
+        </div>
+
+        {/* Score rows */}
+        <div style={{ padding: '8px 14px 10px' }}>
+          {SCORE_LABELS.map(({ key, label }) => {
+            const val = entry.scores?.[key] ?? null;
+            const col = scoreColor(val);
+            const pct = val !== null ? Math.min(100, Math.max(0, val)) : 0;
+            return (
+              <div
+                key={key}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}
+              >
+                {/* Label */}
+                <span
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 10,
+                    color: '#6B7888',
+                    width: 96,
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {label}
+                </span>
+
+                {/* Bar track */}
+                <div
+                  style={{
+                    flex: 1,
+                    height: 3,
+                    background: 'rgba(255,255,255,0.06)',
+                    borderRadius: 99,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${pct}%`,
+                      height: '100%',
+                      background: val !== null ? col : 'transparent',
+                      borderRadius: 99,
+                      transition: 'width 0.3s ease',
+                    }}
+                  />
+                </div>
+
+                {/* Value */}
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: val !== null ? col : '#3A4455',
+                    width: 28,
+                    textAlign: 'right',
+                    flexShrink: 0,
+                  }}
+                >
+                  {val !== null ? val.toFixed(0) : '—'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 const AHUHeatmap: React.FC<Props> = ({ ahuId }) => {
   const timeRange = useAppStore((s) => s.timeRange);
@@ -80,7 +250,7 @@ const AHUHeatmap: React.FC<Props> = ({ ahuId }) => {
 
   return (
     <motion.div
-      className="card p-0 overflow-hidden"
+      className="card p-0 overflow-visible"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
@@ -100,9 +270,9 @@ const AHUHeatmap: React.FC<Props> = ({ ahuId }) => {
         {/* Legend */}
         <div className="flex items-center gap-3 text-[10px] text-[#8A95A5]">
           {[
-            { label: 'Healthy', color: '#00E5A0' },
+            { label: 'Healthy',  color: '#00E5A0' },
             { label: 'Moderate', color: '#F59E0B' },
-            { label: 'Poor', color: '#F97316' },
+            { label: 'Poor',     color: '#F97316' },
             { label: 'Critical', color: '#EF4444' },
           ].map(({ label, color }) => (
             <span key={label} className="flex items-center gap-1">
@@ -132,69 +302,48 @@ const AHUHeatmap: React.FC<Props> = ({ ahuId }) => {
         {data && !loading && (
           <>
             {/* 6×4 grid */}
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-6 gap-2" style={{ position: 'relative' }}>
               {data.hours.map((entry, idx) => {
                 const { bg, text, glow } = healthColor(entry.avg_health);
                 const isHov = hovered === idx;
                 return (
-                  <motion.div
-                    key={entry.hour}
-                    className="relative aspect-square rounded-lg cursor-default select-none"
-                    style={{
-                      backgroundColor: bg,
-                      boxShadow: isHov ? glow : SHADOW_NONE,
-                    }}
-                    initial={{ opacity: 0, scale: 0.7 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: idx * 0.018, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                    onMouseEnter={() => setHovered(idx)}
-                    onMouseLeave={() => setHovered(null)}
-                    whileHover={{ scale: 1.12, zIndex: 10 }}
-                  >
-                    {/* Hour label */}
-                    <div
-                      className="absolute inset-0 flex flex-col items-center justify-center"
-                      style={{ color: text }}
+                  <div key={entry.hour} style={{ position: 'relative' }}>
+                    <motion.div
+                      className="relative aspect-square rounded-lg cursor-default select-none"
+                      style={{
+                        backgroundColor: bg,
+                        boxShadow: isHov ? glow : SHADOW_NONE,
+                      }}
+                      initial={{ opacity: 0, scale: 0.7 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: idx * 0.018, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      onMouseEnter={() => setHovered(idx)}
+                      onMouseLeave={() => setHovered(null)}
+                      whileHover={{ scale: 1.12, zIndex: 10 }}
                     >
-                      <span className="font-mono text-[10px] sm:text-[11px] font-bold leading-none">
-                        {String(entry.hour).padStart(2, '0')}
-                      </span>
-                      {entry.avg_health !== null && (
-                        <span className="font-mono text-[9px] sm:text-[10px] opacity-70 leading-none mt-0.5">
-                          {entry.avg_health.toFixed(0)}
+                      {/* Hour label */}
+                      <div
+                        className="absolute inset-0 flex flex-col items-center justify-center"
+                        style={{ color: text }}
+                      >
+                        <span className="font-mono text-[10px] sm:text-[11px] font-bold leading-none">
+                          {String(entry.hour).padStart(2, '0')}
                         </span>
-                      )}
-                    </div>
+                        {entry.avg_health !== null && (
+                          <span className="font-mono text-[9px] sm:text-[10px] opacity-70 leading-none mt-0.5">
+                            {entry.avg_health.toFixed(0)}
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
 
-                    {/* Tooltip */}
+                    {/* Tooltip — rendered outside motion.div to avoid clip */}
                     <AnimatePresence>
-                      {isHov && (
-                        <motion.div
-                          className="absolute z-20 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none"
-                          initial={{ opacity: 0, y: 4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 4 }}
-                          transition={{ duration: 0.15 }}
-                        >
-                          <div className="bg-[#0D1520] border border-[#1E2A3A] rounded-lg px-3 py-2 text-center whitespace-nowrap shadow-xl">
-                            <div className="font-mono text-xs text-[#E8ECF1] font-bold">{formatHour(entry.hour)}</div>
-                            {entry.avg_health !== null ? (
-                              <>
-                                <div className="font-mono text-sm font-bold" style={{ color: bg }}>
-                                  {entry.avg_health.toFixed(1)}
-                                </div>
-                                <div className="text-[10px] text-[#8A95A5]">{healthLabel(entry.avg_health)}</div>
-                              </>
-                            ) : (
-                              <div className="text-[10px] text-[#8A95A5]">No data</div>
-                            )}
-                          </div>
-                          {/* Caret */}
-                          <div className="w-0 h-0 mx-auto border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-[#1E2A3A]" />
-                        </motion.div>
+                      {isHov && entry.avg_health !== null && (
+                        <HoverTooltip entry={entry} bg={healthColor(entry.avg_health).bg} />
                       )}
                     </AnimatePresence>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>

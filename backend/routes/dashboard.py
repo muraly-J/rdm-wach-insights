@@ -852,18 +852,36 @@ async def ahu_heatmap(
 
         df = df.copy()
         df["_hour"] = pd.to_datetime(df["timestamp"], utc=True).dt.hour
+
+        SCORE_COLS = ["health_index", "energy_anomaly", "pf_degradation", "phase_imbalance", "thd_drift", "overload"]
+        agg_cols = [c for c in SCORE_COLS if c in df.columns]
+
         hourly = (
-            df.groupby("_hour")["health_index"]
+            df.groupby("_hour")[agg_cols]
             .mean()
             .round(1)
             .reset_index()
-            .rename(columns={"_hour": "hour", "health_index": "avg_health"})
+            .rename(columns={"_hour": "hour"})
         )
 
-        # Ensure all 24 hours present (fill missing with None)
-        hour_map = {int(row["hour"]): float(row["avg_health"]) for _, row in hourly.iterrows()}
-        hours = [{"hour": h, "avg_health": hour_map.get(h)} for h in range(24)]
+        # Build per-hour map; missing hours get None for all score cols
+        hour_map: dict[int, dict] = {}
+        for _, row in hourly.iterrows():
+            h = int(row["hour"])
+            hour_map[h] = {
+                col: (float(row[col]) if pd.notna(row[col]) else None)
+                for col in agg_cols
+            }
 
+        def _hour_entry(h: int) -> dict:
+            scores = hour_map.get(h, {col: None for col in agg_cols})
+            return {
+                "hour": h,
+                "avg_health": scores.get("health_index"),
+                "scores": {col: scores.get(col) for col in agg_cols if col != "health_index"},
+            }
+
+        hours = [_hour_entry(h) for h in range(24)]
         return {"ahu_id": ahu_id, "range": time_range, "hours": hours}
 
     except HTTPException:
