@@ -273,13 +273,21 @@ def get_earliest_data_timestamp() -> "datetime | None":
     """
     Return the earliest _time available in the InfluxDB bucket across all WACH
     devices.  Returns a UTC-aware datetime, or None if the query fails.
+
+    Strategy: use first() per measurement (a single time-index seek per series,
+    not a full table scan), group the small result set (~100 rows), sort it, and
+    take the minimum.  This is orders of magnitude faster than sorting all rows.
     """
     from datetime import timezone as _tz
+    # Query only energy_import — one reliable metric, avoids multiplying work
+    # by 17 metrics.  first() jumps to the first stored record in O(1) via the
+    # TSM time index, then we sort the ~N-device "first" rows and take the min.
     flux_query = f'''
     from(bucket: "{_BUCKET}")
       |> range(start: -3y)
-      |> filter(fn: (r) => r._measurement =~ /^wach_e\\d{{4}}_/)
-      |> keep(columns: ["_time"])
+      |> filter(fn: (r) => r._measurement =~ /^wach_e\\d{{4}}_energy_import$/)
+      |> first()
+      |> group()
       |> sort(columns: ["_time"], desc: false)
       |> limit(n: 1)
     '''
