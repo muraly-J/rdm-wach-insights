@@ -3,7 +3,7 @@ import React from 'react';
 import { formatTickByRange } from './utils/formatTick';
 
 // ZONE A — Welcome Hero
-import HeroScrollWrapper from './components/welcome/HeroScrollWrapper';
+import WelcomeHero from './components/welcome/WelcomeHero';
 
 // ZONE C — Dashboard Components
 import CombinedScoresChart from './components/dashboard/CombinedScoresChart';
@@ -58,7 +58,7 @@ interface ScoreEntry {
 // ──────────────────────────────────────────────────────────────────────────────
 
 function App() {
-  const { selectedLevel, selectedDevice, timeRange, setSiteSummaryData } = useAppStore();
+  const { selectedLevel, selectedDevice, timeRange, setSiteSummaryData, heroVisible, setHeroVisible } = useAppStore();
 
   // ── API State ────────────────────────────────────────────────────────────────
   const [healthData, setHealthData] = React.useState<HealthIndexResponse | null>(null);
@@ -182,8 +182,21 @@ function App() {
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#E8ECF1]">
-      {/* ZONE A — Hero (collapses to nav on scroll) */}
-      <HeroScrollWrapper />
+      {/* ZONE A — Fixed hero overlay */}
+      <AnimatePresence>
+        {heroVisible && (
+          <motion.div
+            key="hero-overlay"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.03 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            style={{ position: 'fixed', inset: 0, zIndex: 60 }}
+          >
+            <WelcomeHero />
+            {/* TODO Task 3: add onContinue={() => setHeroVisible(false)} */}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ZONE C — Dashboard */}
       <div id="dashboard">
