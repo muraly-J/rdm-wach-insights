@@ -134,7 +134,7 @@ def _resample_to_daily(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df['_date'] = pd.to_datetime(df['timestamp'], utc=True).dt.normalize()
 
-    group_keys = ['device_id', 'level', '_date']
+    group_keys = ['ahu_id', 'level', '_date']
     # Identify numeric vs text columns (excluding group keys and timestamp)
     numeric_cols = [
         c for c in df.select_dtypes(include='number').columns
