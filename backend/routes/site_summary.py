@@ -59,12 +59,12 @@ async def get_site_summary(range: str = Query(default="7d")):
 
         # ── Step 1: Fleet health assessment ──────────────────────────────────
         from core.risk_engine import generate_fleet_risk_assessment
-        from models.schemas import get_level_from_ahu_id
+        from models.schemas import get_level_from_ahu_id, ALLOWED_DEVICES
 
         fleet = generate_fleet_risk_assessment(
             time_range=internal_range,
             cluster_by_level=True,
-            devices_filter=None,
+            devices_filter=list(ALLOWED_DEVICES),
         )
         assessments = fleet.get("assessments", [])
 
