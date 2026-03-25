@@ -32,10 +32,11 @@ export default function SiteNavBar({ devices }: SiteNavBarProps) {
       <div
         className="sticky top-0 z-30"
         style={{
-          background: 'rgba(11,15,20,0.85)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          borderBottom: '1px solid #1E2A3A',
+          background: 'rgba(11,15,20,0.60)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          boxShadow: 'inset 0 -1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.30)',
         }}
       >
         <div

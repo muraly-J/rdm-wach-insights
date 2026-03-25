@@ -19,13 +19,13 @@ export default function KPIStrip() {
       label: 'Total AHUs',
       value: String(data.totalAHUs),
       color: '#E8ECF1',
-      borderColor: '#1E2A3A',
+      borderColor: 'rgba(255,255,255,0.08)',
     },
     {
       label: 'Avg Site Health',
       value: `${data.avgSiteHealth}`,
       color: '#00E5A0',
-      borderColor: '#1E2A3A',
+      borderColor: 'rgba(255,255,255,0.08)',
     },
     {
       label: 'AHUs in Alert',
@@ -37,7 +37,7 @@ export default function KPIStrip() {
       label: 'Est. Monthly Cost',
       value: `RM ${data.estMonthlyCostMYR.toLocaleString()}`,
       color: '#E8ECF1',
-      borderColor: '#1E2A3A',
+      borderColor: 'rgba(255,255,255,0.08)',
     },
   ];
 
@@ -50,12 +50,15 @@ export default function KPIStrip() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: i * 0.07, ease }}
           style={{
-            background: '#111820',
+            background: 'rgba(255,255,255,0.04)',
+            backdropFilter: 'blur(16px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(16px) saturate(160%)',
             border: `1px solid ${chip.borderColor}`,
             borderRadius: '12px',
             padding: '14px 20px',
             flex: '1 1 160px',
             minWidth: '160px',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
           }}
         >
           <div

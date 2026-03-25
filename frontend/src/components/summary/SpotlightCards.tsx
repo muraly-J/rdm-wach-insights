@@ -24,10 +24,13 @@ function SpotlightCard({ ahu, type, index }: CardProps) {
       transition={{ duration: 0.45, delay: 0.1 + index * 0.08, ease: [0.22, 1, 0.36, 1] }}
       style={{
         flex: '1 1 280px',
-        background: '#111820',
-        border: `1px solid ${accentColor}33`,
+        background: 'rgba(255,255,255,0.04)',
+        backdropFilter: 'blur(24px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        border: `1px solid ${accentColor}22`,
         borderRadius: '16px',
         padding: '20px 24px',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 8px 32px rgba(0,0,0,0.24)',
       }}
     >
       {/* Header row */}

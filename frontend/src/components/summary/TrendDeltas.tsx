@@ -41,10 +41,13 @@ export default function TrendDeltas() {
               style={{
                 flex: '1 1 120px',
                 minWidth: '120px',
-                background: '#111820',
-                border: '1px solid #1E2A3A',
+                background: 'rgba(255,255,255,0.04)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.07)',
                 borderRadius: '10px',
                 padding: '12px 16px',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
               }}
             >
               <div style={{ fontSize: '11px', color: '#8A95A5', marginBottom: '6px' }}>

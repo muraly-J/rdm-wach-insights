@@ -57,16 +57,19 @@ export default function LevelHeatMap() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
-              whileHover={{ scale: 1.04 }}
+              whileHover={{ scale: 1.04, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.10), 0 0 20px ${color}22` }}
               whileTap={{ scale: 0.96 }}
               style={{
                 background: bg,
-                border: `1px solid ${color}44`,
+                backdropFilter: 'blur(12px) saturate(150%)',
+                WebkitBackdropFilter: 'blur(12px) saturate(150%)',
+                border: `1px solid ${color}33`,
                 borderRadius: '12px',
                 padding: '14px 8px',
                 textAlign: 'center',
                 cursor: 'pointer',
                 outline: 'none',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
               }}
             >
               <div style={{ fontSize: '10px', color: '#8A95A5', marginBottom: '6px' }}>
