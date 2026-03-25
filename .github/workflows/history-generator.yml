@@ -23,6 +23,8 @@ jobs:
     name: Generate Full Historical ETL
     runs-on: ubuntu-latest
     timeout-minutes: 1000
+    permissions:
+      contents: write
 
     env:
       INFLUX_URL: ${{ secrets.INFLUX_URL }}

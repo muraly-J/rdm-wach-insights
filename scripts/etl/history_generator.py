@@ -159,8 +159,11 @@ def _fetch_full_history(
         return pd.DataFrame()
 
     combined = pd.concat(frames, axis=0)
-    # Remove any duplicate timestamps from overlapping window edges
-    combined = combined[~combined.index.duplicated(keep='last')].sort_index()
+    # Merge rows that share a timestamp (happens when multiple device batches cover
+    # the same time window — each batch has different columns, same timestamps).
+    # groupby.first() picks the first non-NaN value per column per timestamp,
+    # which correctly stitches device-batch columns back together.
+    combined = combined.groupby(combined.index).first().sort_index()
     return combined
 
 
