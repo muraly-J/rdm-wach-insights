@@ -4,17 +4,20 @@ import { useAppStore } from '../../store/useAppStore';
 
 interface NavItem {
   label: string;
-  sectionId: string;
+  action: 'home' | 'site' | 'scroll';
+  sectionId?: string;
   alwaysVisible?: boolean;
+  showWhen?: 'level' | 'device';
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Home', sectionId: 'hero-region', alwaysVisible: true },
-  { label: 'Health Index', sectionId: 'section-health-index' },
-  { label: 'Health Rankings', sectionId: 'section-rankings' },
-  { label: 'Score Derivation', sectionId: 'section-score-derivation' },
-  { label: 'Predicted Hourly Consumption', sectionId: 'section-predictions' },
-  { label: 'Financial Impact', sectionId: 'section-financial' },
+  { label: 'Home',   action: 'home', alwaysVisible: true },
+  { label: 'Site',   action: 'site', alwaysVisible: true },
+  { label: 'Health Index',                  action: 'scroll', sectionId: 'section-health-index',     showWhen: 'level' },
+  { label: 'Health Rankings',               action: 'scroll', sectionId: 'section-rankings',          showWhen: 'level' },
+  { label: 'Score Derivation',              action: 'scroll', sectionId: 'section-score-derivation',  showWhen: 'device' },
+  { label: 'Predicted Hourly Consumption',  action: 'scroll', sectionId: 'section-predictions',       showWhen: 'device' },
+  { label: 'Financial Impact',              action: 'scroll', sectionId: 'section-financial',         showWhen: 'level' },
 ];
 
 const drawerEase = [0.22, 1, 0.36, 1] as const;
@@ -23,6 +26,9 @@ export default function HamburgerMenu() {
   const hamburgerOpen = useAppStore((s) => s.hamburgerOpen);
   const toggleHamburger = useAppStore((s) => s.toggleHamburger);
   const selectedLevel = useAppStore((s) => s.selectedLevel);
+  const selectedDevice = useAppStore((s) => s.selectedDevice);
+  const setHeroVisible = useAppStore((s) => s.setHeroVisible);
+  const clearLevel = useAppStore((s) => s.clearLevel);
 
   React.useEffect(() => {
     if (!hamburgerOpen) return;
@@ -33,14 +39,30 @@ export default function HamburgerMenu() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [hamburgerOpen, toggleHamburger]);
 
-  function handleNavClick(sectionId: string) {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  function handleNavClick(item: NavItem) {
+    if (item.action === 'home') {
+      setHeroVisible(true);
+      toggleHamburger();
+      return;
+    }
+    if (item.action === 'site') {
+      clearLevel();
+      toggleHamburger();
+      return;
+    }
+    // scroll action
+    if (item.sectionId) {
+      document.getElementById(item.sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     toggleHamburger();
   }
 
-  const visibleItems = NAV_ITEMS.filter(
-    (item) => item.alwaysVisible || selectedLevel !== null,
-  );
+  const visibleItems = NAV_ITEMS.filter(item => {
+    if (item.alwaysVisible) return true;
+    if (item.showWhen === 'level') return selectedLevel !== null;
+    if (item.showWhen === 'device') return selectedDevice !== null && selectedDevice !== 'all';
+    return false;
+  });
 
   return (
     <AnimatePresence>
@@ -79,11 +101,13 @@ export default function HamburgerMenu() {
               bottom: 0,
               zIndex: 50,
               width: 260,
-              background: 'rgba(11,15,20,0.97)',
-              backdropFilter: 'blur(20px)',
-              borderLeft: '1px solid #1E2A3A',
               display: 'flex',
               flexDirection: 'column',
+              background: 'rgba(11,15,20,0.75)',
+              backdropFilter: 'blur(32px) saturate(200%)',
+              WebkitBackdropFilter: 'blur(32px) saturate(200%)',
+              borderLeft: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.04), -24px 0 60px rgba(0,0,0,0.50)',
             }}
           >
             {/* Accent line at top */}
@@ -137,11 +161,11 @@ export default function HamburgerMenu() {
             >
               {visibleItems.map((item, index) => (
                 <motion.button
-                  key={item.sectionId}
+                  key={item.label}
                   initial={{ opacity: 0, x: 16 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05, duration: 0.2 }}
-                  onClick={() => handleNavClick(item.sectionId)}
+                  onClick={() => handleNavClick(item)}
                   style={{
                     width: '100%',
                     textAlign: 'left',
@@ -155,7 +179,7 @@ export default function HamburgerMenu() {
                     cursor: 'pointer',
                     fontFamily: 'DM Sans, sans-serif',
                   }}
-                  whileHover={{ backgroundColor: '#1A2230', color: '#00E5A0' }}
+                  whileHover={{ backgroundColor: 'rgba(0,229,160,0.08)', color: '#00E5A0' }}
                 >
                   {item.label}
                 </motion.button>
