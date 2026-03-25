@@ -813,7 +813,7 @@ async def dashboard_safety_flags(
 @router.get("/ahu-heatmap")
 async def ahu_heatmap(
     ahu_id: str = Query(..., description="AHU device ID, e.g. e0101"),
-    range: str = Query(default="7d", description="Time range: 24h, 7d, or 30d"),
+    time_range: str = Query(default="7d", alias="range", description="Time range: 24h, 7d, or 30d"),
 ):
     """
     Return average health index per hour-of-day (0–23) for a specific AHU.
@@ -827,12 +827,12 @@ async def ahu_heatmap(
     """
     try:
         valid_ranges = ["24h", "7d", "30d"]
-        if range not in valid_ranges:
+        if time_range not in valid_ranges:
             raise HTTPException(status_code=400, detail=f"Range must be one of: {', '.join(valid_ranges)}")
 
         from core.csv_reader import _load_csv, _filter_time_range
 
-        df = await asyncio.to_thread(_load_csv, time_range=range)
+        df = await asyncio.to_thread(_load_csv, time_range=time_range)
         if df.empty:
             raise HTTPException(status_code=404, detail="No health data available")
 
@@ -840,10 +840,11 @@ async def ahu_heatmap(
         if df.empty:
             raise HTTPException(status_code=404, detail=f"No data found for AHU {ahu_id}")
 
-        df = _filter_time_range(df, range)
+        df = _filter_time_range(df, time_range)
         if df.empty:
             raise HTTPException(status_code=404, detail=f"No data in range for AHU {ahu_id}")
 
+        df = df.copy()
         df["_hour"] = pd.to_datetime(df["timestamp"], utc=True).dt.hour
         hourly = (
             df.groupby("_hour")["health_index"]
@@ -857,7 +858,7 @@ async def ahu_heatmap(
         hour_map = {int(row["hour"]): float(row["avg_health"]) for _, row in hourly.iterrows()}
         hours = [{"hour": h, "avg_health": hour_map.get(h)} for h in range(24)]
 
-        return {"ahu_id": ahu_id, "range": range, "hours": hours}
+        return {"ahu_id": ahu_id, "range": time_range, "hours": hours}
 
     except HTTPException:
         raise
