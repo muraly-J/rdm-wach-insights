@@ -236,6 +236,15 @@ _PREDICTION_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+_TIME_OF_DAY_PATTERN = re.compile(
+    r'\b(\d{1,2}\s*(am|pm)|(\d{1,2}:\d{2})|morning|afternoon|evening|night|peak\s+hours?|daytime)\b',
+    re.IGNORECASE,
+)
+_DIAGNOSTIC_INTENT_PATTERN = re.compile(
+    r'\b(why|explain|deep\s+dive|drop|dip|investigate|cause|reason|diagnose|decrease|degrade)\b',
+    re.IGNORECASE,
+)
+
 
 def _is_prediction_query(message: str) -> bool:
     """Return True if the message is asking about future values."""
@@ -473,7 +482,7 @@ def _read_csv_context_sync(context: dict) -> str:
         score_parts = []
         if ea is not None and not pd.isna(ea): score_parts.append(f"EnergyAnomaly={ea:.1f}")
         if pf is not None and not pd.isna(pf): score_parts.append(f"PFDeg={pf:.1f}")
-        if pi is not None and not pd.isna(pi): score_parts.append(f"PhaseImbalance={pi:.1f}")
+        if pi is not None and not pd.isna(pi): score_parts.append(f"Phase Imbalance={pi:.1f}")
         if thd is not None and not pd.isna(thd): score_parts.append(f"THDDrift={thd:.1f}")
         if ol is not None and not pd.isna(ol): score_parts.append(f"Overload={ol:.1f}")
         if score_parts:
@@ -590,6 +599,180 @@ async def _get_financial_context(context: Optional[dict]) -> str:
         return ""
 
 
+def _needs_time_window_context(message: str, context: Optional[dict]) -> bool:
+    """
+    Return True when the message is a time-of-day diagnostic question about a
+    specific device. Triggers on-demand InfluxDB time-series fetch.
+    Both conditions must be met:
+      1. A device ID is known (from context or extracted from the message).
+      2. The message contains a time-of-day reference AND diagnostic intent.
+    """
+    ctx_device = context.get("device") if context else None
+    if not ctx_device and not re.search(r'\be\d{4}\b', message, re.IGNORECASE):
+        return False
+    return bool(_TIME_OF_DAY_PATTERN.search(message)) and bool(_DIAGNOSTIC_INTENT_PATTERN.search(message))
+
+
+def _extract_tw_range(message: str) -> str:
+    """Map natural-language time expressions to a fetch_time_series time_range value."""
+    msg_lower = message.lower()
+    if any(kw in msg_lower for kw in ("30 days", "past month", "last month")):
+        return "last_30d"
+    if any(kw in msg_lower for kw in ("24 hours", "today", "yesterday")):
+        return "last_24h"
+    return "last_7d"
+
+
+async def _get_time_window_context(device_id: str, time_range: str = "last_7d") -> str:
+    """
+    Fetch all raw measurements available in health_all_levels.csv for device_id
+    over time_range, compute mean per UTC hour-of-day (0–23), and return a compact
+    markdown table for injection into the system prompt.
+
+    CSV raw_ column → InfluxDB metric mapping (17 direct + 1 derived):
+      raw_power_total          → power_total
+      raw_energy_import        → energy_import
+      raw_power_factor_avg     → power_factor_avg
+      raw_current_unbalance    → current_unbalance
+      raw_current_l1_thd       → current_l1_thd  \\
+      raw_current_l3_thd       → current_l3_thd  / → composite_thd = max(L1, L3)
+      raw_volts_l1_n           → volts_l1_n
+      raw_volts_l2_n           → volts_l2_n
+      raw_volts_l3_n           → volts_l3_n
+      raw_current_l1           → current_l1
+      raw_current_l2           → current_l2
+      raw_current_l3           → current_l3
+      raw_nema_voltage_imbalance → volts_unbalance
+      raw_volts_l1_thd         → volts_l1_thd
+      raw_volts_l2_thd         → volts_l2_thd
+      raw_volts_l3_thd         → volts_l3_thd
+      raw_apparent_power_total → apparent_power_total
+      raw_hourly_delta, raw_predicted_delta, raw_p95_current → SKIP (ETL/prediction artefacts)
+
+    Always returns "" on any exception — never blocks chat.
+    """
+    try:
+        import pandas as pd
+        from core.influx_client import fetch_time_series
+
+        METRICS = [
+            "power_total",
+            "energy_import",
+            "power_factor_avg",
+            "current_unbalance",
+            "current_l1_thd",
+            "current_l3_thd",
+            "volts_l1_n",
+            "volts_l2_n",
+            "volts_l3_n",
+            "current_l1",
+            "current_l2",
+            "current_l3",
+            "volts_unbalance",
+            "volts_l1_thd",
+            "volts_l2_thd",
+            "volts_l3_thd",
+            "apparent_power_total",
+        ]
+        COL_LABELS = {
+            "power_total":          "Power(kW)",
+            "energy_import":        "Energy(kWh)",
+            "power_factor_avg":     "PF",
+            "apparent_power_total": "Apparent(kVA)",
+            "current_l1":           "I L1(A)",
+            "current_l2":           "I L2(A)",
+            "current_l3":           "I L3(A)",
+            "current_unbalance":    "I Imbalance(%)",
+            "current_l1_thd":       "I L1 THD(%)",
+            "current_l3_thd":       "I L3 THD(%)",
+            "composite_thd":        "Composite THD(%)",
+            "volts_l1_n":           "V L1-N(V)",
+            "volts_l2_n":           "V L2-N(V)",
+            "volts_l3_n":           "V L3-N(V)",
+            "volts_unbalance":      "V Imbalance(%)",
+            "volts_l1_thd":         "V L1 THD(%)",
+            "volts_l2_thd":         "V L2 THD(%)",
+            "volts_l3_thd":         "V L3 THD(%)",
+        }
+
+        loop = asyncio.get_running_loop()
+
+        results = await asyncio.gather(
+            *[
+                loop.run_in_executor(
+                    None,
+                    partial(fetch_time_series, [device_id], metric, time_range),
+                )
+                for metric in METRICS
+            ],
+            return_exceptions=True,
+        )
+
+        frames: dict[str, pd.Series] = {}
+        for metric, result in zip(METRICS, results):
+            if isinstance(result, Exception) or result is None or result.empty:
+                continue
+            if device_id not in result.columns:
+                continue
+            frames[metric] = result[device_id]
+
+        if not frames:
+            return ""
+
+        combined = pd.DataFrame(frames)
+        combined.index = pd.to_datetime(combined.index, utc=True)
+
+        # Derive composite_thd = max(current_l1_thd, current_l3_thd) per row
+        if "current_l1_thd" in combined.columns and "current_l3_thd" in combined.columns:
+            combined["composite_thd"] = combined[["current_l1_thd", "current_l3_thd"]].max(axis=1)
+        elif "current_l1_thd" in combined.columns:
+            combined["composite_thd"] = combined["current_l1_thd"]
+        elif "current_l3_thd" in combined.columns:
+            combined["composite_thd"] = combined["current_l3_thd"]
+
+        combined["_hour"] = combined.index.hour
+        hourly = combined.groupby("_hour").mean()
+
+        DISPLAY_ORDER = [
+            "power_total", "energy_import", "power_factor_avg", "apparent_power_total",
+            "current_l1", "current_l2", "current_l3",
+            "current_unbalance",
+            "current_l1_thd", "current_l3_thd", "composite_thd",
+            "volts_l1_n", "volts_l2_n", "volts_l3_n",
+            "volts_unbalance",
+            "volts_l1_thd", "volts_l2_thd", "volts_l3_thd",
+        ]
+        present = [m for m in DISPLAY_ORDER if m in hourly.columns]
+        if not present:
+            return ""
+
+        header_cols = " | ".join(COL_LABELS[m] for m in present)
+        separator   = " | ".join("---" for _ in present)
+
+        lines = [
+            f"\n\n## On-Demand Sensor Readings — {device_id} (hourly averages, {time_range})",
+            "These are real hourly averages from InfluxDB, grouped by UTC hour of day.",
+            "For local time (Malaysia UTC+8), add 8 hours to the UTC hour shown.",
+            "Use this table to explain why FAIR scores and health index change at specific times of day.",
+            f"| UTC Hour | {header_cols} |",
+            f"| --- | {separator} |",
+        ]
+        for hour in range(24):
+            if hour not in hourly.index:
+                continue
+            row = hourly.loc[hour]
+            values = " | ".join(
+                f"{row[m]:.2f}" if pd.notna(row[m]) else "—"
+                for m in present
+            )
+            lines.append(f"| {hour:02d}:00 | {values} |")
+
+        return "\n".join(lines)
+
+    except Exception:
+        return ""
+
+
 @router.post("/chat")
 async def chat(body: ChatRequest):
     """
@@ -639,6 +822,21 @@ async def chat(body: ChatRequest):
     csv_ctx = await _get_csv_context(body.context)
     if csv_ctx:
         system_prompt += csv_ctx
+
+    # On-demand time-window context: only for device-specific time-of-day queries.
+    # Fetches all raw InfluxDB measurements (matching health_all_levels.csv raw_ columns)
+    # and injects a per-UTC-hour table so the LLM can explain score drops at specific times.
+    if _needs_time_window_context(body.message, body.context):
+        _tw_device = (body.context.get("device") if body.context else None) or (
+            _m.group(1).lower()
+            if (_m := re.search(r'\b(e\d{4})\b', body.message, re.IGNORECASE))
+            else None
+        )
+        if _tw_device:
+            _tw_range = _extract_tw_range(body.message)
+            _tw_ctx = await _get_time_window_context(_tw_device, _tw_range)
+            if _tw_ctx:
+                system_prompt += _tw_ctx
 
     # Financial impact context (level/device cost breakdown)
     fin_ctx = await _get_financial_context(body.context)
