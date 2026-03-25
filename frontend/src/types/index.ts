@@ -210,3 +210,38 @@ export interface FinancialImpact {
   maintenance_risk: number;
   top_ahus: AHUCost[];
 }
+
+// ── Site Summary Types ─────────────────────────────────────────────────────
+
+export interface LevelHealthTile {
+  level: number;        // 1–11
+  avgHealth: number;    // 0–100
+  ahuCount: number;
+}
+
+export interface SpotlightAHU {
+  id: string;
+  name: string;
+  level: number;
+  healthScore: number;
+  monthlyCostMYR: number;
+  safetyFlags: number;
+}
+
+export interface TrendDelta {
+  label: string;              // e.g. "Energy"
+  value: number;              // signed
+  unit: string;               // "%" | "pts" | "MYR" | ""
+  direction: 'up' | 'down';
+}
+
+export interface SiteSummaryData {
+  totalAHUs: number;
+  avgSiteHealth: number;
+  ahusInAlert: number;
+  estMonthlyCostMYR: number;
+  starAHU: SpotlightAHU;
+  criticalAHU: SpotlightAHU;
+  levelTiles: LevelHealthTile[];  // 11 entries
+  trendDeltas: TrendDelta[];
+}
