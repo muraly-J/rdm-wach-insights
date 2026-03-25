@@ -830,9 +830,15 @@ async def ahu_heatmap(
         if time_range not in valid_ranges:
             raise HTTPException(status_code=400, detail=f"Range must be one of: {', '.join(valid_ranges)}")
 
-        from core.csv_reader import _load_csv, _filter_time_range
+        from core.csv_reader import _load_csv, _filter_time_range, HOURLY_CSV_PATH
+        import os
 
-        df = await asyncio.to_thread(_load_csv, time_range=time_range)
+        # Always load raw hourly data for heatmap — _load_csv('30d') resamples
+        # to daily (timestamps normalized to midnight), making dt.hour always 0.
+        if os.path.exists(HOURLY_CSV_PATH) and os.path.getsize(HOURLY_CSV_PATH) > 0:
+            df = await asyncio.to_thread(pd.read_csv, HOURLY_CSV_PATH, parse_dates=["timestamp"])
+        else:
+            df = await asyncio.to_thread(_load_csv, time_range=time_range)
         if df.empty:
             raise HTTPException(status_code=404, detail="No health data available")
 
