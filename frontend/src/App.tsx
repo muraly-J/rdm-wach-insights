@@ -192,8 +192,7 @@ function App() {
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             style={{ position: 'fixed', inset: 0, zIndex: 60 }}
           >
-            <WelcomeHero />
-            {/* TODO Task 3: add onContinue={() => setHeroVisible(false)} */}
+            <WelcomeHero onContinue={() => setHeroVisible(false)} />
           </motion.div>
         )}
       </AnimatePresence>
