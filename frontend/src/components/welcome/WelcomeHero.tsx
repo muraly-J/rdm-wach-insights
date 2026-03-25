@@ -139,7 +139,7 @@ export default function WelcomeHero({ onContinue }: { onContinue: () => void }) 
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
               cursor: 'pointer',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+              boxShadow: '0 0 0px rgba(0,229,160,0)',
             }}
           >
             Continue →

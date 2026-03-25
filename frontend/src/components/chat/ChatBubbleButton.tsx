@@ -30,6 +30,7 @@ const ChatBubbleButton: React.FC<ChatBubbleButtonProps> = ({ onClick }) => {
       {/* Pulsing glow animation (Section 6.1) */}
       <motion.div
         className="absolute inset-0 rounded-full"
+        style={{ boxShadow: '0 0 0 0 rgba(0,229,160,0)' }}
         animate={{
           boxShadow: [
             '0 0 0 0 rgba(0,229,160,0.15)',
