@@ -21,6 +21,7 @@ Author: WACH Insight Team
 
 import sys
 import os
+import time
 import argparse
 from datetime import datetime, timezone, timedelta
 
@@ -144,14 +145,25 @@ def _fetch_full_history(
             for i in range(0, len(devices), device_batch_size)
         ]
         for di, chunk in enumerate(dev_chunks):
-            try:
-                df_chunk = fetch_time_series_window(chunk, metric, window_start, window_end)
-                if not df_chunk.empty:
-                    frames.append(df_chunk)
-            except Exception as e:
-                log_error(
-                    f"  [{metric}] window {window_num} device-batch {di + 1} failed: {e}"
-                )
+            for attempt in range(3):
+                try:
+                    df_chunk = fetch_time_series_window(chunk, metric, window_start, window_end)
+                    if not df_chunk.empty:
+                        frames.append(df_chunk)
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        wait = 15 * (2 ** attempt)  # 15s, 30s
+                        log_error(
+                            f"  [{metric}] window {window_num} batch {di + 1} "
+                            f"attempt {attempt + 1}/3 failed: {e} — retrying in {wait}s"
+                        )
+                        time.sleep(wait)
+                    else:
+                        log_error(
+                            f"  [{metric}] window {window_num} batch {di + 1} "
+                            f"all 3 attempts failed: {e}"
+                        )
 
         window_start = window_end
 
@@ -548,16 +560,28 @@ def run_health_etl_historical(
     ]
 
     metric_dfs = {}
-    with ThreadPoolExecutor(max_workers=len(METRICS)) as executor:
+    # Limit to 3 concurrent InfluxDB metric fetches — firing all 16 at once
+    # overwhelms the remote server and causes connection failures for all of them.
+    with ThreadPoolExecutor(max_workers=3) as executor:
         futures = {executor.submit(_fh, m): m for m in METRICS}
         for future in as_completed(futures):
             m = futures[future]
             try:
                 metric_dfs[m] = future.result()
-                log_info(f"  [{m}] fetch complete")
+                log_info(f"  [{m}] fetch complete ({len(metric_dfs[m])} rows)")
             except Exception as e:
                 log_error(f"  [{m}] fetch failed: {e}")
                 metric_dfs[m] = pd.DataFrame()
+
+    # Abort guard: if power_total returned no data, InfluxDB was unreachable.
+    # Writing health scores computed from empty DataFrames produces garbage — stop.
+    if metric_dfs.get('power_total', pd.DataFrame()).empty:
+        log_error(
+            "ABORT: power_total fetch returned no data — InfluxDB unreachable "
+            f"for window {start_dt.date()} → {end_dt.date()}. "
+            "Skipping health score computation to avoid writing garbage data."
+        )
+        return pd.DataFrame(columns=health_columns)
 
     df_power          = metric_dfs['power_total']
     df_energy         = metric_dfs['energy_import']
@@ -739,6 +763,8 @@ def run_health_etl_historical(
 
             all_health_records.append(record)
             _stats['health_scores_computed'] += 1
+
+        _stats['devices_processed'] += 1
 
     # Create DataFrame
     if not all_health_records:
