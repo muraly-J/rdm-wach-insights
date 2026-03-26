@@ -208,8 +208,8 @@ async def generate_summary(
         "- Write as if briefing a facilities manager who needs to decide whether to act."
     )
     try:
-        from llm.gemini_client import GeminiClient
-        client = GeminiClient()
+        from llm.client_factory import get_chat_client
+        client = get_chat_client()
         text = await client.generate_text(
             prompt=context,
             system_instruction=system_prompt,

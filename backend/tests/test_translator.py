@@ -24,12 +24,13 @@ async def test_rule_based_fallback_returns_structured_query(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_gemini_translation_returns_structured_query():
-    """When ENABLE_LLM=true, Gemini must return a valid StructuredQuery."""
-    if not os.getenv("GEMINI_API_KEY"):
-        pytest.skip("GEMINI_API_KEY not set")
+async def test_llm_translation_returns_structured_query():
+    """When ENABLE_LLM=true, QwenClient must return a valid StructuredQuery.
+    Requires LM Studio running locally — skipped otherwise."""
     import importlib
     import os as _os
+    if not _os.getenv("LMS_ENABLED"):
+        pytest.skip("LMS_ENABLED not set — LM Studio integration test skipped")
     _os.environ["ENABLE_LLM"] = "true"
     import llm.translator as t
     importlib.reload(t)

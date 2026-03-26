@@ -1,10 +1,10 @@
 """
 llm/translator.py
 ─────────────────
-Converts natural language → validated StructuredQuery using Gemini.
+Converts natural language → validated StructuredQuery using local Qwen via LM Studio.
 
 Flow:
-  1. Send user query + system prompt to Gemini
+  1. Send user query + system prompt to QwenClient
   2. Parse the JSON response
   3. Pass through middleware validator
   4. Return (StructuredQuery | None, error_message | None)
@@ -83,8 +83,8 @@ async def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None]
     if not LLM_ENABLED:
         return _parse_query_rules(user_query)
 
-    from llm.gemini_client import GeminiClient
-    client = GeminiClient()
+    from llm.client_factory import get_chat_client
+    client = get_chat_client()
 
     try:
         raw_text = await client.generate_text(
@@ -94,7 +94,7 @@ async def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None]
             max_output_tokens=256,
         )
     except Exception as e:
-        return None, f"Could not reach Gemini API. ({e})"
+        return None, f"Could not reach LM Studio. ({e})"
 
     # Extract JSON from the response
     parsed = _extract_json(raw_text)

@@ -13,13 +13,11 @@ def test_embedder_imports():
 
 @pytest.mark.asyncio
 async def test_embedder_returns_vector():
-    if not os.getenv("GEMINI_API_KEY"):
-        pytest.skip("GEMINI_API_KEY not set")
     from rag.embedder import Embedder
     embedder = Embedder()
     vec = await embedder.embed_document("power factor optimal range 0.95")
     assert isinstance(vec, list)
-    assert len(vec) > 100  # gemini-embedding-001 produces 3072-dim vectors
+    assert len(vec) > 100  # Qwen3-Embedding-0.6B produces 1024-dim vectors
 
 
 def test_vector_store_add_and_query():
@@ -39,8 +37,6 @@ def test_vector_store_add_and_query():
 
 @pytest.mark.asyncio
 async def test_retriever_returns_snippets():
-    if not os.getenv("GEMINI_API_KEY"):
-        pytest.skip("GEMINI_API_KEY not set")
     from rag.vector_store import VectorStore
     from rag.retriever import Retriever
     with tempfile.TemporaryDirectory() as tmpdir:

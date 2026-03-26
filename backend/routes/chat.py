@@ -7,7 +7,7 @@ POST /api/chat
   Request:  { message, history?, context? }
   Response: { reply: str }
 
-Uses Gemini 2.0 Flash with the WACH AI system persona.
+Uses local Qwen via LM Studio with the WACH AI system persona.
 Conversation history is passed by the client (stateless server).
 """
 
@@ -142,7 +142,7 @@ class ChatRequest(BaseModel):
         return v.strip()[:1000]  # Truncate to avoid abuse
 
 
-def _build_gemini_history(history: list[ChatHistoryItem]) -> list[dict]:
+def _build_chat_history(history: list[ChatHistoryItem]) -> list[dict]:
     """
     Convert ChatHistoryItem list to LLM {role, parts} format.
 
@@ -744,7 +744,7 @@ async def chat(body: ChatRequest):
     Accepts the full conversation history from the client (stateless).
     Injects dashboard context into the system prompt when provided.
     """
-    gemini_history = _build_gemini_history(body.history)
+    chat_history = _build_chat_history(body.history)
     system_prompt = _build_system_prompt(body.context)
 
     # Block hallucination for device IDs mentioned in the message but not in AHU_LEVEL_CONFIG.
@@ -881,8 +881,8 @@ async def chat(body: ChatRequest):
         except Exception as rag_err:
             logger.warning("RAG retrieval failed (skipping): %s", rag_err)
 
-    # Append current user message to history for the Gemini call
-    full_messages = gemini_history + [
+    # Append current user message to history for the LLM call
+    full_messages = chat_history + [
         {"role": "user", "parts": [body.message]}
     ]
 
