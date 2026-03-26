@@ -28,6 +28,10 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: etl-data-pipeline
+  cancel-in-progress: false
+
 jobs:
   generate-history:
     name: Generate Full Historical ETL

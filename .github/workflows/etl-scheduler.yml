@@ -7,6 +7,10 @@ on:
   # Allow manual trigger from GitHub UI for testing
   workflow_dispatch:
 
+concurrency:
+  group: etl-data-pipeline
+  cancel-in-progress: false
+
 jobs:
   run-etl:
     name: Run Prediction + Health ETL
@@ -60,6 +64,7 @@ jobs:
             echo "No CSV changes to commit."
           else
             git commit -m "chore(data): update ETL outputs [skip ci]"
+            git pull --rebase
             git push
           fi
 
