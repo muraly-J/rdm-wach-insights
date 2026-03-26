@@ -130,44 +130,80 @@ def _fetch_full_history(
 
     total_days = max(1, (end_dt - start_dt).days)
     total_windows = math.ceil(total_days / batch_days)
+    dev_chunks = [
+        devices[i:i + device_batch_size]
+        for i in range(0, len(devices), device_batch_size)
+    ]
+    total_batches = len(dev_chunks)
     frames = []
     window_start = start_dt
     window_num = 0
+    total_rows_fetched = 0
+
+    log_info(f"  [{metric}] starting: {total_windows} windows × {total_batches} device-batches "
+             f"= {total_windows * total_batches} queries | "
+             f"{len(devices)} devices | {start_dt.date()} → {end_dt.date()}")
 
     while window_start < end_dt:
         window_end = min(window_start + timedelta(days=batch_days), end_dt)
         window_num += 1
-        log_info(f"  [{metric}] window {window_num}/{total_windows}: "
-                 f"{window_start.date()} → {window_end.date()}")
+        window_rows = 0
+        window_ok = 0
+        window_fail = 0
+        window_empty = 0
 
-        dev_chunks = [
-            devices[i:i + device_batch_size]
-            for i in range(0, len(devices), device_batch_size)
-        ]
+        log_info(f"  [{metric}] window {window_num}/{total_windows}: "
+                 f"{window_start.date()} → {window_end.date()} "
+                 f"({(window_end - window_start).days}d, {total_batches} batches)")
+
         for di, chunk in enumerate(dev_chunks):
+            batch_label = f"batch {di + 1}/{total_batches}"
+            devices_preview = ",".join(chunk[:3]) + (f"+{len(chunk)-3}" if len(chunk) > 3 else "")
             for attempt in range(3):
                 try:
                     df_chunk = fetch_time_series_window(chunk, metric, window_start, window_end)
                     if not df_chunk.empty:
+                        rows = len(df_chunk)
                         frames.append(df_chunk)
+                        window_rows += rows
+                        window_ok += 1
+                        log_info(f"    [{metric}] w{window_num} {batch_label} ({devices_preview}): "
+                                 f"OK — {rows} rows, {len(df_chunk.columns)} devices")
+                    else:
+                        window_empty += 1
+                        log_info(f"    [{metric}] w{window_num} {batch_label} ({devices_preview}): "
+                                 f"EMPTY — no data in this range")
                     break
                 except Exception as e:
                     if attempt < 2:
                         wait = 15 * (2 ** attempt)  # 15s, 30s
                         log_error(
-                            f"  [{metric}] window {window_num} batch {di + 1} "
-                            f"attempt {attempt + 1}/3 failed: {e} — retrying in {wait}s"
+                            f"    [{metric}] w{window_num} {batch_label} ({devices_preview}): "
+                            f"FAIL attempt {attempt + 1}/3 — {type(e).__name__}: {e} "
+                            f"— retrying in {wait}s"
                         )
                         time.sleep(wait)
                     else:
+                        window_fail += 1
                         log_error(
-                            f"  [{metric}] window {window_num} batch {di + 1} "
-                            f"all 3 attempts failed: {e}"
+                            f"    [{metric}] w{window_num} {batch_label} ({devices_preview}): "
+                            f"FAIL all 3 attempts — {type(e).__name__}: {e}"
                         )
+
+        total_rows_fetched += window_rows
+        status_parts = [f"{window_ok} ok"]
+        if window_empty:
+            status_parts.append(f"{window_empty} empty")
+        if window_fail:
+            status_parts.append(f"{window_fail} FAILED")
+        log_info(f"  [{metric}] window {window_num}/{total_windows} done: "
+                 f"{window_rows} rows ({', '.join(status_parts)}) | "
+                 f"running total: {total_rows_fetched} rows")
 
         window_start = window_end
 
     if not frames:
+        log_error(f"  [{metric}] RESULT: 0 rows — all {total_windows * total_batches} queries returned empty/failed")
         return pd.DataFrame()
 
     combined = pd.concat(frames, axis=0)
@@ -176,6 +212,8 @@ def _fetch_full_history(
     # groupby.first() picks the first non-NaN value per column per timestamp,
     # which correctly stitches device-batch columns back together.
     combined = combined.groupby(combined.index).first().sort_index()
+    log_info(f"  [{metric}] RESULT: {len(combined)} rows × {len(combined.columns)} devices "
+             f"| span {combined.index[0].date()} → {combined.index[-1].date()}")
     return combined
 
 
@@ -559,7 +597,15 @@ def run_health_etl_historical(
         'volts_l1_thd', 'volts_l2_thd', 'volts_l3_thd',
     ]
 
+    log_info(f"Launching {len(METRICS)} metric fetches with max 3 concurrent "
+             f"InfluxDB connections ({len(devices_list)} devices, "
+             f"{start_dt.date()} → {end_dt.date()})...")
+
     metric_dfs = {}
+    metrics_ok = []
+    metrics_empty = []
+    metrics_failed = []
+
     # Limit to 3 concurrent InfluxDB metric fetches — firing all 16 at once
     # overwhelms the remote server and causes connection failures for all of them.
     with ThreadPoolExecutor(max_workers=3) as executor:
@@ -567,11 +613,25 @@ def run_health_etl_historical(
         for future in as_completed(futures):
             m = futures[future]
             try:
-                metric_dfs[m] = future.result()
-                log_info(f"  [{m}] fetch complete ({len(metric_dfs[m])} rows)")
+                df = future.result()
+                metric_dfs[m] = df
+                if df.empty:
+                    metrics_empty.append(m)
+                    log_error(f"  [METRIC] {m}: EMPTY — 0 rows returned")
+                else:
+                    metrics_ok.append(m)
+                    log_info(f"  [METRIC] {m}: OK — {len(df)} rows, {len(df.columns)} devices")
             except Exception as e:
-                log_error(f"  [{m}] fetch failed: {e}")
+                metrics_failed.append(m)
+                log_error(f"  [METRIC] {m}: FAILED — {type(e).__name__}: {e}")
                 metric_dfs[m] = pd.DataFrame()
+
+    log_info(f"Metric fetch summary: {len(metrics_ok)}/{len(METRICS)} succeeded, "
+             f"{len(metrics_empty)} empty, {len(metrics_failed)} failed")
+    if metrics_empty:
+        log_error(f"  Empty metrics: {', '.join(metrics_empty)}")
+    if metrics_failed:
+        log_error(f"  Failed metrics: {', '.join(metrics_failed)}")
 
     # Abort guard: if power_total returned no data, InfluxDB was unreachable.
     # Writing health scores computed from empty DataFrames produces garbage — stop.
@@ -613,10 +673,19 @@ def run_health_etl_historical(
         except Exception:
             return float(s.iloc[-1]) if not s.empty else None
 
+    log_info(f"Computing health scores for {len(devices)} devices...")
+
     # Process each device — iterate ALL timestamps (not just latest)
     for idx, ahu_id in enumerate(devices):
         processed = idx + 1
-        log_info(f"Computing health scores for {ahu_id} ({processed}/{len(devices)})...")
+        device_data_preview = predictions_df[predictions_df['ahu_id'] == ahu_id]
+        ts_count = len(device_data_preview)
+        has_power = not df_power.empty and ahu_id in df_power.columns
+        has_pf = not df_pf.empty and ahu_id in df_pf.columns
+        log_info(f"  [{processed:3d}/{len(devices)}] {ahu_id}: "
+                 f"{ts_count} timestamps | "
+                 f"power={'YES' if has_power else 'NO'} "
+                 f"pf={'YES' if has_pf else 'NO'}")
 
         # Get ALL rows for this device sorted by timestamp
         device_data = predictions_df[predictions_df['ahu_id'] == ahu_id].sort_values('timestamp')
@@ -764,6 +833,8 @@ def run_health_etl_historical(
             all_health_records.append(record)
             _stats['health_scores_computed'] += 1
 
+        records_for_device = len([r for r in all_health_records if r['ahu_id'] == ahu_id])
+        log_info(f"    → {ahu_id} done: {records_for_device} health records written")
         _stats['devices_processed'] += 1
 
     # Create DataFrame
