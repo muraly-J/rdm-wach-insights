@@ -12,9 +12,21 @@ Usage:
     python3 scripts/history_generator.py
     python3 scripts/history_generator.py --level all --verbose
 
+    # Run only Phase 1 (prediction ETL), then exit — saves predictions.csv
+    python3 scripts/history_generator.py --phase1-only
+
+    # Skip Phase 1, load predictions from existing CSV, run health scoring
+    python3 scripts/history_generator.py --skip-phase1
+
+    # Resume a cancelled run — load metric parquet cache + skip Phase 1
+    python3 scripts/history_generator.py --skip-phase1 --use-cache
+
 Output:
     data/predictions.csv       - Energy predictions with actual vs predicted values
     data/health_all_levels.csv - Health scores with tiers and safety flags
+
+Cache (for resume):
+    data/metric_cache/{metric}.parquet  - Per-metric raw data, saved after each fetch
 
 Author: WACH Insight Team
 """
@@ -52,6 +64,7 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 PREDICTIONS_FILE = os.path.join(DATA_DIR, "predictions.csv")
 HEALTH_FILE = os.path.join(DATA_DIR, "health_all_levels.csv")
 HOURLY_FILE = os.path.join(DATA_DIR, "health_hourly.csv")
+DEFAULT_CACHE_DIR = os.path.join(DATA_DIR, "metric_cache")
 
 # Statistics
 _stats = {
@@ -519,6 +532,8 @@ def run_health_etl_historical(
     start_dt: datetime = None,
     end_dt: datetime = None,
     batch_days: int = 30,
+    cache_dir: str = None,
+    use_cache: bool = False,
 ) -> pd.DataFrame:
     """
     Run Health Scoring ETL using historical predictions.
@@ -583,7 +598,31 @@ def run_health_etl_historical(
     devices_list = list(devices_with_data)
 
     def _fh(metric):
-        return _fetch_full_history(devices_list, metric, start_dt, end_dt, batch_days).sort_index()
+        """Fetch metric data — loads from parquet cache if available, otherwise queries InfluxDB."""
+        if cache_dir:
+            cache_path = os.path.join(cache_dir, f"{metric}.parquet")
+            if use_cache and os.path.exists(cache_path):
+                try:
+                    df = pd.read_parquet(cache_path)
+                    log_info(f"  [METRIC] {metric}: CACHE HIT — loaded {len(df)} rows "
+                             f"from {cache_path}")
+                    return df.sort_index()
+                except Exception as e:
+                    log_error(f"  [METRIC] {metric}: cache read failed ({e}), fetching from InfluxDB")
+
+        df = _fetch_full_history(devices_list, metric, start_dt, end_dt, batch_days).sort_index()
+
+        # Save to parquet cache so a future resume can skip re-fetching this metric.
+        if cache_dir and not df.empty:
+            try:
+                os.makedirs(cache_dir, exist_ok=True)
+                cache_path = os.path.join(cache_dir, f"{metric}.parquet")
+                df.to_parquet(cache_path)
+                log_info(f"  [METRIC] {metric}: cached {len(df)} rows → {cache_path}")
+            except Exception as e:
+                log_error(f"  [METRIC] {metric}: cache write failed ({e}) — continuing without cache")
+
+        return df
 
     # Fetch all 16 metrics concurrently — each call creates its own InfluxDB
     # connection so parallel execution is safe.
@@ -597,9 +636,19 @@ def run_health_etl_historical(
         'volts_l1_thd', 'volts_l2_thd', 'volts_l3_thd',
     ]
 
+    cached_count = 0
+    if cache_dir and use_cache:
+        cached_count = sum(
+            1 for m in METRICS
+            if os.path.exists(os.path.join(cache_dir, f"{m}.parquet"))
+        )
+
     log_info(f"Launching {len(METRICS)} metric fetches with max 3 concurrent "
              f"InfluxDB connections ({len(devices_list)} devices, "
              f"{start_dt.date()} → {end_dt.date()})...")
+    if cached_count:
+        log_info(f"  Resume mode: {cached_count}/{len(METRICS)} metrics have parquet cache "
+                 f"— those will be loaded instantly, {len(METRICS) - cached_count} will fetch InfluxDB")
 
     metric_dfs = {}
     metrics_ok = []
@@ -897,12 +946,18 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python scripts/history_generator.py          # Run complete ETL
-  python scripts/history_generator.py --dry-run  # Show what would run
+  python scripts/history_generator.py              # Run complete ETL
+  python scripts/history_generator.py --dry-run    # Show plan without executing
+  python scripts/history_generator.py --phase1-only         # Phase 1 only (saves predictions.csv)
+  python scripts/history_generator.py --skip-phase1         # Phase 2 only (loads existing predictions.csv)
+  python scripts/history_generator.py --skip-phase1 --use-cache  # Resume a cancelled run
 
 Output:
   data/predictions.csv       - Energy predictions
   data/health_all_levels.csv - Health scores with tiers and safety flags
+
+Cache (resume support):
+  data/metric_cache/{metric}.parquet  - Saved after each metric fetch; loaded on --use-cache
         """
     )
 
@@ -932,25 +987,58 @@ Output:
         help="Width of each InfluxDB time-fetch window in days (default: 30)"
     )
 
+    parser.add_argument(
+        '--phase1-only',
+        action='store_true',
+        help="Run only Phase 1 (prediction ETL), save predictions.csv, then exit"
+    )
+
+    parser.add_argument(
+        '--skip-phase1',
+        action='store_true',
+        help="Skip Phase 1 — load predictions from existing predictions.csv and run health scoring"
+    )
+
+    parser.add_argument(
+        '--cache-dir',
+        type=str,
+        default=DEFAULT_CACHE_DIR,
+        help=f"Directory for per-metric parquet cache files (default: {DEFAULT_CACHE_DIR})"
+    )
+
+    parser.add_argument(
+        '--use-cache',
+        action='store_true',
+        help="Load metric data from parquet cache instead of querying InfluxDB (for resuming a cancelled run)"
+    )
+
     args = parser.parse_args()
 
     if args.dry_run:
         log_info("=" * 70)
         log_info("DRY-RUN MODE - Showing plan only")
         log_info("=" * 70)
-        log_info("Step 1: Prediction ETL")
-        log_info(f"  - Query InfluxDB for earliest available data timestamp")
-        log_info(f"  - Fetch energy_import in {args.batch_days}-day batches from earliest → now")
-        log_info(f"  - Compute hourly_delta(t) = E(t) - E(t-1h)")
-        log_info(f"  - Compute predicted_delta(t) = avg(δ(t−24h), δ(t−168h), δ(t−336h))")
-        log_info(f"  - Compute energy_anomaly = hourly_delta(t) − predicted_delta(t)")
-        log_info(f"  - Output: data/predictions.csv")
-        log_info("")
-        log_info("Step 2: Health Scoring ETL")
-        log_info(f"  - Fetch all 16 raw metrics in {args.batch_days}-day batches")
-        log_info(f"  - Compute FAIR health scores for all devices")
-        log_info(f"  - Apply safety flags for engineering audit")
-        log_info(f"  - Output: data/health_all_levels.csv + data/health_hourly.csv")
+        phase1_label = "SKIP (loading predictions.csv)" if args.skip_phase1 else "RUN"
+        log_info(f"Phase 1: Prediction ETL [{phase1_label}]")
+        if not args.skip_phase1:
+            log_info(f"  - Query InfluxDB for earliest available data timestamp")
+            log_info(f"  - Fetch energy_import in {args.batch_days}-day batches from earliest → now")
+            log_info(f"  - Compute hourly_delta(t) = E(t) - E(t-1h)")
+            log_info(f"  - Compute predicted_delta(t) = avg(δ(t−24h), δ(t−168h), δ(t−336h))")
+            log_info(f"  - Compute energy_anomaly = hourly_delta(t) − predicted_delta(t)")
+            log_info(f"  - Output: data/predictions.csv")
+        if args.phase1_only:
+            log_info("  --phase1-only: will exit after Phase 1")
+        else:
+            log_info("")
+            cache_label = f"RESUME (cache: {args.cache_dir})" if args.use_cache else f"FRESH (cache dir: {args.cache_dir})"
+            log_info(f"Phase 2: Health Scoring ETL [{cache_label}]")
+            log_info(f"  - Fetch all 16 raw metrics in {args.batch_days}-day batches")
+            if args.use_cache:
+                log_info(f"  - Metrics with existing .parquet in {args.cache_dir} will be loaded from cache")
+            log_info(f"  - Compute FAIR health scores for all devices")
+            log_info(f"  - Apply safety flags for engineering audit")
+            log_info(f"  - Output: data/health_all_levels.csv + data/health_hourly.csv")
         log_info("")
         devices = get_all_devices()
         log_info(f"Estimated devices to process: {len(devices)} AHUs across all levels")
@@ -966,6 +1054,12 @@ Output:
     log_info(f"Started at: {run_start.isoformat()}")
     log_info(f"Level filter: {args.level}")
     log_info(f"Batch window: {args.batch_days} days")
+    if args.phase1_only:
+        log_info("Mode: Phase 1 only (--phase1-only)")
+    elif args.skip_phase1:
+        log_info(f"Mode: Phase 2 only (--skip-phase1)"
+                 + (" + cache resume (--use-cache)" if args.use_cache else ""))
+    log_info(f"Cache dir: {args.cache_dir}")
 
     devices = get_all_devices()
     if args.level != 'all':
@@ -975,6 +1069,7 @@ Output:
     log_info(f"Devices to process: {len(devices)} AHUs")
 
     # Discover the earliest available data timestamp in InfluxDB
+    # (needed for both Phase 1 and Phase 2 window bounds)
     from core.influx_client import get_earliest_data_timestamp
     log_info("")
     log_info("Querying InfluxDB for earliest available data timestamp...")
@@ -990,24 +1085,51 @@ Output:
     log_info(f"Full history span: {total_days} days "
              f"({earliest_ts.date()} → {end_ts.date()})")
 
-    # Step 1: Prediction ETL
-    log_info("")
-    log_info("Phase 1: Running Prediction ETL")
-    log_info("-" * 50)
-
-    predictions_df = run_prediction_etl_historical(
-        start_time=earliest_ts,
-        end_time=end_ts,
-        devices=devices,
-        batch_days=args.batch_days,
-    )
-
-    if predictions_df.empty:
-        log_error("Prediction ETL produced no data!")
+    # -------------------------------------------------------------------------
+    # Phase 1: Prediction ETL
+    # -------------------------------------------------------------------------
+    if args.skip_phase1:
+        # Load predictions from existing CSV instead of re-fetching InfluxDB
+        log_info("")
+        log_info("Phase 1: SKIPPED — loading predictions from existing CSV")
+        log_info("-" * 50)
+        if not os.path.exists(PREDICTIONS_FILE):
+            log_error(f"predictions.csv not found at {PREDICTIONS_FILE} — cannot skip Phase 1!")
+            return 1
+        predictions_df = pd.read_csv(PREDICTIONS_FILE, parse_dates=['timestamp'])
+        log_info(f"Loaded {len(predictions_df)} rows from {PREDICTIONS_FILE}")
     else:
-        save_predictions(predictions_df)
+        log_info("")
+        log_info("Phase 1: Running Prediction ETL")
+        log_info("-" * 50)
 
-    # Step 2: Health Scoring ETL
+        predictions_df = run_prediction_etl_historical(
+            start_time=earliest_ts,
+            end_time=end_ts,
+            devices=devices,
+            batch_days=args.batch_days,
+        )
+
+        if predictions_df.empty:
+            log_error("Prediction ETL produced no data!")
+        else:
+            save_predictions(predictions_df)
+
+    if args.phase1_only:
+        elapsed = (datetime.now() - start_time).total_seconds()
+        log_info("")
+        log_info("=" * 70)
+        log_info("Phase 1 complete (--phase1-only mode). Exiting.")
+        log_info("=" * 70)
+        log_info(f"Duration: {elapsed:.1f} seconds")
+        log_info(f"Predictions generated: {_stats['predictions_generated']}")
+        if _stats['errors']:
+            log_info(f"Errors encountered: {len(_stats['errors'])}")
+        return 0 if not _stats['errors'] else 1
+
+    # -------------------------------------------------------------------------
+    # Phase 2: Health Scoring ETL
+    # -------------------------------------------------------------------------
     log_info("")
     log_info("Phase 2: Running Health Scoring ETL")
     log_info("-" * 50)
@@ -1017,6 +1139,8 @@ Output:
         start_dt=earliest_ts,
         end_dt=end_ts,
         batch_days=args.batch_days,
+        cache_dir=args.cache_dir,
+        use_cache=args.use_cache,
     )
 
     if health_df.empty:

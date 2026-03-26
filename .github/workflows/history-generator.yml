@@ -17,6 +17,16 @@ on:
         description: 'InfluxDB fetch window size in days (default: 30)'
         required: false
         default: '30'
+      skip_phase1:
+        description: 'Skip Phase 1 — load predictions from existing predictions.csv in repo'
+        required: false
+        type: boolean
+        default: false
+      resume:
+        description: 'Resume a cancelled run — uses parquet cache for already-fetched metrics + skips Phase 1'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   generate-history:
@@ -32,6 +42,12 @@ jobs:
       INFLUX_ORG: ${{ secrets.INFLUX_ORG }}
       INFLUX_SKIP_TLS: "true"
       PYTHONUNBUFFERED: "1"
+      # Workflow inputs as env vars to prevent command injection
+      INPUT_LEVEL: ${{ github.event.inputs.level }}
+      INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
+      INPUT_BATCH_DAYS: ${{ github.event.inputs.batch_days }}
+      INPUT_SKIP_PHASE1: ${{ github.event.inputs.skip_phase1 }}
+      INPUT_RESUME: ${{ github.event.inputs.resume }}
 
     steps:
       - name: Checkout repository
@@ -46,29 +62,121 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run History Generator
+      # Restore metric parquet cache from the most recent run that saved it.
+      # On resume, previously-fetched metrics load instantly instead of re-querying InfluxDB.
+      - name: Restore metric cache
+        id: restore-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: data/metric_cache
+          key: metric-cache-${{ github.run_id }}
+          restore-keys: |
+            metric-cache-
+
+      - name: Phase 1 — Prediction ETL
+        if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.skip_phase1 != 'true' && github.event.inputs.resume != 'true' }}
         run: |
           echo "=========================================="
-          echo "History Generator started — $(date -u)"
-          echo "Level: ${{ github.event.inputs.level }}"
-          echo "Dry run: ${{ github.event.inputs.dry_run }}"
+          echo "Phase 1: Prediction ETL — $(date -u)"
+          echo "Level: $INPUT_LEVEL"
           echo "=========================================="
 
-          ARGS="--level ${{ github.event.inputs.level }} --verbose --batch-days ${{ github.event.inputs.batch_days }}"
-          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            ARGS="$ARGS --dry-run"
+          # Validate batch_days is numeric before using it
+          if ! [[ "$INPUT_BATCH_DAYS" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: batch_days must be a positive integer, got: $INPUT_BATCH_DAYS"
+            exit 1
           fi
 
-          python scripts/etl/history_generator.py $ARGS
+          python scripts/etl/history_generator.py \
+            --phase1-only \
+            --level "$INPUT_LEVEL" \
+            --verbose \
+            --batch-days "$INPUT_BATCH_DAYS"
 
-          echo "=========================================="
-          echo "History Generator finished — $(date -u)"
-          echo "=========================================="
+          echo "Phase 1 finished — $(date -u)"
 
-      - name: Commit generated CSVs
+      - name: Phase 1 — Dry run
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          EXTRA_ARGS=""
+          if [ "$INPUT_SKIP_PHASE1" = "true" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --skip-phase1"
+          fi
+          if [ "$INPUT_RESUME" = "true" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --skip-phase1 --use-cache"
+          fi
+
+          if ! [[ "$INPUT_BATCH_DAYS" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: batch_days must be a positive integer, got: $INPUT_BATCH_DAYS"
+            exit 1
+          fi
+
+          python scripts/etl/history_generator.py \
+            --dry-run \
+            --level "$INPUT_LEVEL" \
+            --verbose \
+            --batch-days "$INPUT_BATCH_DAYS" \
+            $EXTRA_ARGS
+
+      # Commit predictions.csv immediately after Phase 1 so it survives if Phase 2 is cancelled.
+      - name: Commit predictions.csv (intermediate)
+        if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.skip_phase1 != 'true' && github.event.inputs.resume != 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/predictions.csv
+          if git diff --staged --quiet; then
+            echo "No changes to predictions.csv."
+          else
+            git commit -m "chore(data): save predictions after Phase 1 [skip ci]"
+            git push
+          fi
+
+      - name: Phase 2 — Health Scoring ETL
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          echo "=========================================="
+          echo "Phase 2: Health Scoring ETL — $(date -u)"
+          echo "Resume: $INPUT_RESUME"
+          echo "Skip Phase 1: $INPUT_SKIP_PHASE1"
+          echo "=========================================="
+
+          if ! [[ "$INPUT_BATCH_DAYS" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: batch_days must be a positive integer, got: $INPUT_BATCH_DAYS"
+            exit 1
+          fi
+
+          EXTRA_ARGS=""
+          if [ "$INPUT_RESUME" = "true" ]; then
+            EXTRA_ARGS="--use-cache"
+            echo "Resume mode: will load cached metrics from data/metric_cache/"
+          fi
+
+          python scripts/etl/history_generator.py \
+            --skip-phase1 \
+            --level "$INPUT_LEVEL" \
+            --verbose \
+            --batch-days "$INPUT_BATCH_DAYS" \
+            $EXTRA_ARGS
+
+          echo "Phase 2 finished — $(date -u)"
+
+      # Save the metric parquet cache so a future resume run can load it.
+      # runs `always()` so the cache is saved even if Phase 2 is cancelled mid-run —
+      # that is the whole point: next run picks up from where this one stopped.
+      - name: Save metric cache
+        if: ${{ always() && github.event.inputs.dry_run != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: data/metric_cache
+          key: metric-cache-${{ github.run_id }}
+
+      - name: Commit generated CSVs
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase
           git add data/predictions.csv data/health_all_levels.csv data/health_hourly.csv
           if git diff --staged --quiet; then
             echo "No CSV changes to commit."
