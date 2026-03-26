@@ -535,22 +535,46 @@ def run_health_etl_historical(
     def _fh(metric):
         return _fetch_full_history(devices_list, metric, start_dt, end_dt, batch_days).sort_index()
 
-    df_power          = _fh('power_total')
-    df_energy         = _fh('energy_import')
-    df_pf             = _fh('power_factor_avg')
-    df_unbalance      = _fh('current_unbalance')
-    df_l1_thd         = _fh('current_l1_thd')
-    df_l3_thd         = _fh('current_l3_thd')
-    df_apparent_power = _fh('apparent_power_total')
-    df_current_l1     = _fh('current_l1')
-    df_current_l2     = _fh('current_l2')
-    df_current_l3     = _fh('current_l3')
-    df_volts_l1_n     = _fh('volts_l1_n')
-    df_volts_l2_n     = _fh('volts_l2_n')
-    df_volts_l3_n     = _fh('volts_l3_n')
-    df_volts_l1_thd   = _fh('volts_l1_thd')
-    df_volts_l2_thd   = _fh('volts_l2_thd')
-    df_volts_l3_thd   = _fh('volts_l3_thd')
+    # Fetch all 16 metrics concurrently — each call creates its own InfluxDB
+    # connection so parallel execution is safe.
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    METRICS = [
+        'power_total', 'energy_import', 'power_factor_avg', 'current_unbalance',
+        'current_l1_thd', 'current_l3_thd', 'apparent_power_total',
+        'current_l1', 'current_l2', 'current_l3',
+        'volts_l1_n', 'volts_l2_n', 'volts_l3_n',
+        'volts_l1_thd', 'volts_l2_thd', 'volts_l3_thd',
+    ]
+
+    metric_dfs = {}
+    with ThreadPoolExecutor(max_workers=len(METRICS)) as executor:
+        futures = {executor.submit(_fh, m): m for m in METRICS}
+        for future in as_completed(futures):
+            m = futures[future]
+            try:
+                metric_dfs[m] = future.result()
+                log_info(f"  [{m}] fetch complete")
+            except Exception as e:
+                log_error(f"  [{m}] fetch failed: {e}")
+                metric_dfs[m] = pd.DataFrame()
+
+    df_power          = metric_dfs['power_total']
+    df_energy         = metric_dfs['energy_import']
+    df_pf             = metric_dfs['power_factor_avg']
+    df_unbalance      = metric_dfs['current_unbalance']
+    df_l1_thd         = metric_dfs['current_l1_thd']
+    df_l3_thd         = metric_dfs['current_l3_thd']
+    df_apparent_power = metric_dfs['apparent_power_total']
+    df_current_l1     = metric_dfs['current_l1']
+    df_current_l2     = metric_dfs['current_l2']
+    df_current_l3     = metric_dfs['current_l3']
+    df_volts_l1_n     = metric_dfs['volts_l1_n']
+    df_volts_l2_n     = metric_dfs['volts_l2_n']
+    df_volts_l3_n     = metric_dfs['volts_l3_n']
+    df_volts_l1_thd   = metric_dfs['volts_l1_thd']
+    df_volts_l2_thd   = metric_dfs['volts_l2_thd']
+    df_volts_l3_thd   = metric_dfs['volts_l3_thd']
 
     def _asof_value(df, ahu_id, ts):
         """Look up nearest-prior value for ahu_id at timestamp ts."""
