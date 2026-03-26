@@ -13,7 +13,7 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ content }) => {
 
   return (
     <span
-      className="relative inline-flex items-center ml-1.5 align-middle"
+      className="relative inline-flex items-center ml-1.5 align-middle z-[9999]"
       onMouseEnter={() => setVisible(true)}
       onMouseLeave={() => setVisible(false)}
     >
@@ -33,7 +33,7 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ content }) => {
       {visible && (
         <div
           className="
-            absolute z-50 top-6 left-0
+            absolute z-[9999] top-6 left-0
             w-80 p-4 rounded-xl
             bg-[#1A2230] border border-[#1E2A3A] shadow-2xl
             text-xs text-[#8A95A5] leading-relaxed
