@@ -129,6 +129,7 @@ jobs:
             echo "No changes to predictions.csv."
           else
             git commit -m "chore(data): save predictions after Phase 1 [skip ci]"
+            git pull --rebase
             git push
           fi
 
