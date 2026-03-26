@@ -32,7 +32,7 @@ jobs:
   generate-history:
     name: Generate Full Historical ETL
     runs-on: ubuntu-latest
-    timeout-minutes: 1000
+    timeout-minutes: 355  # GitHub hard-caps GitHub-hosted runners at 6h; 355min gives cleanup steps time to run
     permissions:
       contents: write
 
