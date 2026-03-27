@@ -48,8 +48,8 @@ function scoreColor(score: number | null): string {
 function healthLabel(score: number | null): string {
   if (score === null) return 'No data';
   if (score >= 80) return 'Healthy';
-  if (score >= 60) return 'Moderate';
-  if (score >= 40) return 'Poor';
+  if (score >= 60) return 'Monitor';
+  if (score >= 40) return 'Maintenance Soon';
   return 'Critical';
 }
 
@@ -270,10 +270,10 @@ const AHUHeatmap: React.FC<Props> = ({ ahuId }) => {
         {/* Legend */}
         <div className="flex items-center gap-3 text-[10px] text-[#8A95A5]">
           {[
-            { label: 'Healthy',  color: '#00E5A0' },
-            { label: 'Moderate', color: '#F59E0B' },
-            { label: 'Poor',     color: '#F97316' },
-            { label: 'Critical', color: '#EF4444' },
+            { label: 'Healthy',          color: '#00E5A0' },
+            { label: 'Monitor',          color: '#F59E0B' },
+            { label: 'Maintenance Soon', color: '#F97316' },
+            { label: 'Critical',         color: '#EF4444' },
           ].map(({ label, color }) => (
             <span key={label} className="flex items-center gap-1">
               <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: color }} />

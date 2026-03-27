@@ -150,6 +150,16 @@ function App() {
     [healthData, selectedLevel]
   );
 
+  // ── Stable full device list for the DEV dropdown ─────────────────────────────
+  // Only updated when no device is selected (full-level fetch), so the dropdown
+  // always shows all devices even after one is chosen.
+  const [navDevices, setNavDevices] = React.useState<typeof devices>([]);
+  React.useEffect(() => {
+    if ((!selectedDevice || selectedDevice === 'all') && devices.length > 0) {
+      setNavDevices(devices);
+    }
+  }, [devices, selectedDevice]);
+
   // ── Health Index chart data ──────────────────────────────────────────────────
   const healthChartData = React.useMemo(() => {
     if (!healthData?.devices?.length) return [];
@@ -233,7 +243,7 @@ function App() {
       {/* ZONE C — Dashboard */}
       <div id="dashboard">
         {/* Unified controls strip */}
-        <SiteNavBar devices={devices} />
+        <SiteNavBar devices={navDevices} />
 
         {/* Dashboard content — only shown when a level is selected */}
         <AnimatePresence mode="wait">
@@ -340,7 +350,7 @@ function App() {
 
               {/* Financial Impact Section */}
               {selectedLevel && (
-                <div id="section-financial" style={{ scrollMarginTop: '56px' }}>
+                <div id="section-financial" style={{ scrollMarginTop: '56px' }} className="pt-8">
                   <React.Suspense fallback={<div className="card h-48 animate-pulse bg-[#1A2230] rounded-xl" />}>
                     <FinancialImpactView
                       level={selectedLevel}

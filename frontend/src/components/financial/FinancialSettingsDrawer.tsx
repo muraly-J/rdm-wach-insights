@@ -49,7 +49,7 @@ const FinancialSettingsDrawer: React.FC<Props> = ({ config, onClose, onSaved }) 
       />
       {/* Drawer */}
       <motion.div
-        className="fixed right-0 top-0 h-full w-[360px] bg-[#0B0F14] border-l border-[#1E2A3A] z-50 flex flex-col shadow-2xl"
+        className="fixed right-0 top-0 h-dvh w-[360px] bg-[#0B0F14] border-l border-[#1E2A3A] z-50 flex flex-col shadow-2xl"
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
