@@ -17,6 +17,8 @@ CSV columns used:
   raw_apparent_power_total, raw_p95_current
 """
 
+from __future__ import annotations
+
 import os
 import pandas as pd
 from datetime import datetime, timedelta, timezone

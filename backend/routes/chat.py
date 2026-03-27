@@ -736,6 +736,319 @@ async def _get_time_window_context(device_id: str, time_range: str = "last_7d") 
         return ""
 
 
+# ── Gap 1 helpers: Time-Series Summary ────────────────────────────────────────
+
+_TIME_SERIES_PATTERN = re.compile(
+    r'\b(show|display|graph|chart|trend|history|over\s+the\s+last|last\s+\d+\s*(day|hour|week|month)'
+    r'|past\s+\d+|7\s*day|24\s*hour|30\s*day|over\s+time|time\s+series)\b',
+    re.IGNORECASE,
+)
+
+
+def _is_time_series_query(message: str) -> bool:
+    """Return True when message asks for a time-based metric summary for a specific device."""
+    has_device = bool(re.search(r'\be\d{4}\b', message, re.IGNORECASE))
+    return has_device and bool(_TIME_SERIES_PATTERN.search(message))
+
+
+def _extract_ts_params(message: str, context: Optional[dict]) -> tuple[str, str]:
+    """Extract (device_id, csv_time_range) from message or context."""
+    device_match = re.search(r'\b(e\d{4})\b', message, re.IGNORECASE)
+    device_id = device_match.group(1).lower() if device_match else (
+        (context or {}).get("device") or ""
+    )
+    msg_lower = message.lower()
+    if any(kw in msg_lower for kw in ("30 day", "past month", "last month")):
+        time_range = "30d"
+    elif any(kw in msg_lower for kw in ("24 hour", "today", "yesterday")):
+        time_range = "24h"
+    else:
+        time_range = "7d"
+    return device_id, time_range
+
+
+def _get_time_series_summary_sync(device_id: str, time_range: str) -> str:
+    """
+    Read health_hourly.csv for device_id over time_range and return a
+    per-metric statistical summary (min/max/mean/latest/trend direction).
+    """
+    try:
+        import pandas as pd
+        from core.csv_reader import HOURLY_CSV_PATH, _filter_time_range
+
+        df = pd.read_csv(HOURLY_CSV_PATH, parse_dates=["timestamp"])
+        df = df[df["ahu_id"] == device_id]
+        df = _filter_time_range(df, time_range)
+        if df.empty:
+            return ""
+
+        df = df.sort_values("timestamp")
+
+        METRICS = [
+            ("health_index",          "Health Index"),
+            ("energy_anomaly",        "Energy Anomaly"),
+            ("pf_degradation",        "PF Degradation"),
+            ("phase_imbalance",       "Phase Imbalance"),
+            ("thd_drift",             "THD Drift"),
+            ("overload",              "Overload"),
+            ("raw_power_total",       "Power (kW)"),
+            ("raw_power_factor_avg",  "Power Factor"),
+            ("raw_current_unbalance", "Current Imbalance (%)"),
+        ]
+
+        rows = []
+        for col, label in METRICS:
+            if col not in df.columns:
+                continue
+            series = df[col].dropna()
+            if series.empty:
+                continue
+            mn, mx, mean = series.min(), series.max(), series.mean()
+            latest, first = float(series.iloc[-1]), float(series.iloc[0])
+            direction = "rising" if latest > first * 1.02 else "falling" if latest < first * 0.98 else "stable"
+            rows.append(
+                f"- **{label}**: min={mn:.2f} max={mx:.2f} mean={mean:.2f} "
+                f"latest={latest:.2f} trend={direction}"
+            )
+
+        if not rows:
+            return ""
+
+        lines = [f"\n\n## Time-Series Summary — {device_id} ({time_range})"]
+        lines.append("Statistical summary from dashboard CSV over the requested period:")
+        lines += rows
+        lines.append(
+            "\nINSTRUCTION: Use these statistics to answer the user's question directly. "
+            "Cite the exact min/max/mean values and state whether each metric is rising or falling."
+        )
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
+async def _get_time_series_summary(device_id: str, time_range: str) -> str:
+    """Async wrapper for _get_time_series_summary_sync."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None, _get_time_series_summary_sync, device_id, time_range
+    )
+
+
+# ── Gap 2 helpers: Ranking ────────────────────────────────────────────────────
+
+_RANKING_PATTERN = re.compile(
+    r'\b(rank\w*|worst|best|top|bottom|most|least|highest|lowest|'
+    r'which\s+(ahu|unit|device)s?)\b',
+    re.IGNORECASE,
+)
+
+_METRIC_KEYWORD_MAP = [
+    (["energy", "kWh", "consumption"],              "energy_anomaly"),
+    (["power factor", "pf"],                         "pf_degradation"),
+    (["phase imbalance", "imbalance", "unbalance"],  "phase_imbalance"),
+    (["thd", "harmonic"],                            "thd_drift"),
+    (["overload", "load", "power"],                  "overload"),
+    (["health"],                                     "health_index"),
+]
+
+# Metrics where LOW = bad (ascending sort puts worst first)
+_ASCENDING_WORST = {"health_index", "pf_degradation"}
+
+
+def _is_ranking_query(message: str) -> bool:
+    """Return True when message requests a ranked list for a specific level."""
+    has_ranking = bool(_RANKING_PATTERN.search(message))
+    has_level = bool(re.search(r'\blevel\s*\d+\b', message, re.IGNORECASE))
+    return has_ranking and has_level
+
+
+def _extract_ranking_params(message: str) -> tuple[int, str, bool]:
+    """
+    Returns (level, metric_col, ascending).
+    ascending=True  → low values first (worst for health/PF metrics)
+    ascending=False → high values first (worst for energy/imbalance/THD/overload)
+    """
+    level_match = re.search(r'\blevel\s*(\d+)\b', message, re.IGNORECASE)
+    level = int(level_match.group(1)) if level_match else 1
+
+    msg_lower = message.lower()
+    metric_col = "health_index"
+    for keywords, col in _METRIC_KEYWORD_MAP:
+        if any(kw in msg_lower for kw in keywords):
+            metric_col = col
+            break
+
+    # Default: sort so worst units come first
+    ascending = metric_col in _ASCENDING_WORST
+
+    # Flip for "best"/"least" queries
+    if any(kw in msg_lower for kw in ("best", "least", "lowest", "bottom")):
+        ascending = not ascending
+
+    return level, metric_col, ascending
+
+
+def _get_ranking_context_sync(level: int, metric_col: str, ascending: bool) -> str:
+    """Return a ranked list of all AHUs on the level sorted by metric_col."""
+    try:
+        import pandas as pd
+        from core.csv_reader import _load_csv
+
+        df = _load_csv(time_range="7d")
+        if df.empty:
+            return ""
+
+        df = df[df["level"] == f"Level {level}"]
+        if df.empty or metric_col not in df.columns:
+            return ""
+
+        latest = (
+            df.sort_values("timestamp")
+              .groupby("ahu_id", sort=False)
+              .last()
+              .reset_index()
+        )
+        latest = latest.dropna(subset=[metric_col])
+        latest = latest.sort_values(metric_col, ascending=ascending)
+
+        METRIC_LABELS = {
+            "health_index":    "Health Index",
+            "energy_anomaly":  "Energy Anomaly",
+            "pf_degradation":  "PF Degradation",
+            "phase_imbalance": "Phase Imbalance",
+            "thd_drift":       "THD Drift",
+            "overload":        "Overload",
+        }
+        metric_label = METRIC_LABELS.get(metric_col, metric_col)
+        order_note = "ascending — lowest first" if ascending else "descending — highest first"
+
+        lines = [f"\n\n## Ranking — Level {level} by {metric_label} ({order_note})"]
+        lines.append(f"All {len(latest)} AHUs on Level {level}:")
+        for i, (_, row) in enumerate(latest.iterrows(), 1):
+            val = row.get(metric_col)
+            hi = row.get("health_index")
+            tier = row.get("tier", "")
+            val_str = f"{val:.1f}" if val is not None and not pd.isna(val) else "?"
+            hi_str = (
+                f"{hi:.1f}/100 ({tier})"
+                if hi is not None and not pd.isna(hi) else "?"
+            )
+            lines.append(
+                f"  {i}. **{row['ahu_id']}**: {metric_label}={val_str} | Health={hi_str}"
+            )
+
+        lines.append(
+            "\nINSTRUCTION: Use this ranked list to answer the user's question directly. "
+            "Name the top units and their exact metric values."
+        )
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
+async def _get_ranking_context(level: int, metric_col: str, ascending: bool) -> str:
+    """Async wrapper for _get_ranking_context_sync."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None, _get_ranking_context_sync, level, metric_col, ascending
+    )
+
+
+# ── Gap 3 helpers: Cross-Device Comparison ────────────────────────────────────
+
+_COMPARISON_PATTERN = re.compile(
+    r'\b(compare|comparison|versus|vs\.?|against|side.by.side|difference\s+between)\b',
+    re.IGNORECASE,
+)
+
+
+def _is_comparison_query(message: str) -> bool:
+    """Return True when message requests a side-by-side comparison of two or more devices."""
+    has_compare = bool(_COMPARISON_PATTERN.search(message))
+    device_ids = re.findall(r'\b(e\d{4})\b', message, re.IGNORECASE)
+    unique_devices = set(d.lower() for d in device_ids)
+    return has_compare and len(unique_devices) >= 2
+
+
+def _extract_comparison_devices(message: str) -> list[str]:
+    """Extract up to 4 unique device IDs from the message (order-preserving)."""
+    matches = re.findall(r'\b(e\d{4})\b', message, re.IGNORECASE)
+    seen: list[str] = []
+    for m in matches:
+        lm = m.lower()
+        if lm not in seen:
+            seen.append(lm)
+    return seen[:4]
+
+
+def _get_comparison_context_sync(devices: list[str]) -> str:
+    """
+    Read health_hourly.csv, take the latest snapshot per requested device,
+    and return a markdown side-by-side comparison table.
+    """
+    try:
+        import pandas as pd
+        from core.csv_reader import HOURLY_CSV_PATH
+
+        df = pd.read_csv(HOURLY_CSV_PATH, parse_dates=["timestamp"])
+
+        METRICS = [
+            ("health_index",          "Health Index"),
+            ("energy_anomaly",        "Energy Anomaly"),
+            ("pf_degradation",        "PF Degradation"),
+            ("phase_imbalance",       "Phase Imbalance"),
+            ("thd_drift",             "THD Drift"),
+            ("overload",              "Overload"),
+            ("raw_power_total",       "Power (kW)"),
+            ("raw_power_factor_avg",  "Power Factor"),
+            ("raw_current_unbalance", "Current Imbalance (%)"),
+        ]
+
+        snapshots: dict[str, "pd.Series"] = {}
+        for dev in devices:
+            subset = df[df["ahu_id"] == dev].sort_values("timestamp")
+            if not subset.empty:
+                snapshots[dev] = subset.iloc[-1]
+
+        if len(snapshots) < 2:
+            return ""
+
+        header = "| Metric | " + " | ".join(snapshots.keys()) + " |"
+        separator = "| --- | " + " | ".join("---" for _ in snapshots) + " |"
+
+        lines = [f"\n\n## Side-by-Side Comparison — {' vs '.join(devices)}"]
+        lines.append(header)
+        lines.append(separator)
+
+        for col, label in METRICS:
+            row_vals = []
+            col_present = False
+            for dev, snap in snapshots.items():
+                val = snap.get(col) if col in snap.index else None
+                if val is not None and not pd.isna(val):
+                    col_present = True
+                    row_vals.append(f"{val:.2f}")
+                else:
+                    row_vals.append("—")
+            if col_present:
+                lines.append(f"| {label} | " + " | ".join(row_vals) + " |")
+
+        lines.append(
+            "\nINSTRUCTION: Use this table to explain which device performs better "
+            "for each metric. Highlight the biggest differences and their implications "
+            "for maintenance prioritization."
+        )
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
+async def _get_comparison_context(devices: list[str]) -> str:
+    """Async wrapper for _get_comparison_context_sync."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _get_comparison_context_sync, devices)
+
+
 @router.post("/chat")
 async def chat(body: ChatRequest):
     """
@@ -801,6 +1114,22 @@ async def chat(body: ChatRequest):
             if _tw_ctx:
                 system_prompt += _tw_ctx
 
+    # Time-series summary: for device-scoped history/trend queries.
+    # Provides min/max/mean/trend per metric so the LLM can give a data-grounded summary.
+    if _is_time_series_query(body.message):
+        _ts_device, _ts_range = _extract_ts_params(body.message, body.context)
+        if _ts_device:
+            _ts_ctx = await _get_time_series_summary(_ts_device, _ts_range)
+            if _ts_ctx:
+                system_prompt += _ts_ctx
+
+    # Ranking context: for "rank level N by metric" / "worst X on level N" queries.
+    if _is_ranking_query(body.message):
+        _rank_level, _rank_col, _rank_asc = _extract_ranking_params(body.message)
+        _rank_ctx = await _get_ranking_context(_rank_level, _rank_col, _rank_asc)
+        if _rank_ctx:
+            system_prompt += _rank_ctx
+
     # Financial impact context (level/device cost breakdown)
     fin_ctx = await _get_financial_context(body.context)
     if fin_ctx:
@@ -833,6 +1162,15 @@ async def chat(body: ChatRequest):
             extra_csv2 = await _get_csv_context({"level": extra_level})
             if extra_csv2:
                 system_prompt += f"\n\n## Computed Health Scores (Level {extra_level} — mentioned in query)" + extra_csv2.split("## Computed Health Scores", 1)[-1]
+
+    # Cross-device comparison: side-by-side table when two or more devices are mentioned
+    # with a comparison keyword (vs, compare, versus, etc.).
+    if _is_comparison_query(body.message):
+        _cmp_devices = _extract_comparison_devices(body.message)
+        if len(_cmp_devices) >= 2:
+            _cmp_ctx = await _get_comparison_context(_cmp_devices)
+            if _cmp_ctx:
+                system_prompt += _cmp_ctx
 
     # Prediction context: if the message asks about future values,
     # inject predicted measurements and scores for the mentioned device/level.
