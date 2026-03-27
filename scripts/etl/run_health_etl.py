@@ -832,8 +832,8 @@ def transform_health_scores(df_raw):
             "trend_thd": round(tr_thd, 4),
 
             # === Overload Components (A: ceiling, B: z-score, C: trend) ===
-            "overload_power_ratio": round(power_current / baseline["power_total"]["p95"], 4) if baseline["power_total"].get("p95") else None,
-            "overload_demand": round(max(0.0, power_current / baseline["power_total"]["p95"] - 0.85), 4) if baseline["power_total"].get("p95") else None,
+            "overload_power_ratio": round(power_current / baseline["power_total"]["p95"], 4) if (power_current is not None and baseline["power_total"].get("p95")) else None,
+            "overload_demand": round(max(0.0, power_current / baseline["power_total"]["p95"] - 0.85), 4) if (power_current is not None and baseline["power_total"].get("p95")) else None,
             "score_overload_A": round(score_A, 4),
             "score_overload_B": round(score_B, 4),
             "score_overload_C": round(score_C, 4),

@@ -688,7 +688,11 @@ def fetch_latest_hourly_data(
     if df.empty:
         return df
 
-    # Pivot to wide format — one row per (AHU, timestamp, level), one column per metric
+    # Floor timestamps to the hour so that snapshot-mode metrics (each with
+    # a slightly different sub-second timestamp) collapse to one row per device.
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True).dt.floor("h")
+
+    # Pivot to wide format — one row per (AHU, hour, level), one column per metric
     df_wide = df.pivot_table(
         index=["device_id", "level", "timestamp"],
         columns="metric",
