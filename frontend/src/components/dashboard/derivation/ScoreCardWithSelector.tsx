@@ -53,7 +53,7 @@ export default function ScoreCardWithSelector({
   }, [selectedMetrics]);
 
   return (
-    <div className="min-w-[400px] w-[400px] md:min-w-[500px] md:w-[500px] flex flex-col">
+    <div className="min-w-[800px] w-[800px] md:min-w-[1000px] md:w-[1000px] flex flex-col">
       <RawScoreRelationChart
         scoreName={scoreName}
         series={series}

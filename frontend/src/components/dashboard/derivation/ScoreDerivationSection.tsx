@@ -77,7 +77,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
 
             if (isEmpty) {
               return (
-                <div key={score} className="min-w-[400px] w-[400px] md:min-w-[500px] md:w-[500px] card p-6 flex items-center justify-center bg-yellow-900/10 border border-yellow-700/30">
+                <div key={score} className="min-w-[800px] w-[800px] md:min-w-[1000px] md:w-[1000px] card p-6 flex items-center justify-center bg-yellow-900/10 border border-yellow-700/30">
                   <div className="text-center max-w-[280px]">
                     <svg
                       className="w-10 h-10 mx-auto mb-2 text-yellow-500"
