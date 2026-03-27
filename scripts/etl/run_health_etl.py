@@ -25,7 +25,7 @@ import sys
 import os
 import argparse
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add backend to path for imports (scripts/etl → .. → scripts → .. → backend)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
@@ -393,6 +393,25 @@ def compute_safety_flags(baseline):
 # STEP 1: EXTRACT - Fetch Raw Data
 # ──────────────────────────────────────────────────────────────────────────────
 
+def _get_latest_csv_timestamp():
+    """
+    Return the latest timestamp in health_hourly.csv as a UTC datetime, or None.
+    Used by the scheduler to determine where to resume fetching from InfluxDB.
+    """
+    if not os.path.exists(OUTPUT_HOURLY_FILE) or os.path.getsize(OUTPUT_HOURLY_FILE) == 0:
+        return None
+    try:
+        df = pd.read_csv(OUTPUT_HOURLY_FILE, usecols=["timestamp"], parse_dates=["timestamp"])
+        if df.empty:
+            return None
+        latest = pd.to_datetime(df["timestamp"]).max()
+        if latest.tzinfo is None:
+            return latest.to_pydatetime().replace(tzinfo=timezone.utc)
+        return latest.to_pydatetime()
+    except Exception:
+        return None
+
+
 def extract_raw_data(metrics_to_fetch=None, level_filter=None):
     """
     Step 1: Fetch latest hourly data for all AHUs from InfluxDB.
@@ -428,10 +447,18 @@ def extract_raw_data(metrics_to_fetch=None, level_filter=None):
             "volts_l3_thd",
         ]
 
+    # Gap-filling: resume from the last timestamp in the hourly CSV
+    since = _get_latest_csv_timestamp()
+    if since is not None:
+        print(f"[gap-fill] Latest CSV timestamp: {since.isoformat()} — fetching from there")
+    else:
+        print("[gap-fill] No existing CSV — fetching latest snapshot per device")
+
     try:
         df = fetch_latest_hourly_data(
             metrics_to_fetch=metrics_to_fetch,
-            level_filter=level_filter
+            level_filter=level_filter,
+            since=since,
         )
 
         if df.empty:
@@ -912,7 +939,22 @@ def load_to_csv(df_scores, output_path=None):
 
     df_output = df_scores[[c for c in required_cols if c in df_scores.columns]]
 
-    # Append mode
+    # Deduplicate against existing file before writing
+    if file_exists:
+        try:
+            existing = pd.read_csv(output_path, parse_dates=["timestamp"])
+            combined = pd.concat([existing, df_output], ignore_index=True)
+            combined = combined.drop_duplicates(
+                subset=["timestamp", "device_id"], keep="last"
+            ).sort_values(["timestamp", "device_id"])
+            combined.to_csv(output_path, index=False)
+            new_rows = len(combined) - len(existing)
+            print(f"[OK] Merged {len(df_output)} records into existing file "
+                  f"({new_rows} net new rows, total: {len(combined)})")
+            return len(df_output)
+        except Exception as e:
+            print(f"[WARN] Merge failed ({e}), falling back to append mode")
+
     mode = 'a' if file_exists else 'w'
     header = not file_exists
 

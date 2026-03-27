@@ -560,34 +560,27 @@ def fetch_prediction_data(
 
 def fetch_latest_hourly_data(
     metrics_to_fetch: list[str] = None,
-    level_filter: int = None
+    level_filter: int = None,
+    since: datetime = None,
 ) -> pd.DataFrame:
     """
-    Fetch the latest hourly data point for each AHU across all levels or a specific level.
+    Fetch hourly data for each AHU across all levels or a specific level.
 
-    This function queries InfluxDB to get the most recent reading for each
-    metric for every AHU, then aggregates them into a single DataFrame.
+    When `since` is None (default): returns the single latest reading per AHU
+    (snapshot mode — original behaviour, used for one-off runs).
+
+    When `since` is a UTC datetime: returns all hourly readings from that
+    timestamp onwards using aggregateWindow(every: 1h), one row per (AHU, hour).
+    This is used by the scheduler to fill any gaps since the last run.
 
     Args:
         metrics_to_fetch: List of metric names to fetch.
-                         Default: ["power_total", "energy_import",
-                                   "power_factor_avg", "current_unbalance",
-                                   "current_l1_thd", "current_l3_thd"]
-        level_filter: Optional level number (1-11) to fetch only specific level.
-                     If None, fetches all levels.
+        level_filter: Optional level number (1-11). If None, fetches all levels.
+        since: Optional UTC datetime. If supplied, fetches a time-series window
+               instead of a single snapshot.
 
     Returns:
-        DataFrame with columns:
-        - timestamp (latest reading time)
-        - ahu_id
-        - level (Building level 1-11)
-        - All requested metrics
-
-    Example:
-        >>> df = fetch_latest_hourly_data()
-        >>> print(f"Retrieved {len(df)} AHU readings")
-        >>> # Fetch only Level 1
-        >>> df = fetch_latest_hourly_data(level_filter=1)
+        DataFrame with columns: timestamp, device_id, level, <metrics…>
     """
     if metrics_to_fetch is None:
         metrics_to_fetch = [
@@ -607,13 +600,13 @@ def fetch_latest_hourly_data(
             print(f"[influx_client] Error: Invalid level {level_filter}")
             return pd.DataFrame()
         device_ids = AHU_LEVEL_CONFIG[level_filter]["device_ids"]
-        print(f"[influx_client] Fetching latest data for Level {level_filter} ({len(device_ids)} AHUs)...")
+        print(f"[influx_client] Fetching data for Level {level_filter} ({len(device_ids)} AHUs)...")
     else:
         all_devices = []
         for level_config in AHU_LEVEL_CONFIG.values():
             all_devices.extend(level_config["device_ids"])
         device_ids = all_devices
-        print(f"[influx_client] Fetching latest data for {len(device_ids)} AHUs (all levels)...")
+        print(f"[influx_client] Fetching data for {len(device_ids)} AHUs (all levels)...")
 
     print(f"[influx_client] Metrics: {', '.join(metrics_to_fetch)}")
 
@@ -636,12 +629,21 @@ def fetch_latest_hourly_data(
             
             # Query each metric for this level
             for metric in metrics_to_fetch:
-                flux_query = f'''
-                from(bucket: "{_BUCKET}")
-                  |> range(start: -7d)
-                  |> filter(fn: (r) => r._measurement =~ /^wach_({devices_regex})_{metric}$/)
-                  |> last()
-                '''
+                if since is not None:
+                    since_iso = since.strftime('%Y-%m-%dT%H:%M:%SZ')
+                    flux_query = f'''
+                    from(bucket: "{_BUCKET}")
+                      |> range(start: {since_iso})
+                      |> filter(fn: (r) => r._measurement =~ /^wach_({devices_regex})_{metric}$/)
+                      |> aggregateWindow(every: 1h, fn: last, createEmpty: false)
+                    '''
+                else:
+                    flux_query = f'''
+                    from(bucket: "{_BUCKET}")
+                      |> range(start: -7d)
+                      |> filter(fn: (r) => r._measurement =~ /^wach_({devices_regex})_{metric}$/)
+                      |> last()
+                    '''
 
                 try:
                     tables = client.query_api().query(flux_query)
@@ -660,6 +662,7 @@ def fetch_latest_hourly_data(
                                     level = f"Level {int(level_code)}"
 
                                     records.append({
+                                        "timestamp": record.get_time(),
                                         "device_id": ahu_id,
                                         "level": level,
                                         "metric": metric,
@@ -685,46 +688,18 @@ def fetch_latest_hourly_data(
     if df.empty:
         return df
 
-    # Pivot to wide format (one row per AHU, one column per metric)
+    # Pivot to wide format — one row per (AHU, timestamp, level), one column per metric
     df_wide = df.pivot_table(
-        index=["device_id", "level"],
+        index=["device_id", "level", "timestamp"],
         columns="metric",
-        values="value"
+        values="value",
+        aggfunc="last",
     ).reset_index()
 
     # Ensure all expected metrics are present
     for metric in metrics_to_fetch:
         if metric not in df_wide.columns:
             df_wide[metric] = None
-
-    # Get timestamps from power_total data (has all AHUs)
-    print("[influx_client] Fetching timestamps...")
-
-    # Get the devices for this query (all or filtered)
-    if level_filter is not None:
-        devices_for_timestamps = AHU_LEVEL_CONFIG[level_filter]["device_ids"]
-    else:
-        devices_for_timestamps = all_devices
-
-    # First, fetch power data with the relevant devices to get timestamps
-    df_power = fetch_time_series(devices_for_timestamps, "power_total", "last_7d")
-    
-    # Extract timestamps from the last row of each AHU
-    timestamps = {}
-    for ahu_id in df_wide["device_id"]:
-        if ahu_id in df_power.columns and not pd.isna(df_power[ahu_id].iloc[-1]):
-            timestamps[ahu_id] = df_power.index[-1].isoformat()
-        else:
-            # Try to find a non-null value anywhere in the series
-            non_null = df_power[ahu_id].dropna()
-            if len(non_null) > 0:
-                # Get timestamp of last non-null value
-                last_valid_idx = non_null.index[-1]
-                timestamps[ahu_id] = last_valid_idx.isoformat()
-            else:
-                timestamps[ahu_id] = None
-
-    df_wide["timestamp"] = df_wide["device_id"].map(timestamps)
 
     # Compute composite_thd from max of L1 and L3 THD
     has_composite = False
