@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find *)",
+      "Bash(npm run *)",
+      "Bash(curl *)",
+      "Bash(pkill *)",
+      "Bash(nohup *)",
+      "Bash(sleep *)",
+      "Bash(./start.sh)",
+      "Bash(chmod *)",
+      "Bash(python *)"
+    ]
+  },
+  "$version": 3
+}

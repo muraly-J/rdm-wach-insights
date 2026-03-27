@@ -122,7 +122,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
         {series.map((s) => s.label).join(' · ')} → Score 0–100
       </p>
 
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={560}>
         <LineChart data={mergedData} margin={{ top: 15, right: 40, left: 0, bottom: 25 }}>
           <CartesianGrid stroke="#1E2A3A" strokeDasharray="3 3" vertical={false} />
 
