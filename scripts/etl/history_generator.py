@@ -534,6 +534,7 @@ def run_health_etl_historical(
     batch_days: int = 30,
     cache_dir: str = None,
     use_cache: bool = False,
+    simulate_timeout_after: int = 0,
 ) -> pd.DataFrame:
     """
     Run Health Scoring ETL using historical predictions.
@@ -654,6 +655,7 @@ def run_health_etl_historical(
     metrics_ok = []
     metrics_empty = []
     metrics_failed = []
+    _simulated_timeout = False
 
     # Limit to 3 concurrent InfluxDB metric fetches — firing all 16 at once
     # overwhelms the remote server and causes connection failures for all of them.
@@ -674,6 +676,18 @@ def run_health_etl_historical(
                 metrics_failed.append(m)
                 log_error(f"  [METRIC] {m}: FAILED — {type(e).__name__}: {e}")
                 metric_dfs[m] = pd.DataFrame()
+
+            if simulate_timeout_after > 0 and len(metrics_ok) >= simulate_timeout_after:
+                log_info(f"  [SIMULATE-TIMEOUT] {len(metrics_ok)} metrics fetched+cached — "
+                         f"exiting early to simulate a GitHub Actions cancellation. "
+                         f"Run again with --use-cache to resume.")
+                _simulated_timeout = True
+                break
+
+    if _simulated_timeout:
+        log_info(f"Metric fetch summary (partial): {len(metrics_ok)}/{len(METRICS)} fetched before simulated timeout")
+        log_info("Cached metrics are saved to disk — use --use-cache to resume from here.")
+        sys.exit(0)
 
     log_info(f"Metric fetch summary: {len(metrics_ok)}/{len(METRICS)} succeeded, "
              f"{len(metrics_empty)} empty, {len(metrics_failed)} failed")
@@ -1012,6 +1026,21 @@ Cache (resume support):
         help="Load metric data from parquet cache instead of querying InfluxDB (for resuming a cancelled run)"
     )
 
+    parser.add_argument(
+        '--devices',
+        type=str,
+        default='',
+        help="Comma-separated device IDs to process (e.g. e0101,e0102). Overrides --level when set."
+    )
+
+    parser.add_argument(
+        '--simulate-timeout-after-metrics',
+        type=int,
+        default=0,
+        metavar='N',
+        help="Exit after N metrics have been fetched+cached (simulates a GitHub Actions cancellation for testing resume)"
+    )
+
     args = parser.parse_args()
 
     if args.dry_run:
@@ -1062,7 +1091,10 @@ Cache (resume support):
     log_info(f"Cache dir: {args.cache_dir}")
 
     devices = get_all_devices()
-    if args.level != 'all':
+    if args.devices:
+        devices = [d.strip() for d in args.devices.split(',') if d.strip()]
+        log_info(f"  --devices override: {devices}")
+    elif args.level != 'all':
         level_num = int(args.level)
         devices = get_devices_by_level(level_num)
 
@@ -1098,6 +1130,10 @@ Cache (resume support):
             return 1
         predictions_df = pd.read_csv(PREDICTIONS_FILE, parse_dates=['timestamp'])
         log_info(f"Loaded {len(predictions_df)} rows from {PREDICTIONS_FILE}")
+        if args.devices:
+            before = len(predictions_df)
+            predictions_df = predictions_df[predictions_df['ahu_id'].isin(devices)]
+            log_info(f"  --devices filter: {before} → {len(predictions_df)} rows ({len(devices)} devices)")
     else:
         log_info("")
         log_info("Phase 1: Running Prediction ETL")
@@ -1141,6 +1177,7 @@ Cache (resume support):
         batch_days=args.batch_days,
         cache_dir=args.cache_dir,
         use_cache=args.use_cache,
+        simulate_timeout_after=args.simulate_timeout_after_metrics,
     )
 
     if health_df.empty:

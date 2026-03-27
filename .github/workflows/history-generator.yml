@@ -27,6 +27,14 @@ on:
         required: false
         type: boolean
         default: false
+      devices:
+        description: 'Comma-separated device IDs to process (e.g. e0101 or e0101,e0102). Leave empty for all devices.'
+        required: false
+        default: ''
+      simulate_timeout_after_metrics:
+        description: 'Testing only: exit after N metrics are cached (simulates a mid-run cancellation to test resume)'
+        required: false
+        default: ''
 
 concurrency:
   group: etl-data-pipeline
@@ -52,6 +60,8 @@ jobs:
       INPUT_BATCH_DAYS: ${{ github.event.inputs.batch_days }}
       INPUT_SKIP_PHASE1: ${{ github.event.inputs.skip_phase1 }}
       INPUT_RESUME: ${{ github.event.inputs.resume }}
+      INPUT_DEVICES: ${{ github.event.inputs.devices }}
+      INPUT_SIMULATE_TIMEOUT: ${{ github.event.inputs.simulate_timeout_after_metrics }}
 
     steps:
       - name: Checkout repository
@@ -91,11 +101,17 @@ jobs:
             exit 1
           fi
 
+          DEVICES_ARG=""
+          if [ -n "$INPUT_DEVICES" ]; then
+            DEVICES_ARG="--devices $INPUT_DEVICES"
+          fi
+
           python scripts/etl/history_generator.py \
             --phase1-only \
             --level "$INPUT_LEVEL" \
             --verbose \
-            --batch-days "$INPUT_BATCH_DAYS"
+            --batch-days "$INPUT_BATCH_DAYS" \
+            $DEVICES_ARG
 
           echo "Phase 1 finished — $(date -u)"
 
@@ -155,6 +171,13 @@ jobs:
           if [ "$INPUT_RESUME" = "true" ]; then
             EXTRA_ARGS="--use-cache"
             echo "Resume mode: will load cached metrics from data/metric_cache/"
+          fi
+          if [ -n "$INPUT_DEVICES" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --devices $INPUT_DEVICES"
+          fi
+          if [ -n "$INPUT_SIMULATE_TIMEOUT" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --simulate-timeout-after-metrics $INPUT_SIMULATE_TIMEOUT"
+            echo "Simulate timeout: will exit after $INPUT_SIMULATE_TIMEOUT metrics are cached"
           fi
 
           python scripts/etl/history_generator.py \
