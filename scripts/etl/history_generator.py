@@ -249,7 +249,8 @@ def compute_ahu_health_score(
     df_power: pd.DataFrame,
     df_unbalance: pd.DataFrame,
     df_l1_thd: pd.DataFrame,
-    df_l3_thd: pd.DataFrame
+    df_l3_thd: pd.DataFrame,
+    p95_current: float = None,
 ) -> dict:
     """
     Compute FAIR health score for a single AHU.
@@ -257,60 +258,151 @@ def compute_ahu_health_score(
     Returns dict with health_index, risk_scores, and tier.
     """
     try:
-        # Energy Anomaly — normalize delta_kwh against daily energy variation std
+        # Energy Anomaly — robust MAD-based normalization of prediction error
         energy_score = 0.5
         ahu_energy = df_energy.get(ahu_id)
         if ahu_energy is not None and pd.notna(energy_anomaly_val) and ahu_energy.notna().sum() > 24:
             hist_energy = ahu_energy.dropna()
             hist_daily = hist_energy.diff().dropna()
-            daily_std = max(float(hist_daily.std()), 1.0)
-            z_score = float(energy_anomaly_val) / daily_std
+            daily_median = float(hist_daily.median())
+            daily_mad = float((hist_daily - daily_median).abs().median())
+            rstd = max(1.4826 * daily_mad, 1.0)  # min floor 1 kWh
+            z_score = float(energy_anomaly_val) / rstd
             energy_score = sigmoid_score(z_score)
 
-        # Power Factor Risk
+        # Power Factor Risk — robust MAD + OLS trend
         pf_score = 0.5
         ahu_pf = df_pf.get(ahu_id)
         if current_pf is not None and ahu_pf is not None and ahu_pf.notna().sum() > 24:
             hist_pf = ahu_pf.dropna()
-            pf_mean = float(hist_pf.mean())
-            pf_std = float(hist_pf.std())
-            if pf_std > 0:
-                z_score = (pf_mean - current_pf) / pf_std
-                pf_score = sigmoid_score(z_score)
+            pf_median = float(hist_pf.median())
+            mad = float((hist_pf - pf_median).abs().median())
+            rstd = max(1.4826 * mad, 0.008)  # min floor avoids division by ~0 on stable AHUs
 
-        # Phase Imbalance Risk
+            # Level term (70%): positive z when PF drops below AHU's own median
+            PF_SENSITIVITY = 1.5
+            z = (pf_median - current_pf) / rstd
+            level_term = sigmoid_score(z * PF_SENSITIVITY)
+
+            # Trend term (30%): OLS slope over last 7 days — fires when PF is falling
+            trend_term = 0.5
+            cutoff = hist_pf.index[-1] - pd.Timedelta(days=7)
+            recent_pf = hist_pf[hist_pf.index >= cutoff]
+            if len(recent_pf) >= 3:
+                t = np.arange(len(recent_pf), dtype=float)
+                t_mean = t.mean()
+                y_vals = recent_pf.values.astype(float)
+                y_mean = y_vals.mean()
+                denom = float(((t - t_mean) ** 2).sum())
+                ols_slope = float(((t - t_mean) * (y_vals - y_mean)).sum()) / denom if denom > 0 else 0.0
+                PF_SLOPE_SENS = 2.0
+                trend_term = sigmoid_score(max(0.0, -ols_slope / rstd) * PF_SLOPE_SENS)
+
+            pf_score = 0.70 * level_term + 0.30 * trend_term
+
+        # Phase Imbalance Risk — robust MAD + OLS trend
         imbalance_score = 0.5
         ahu_unbalance = df_unbalance.get(ahu_id)
         if current_unbalance is not None and ahu_unbalance is not None and ahu_unbalance.notna().sum() > 24:
             hist_unbalance = ahu_unbalance.dropna()
-            unbalance_mean = float(hist_unbalance.mean())
-            unbalance_std = float(hist_unbalance.std())
-            if unbalance_std > 0:
-                z_score = (current_unbalance - unbalance_mean) / unbalance_std
-                imbalance_score = sigmoid_score(z_score)
+            unbalance_median = float(hist_unbalance.median())
+            mad = float((hist_unbalance - unbalance_median).abs().median())
+            rstd = max(1.4826 * mad, 0.15)  # min floor for unbalance %
 
-        # THD Drift Risk
+            # Level term (70%): positive z when current exceeds AHU's own median
+            IMBALANCE_SENSITIVITY = 1.5
+            z = (current_unbalance - unbalance_median) / rstd
+            level_term = sigmoid_score(z * IMBALANCE_SENSITIVITY)
+
+            # Trend term (30%): OLS slope over last 7 days — fires when imbalance is rising
+            trend_term = 0.5
+            cutoff = hist_unbalance.index[-1] - pd.Timedelta(days=7)
+            recent_unbalance = hist_unbalance[hist_unbalance.index >= cutoff]
+            if len(recent_unbalance) >= 3:
+                t = np.arange(len(recent_unbalance), dtype=float)
+                t_mean = t.mean()
+                y_vals = recent_unbalance.values.astype(float)
+                y_mean = y_vals.mean()
+                denom = float(((t - t_mean) ** 2).sum())
+                ols_slope = float(((t - t_mean) * (y_vals - y_mean)).sum()) / denom if denom > 0 else 0.0
+                IMBALANCE_SLOPE_SENS = 2.0
+                trend_term = sigmoid_score(max(0.0, ols_slope / rstd) * IMBALANCE_SLOPE_SENS)
+
+            imbalance_score = 0.70 * level_term + 0.30 * trend_term
+
+        # THD Drift Risk — composite average + 24h rolling mean + robust MAD + OLS trend
         thd_score = 0.5
-        if current_composite_thd is not None:
-            # Combine L1 and L3 THD
-            all_thd = pd.concat([df_l1_thd.get(ahu_id), df_l3_thd.get(ahu_id)], axis=1)
-            hist_thd = all_thd.max(axis=1).dropna()
-            if len(hist_thd) > 24:
-                thd_mean = float(hist_thd.mean())
-                thd_std = float(hist_thd.std())
-                if thd_std > 0:
-                    z_score = (current_composite_thd - thd_mean) / thd_std
-                    thd_score = sigmoid_score(z_score)
+        l1_series = df_l1_thd.get(ahu_id)
+        l3_series = df_l3_thd.get(ahu_id)
+        if l1_series is not None or l3_series is not None:
+            # Average of available phases (not max — we want chronic elevation, not worst spike)
+            if l1_series is not None and l3_series is not None:
+                composite_raw = (l1_series + l3_series) / 2
+            else:
+                composite_raw = l1_series if l1_series is not None else l3_series
+            # 24h rolling mean filters motor-start and switching transients
+            thd_24h = composite_raw.dropna().rolling('24h', min_periods=3).mean().dropna()
+            if len(thd_24h) > 24 and current_composite_thd is not None:
+                thd_median = float(thd_24h.median())
+                mad = float((thd_24h - thd_median).abs().median())
+                rstd = max(1.4826 * mad, 0.15)
 
-        # Overload Risk
+                # Use last smoothed value — not the raw instantaneous reading
+                current_thd_smoothed = float(thd_24h.iloc[-1])
+                THD_SENSITIVITY = 1.5
+                z = (current_thd_smoothed - thd_median) / rstd
+                level_term = sigmoid_score(z * THD_SENSITIVITY)
+
+                # Trend term (30%): OLS slope over last 7 days of smoothed series
+                trend_term = 0.5
+                cutoff = thd_24h.index[-1] - pd.Timedelta(days=7)
+                recent_thd = thd_24h[thd_24h.index >= cutoff]
+                if len(recent_thd) >= 3:
+                    t = np.arange(len(recent_thd), dtype=float)
+                    t_mean = t.mean()
+                    y_vals = recent_thd.values.astype(float)
+                    y_mean = y_vals.mean()
+                    denom = float(((t - t_mean) ** 2).sum())
+                    ols_slope = float(((t - t_mean) * (y_vals - y_mean)).sum()) / denom if denom > 0 else 0.0
+                    THD_SLOPE_SENS = 2.0
+                    trend_term = sigmoid_score(max(0.0, ols_slope / rstd) * THD_SLOPE_SENS)
+
+                thd_score = 0.70 * level_term + 0.30 * trend_term
+
+        # Overload Risk — three-factor composite: ceiling proximity + vs-baseline + rising trend
         overload_score = 0.5
         ahu_power = df_power.get(ahu_id)
         if current_power is not None and ahu_power is not None and ahu_power.notna().sum() > 24:
             hist_power = ahu_power.dropna()
-            power_p99 = float(hist_power.quantile(0.99))
-            if power_p99 > 0:
-                ratio = current_power / power_p99
-                overload_score = sigmoid_score(ratio * 2 - 1)
+            power_median = float(hist_power.median())
+            mad_power = float((hist_power - power_median).abs().median())
+            rstd_power = max(1.4826 * mad_power, 1.0)  # min floor 1W
+
+            # score_A (50%): ceiling proximity — how close to this AHU's own p95 power
+            # p95 of power_total keeps units consistent (kW vs kW).
+            # p95_current (A) is retained for future current-specific overload checks.
+            power_p95 = float(hist_power.quantile(0.95))
+            score_A = sigmoid_score((current_power / power_p95 - 0.85) * 8) if power_p95 > 0 else 0.5
+
+            # score_B (30%): how far above AHU's own normal operating level
+            z_power = (current_power - power_median) / rstd_power
+            score_B = sigmoid_score(z_power * 1.5)
+
+            # score_C (20%): rising power trend over last 7 days
+            score_C = 0.5
+            cutoff = hist_power.index[-1] - pd.Timedelta(days=7)
+            recent_power = hist_power[hist_power.index >= cutoff]
+            if len(recent_power) >= 3:
+                t = np.arange(len(recent_power), dtype=float)
+                t_mean = t.mean()
+                y_vals = recent_power.values.astype(float)
+                y_mean = y_vals.mean()
+                denom = float(((t - t_mean) ** 2).sum())
+                ols_slope = float(((t - t_mean) * (y_vals - y_mean)).sum()) / denom if denom > 0 else 0.0
+                OVERLOAD_SLOPE_SENS = 2.0
+                score_C = sigmoid_score(max(0.0, ols_slope / rstd_power) * OVERLOAD_SLOPE_SENS)
+
+            overload_score = 0.50 * score_A + 0.30 * score_B + 0.20 * score_C
 
         # Build risk scores dict
         risk_scores = {
@@ -834,7 +926,8 @@ def run_health_etl_historical(
                     df_power=df_power,
                     df_unbalance=df_unbalance,
                     df_l1_thd=df_l1_thd,
-                    df_l3_thd=df_l3_thd
+                    df_l3_thd=df_l3_thd,
+                    p95_current=p95_current,
                 )
             except Exception as e:
                 log_error(f"Error computing health score for {ahu_id} at {ts}: {e}")
