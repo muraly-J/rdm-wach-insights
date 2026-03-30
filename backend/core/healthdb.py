@@ -170,26 +170,38 @@ class HealthDB:
 
     def get_ranking(
         self,
-        level: int,
+        level: Optional[int],
         metric: str,
         n: int = 5,
         order: str = "asc",
     ) -> pd.DataFrame:
         """
-        Rank AHUs within a level by metric using their latest reading.
+        Rank AHUs by metric using their latest reading.
+        level: floor to filter to (1–11), or None for all levels.
         order: 'asc' = worst first (lowest value), 'desc' = best first.
         """
         direction = "ASC" if order == "asc" else "DESC"
-        query = f"""
-            SELECT ahu_id, level, health_index, {metric}, timestamp
-            FROM health_hourly
-            WHERE level = ?
-            QUALIFY ROW_NUMBER() OVER (PARTITION BY ahu_id ORDER BY timestamp DESC) = 1
-            ORDER BY {metric} {direction}
-            LIMIT ?
-        """
+        if level is not None:
+            query = f"""
+                SELECT ahu_id, level, health_index, {metric}, timestamp
+                FROM health_hourly
+                WHERE level = ?
+                QUALIFY ROW_NUMBER() OVER (PARTITION BY ahu_id ORDER BY timestamp DESC) = 1
+                ORDER BY {metric} {direction}
+                LIMIT ?
+            """
+            params = [level, n]
+        else:
+            query = f"""
+                SELECT ahu_id, level, health_index, {metric}, timestamp
+                FROM health_hourly
+                QUALIFY ROW_NUMBER() OVER (PARTITION BY ahu_id ORDER BY timestamp DESC) = 1
+                ORDER BY {metric} {direction}
+                LIMIT ?
+            """
+            params = [n]
         with self._conn() as conn:
-            return conn.execute(query, [level, n]).df()
+            return conn.execute(query, params).df()
 
     def get_latest_timestamp(self) -> Optional[datetime]:
         """Return the most recent timestamp in the DB, or None if empty."""

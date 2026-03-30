@@ -186,29 +186,28 @@ async def handle_query_live_readings(
 
 
 async def handle_query_ranking(
-    level: int,
     metric: str,
+    level: int = None,
     n: int = 5,
     order: str = "asc",
 ) -> dict:
     """
-    Rank AHUs by metric within a level.
+    Rank AHUs by metric. level=None ranks across all floors.
     """
     db = _get_db()
     df = db.get_ranking(level=level, metric=metric, n=n, order=order)
 
+    scope = f"level {level}" if level is not None else "all levels"
     if df.empty:
-        return {"ranking": [], "note": f"No data for level {level}."}
+        return {"ranking": [], "note": f"No data for {scope}."}
 
     if "timestamp" in df.columns:
         df["timestamp"] = df["timestamp"].astype(str)
 
-    return {
-        "level": level,
-        "metric": metric,
-        "order": order,
-        "ranking": _df_to_records(df),
-    }
+    result = {"metric": metric, "order": order, "scope": scope, "ranking": _df_to_records(df)}
+    if level is not None:
+        result["level"] = level
+    return result
 
 
 async def handle_query_financial_impact(

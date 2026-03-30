@@ -101,16 +101,19 @@ TOOLS = [
         "function": {
             "name": "query_ranking",
             "description": (
-                "Rank AHUs within a level by a health metric using their latest readings. "
+                "Rank AHUs by a health metric using their latest readings. "
+                "Omit level to rank across ALL floors (use for 'worst AHUs in the building', "
+                "'which AHUs have lowest health scores across all levels'). "
+                "Specify level (1–11) to rank within a single floor. "
                 "Use for: 'worst devices', 'top N by PF', 'which AHUs need attention', best/worst comparisons."
             ),
             "parameters": {
                 "type": "object",
-                "required": ["level", "metric"],
+                "required": ["metric"],
                 "properties": {
                     "level": {
                         "type": "integer",
-                        "description": "Floor level to rank within (1–11).",
+                        "description": "Floor level to rank within (1–11). Omit to rank across all levels.",
                     },
                     "metric": {
                         "type": "string",
