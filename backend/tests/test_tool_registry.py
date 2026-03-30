@@ -7,8 +7,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from tools.tool_registry import TOOLS, dispatch_tool
 
 
-def test_tools_list_has_five_entries():
-    assert len(TOOLS) == 5
+def test_tools_list_has_six_entries():
+    # 6 tools: original 5 + query_building_summary added for efficient building-wide queries
+    assert len(TOOLS) == 6
 
 
 def test_all_tools_have_required_fields():
@@ -22,6 +23,7 @@ def test_all_tools_have_required_fields():
 def test_tool_names_are_correct():
     names = {t["function"]["name"] for t in TOOLS}
     assert names == {
+        "query_building_summary",
         "query_health_scores",
         "query_live_readings",
         "query_ranking",
