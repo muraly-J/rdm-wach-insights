@@ -137,20 +137,60 @@ def extract_prediction_data(device_ids, reference_time=None):
 
 def transform_predictions(df_raw):
     """
-    Step 2: Compute predicted energy (ŷ), hourly deltas, and energy anomaly.
+    Step 2: Compute predicted energy consumption and flag anomalies.
 
-    NEW Formula:
-      hourly_delta(t)     = E(t) - E(t-1h)
-      predicted_delta(t)  = (δ(t−24h) + δ(t−168h) + δ(t−336h)) / 3
-      energy_anomaly      = hourly_delta(t) - predicted_delta(t)
+    HOW THE PREDICTION WORKS
+    ─────────────────────────
+    AHUs follow weekly patterns: the same hour on the same day of the week
+    tends to consume similar amounts of energy. We exploit this by asking:
+    "how much energy did this AHU consume in the equivalent hour yesterday,
+    one week ago, and two weeks ago?" and averaging those as the prediction.
 
-    Where δ(t−nh) = E(t−nh) - E(t−nh-1h)
+    Step A — Hourly consumption at a point in time
+        delta(t) = E(t) - E(t-1h)
+        InfluxDB stores cumulative kWh (ever-increasing meter reading).
+        Subtracting the previous hour's reading gives actual consumption
+        for that one-hour window. We call this a "delta".
+
+    Step B — Three historical reference deltas
+        delta_yesterday  = E(t-24h)  - E(t-25h)   # same hour, yesterday
+        delta_last_week  = E(t-168h) - E(t-169h)   # same hour, 7 days ago
+        delta_two_weeks  = E(t-336h) - E(t-337h)   # same hour, 14 days ago
+        (168h = 7 days, 336h = 14 days)
+
+    Step C — Predicted delta (baseline expectation)
+        predicted_delta = average(delta_yesterday, delta_last_week, delta_two_weeks)
+        Using 3 reference points smooths out one-off anomalies on any single
+        past day (e.g. a public holiday or planned shutdown).
+
+    Step D — Energy anomaly (the score fed into FAIR)
+        energy_anomaly = delta(t) - predicted_delta
+        Positive → AHU consumed MORE than expected this hour (waste / fault)
+        Negative → AHU consumed LESS than expected (could be shutdown or data gap)
+        Zero     → consumption exactly matched historical pattern
+
+    DATA QUALITY FLAG
+        If fewer than 3 reference deltas are available (AHU is new, or
+        InfluxDB has gaps beyond 2 weeks), we set insufficient_history=True
+        and the FAIR scorer treats energy_anomaly as unreliable for that AHU.
 
     Args:
-        df_raw: DataFrame with energy values from Step 1
+        df_raw: DataFrame from Step 1 with 8 energy readings per AHU:
+                energy_current, energy_t_minus_1h,
+                yesterday_kwh, yesterday_minus_1h,
+                last_week_kwh, last_week_minus_1h,
+                two_weeks_kwh, two_weeks_minus_1h
 
     Returns:
-        DataFrame with added columns: hourly_delta, predicted_delta, energy_anomaly
+        DataFrame with added columns:
+            hourly_delta       — actual kWh consumed this hour
+            delta_yesterday    — kWh consumed same hour yesterday
+            delta_last_week    — kWh consumed same hour last week
+            delta_two_weeks    — kWh consumed same hour two weeks ago
+            predicted_delta    — average of the three historical deltas
+            available_delta_slots — count of valid historical deltas (0–3)
+            insufficient_history  — True if fewer than 3 slots available
+            energy_anomaly     — actual minus predicted (kWh deviation)
     """
     print("\n" + "="*70)
     print("STEP 2: TRANSFORM - Computing Predictions")
@@ -163,9 +203,11 @@ def transform_predictions(df_raw):
     # Make a copy to avoid modifying original
     df = df_raw.copy()
 
-    # ── Compute Hourly Deltas (actual energy consumed in the hour) ─────────────
+    # ── Step A+B: Compute hourly deltas ───────────────────────────────────────
+    # Each delta = E(at time T) - E(one hour before T)
+    # This converts cumulative meter readings into per-hour consumption figures.
     def compute_hourly_delta(row, current_col, prev_col):
-        """Compute δ = E(current) - E(previous_hour)."""
+        """Return kWh consumed in the hour ending at current_col, or None if data missing."""
         current = row.get(current_col)
         prev = row.get(prev_col)
 
@@ -176,30 +218,32 @@ def transform_predictions(df_raw):
 
         return float(current - prev)
 
-    # Hourly delta at current time
+    # Actual consumption this hour: E(t) - E(t-1h)
     df['hourly_delta'] = df.apply(lambda row: compute_hourly_delta(row, 'energy_current', 'energy_t_minus_1h'), axis=1)
 
-    # Hourly deltas at historical points
-    df['delta_yesterday'] = df.apply(lambda row: compute_hourly_delta(row, 'yesterday_kwh', 'yesterday_minus_1h'), axis=1)
-    df['delta_last_week'] = df.apply(lambda row: compute_hourly_delta(row, 'last_week_kwh', 'last_week_minus_1h'), axis=1)
-    df['delta_two_weeks'] = df.apply(lambda row: compute_hourly_delta(row, 'two_weeks_kwh', 'two_weeks_minus_1h'), axis=1)
+    # Historical reference consumptions for the same clock-hour on past days
+    df['delta_yesterday'] = df.apply(lambda row: compute_hourly_delta(row, 'yesterday_kwh', 'yesterday_minus_1h'), axis=1)    # 24h ago
+    df['delta_last_week'] = df.apply(lambda row: compute_hourly_delta(row, 'last_week_kwh', 'last_week_minus_1h'), axis=1)    # 168h ago
+    df['delta_two_weeks'] = df.apply(lambda row: compute_hourly_delta(row, 'two_weeks_kwh', 'two_weeks_minus_1h'), axis=1)    # 336h ago
 
-    # ── Compute Predicted Delta (average of historical hourly deltas) ─────────
+    # ── Step C: Predicted delta = average of up to 3 historical references ────
+    # Using the mean of yesterday / last week / two weeks ago as the baseline.
+    # If any reference is unavailable (data gap), we average the remaining ones.
+    # If all three are missing, predicted_delta stays None → insufficient_history.
     def compute_predicted_delta(row):
-        """Compute ŷ_δ(t) = avg(δ(t−24h), δ(t−168h), δ(t−336h))."""
+        """Average the available historical deltas. Returns None if none are valid."""
         values = [
             row.get('delta_yesterday'),
             row.get('delta_last_week'),
             row.get('delta_two_weeks')
         ]
-        # Filter out None/NaN values
         valid_values = [v for v in values if v is not None and not np.isnan(v)]
         if len(valid_values) == 0:
             return None
         return float(np.mean(valid_values))
 
     def count_delta_slots(row):
-        """Count how many delta slots have valid data."""
+        """Count how many of the 3 historical reference deltas have valid data (max 3)."""
         values = [
             row.get('delta_yesterday'),
             row.get('delta_last_week'),
@@ -208,18 +252,21 @@ def transform_predictions(df_raw):
         valid_count = sum(1 for v in values if v is not None and not np.isnan(v))
         return valid_count
 
-    # Apply predicted delta formula
     df['predicted_delta'] = df.apply(compute_predicted_delta, axis=1)
-
-    # Count available delta slots
     df['available_delta_slots'] = df.apply(count_delta_slots, axis=1)
 
-    # Mark insufficient history (< 3 delta slots means data < 2 weeks)
+    # Flag AHUs where we have fewer than 3 reference points.
+    # This happens for new AHUs (< 2 weeks of history) or when InfluxDB has
+    # gaps at the required lookback timestamps. FAIR scoring will discount
+    # the energy_anomaly component for these devices.
     df['insufficient_history'] = df['available_delta_slots'] < 3
 
-    # ── Compute Energy Anomaly (deviation of hourly delta from predicted) ─────
+    # ── Step D: Energy anomaly = actual consumption minus predicted ───────────
+    # Positive value: AHU used more energy than its historical pattern suggests.
+    # Negative value: AHU used less (could be intentional shutdown or data gap).
+    # The magnitude drives the energy_anomaly sub-score inside FAIR.
     def compute_energy_anomaly(row):
-        """Compute energy_anomaly = hourly_delta - predicted_delta."""
+        """actual kWh this hour minus predicted kWh. Returns None if either is missing."""
         actual_delta = row.get('hourly_delta')
         predicted = row.get('predicted_delta')
 
