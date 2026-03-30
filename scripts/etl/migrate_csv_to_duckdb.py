@@ -35,6 +35,10 @@ def migrate():
     print(f"Reading {CSV_PATH} ...")
     df = pd.read_csv(CSV_PATH, parse_dates=["timestamp"])
 
+    # Normalise level: "Level 1" → 1
+    if df["level"].dtype == object:
+        df["level"] = df["level"].str.replace("Level ", "", regex=False).astype(int)
+
     # Ensure timestamp is tz-aware UTC
     if df["timestamp"].dt.tz is None:
         df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")

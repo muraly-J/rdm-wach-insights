@@ -1007,6 +1007,10 @@ def save_health_duckdb(results_df: pd.DataFrame, dry_run: bool = False) -> None:
         # ETL uses 'device_id'; CSV/DuckDB uses 'ahu_id'
         df = results_df.rename(columns={"device_id": "ahu_id"}) if "device_id" in results_df.columns else results_df.copy()
 
+        # Normalise level: "Level 1" → 1
+        if "level" in df.columns and df["level"].dtype == object:
+            df["level"] = df["level"].str.replace("Level ", "", regex=False).astype(int)
+
         # Select only schema columns (drop any extra ETL columns)
         schema_cols = [
             "timestamp", "ahu_id", "level", "health_index", "tier",
