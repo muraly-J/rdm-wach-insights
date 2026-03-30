@@ -1217,8 +1217,8 @@ def run_etl_pipeline(output_path=None, dry_run=False, level=None, scheduled=Fals
             if hourly_written:
                 results["rows_loaded_hourly"] = len(df_scores)
 
-        # STEP 3c: Load to DuckDB (always runs alongside CSV)
-        save_health_duckdb(df_scores, dry_run=dry_run)
+    # STEP 3c: Load to DuckDB (always runs, passes dry_run flag)
+    save_health_duckdb(df_scores, dry_run=dry_run)
 
     # STEP 4: Safety Flags Summary
     print_safety_flags_summary(df_scores)
