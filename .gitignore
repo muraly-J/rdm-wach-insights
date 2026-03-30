@@ -272,3 +272,4 @@ data/audit_results*.json
 # Tarballs that may contain secrets
 # =========================
 *_backup*.tar.gz
+.worktrees/
