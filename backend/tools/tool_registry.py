@@ -16,12 +16,27 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "query_building_summary",
+            "description": (
+                "Get a single-call building-wide health overview: tier counts and average health index "
+                "per level, plus totals. USE THIS FIRST when asked about overall building health, "
+                "site status, or 'how is the building doing'. Never loop through levels manually."
+            ),
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "query_health_scores",
             "description": (
                 "Query FAIR health scores and component scores for AHUs from the Health DB. "
-                "Use for: health index trends, component breakdowns (energy anomaly, PF, phase imbalance, "
-                "THD, overload), safety flag history, comparing devices over a time range. "
-                "Returns rows with timestamp, health_index, tier, and all FAIR component scores."
+                "Use for: overall building health status, health index trends, component breakdowns "
+                "(energy anomaly, PF, phase imbalance, THD, overload), comparing devices over a time range. "
+                "IMPORTANT: Omit both ahu_ids and level to get a building-wide summary aggregated by level "
+                "(fastest way to answer 'what is the building health status'). "
+                "Specify level (1-11) to get all AHUs on that floor. "
+                "Specify ahu_ids for individual device detail."
             ),
             "parameters": {
                 "type": "object",
@@ -174,6 +189,7 @@ TOOLS = [
 
 
 _KNOWN_TOOLS = {
+    "query_building_summary",
     "query_health_scores",
     "query_live_readings",
     "query_ranking",
@@ -191,7 +207,10 @@ async def dispatch_tool(name: str, args: dict) -> dict[str, Any]:
         logger.warning(f"dispatch_tool: unknown tool '{name}'")
         return {"error": f"Unknown tool: {name}"}
 
+    logger.info(f"tool_call: {name}({args})")
+
     from tools.health_tools import (
+        handle_query_building_summary,
         handle_query_health_scores,
         handle_query_live_readings,
         handle_query_ranking,
@@ -200,6 +219,7 @@ async def dispatch_tool(name: str, args: dict) -> dict[str, Any]:
     )
 
     handlers = {
+        "query_building_summary":  handle_query_building_summary,
         "query_health_scores":    handle_query_health_scores,
         "query_live_readings":    handle_query_live_readings,
         "query_ranking":          handle_query_ranking,

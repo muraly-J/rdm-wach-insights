@@ -58,6 +58,41 @@ def _df_to_records(df: pd.DataFrame) -> list:
 
 # ── Handlers ───────────────────────────────────────────────────────────────────
 
+async def handle_query_building_summary() -> dict:
+    """Return a single aggregated building-wide health overview."""
+    db = _get_db()
+    df = db.get_latest_snapshot()
+    if df.empty:
+        return {"note": "No health data available."}
+
+    summary_rows = []
+    for lvl, grp in df.groupby("level"):
+        tier_counts = grp["tier"].value_counts().to_dict() if "tier" in grp.columns else {}
+        summary_rows.append({
+            "level": int(lvl),
+            "ahu_count": len(grp),
+            "avg_health_index": round(grp["health_index"].mean(), 1) if "health_index" in grp.columns else None,
+            "min_health_index": round(grp["health_index"].min(), 1) if "health_index" in grp.columns else None,
+            "worst_ahu": grp.loc[grp["health_index"].idxmin(), "ahu_id"] if "health_index" in grp.columns else None,
+            "tier_healthy": tier_counts.get("Healthy", 0),
+            "tier_monitor": tier_counts.get("Monitor", 0),
+            "tier_maintenance": tier_counts.get("Maintenance", 0),
+            "tier_critical": tier_counts.get("Critical", 0),
+        })
+    summary_rows.sort(key=lambda r: r["level"])
+
+    total = len(df)
+    return {
+        "total_ahus": total,
+        "avg_health_index": round(df["health_index"].mean(), 1) if "health_index" in df.columns else None,
+        "tier_healthy": sum(r["tier_healthy"] for r in summary_rows),
+        "tier_monitor": sum(r["tier_monitor"] for r in summary_rows),
+        "tier_maintenance": sum(r["tier_maintenance"] for r in summary_rows),
+        "tier_critical": sum(r["tier_critical"] for r in summary_rows),
+        "by_level": summary_rows,
+    }
+
+
 async def handle_query_health_scores(
     ahu_ids: Optional[list] = None,
     level: Optional[int] = None,
@@ -83,6 +118,37 @@ async def handle_query_health_scores(
     if "timestamp" in df.columns:
         df["timestamp"] = df["timestamp"].astype(str)
 
+    # When querying the full building (no level/ahu filter, latest snapshot),
+    # return a level-aggregated summary instead of 121 raw rows.
+    if query_type == "latest_snapshot" and ahu_ids is None and level is None and len(df) > 20:
+        summary_rows = []
+        for lvl, grp in df.groupby("level"):
+            tier_counts = grp["tier"].value_counts().to_dict() if "tier" in grp.columns else {}
+            summary_rows.append({
+                "level": int(lvl),
+                "ahu_count": len(grp),
+                "avg_health_index": round(grp["health_index"].mean(), 1) if "health_index" in grp.columns else None,
+                "min_health_index": round(grp["health_index"].min(), 1) if "health_index" in grp.columns else None,
+                "tier_healthy": tier_counts.get("Healthy", 0),
+                "tier_monitor": tier_counts.get("Monitor", 0),
+                "tier_maintenance": tier_counts.get("Maintenance", 0),
+                "tier_critical": tier_counts.get("Critical", 0),
+            })
+        summary_rows.sort(key=lambda r: r["level"])
+        overall = {
+            "total_ahus": len(df),
+            "avg_health_index": round(df["health_index"].mean(), 1) if "health_index" in df.columns else None,
+            "tier_healthy": sum(r["tier_healthy"] for r in summary_rows),
+            "tier_monitor": sum(r["tier_monitor"] for r in summary_rows),
+            "tier_maintenance": sum(r["tier_maintenance"] for r in summary_rows),
+            "tier_critical": sum(r["tier_critical"] for r in summary_rows),
+        }
+        return {
+            "query_type": "building_summary",
+            "overall": overall,
+            "by_level": summary_rows,
+        }
+
     return {
         "query_type": query_type,
         "row_count": len(df),
@@ -99,17 +165,12 @@ async def handle_query_live_readings(
     """
     try:
         from core.influx_client import fetch_latest_hourly_data
-        from models.schemas import AHU_LEVEL_CONFIG
 
-        if ahu_ids:
-            devices_filter = ahu_ids
-        elif level is not None:
-            level_key = f"level_{level}"
-            devices_filter = AHU_LEVEL_CONFIG.get(level_key, {}).get("devices", [])
-        else:
-            devices_filter = None
-
-        df = await fetch_latest_hourly_data(devices_filter=devices_filter)
+        df = fetch_latest_hourly_data(
+            level_filter=level if level is not None else None,
+        )
+        if ahu_ids and df is not None and not df.empty and "device_id" in df.columns:
+            df = df[df["device_id"].isin(ahu_ids)]
         if df is None or (hasattr(df, 'empty') and df.empty):
             return {"readings": [], "note": "No live readings available."}
 
