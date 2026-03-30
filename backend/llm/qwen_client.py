@@ -107,3 +107,104 @@ class QwenClient:
         except Exception as e:
             logger.warning(f"LM Studio unreachable: {e}")
             return "Local LM Studio is not available in this environment."
+
+    async def generate_with_tools(
+        self,
+        system_prompt: str,
+        messages: list,
+        tools: list,
+        tool_dispatcher,
+        max_tool_rounds: int = 5,
+        temperature: float = 0.7,
+        max_output_tokens: int = 2048,
+    ) -> str:
+        """
+        Agentic tool-calling loop.
+
+        Sends messages + tool definitions to the model. If the model issues
+        tool_calls, executes them via tool_dispatcher and feeds results back.
+        Repeats until the model produces a final text response or max_tool_rounds
+        is reached.
+
+        Args:
+            system_prompt: Lean system prompt (no pre-loaded data).
+            messages: Conversation history in OpenAI format
+                      [{"role": "user"|"assistant", "content": str}, ...].
+            tools: List of tool definitions in OpenAI function-calling schema.
+            tool_dispatcher: Async callable(name: str, args: dict) -> dict.
+            max_tool_rounds: Safety cap on tool-call iterations.
+            temperature: Sampling temperature.
+            max_output_tokens: Max tokens for final response.
+
+        Returns:
+            Final assistant response string with <think> blocks stripped.
+        """
+        import json
+        full_messages = [{"role": "system", "content": system_prompt}] + list(messages)
+
+        for round_num in range(max_tool_rounds + 1):
+            is_final_round = (round_num == max_tool_rounds)
+
+            # On the final round, send without tools so the model must answer
+            call_tools = tools if not is_final_round else []
+
+            loop = asyncio.get_event_loop()
+            try:
+                kwargs = dict(
+                    model=self._model,
+                    messages=full_messages,
+                    temperature=temperature,
+                    max_tokens=max_output_tokens,
+                )
+                if call_tools:
+                    kwargs["tools"] = call_tools
+                    kwargs["tool_choice"] = "auto"
+
+                response = await loop.run_in_executor(
+                    None,
+                    partial(self._client.chat.completions.create, **kwargs),
+                )
+            except Exception as e:
+                logger.warning(f"LM Studio unreachable: {e}")
+                return "Local LM Studio is not available in this environment."
+
+            choice = response.choices[0]
+            tool_calls = getattr(choice.message, "tool_calls", None)
+
+            # No tool calls → final answer
+            if not tool_calls:
+                content = choice.message.content or ""
+                return _strip_think(content)
+
+            # Append assistant message (with tool_calls) to history
+            full_messages.append({
+                "role": "assistant",
+                "content": choice.message.content or "",
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                        },
+                    }
+                    for tc in tool_calls
+                ],
+            })
+
+            # Execute each tool call and append results
+            for tc in tool_calls:
+                try:
+                    args = json.loads(tc.function.arguments)
+                except json.JSONDecodeError:
+                    args = {}
+                result = await tool_dispatcher(tc.function.name, args)
+                full_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": json.dumps(result, default=str),
+                })
+
+        # Should not reach here (final round sends without tools)
+        return "I was unable to complete the analysis."
