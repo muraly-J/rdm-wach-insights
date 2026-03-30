@@ -11,6 +11,20 @@
   --tw-ring-offset-shadow: 0 0 #0000;
 }
 
+/* Chat bubble pulse — CSS keyframe replaces Framer Motion boxShadow animation */
+@keyframes chat-bubble-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,229,160,0.15); }
+  50%       { box-shadow: 0 0 0 12px rgba(0,229,160,0.15); }
+}
+.chat-bubble-glow {
+  animation: chat-bubble-pulse 3s ease-in-out infinite;
+}
+
+/* WelcomeHero CTA button hover glow — CSS hover replaces Framer Motion boxShadow */
+.welcome-cta-btn:hover {
+  box-shadow: 0 0 32px rgba(0,229,160,0.35);
+}
+
 :root {
   /* Color Palette */
   --bg-primary: #0B0F14;

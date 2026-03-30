@@ -123,8 +123,9 @@ export default function WelcomeHero({ onContinue }: { onContinue: () => void }) 
           {/* Continue glass pill button (replaces ScrollCTA) */}
           <motion.button
             onClick={onContinue}
-            whileHover={{ scale: 1.03, boxShadow: '0 0 32px rgba(0,229,160,0.35)' }}
+            whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
+            className="welcome-cta-btn"
             style={{
               marginTop: '40px',
               padding: '14px 40px',
@@ -140,6 +141,7 @@ export default function WelcomeHero({ onContinue }: { onContinue: () => void }) 
               WebkitBackdropFilter: 'blur(8px)',
               cursor: 'pointer',
               boxShadow: '0 0 0px rgba(0,229,160,0)',
+              transition: 'box-shadow 0.2s ease',
             }}
           >
             Continue →

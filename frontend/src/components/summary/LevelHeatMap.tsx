@@ -64,7 +64,7 @@ export default function LevelHeatMap() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
-              whileHover={{ scale: 1.04, boxShadow: getHealthGlow(tile.avgHealth) }}
+              whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
               style={{
                 background: bg,
@@ -77,6 +77,7 @@ export default function LevelHeatMap() {
                 cursor: 'pointer',
                 outline: 'none',
                 boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+                transition: 'box-shadow 0.15s ease',
               }}
             >
               <div style={{ fontSize: '10px', color: '#8A95A5', marginBottom: '6px' }}>
