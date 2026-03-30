@@ -72,14 +72,16 @@ The FAIR health scoring system used by WACH:
 
 #### `malaysian_hospital_hvac_context.md`
 Malaysian regulatory and environmental context:
-- **JKR Cipta HVAC guidelines**: Design Standard for Government Buildings (JKR 20600-0014), AHU sizing and redundancy requirements
-- **KKM Hospital Support Services standards**: Engineering Services specification for hospitals, HVAC requirements by department class
-- **MS 1525**: Code of practice on energy efficiency and use of renewable energy for non-residential buildings — OTTV, RTTV, system COP targets
-- **Infection control pressure relationships**: OT and clean rooms = positive pressure (+8 Pa); isolation rooms (infectious) = negative pressure (−8 Pa); corridors as buffer zones
-- **ACH requirements by department**: OT ≥ 25 ACH (15 fresh air), ICU/NICU ≥ 12 ACH, General Ward ≥ 6 ACH, Pharmacy cleanroom to ISO 7/8
-- **Tropical climate baseline**: Design conditions 33°C DBT / 28°C WBT outdoor, 24°C / 55% RH indoor setpoint for wards, 21°C / 55% RH for OT. High latent load fraction (dehumidification dominates cooling load).
-- **Typical AHU energy intensity**: OT AHU 15–25 kW, Ward AHU 5–12 kW, Pharmacy FAU 3–8 kW (varies with size)
-- **ASHRAE 170-2021**: Applied in Malaysian hospitals as de-facto standard for ventilation of healthcare facilities
+- **JKR Standard Specification 2025**: JKR Malaysia released the updated Standard Specification for Building Works in 2025 (replacing the 2020 edition), covering ACMV system requirements for government buildings including hospitals.
+- **JKR Technical Specification for ACMV (Edition 2020, still current for technical detail)**: Specifies maintenance, testing per ANSI/ASHRAE 111, and control requirements for air conditioning and mechanical ventilation in government buildings.
+- **KKM Hospital Support Services standards**: Ministry of Health Engineering Services specification for hospitals, HVAC requirements by department class, infection control requirements aligned with KKM guidelines.
+- **KKM Ventilation Guidelines (2021, updated for airborne pathogen control)**: MOH guidelines on ventilation in healthcare settings to reduce respiratory pathogen transmission — specifies pressure relationships and ACH by risk zone.
+- **MS 1525:2014**: Malaysian Standard — Code of practice on energy efficiency and use of renewable energy for non-residential buildings. OTTV ≤ 50 W/m², RTTV ≤ 25 W/m², chiller COP targets.
+- **Infection control pressure relationships**: OT and clean rooms = positive pressure (+8 Pa); isolation rooms (infectious disease) = negative pressure (−8 Pa); corridors serve as buffer zones between pressure differentials.
+- **ACH requirements by department** (JKR/KKM aligned): OT ≥ 25 ACH total (15 ACH fresh air), ICU/PICU/NICU ≥ 12 ACH, General Ward ≥ 6 ACH, Pharmacy cleanroom ISO 7/8 ≥ 20 ACH.
+- **Tropical climate baseline**: Design outdoor conditions 33°C DBT / 28°C WBT (Kuala Lumpur). Indoor setpoints: wards 24°C / 55% RH, OT 21°C / 55% RH. High latent load fraction — dehumidification dominates cooling load year-round (no winter/summer seasonal variation unlike temperate climates).
+- **Typical AHU energy intensity**: OT AHU 15–25 kW, Ward AHU 5–12 kW, Pharmacy FAU 3–8 kW (varies with supply air volume and room size).
+- **ASHRAE 170-2025**: The current edition of the primary healthcare ventilation standard (updated from 2021). Applied in Malaysian hospitals alongside JKR/KKM standards. Key 2025 updates: natural ventilation provisions, updated imaging room requirements, revised behavioural health spaces, updated construction-phase ventilation requirements. OT requirement: ≥ 20 ACH total (ASHRAE); JKR specifies ≥ 25 ACH which is the more stringent local requirement hospitals follow.
 
 #### `hospital_ahu_environments.md`
 Room-by-room AHU application requirements:
@@ -99,16 +101,35 @@ Room-by-room AHU application requirements:
 AHU failure implications differ by department: OT failure = surgical schedule cancellation (patient safety + revenue); PICU failure = life support risk; ward failure = patient discomfort and infection risk.
 
 #### `tnb_tariff_financial_guide.md`
-Malaysian TNB electricity tariff structure and penalty framework:
-- **Commercial tariffs**: C1 (≤ 33kV, < 100 kW demand), C2 (≤ 33kV, ≥ 100 kW demand) — hospitals typically on C2 or Medium Voltage (E1/E2/E3)
-- **Tariff components**: energy charge (sen/kWh), maximum demand charge (RM/kW/month), fuel cost adjustment
-- **Current rates (2024)**: C2 — energy: 35.5–43.5 sen/kWh (peak/off-peak); MD charge: RM29.60/kW
-- **Power Factor penalty**: TNB charges penalty when monthly average PF < 0.85. Formula: `Penalty = Bill × (0.85/actual_PF − 1)`. At PF = 0.75, penalty adds ~13% to bill.
-- **PF rebate**: TNB gives 1.5% rebate when monthly average PF > 0.90
-- **Maximum Demand**: charged on the highest 30-min kVA demand in the month. Poor PF increases kVA for same kW, raising MD charges.
-- **Cost of inaction example**: A 10 kW AHU running at PF 0.78 for 30 days incurs ~RM 85/month PF penalty. Across 121 AHUs with average PF 0.82, annual penalty exposure: ~RM 45,000–80,000.
-- **ROI of capacitor bank correction**: installation cost RM 2,000–5,000 per AHU; payback typically 6–18 months from PF penalty elimination alone, not counting reduced MD charges and improved motor life.
-- **Energy anomaly cost**: 10% above-baseline energy on a 10 kW AHU = ~1 kW excess = ~RM 175/month wasted. Across fleet: substantial.
+Malaysian TNB electricity tariff structure and penalty framework (RP4, effective 1 July 2025):
+
+- **Tariff restructure (RP4)**: TNB overhauled tariff categories from 1 July 2025 under Regulatory Period 4 (2025–2027). The old single Maximum Demand (MD) charge is replaced by two separate charges: Capacity Charge + Network Charge. Base tariff increased ~14.2% from RP3.
+
+- **Hospital tariff categories**: Most government hospitals are on Medium Voltage (MV) supply. The relevant categories are:
+  - **MV General** (ex-Tariff C1/E1): flat energy rate, no TOU differentiation. Energy: RM 0.2983/kWh. Capacity + Network: RM 89.27/kW/month.
+  - **MV TOU** (ex-Tariff C2/E2): time-of-use energy rates. Peak (Mon–Fri, 2 PM–10 PM): RM 0.3132/kWh. Off-peak (all other times incl. weekends/public holidays): RM 0.2723/kWh. Capacity + Network: RM 97.06/kW/month.
+  - **HV General** (ex-Tariff C3/E3, 132kV and above, large hospitals): Energy RM 0.4303/kWh. Capacity + Network: RM 31.21/kW/month.
+
+- **AFA (Automatic Fuel Adjustment)**: replaces the old ICPT mechanism. Adjusted monthly by the Energy Commission (ST) based on fuel prices and exchange rates. Jan 2026 AFA rate: −4.99 sen/kWh (a discount). Added to or subtracted from the base energy charge each month.
+
+- **Power Factor penalty** (unchanged under RP4, applies to supplies ≤ 132kV):
+  - Penalty threshold: monthly average PF < 0.85
+  - For PF between 0.75 and 0.85: `[(0.85 − PF) / 0.01] × 1.5%` of the monthly bill
+  - For PF below 0.75: `[(0.85 − 0.75) / 0.01 × 1.5%] + [(0.75 − PF) / 0.01 × 3%]` of the monthly bill
+  - Example: PF = 0.82 → `[(0.85 − 0.82) / 0.01] × 1.5% = 3 × 1.5% = 4.5%` surcharge on total bill
+  - Example: PF = 0.78 → `7 × 1.5% = 10.5%` surcharge
+  - Example: PF = 0.72 → `10 × 1.5% + 3 × 3% = 15% + 9% = 24%` surcharge
+  - For supplies ≥ 132kV (large hospitals): threshold is PF < 0.90
+
+- **Capacity + Network charge impact of poor PF**: Capacity and Network charges are billed per kW of maximum demand. Poor PF means higher kVA for the same useful kW output — if the hospital's maximum demand measurement includes reactive component effects, the effective billing demand rises.
+
+- **Cost of inaction example**: Across 121 AHUs on MV TOU tariff, if average fleet PF is 0.82, PF surcharge = 4.5% of monthly energy bill. At RM 0.30/kWh average and 200 kWh/day per AHU × 121 AHUs × 30 days = ~728,000 kWh/month → bill ~RM 218,000 → PF penalty ~RM 9,800/month = RM 117,600/year.
+
+- **ROI of capacitor bank correction**: installation cost RM 2,000–5,000 per AHU; payback typically 6–18 months from PF penalty elimination alone, plus reduced capacity/network charges and improved motor life.
+
+- **Energy anomaly cost**: 10% above-baseline energy on a 10 kW AHU = ~1 kW excess = at RM 0.30/kWh, ~RM 216/month wasted per AHU. Across 121 AHUs if 20% show energy anomaly: ~RM 5,200/month = ~RM 62,000/year.
+
+- **TOU optimisation opportunity**: Hospitals on MV TOU can shift non-critical AHU pre-cooling to off-peak hours (before 2 PM or after 10 PM) to benefit from lower off-peak rates (RM 0.2723 vs RM 0.3132/kWh).
 
 #### `fault_diagnosis_guide.md`
 Decision trees for each WACH fault type:
@@ -118,7 +139,7 @@ Decision trees for each WACH fault type:
 2. No VFD → Check capacitor bank: test capacitance (should be within 5% of nameplate), check for open-circuited capacitors
 3. Check motor: insulation resistance test (Megger), winding resistance balance
 4. Check for added inductive loads on same circuit (other motors, transformers)
-5. If PF < 0.75 and trending down → immediate intervention, risk of TNB penalty and overheating
+5. If PF < 0.75 and trending down → immediate intervention; TNB surcharge rate doubles to 3%/0.01 below 0.75 (on top of the 15% already accrued from 0.85→0.75 band) plus motor overheating risk
 
 **High THD (thd_drift high)**
 1. Is VFD installed? → Check VFD for line reactor, check if output filter fitted
