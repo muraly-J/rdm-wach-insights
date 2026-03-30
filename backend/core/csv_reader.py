@@ -20,8 +20,26 @@ CSV columns used:
 from __future__ import annotations
 
 import os
+import time
 import pandas as pd
 from datetime import datetime, timedelta, timezone
+
+# In-memory CSV cache: path → (DataFrame, loaded_at_monotonic)
+_CSV_CACHE: dict[str, tuple[pd.DataFrame, float]] = {}
+_CSV_CACHE_TTL = 300  # seconds (5 minutes)
+
+
+def _read_csv_cached(path: str) -> pd.DataFrame:
+    """Read a CSV with a 5-minute in-memory cache to avoid repeated 156MB disk reads."""
+    now = time.monotonic()
+    cached = _CSV_CACHE.get(path)
+    if cached is not None:
+        df, loaded_at = cached
+        if now - loaded_at < _CSV_CACHE_TTL:
+            return df
+    df = pd.read_csv(path, parse_dates=['timestamp'])
+    _CSV_CACHE[path] = (df, now)
+    return df
 
 CSV_PATH = os.path.join(
     os.path.dirname(__file__), '..', '..', 'data', 'health_all_levels.csv'
@@ -175,18 +193,18 @@ def _load_csv(time_range: str = "7d") -> pd.DataFrame:
         )
         if not os.path.exists(path) or os.path.getsize(path) == 0:
             return pd.DataFrame()
-        return pd.read_csv(path, parse_dates=['timestamp'])
+        return _read_csv_cached(path)
 
     # 30d — load hourly and resample to daily for the most current data
     if hourly_ok:
-        df = pd.read_csv(HOURLY_CSV_PATH, parse_dates=['timestamp'])
+        df = _read_csv_cached(HOURLY_CSV_PATH)
         return _resample_to_daily(df)
 
     # fallback to pre-built daily CSV
     path = DAILY_CSV_PATH if os.path.exists(DAILY_CSV_PATH) else CSV_PATH
     if not os.path.exists(path) or os.path.getsize(path) == 0:
         return pd.DataFrame()
-    return pd.read_csv(path, parse_dates=['timestamp'])
+    return _read_csv_cached(path)
 
 
 def _filter_time_range(df: pd.DataFrame, time_range: str) -> pd.DataFrame:
