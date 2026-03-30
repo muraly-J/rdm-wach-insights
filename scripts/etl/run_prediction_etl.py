@@ -91,9 +91,13 @@ def extract_prediction_data(device_ids, reference_time=None):
             record = {
                 'device_id': ahu_id,
                 'energy_current': values.get('energy_current'),
+                'energy_t_minus_1h': values.get('energy_t_minus_1h'),
                 'yesterday_kwh': values.get('yesterday_kwh'),
+                'yesterday_minus_1h': values.get('yesterday_minus_1h'),
                 'last_week_kwh': values.get('last_week_kwh'),
-                'two_weeks_kwh': values.get('two_weeks_kwh')
+                'last_week_minus_1h': values.get('last_week_minus_1h'),
+                'two_weeks_kwh': values.get('two_weeks_kwh'),
+                'two_weeks_minus_1h': values.get('two_weeks_minus_1h'),
             }
             records.append(record)
 

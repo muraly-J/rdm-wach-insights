@@ -939,19 +939,31 @@ def load_to_csv(df_scores, output_path=None):
 
     df_output = df_scores[[c for c in required_cols if c in df_scores.columns]]
 
-    # Deduplicate against existing file before writing
+    # Deduplicate against existing file before writing.
+    # Guard against LFS pointer files (checked out without LFS objects) —
+    # these look like valid files but contain "version https://git-lfs.github.com/spec/v1"
+    # instead of CSV data. Treat them as non-existent so we write fresh.
     if file_exists:
         try:
-            existing = pd.read_csv(output_path, parse_dates=["timestamp"])
-            combined = pd.concat([existing, df_output], ignore_index=True)
-            combined = combined.drop_duplicates(
-                subset=["timestamp", "device_id"], keep="last"
-            ).sort_values(["timestamp", "device_id"])
-            combined.to_csv(output_path, index=False)
-            new_rows = len(combined) - len(existing)
-            print(f"[OK] Merged {len(df_output)} records into existing file "
-                  f"({new_rows} net new rows, total: {len(combined)})")
-            return len(df_output)
+            with open(output_path, "r") as _f:
+                first_line = _f.readline()
+            if first_line.startswith("version https://git-lfs.github.com"):
+                print("[WARN] Existing file is a Git LFS pointer (object not fetched) — writing fresh")
+                file_exists = False
+            else:
+                existing = pd.read_csv(output_path)
+                if "timestamp" not in existing.columns:
+                    raise ValueError(f"Existing CSV missing 'timestamp' column (columns: {list(existing.columns)[:5]})")
+                existing["timestamp"] = pd.to_datetime(existing["timestamp"], utc=True, errors="coerce")
+                combined = pd.concat([existing, df_output], ignore_index=True)
+                combined = combined.drop_duplicates(
+                    subset=["timestamp", "device_id"], keep="last"
+                ).sort_values(["timestamp", "device_id"])
+                combined.to_csv(output_path, index=False)
+                new_rows = len(combined) - len(existing)
+                print(f"[OK] Merged {len(df_output)} records into existing file "
+                      f"({new_rows} net new rows, total: {len(combined)})")
+                return len(df_output)
         except Exception as e:
             print(f"[WARN] Merge failed ({e}), falling back to append mode")
 
