@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { NavigateTarget } from '../../api/client'
 import ChatChartModal, { ChartEntry } from './ChatChartModal'
 
@@ -85,7 +86,7 @@ const BotMessage: React.FC<BotMessageProps> = ({
             "
           >
             <div className="text-sm text-[#E8ECF1] leading-relaxed prose prose-invert prose-sm max-w-none">
-              <ReactMarkdown>{content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
             </div>
           </div>
 
