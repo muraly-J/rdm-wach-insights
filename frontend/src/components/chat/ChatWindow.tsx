@@ -100,10 +100,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
         shadow-2xl border border-[#1E2A3A]
         flex flex-col
       "
-      animate={{ height: isMinimized ? 'auto' : 'min(560px, 80dvh)', opacity: 1, scale: 1 }}
+      animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
       initial={{ opacity: 0, scale: 0.9 }}
       exit={{ opacity: 0, scale: 0.9 }}
+      style={{ height: isMinimized ? 'auto' : 'min(560px, 80dvh)' }}
     >
       <ChatHeader
         isOpen={isOpen}

@@ -7,5 +7,5 @@ errorlog     = "-"
 loglevel     = "info"
 max_requests        = 1000
 max_requests_jitter = 100
-timeout      = 120
+timeout      = 300
 keepalive    = 5
