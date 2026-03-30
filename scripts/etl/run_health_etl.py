@@ -976,6 +976,64 @@ def load_to_csv(df_scores, output_path=None):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# STEP 3c: LOAD - Write to DuckDB Health DB
+# ──────────────────────────────────────────────────────────────────────────────
+
+def save_health_duckdb(results_df: pd.DataFrame, dry_run: bool = False) -> None:
+    """
+    Append/replace computed health scores into data/healthdb.duckdb.
+
+    Called after save_health_csv() as step 3c in the ETL pipeline.
+    Idempotent — safe to re-run (upsert on PRIMARY KEY (timestamp, ahu_id)).
+    """
+    import sys
+    import os
+    # Add backend to path so we can import HealthDB from the ETL process
+    backend_path = os.path.join(os.path.dirname(__file__), '..', '..', 'backend')
+    if backend_path not in sys.path:
+        sys.path.insert(0, backend_path)
+
+    from core.healthdb import HealthDB
+
+    if dry_run:
+        print("[DRY-RUN] Would write to healthdb.duckdb (skipping)")
+        return
+
+    print("STEP 3c: LOAD - Writing to healthdb.duckdb")
+    try:
+        db = HealthDB()
+
+        # Rename output columns to match DuckDB schema
+        # ETL uses 'device_id'; CSV/DuckDB uses 'ahu_id'
+        df = results_df.rename(columns={"device_id": "ahu_id"}) if "device_id" in results_df.columns else results_df.copy()
+
+        # Select only schema columns (drop any extra ETL columns)
+        schema_cols = [
+            "timestamp", "ahu_id", "level", "health_index", "tier",
+            "energy_anomaly", "pf_degradation", "phase_imbalance",
+            "thd_drift", "overload", "raw_power_total", "raw_energy_import",
+            "raw_hourly_delta", "raw_predicted_delta", "raw_energy_anomaly_raw",
+            "raw_power_factor_avg", "raw_current_unbalance", "raw_composite_thd",
+            "raw_apparent_power_total", "raw_current_l1", "raw_current_l2",
+            "raw_current_l3", "raw_volts_l1_n", "raw_volts_l2_n", "raw_volts_l3_n",
+            "raw_current_l1_thd", "raw_current_l3_thd", "raw_volts_l1_thd",
+            "raw_volts_l2_thd", "raw_volts_l3_thd", "raw_nema_voltage_imbalance",
+            "raw_p95_current", "safety_flags",
+        ]
+        missing = [c for c in schema_cols if c not in df.columns]
+        if missing:
+            for col in missing:
+                df[col] = None  # fill missing columns with NULL
+        df = df[schema_cols]
+
+        rows = db.upsert(df)
+        print(f"[OK] Upserted {rows} rows to healthdb.duckdb")
+    except Exception as e:
+        print(f"[ERROR] healthdb write failed: {e}")
+        # Non-fatal — ETL continues, CSV is still written
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # STEP 3b: LOAD - Write Hourly CSV (Append-only for 24h chart)
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -1158,6 +1216,9 @@ def run_etl_pipeline(output_path=None, dry_run=False, level=None, scheduled=Fals
             step_timings["load_hourly"] = end_timer("STEP 3b: Load hourly CSV")
             if hourly_written:
                 results["rows_loaded_hourly"] = len(df_scores)
+
+        # STEP 3c: Load to DuckDB (always runs alongside CSV)
+        save_health_duckdb(df_scores, dry_run=dry_run)
 
     # STEP 4: Safety Flags Summary
     print_safety_flags_summary(df_scores)
