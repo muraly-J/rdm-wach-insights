@@ -201,5 +201,5 @@ class HealthDB:
             ts = result[0]
             if hasattr(ts, 'tzinfo') and ts.tzinfo is None:
                 return ts.replace(tzinfo=timezone.utc)
-            return ts
+            return ts.astimezone(timezone.utc)
         return None
