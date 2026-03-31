@@ -181,9 +181,11 @@ class HealthDB:
         order: 'asc' = worst first (lowest value), 'desc' = best first.
         """
         direction = "ASC" if order == "asc" else "DESC"
+        # Include tier so callers don't have to infer it from the index value.
+        select_cols = f"ahu_id, level, health_index, tier, {metric}, timestamp"
         if level is not None:
             query = f"""
-                SELECT ahu_id, level, health_index, {metric}, timestamp
+                SELECT {select_cols}
                 FROM health_hourly
                 WHERE level = ?
                 QUALIFY ROW_NUMBER() OVER (PARTITION BY ahu_id ORDER BY timestamp DESC) = 1
@@ -193,7 +195,7 @@ class HealthDB:
             params = [level, n]
         else:
             query = f"""
-                SELECT ahu_id, level, health_index, {metric}, timestamp
+                SELECT {select_cols}
                 FROM health_hourly
                 QUALIFY ROW_NUMBER() OVER (PARTITION BY ahu_id ORDER BY timestamp DESC) = 1
                 ORDER BY {metric} {direction}
