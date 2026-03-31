@@ -4,6 +4,8 @@ rag/vector_store.py
 ChromaDB wrapper. Stores and queries document embeddings.
 """
 
+from typing import Optional
+
 import chromadb
 from chromadb.config import Settings
 
@@ -26,7 +28,7 @@ class VectorStore:
         ids: list[str],
         documents: list[str],
         embeddings: list[list[float]],
-        metadatas: list[dict] | None = None,
+        metadatas: Optional[list[dict]] = None,
     ) -> None:
         """Add or update documents in the collection."""
         self._collection.upsert(
