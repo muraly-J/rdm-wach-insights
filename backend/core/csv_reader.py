@@ -37,7 +37,16 @@ def _read_csv_cached(path: str) -> pd.DataFrame:
         df, loaded_at = cached
         if now - loaded_at < _CSV_CACHE_TTL:
             return df
-    df = pd.read_csv(path, parse_dates=['timestamp'])
+    df = pd.read_csv(path, parse_dates=['timestamp'], low_memory=False)
+    # Normalise device identifier: all downstream code expects 'ahu_id'.
+    # Some CSV generations write 'device_id' instead, or leave 'ahu_id' mostly
+    # NaN while 'device_id' is populated — fill/rename as needed.
+    if 'ahu_id' not in df.columns and 'device_id' in df.columns:
+        df = df.rename(columns={'device_id': 'ahu_id'})
+    elif 'ahu_id' in df.columns and 'device_id' in df.columns:
+        nan_ratio = df['ahu_id'].isna().mean()
+        if nan_ratio > 0.5:
+            df['ahu_id'] = df['ahu_id'].fillna(df['device_id'])
     _CSV_CACHE[path] = (df, now)
     return df
 
