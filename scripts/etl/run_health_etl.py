@@ -25,7 +25,7 @@ import sys
 import os
 import argparse
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 # Add backend to path for imports (scripts/etl → .. → scripts → .. → backend)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
