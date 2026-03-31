@@ -35,7 +35,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from backend.utils.error_handler import handle_forecast_error
+from utils.error_handler import handle_forecast_error
 
 router = APIRouter()
 

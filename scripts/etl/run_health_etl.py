@@ -447,18 +447,23 @@ def extract_raw_data(metrics_to_fetch=None, level_filter=None):
             "volts_l3_thd",
         ]
 
-    # Gap-filling: resume from the last timestamp in the hourly CSV
+    # Gap-filling: resume from the last timestamp in the hourly CSV.
+    # Always fetch at least 168 h of history so scoring functions have enough
+    # data points (they require ≥ 24). Only rows newer than `since` are saved.
     since = _get_latest_csv_timestamp()
+    HISTORY_HOURS = 168
     if since is not None:
-        print(f"[gap-fill] Latest CSV timestamp: {since.isoformat()} — fetching from there")
+        history_since = since - timedelta(hours=HISTORY_HOURS)
+        print(f"[gap-fill] Latest CSV timestamp: {since.isoformat()} — fetching {HISTORY_HOURS}h lookback for scoring")
     else:
+        history_since = None
         print("[gap-fill] No existing CSV — fetching latest snapshot per device")
 
     try:
         df = fetch_latest_hourly_data(
             metrics_to_fetch=metrics_to_fetch,
             level_filter=level_filter,
-            since=since,
+            since=history_since,
         )
 
         if df.empty:
@@ -723,9 +728,11 @@ def transform_health_scores(df_raw):
             overload_score, z_overload, score_A, score_B, score_C = 0.5, np.nan, np.nan, np.nan, np.nan
 
         # Calculate health index
+        # Key must match HEALTH_INDEX_WEIGHTS keys exactly.
+        # NOTE: the CSV column is "pf_degradation" but the weight key is "power_factor".
         risk_scores = {
             "energy_anomaly": round(energy_score, 4),
-            "pf_degradation": round(pf_score, 4),
+            "power_factor":   round(pf_score, 4),
             "phase_imbalance": round(unbal_score, 4),
             "thd_drift": round(thd_score, 4),
             "overload": round(overload_score, 4),
