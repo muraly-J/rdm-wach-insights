@@ -85,20 +85,26 @@ export interface NavigateTarget {
 
 /**
  * POST /api/chat — Chat widget messaging
- * Spec: Section 6.4 chat backend integration
  */
 export async function sendChatMessage(
   message: string,
   options?: {
     level?: number;
     device?: string | null;
+    financial_impact?: number | null;
     history?: Array<{ role: 'user' | 'model'; content: string }>;
+    persona?: string | null;
   }
 ) {
-  const { history, ...context } = options ?? {};
+  const { history, persona, ...context } = options ?? {};
   return apiFetch<{ reply: string; navigate?: NavigateTarget | null }>('/chat', {
     method: 'POST',
-    body: JSON.stringify({ message, context, history: history ?? [] }),
+    body: JSON.stringify({
+      message,
+      context,
+      history: history ?? [],
+      persona: persona ?? null,
+    }),
   });
 }
 

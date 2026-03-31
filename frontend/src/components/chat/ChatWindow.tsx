@@ -29,6 +29,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [isTyping, setIsTyping] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState<'general' | 'technical' | 'technician' | 'financial' | null>(null);
 
   const selectedLevel = useAppStore((s) => s.selectedLevel);
   const selectedDevice = useAppStore((s) => s.selectedDevice);
@@ -47,6 +48,26 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
 
   const handleClearChat = () => {
     setMessages([INITIAL_MESSAGE]);
+  };
+
+  const handlePersonaChange = (persona: 'general' | 'technical' | 'technician' | 'financial' | null) => {
+    setSelectedPersona(persona);
+    if (persona) {
+      const labels: Record<string, string> = {
+        general: 'general audience',
+        technical: 'an engineering perspective',
+        technician: 'a maintenance technician perspective',
+        financial: 'a financial perspective',
+      };
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'bot',
+          content: `Got it — I'll explain things from ${labels[persona]}.`,
+        },
+      ]);
+    }
   };
 
   const handleSendMessage = async (text: string) => {
@@ -68,6 +89,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
         device: selectedDevice ?? undefined,
         financial_impact: financialImpact ?? undefined,
         history,
+        persona: selectedPersona,
       });
       setMessages((prev) => [
         ...prev,
@@ -129,7 +151,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
               onNavigate={handleNavigate}
               onClearChat={handleClearChat}
             />
-            <ChatInput onSendMessage={handleSendMessage} />
+            <ChatInput
+                onSendMessage={handleSendMessage}
+                onPersonaChange={handlePersonaChange}
+                selectedPersona={selectedPersona}
+              />
           </motion.div>
         )}
       </AnimatePresence>
