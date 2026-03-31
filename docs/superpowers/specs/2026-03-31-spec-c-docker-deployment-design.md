@@ -167,52 +167,90 @@ volumes:
 
 ## Section 5: Environment Variables
 
-Full `.env.example`:
+The `.env.example` ships **pre-configured for the Women and Child Ward, Hospital Kuala Lumpur**. A colleague fills in three required values and nothing else. This is the intended minimum viable setup.
+
+### What the colleague fills in (3 required + 1 security)
 
 ```bash
-# ── Identity ─────────────────────────────────────────────────────────────────
-# Used in chatbot system prompt and logs. Change per hospital deployment.
-WACH_BUILDING_NAME=Hospital Kuala Lumpur
-WACH_DEPARTMENT=Engineering
-HOSPITAL_ID=hkl
+INFLUX_URL=           # your InfluxDB server URL
+INFLUX_TOKEN=         # your InfluxDB API token (read access)
+INFLUX_BUCKET=        # your InfluxDB bucket name
+API_KEY=              # generate with: openssl rand -base64 32
+```
 
-# ── InfluxDB ──────────────────────────────────────────────────────────────────
-# Required. Point at the hospital's InfluxDB instance.
-INFLUX_URL=http://192.168.1.10:8086
+### Full `.env.example` (shipped with defaults pre-set)
+
+```bash
+# ═══════════════════════════════════════════════════════════════════
+# WACH Insight — Women and Child Ward, Hospital Kuala Lumpur
+# ═══════════════════════════════════════════════════════════════════
+# To deploy for a different ward or hospital, update the Identity
+# section below and point the InfluxDB vars at the new data source.
+# Everything else can stay as-is.
+# ═══════════════════════════════════════════════════════════════════
+
+# ── YOU MUST FILL THESE IN ────────────────────────────────────────
+INFLUX_URL=http://YOUR_INFLUXDB_HOST:8086
 INFLUX_TOKEN=your-influxdb-token-here
-INFLUX_ORG=wach
-INFLUX_BUCKET=wach_bucket_3
-# Set to true if InfluxDB runs plain HTTP on a non-localhost address
-INFLUX_SKIP_TLS=false
+INFLUX_BUCKET=your-bucket-name-here
+API_KEY=generate-with-openssl-rand-base64-32
 
-# ── LLM ──────────────────────────────────────────────────────────────────────
-# Point at LM Studio on host (Mac/Windows) or a shared GPU server.
-# For Docker Desktop on Mac/Windows: host.docker.internal works out of the box.
-# For Linux hosts: use the host's actual IP (e.g. http://172.17.0.1:1234/v1).
+# ── Identity (pre-set for Women & Child Ward HKL) ────────────────
+# Change these when deploying for a different ward or hospital.
+WACH_BUILDING_NAME=Hospital Kuala Lumpur
+WACH_DEPARTMENT=Women and Child Ward
+HOSPITAL_ID=hkl-wcw
+
+# ── LLM ──────────────────────────────────────────────────────────
+# Docker Desktop (Mac/Windows): host.docker.internal works as-is.
+# Linux host: replace with the host machine's LAN IP.
 LMS_BASE_URL=http://host.docker.internal:1234/v1
 LMS_MODEL=qwen/qwen3-coder-next
 LMS_API_KEY=lm-studio
 
-# ── Security ──────────────────────────────────────────────────────────────────
-# Required. Generate with: openssl rand -base64 32
-API_KEY=change-this-to-a-long-random-string
+# ── InfluxDB extras ───────────────────────────────────────────────
+INFLUX_ORG=wach
+# Set true only if InfluxDB runs plain HTTP on a non-localhost address
+INFLUX_SKIP_TLS=false
 
-# Allowed frontend origins (comma-separated). Add your frontend URL here.
+# ── Networking ────────────────────────────────────────────────────
 CORS_ORIGINS=http://localhost:3000,http://localhost:5173
-
-# ── ETL Schedule ──────────────────────────────────────────────────────────────
-# Cron syntax. Default: every hour on the hour.
-ETL_SCHEDULE=0 * * * *
-
-# ── Backend Port ─────────────────────────────────────────────────────────────
-# Default: 8081. Change if port is taken.
 BACKEND_PORT=8081
 
-# ── Optional ─────────────────────────────────────────────────────────────────
+# ── ETL Schedule (cron syntax) ────────────────────────────────────
+ETL_SCHEDULE=0 * * * *
+
+# ── Optional ─────────────────────────────────────────────────────
 RATE_LIMIT_REQUESTS=100
 RATE_LIMIT_WINDOW=60
 DEBUG=false
 ```
+
+### Scalability model
+
+This repo is a **ward profile**. Deploying for a new ward or hospital means:
+
+1. Clone the repo
+2. `cp .env.example .env`
+3. Fill in the 4 required vars (InfluxDB credentials + API key)
+4. Update the Identity block (building name, department, hospital ID)
+5. `docker compose up`
+
+No code changes. No Dockerfile changes. The chatbot's system prompt, tool descriptions, and all business logic adapt automatically via the identity env vars.
+
+```
+Clone → Configure .env → docker compose up
+         ↑ 4 lines max
+```
+
+**Scaling path:**
+```
+Women & Child Ward (HKL)   →  repo + .env A
+ICU (HKL)                  →  same repo + .env B  (different bucket)
+Paediatric Ward (PPUM)     →  same repo + .env C  (different hospital)
+```
+
+Each deployment is fully isolated. Same codebase, different identities and data sources.
 
 ---
 
@@ -256,24 +294,20 @@ The `/api/chat` section is the longest — it explains `message`, `history`, `pe
 
 ## Section 7: Multi-Ward Deployment Pattern
 
-Each hospital deployment is an independent `docker compose up` with its own `.env`. No shared state between deployments.
+See Section 5 (Scalability model) for the full pattern. In brief: each ward/hospital is an independent `docker compose up` with its own `.env`. No shared state between deployments. Two instances can run on the same VM by setting different `BACKEND_PORT` values.
 
 ```
-Hospital A (HKL)          Hospital B (PPUM)
-─────────────────         ─────────────────
-.env:                     .env:
-  HOSPITAL_ID=hkl           HOSPITAL_ID=ppum
-  INFLUX_BUCKET=wach_hkl    INFLUX_BUCKET=wach_ppum
-  WACH_BUILDING_NAME=HKL    WACH_BUILDING_NAME=PPUM
-  BACKEND_PORT=8081          BACKEND_PORT=8082
+Women & Child Ward (HKL)      ICU (HKL)
+────────────────────────       ──────────────────────
+HOSPITAL_ID=hkl-wcw            HOSPITAL_ID=hkl-icu
+WACH_DEPARTMENT=Women...       WACH_DEPARTMENT=ICU
+INFLUX_BUCKET=wcw_bucket       INFLUX_BUCKET=icu_bucket
+BACKEND_PORT=8081               BACKEND_PORT=8082
 
-docker compose up         docker compose up
-→ API at :8081            → API at :8082
-→ own DuckDB volume       → own DuckDB volume
-→ own ChromaDB volume     → own ChromaDB volume
+→ API at :8081                 → API at :8082
+→ own DuckDB volume            → own DuckDB volume
+→ own ChromaDB volume          → own ChromaDB volume
 ```
-
-Each instance has isolated data volumes. Both can run on the same VM by changing `BACKEND_PORT`.
 
 ---
 
