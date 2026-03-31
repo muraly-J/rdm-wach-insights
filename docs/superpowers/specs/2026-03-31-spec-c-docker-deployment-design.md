@@ -74,12 +74,19 @@ On container start:
 
 ### Cron file: `docker/etl.cron`
 
-A single line:
+Two lines — both pipelines, matching what the GitHub Actions scheduler runs today:
 ```
-${ETL_SCHEDULE} python -m scripts.etl.run_health_etl
+${ETL_SCHEDULE} python -m scripts.etl.run_prediction_etl --level all
+${ETL_SCHEDULE} python -m scripts.etl.run_health_etl --level all --output-hourly
 ```
 
-`ETL_SCHEDULE` defaults to `0 * * * *` (hourly). Colleagues can change it in `.env` — e.g. `ETL_SCHEDULE=*/30 * * * *` for every 30 minutes.
+`ETL_SCHEDULE` defaults to `0 * * * *` (hourly). The GitHub Actions scheduler runs every 30 minutes — if that cadence is needed, set `ETL_SCHEDULE=0,30 * * * *`.
+
+### Relationship to GitHub Actions scheduler
+
+Once the Docker ETL sidecar is running at a hospital deployment, the `etl-scheduler.yml` GitHub Actions workflow is redundant for that deployment. The Actions workflow can have its `schedule` trigger disabled; the `workflow_dispatch` (manual trigger) is worth keeping for ad-hoc debugging.
+
+The Actions workflow currently also **commits output files back to git** (`health_hourly.csv`, `healthdb.duckdb`, etc.) to serve as seed data for new deployments. Once Docker is the primary deployment model, new colleagues don't need pre-seeded files — the ETL populates the DuckDB volume from InfluxDB on first run. The migration script (`migrate_csv_to_duckdb.py`) becomes optional: run it if a pre-populated CSV exists, skip it if not.
 
 ### Re-run safety
 
