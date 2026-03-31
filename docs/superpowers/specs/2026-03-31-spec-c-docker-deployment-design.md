@@ -62,8 +62,9 @@ Markdown RAG docs (`backend/data/rag_docs/*.md`) are **baked into the image** at
 On container start:
   1. Check /app/data/.migrated sentinel file
      NOT present →
-       run: python -m scripts.etl.migrate_csv_to_duckdb   (~10s)
-       run: python -m scripts.ingest_all_docs              (~2min, embeds ~150 chunks)
+       run: python -m scripts.generate_ward_docs            (~1s)
+       run: python -m scripts.etl.migrate_csv_to_duckdb    (~10s, skips if no CSV)
+       run: python -m scripts.ingest_all_docs               (~2min, embeds ~150-200 chunks)
        touch /app/data/.migrated
      Present →
        skip init entirely
@@ -71,6 +72,8 @@ On container start:
   2. Start supercronic with /app/docker/etl.cron
      (supercronic: Shopify-maintained, PID-1 safe container cron)
 ```
+
+Ward doc generation runs first so the generated docs are available for RAG ingest. To re-generate docs after updating `ward_config.yml` (e.g. new AHUs added), delete the sentinel and restart the ETL container.
 
 ### Cron file: `docker/etl.cron`
 
@@ -100,6 +103,84 @@ docker compose restart etl
 
 ---
 
+## Section 2b: Ward Configuration
+
+### The problem
+
+Two RAG docs are WACH-specific and would mislead a colleague deploying for a different ward:
+- `ahu_directory.md` — lists WACH's specific 121 devices by ID, level, and location
+- `wach_system_guide.md` — says "121 AHUs across 11 levels", device IDs e0101–e1108
+
+The other 9 RAG docs (`ahu_components_overview.md`, `ahu_electrical_health.md`, `fair_scoring_methodology.md`, etc.) are **generic** — they describe electrical health, Malaysian hospital standards, TNB tariffs, maintenance procedures. These work unchanged for any hospital ward.
+
+The system prompt also hardcodes WACH topology ("11 levels", "121 AHUs", valid device ID range). Without fixing this, the ICU chatbot would answer ICU queries with WACH-specific device IDs and counts.
+
+### Solution: `ward_config.yml`
+
+A YAML config file the colleague fills in alongside `.env`. It describes the ward's AHU topology. A generator script reads it and produces the two ward-specific RAG docs automatically.
+
+**Colleague provides:**
+
+```yaml
+# ward_config.yml
+hospital: Hospital Kuala Lumpur
+ward: ICU
+hospital_id: hkl-icu
+
+# One entry per monitored level/floor.
+# 'ahus' is the count of AHUs on that level — the system auto-generates device IDs.
+levels:
+  - level: 3
+    name: "Level 3 — General ICU"
+    ahus: 8
+  - level: 4
+    name: "Level 4 — Cardiac ICU"
+    ahus: 6
+  - level: 5
+    name: "Level 5 — Neuro ICU"
+    ahus: 7
+
+# Device ID format: prefix + zero-padded level + zero-padded unit number
+# e.g. prefix "e" → e0301, e0302 ... e0308 for Level 3
+device_prefix: "e"
+```
+
+### New script: `scripts/generate_ward_docs.py`
+
+Reads `ward_config.yml` and writes two files into `backend/data/rag_docs/`:
+
+**`ward_directory.md`** (replaces `ahu_directory.md`):
+- Full device ID list with level and unit numbers derived from config
+- Total AHU count, level names, device ID range
+- Example: "Level 3 — General ICU: e0301–e0308 (8 AHUs)"
+
+**`ward_system_guide.md`** (replaces `wach_system_guide.md`):
+- Everything `wach_system_guide.md` contains but with the correct ward name, hospital, level count, total AHU count, and device ID format
+- "What the chatbot can and cannot answer" section is generic — stays the same
+
+The script is idempotent — safe to re-run. If `ward_config.yml` is not found, it logs a warning and exits without error (the original WACH docs remain, deployment still works for the WACH ward).
+
+### System prompt
+
+`backend/llm/prompts.py` currently hardcodes topology constants. These are replaced with values read from `ward_config.yml` at startup:
+- Total AHU count
+- Level count  
+- Device ID prefix and range (derived from config, e.g. "e0301–e0508")
+
+This is a small change to `build_system_prompt()` — read from config, not hardcoded strings.
+
+### What the colleague workflow looks like
+
+```
+1. cp .env.example .env           → fill in 4 lines (InfluxDB + API key)
+2. cp ward_config.example.yml ward_config.yml  → fill in their levels + AHU counts
+3. docker compose up              → ward docs generated, RAG ingested, API live
+```
+
+No code changes. No Dockerfile changes. The chatbot answers ICU questions about ICU devices.
+
+---
+
 ## Section 3: File Inventory
 
 ### New files
@@ -107,20 +188,23 @@ docker compose restart etl
 | File | Purpose |
 |------|---------|
 | `docker-compose.yml` | Two-service compose: backend + etl, two named volumes |
-| `docker/etl-entrypoint.sh` | Sentinel check → migration/ingest → supercronic |
+| `docker/etl-entrypoint.sh` | Ward doc gen → migration → ingest → supercronic |
 | `docker/etl.cron` | Cron schedule file consumed by supercronic |
-| `.env.example` | Every env var documented with comments and defaults |
+| `.env.example` | Every env var, pre-set for Women & Child Ward HKL |
+| `ward_config.example.yml` | AHU topology template, pre-set for Women & Child Ward HKL |
+| `scripts/generate_ward_docs.py` | Reads `ward_config.yml`, writes `ward_directory.md` + `ward_system_guide.md` |
 | `API.md` | Narrative integration guide + endpoint reference for frontend builders |
 
 ### Modified files
 
 | File | Change |
 |------|--------|
-| `Dockerfile` | Add `supercronic` install; remove Railway-specific PORT default; keep `railway.toml` compatibility |
+| `Dockerfile` | Add `supercronic` install; copy `docker/` scripts into image |
+| `backend/llm/prompts.py` | Read topology constants from `ward_config.yml` instead of hardcoded WACH values |
 
 ### Unchanged
 
-Everything in `backend/` is untouched. No application code changes in Spec C.
+All other backend code, RAG infrastructure, tools, routes — untouched.
 
 ---
 
