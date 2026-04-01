@@ -1,0 +1,47 @@
+# docker-compose.yml
+# ═══════════════════════════════════════════════════════════════════
+# WACH Insight — Chatbot API Stack
+# Two services: backend (FastAPI) + etl (sidecar cron)
+# Two volumes:  duckdb_data + chroma_data
+#
+# Quick start:
+#   cp .env.example .env            # fill in 4 required vars
+#   cp ward_config.example.yml ward_config.yml  # fill in AHU topology
+#   docker compose up --build
+# ═══════════════════════════════════════════════════════════════════
+
+services:
+  backend:
+    build: .
+    ports:
+      - "${BACKEND_PORT:-8081}:8000"
+    volumes:
+      - duckdb_data:/app/data
+      - chroma_data:/app/data/chroma
+      - ${WARD_CONFIG_PATH:-./ward_config.example.yml}:/app/ward_config.yml:ro
+    env_file: .env
+    environment:
+      - PORT=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  etl:
+    build: .
+    command: /app/docker/etl-entrypoint.sh
+    volumes:
+      - duckdb_data:/app/data
+      - chroma_data:/app/data/chroma
+      - ${WARD_CONFIG_PATH:-./ward_config.example.yml}:/app/ward_config.yml:ro
+    env_file: .env
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  duckdb_data:
+  chroma_data:

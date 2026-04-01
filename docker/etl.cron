@@ -1,0 +1,6 @@
+# docker/etl.cron
+# Runs both ETL pipelines on the schedule defined by ETL_SCHEDULE.
+# Default (from .env.example): 0 * * * * = every hour on the hour.
+# For every 30 minutes (matching GitHub Actions): 0,30 * * * *
+${ETL_SCHEDULE:-0 * * * *} cd /app && python -m scripts.etl.run_prediction_etl --level all
+${ETL_SCHEDULE:-0 * * * *} cd /app && python -m scripts.etl.run_health_etl --level all --output-hourly

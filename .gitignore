@@ -273,3 +273,8 @@ data/audit_results*.json
 # =========================
 *_backup*.tar.gz
 .worktrees/
+
+# =========================
+# Ward configuration (instance-specific)
+# =========================
+ward_config.yml
