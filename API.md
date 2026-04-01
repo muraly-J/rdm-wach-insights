@@ -16,7 +16,7 @@ curl http://localhost:8081/health
 # 3. Say hello to the chatbot
 curl -X POST http://localhost:8081/api/chat \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{"message": "what is the health of level 3?"}'
 ```
 
@@ -25,7 +25,7 @@ curl -X POST http://localhost:8081/api/chat \
 Every request (except `GET /health`) requires an API key header:
 
 ```
-X-API-Key: <your API_KEY from .env>
+Authorization: Bearer <your API_KEY from .env>
 ```
 
 Generate a key: `openssl rand -base64 32`
@@ -95,13 +95,13 @@ No auth required. Use for Docker healthchecks and uptime monitoring.
 # First message
 curl -X POST http://localhost:8081/api/chat \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: $API_KEY" \
+  -H "Authorization: Bearer $API_KEY" \
   -d '{"message": "which AHUs on level 5 need attention?"}'
 
 # Follow-up with history
 curl -X POST http://localhost:8081/api/chat \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: $API_KEY" \
+  -H "Authorization: Bearer $API_KEY" \
   -d '{
     "message": "why is e0507 in the maintenance tier?",
     "history": [
@@ -126,7 +126,7 @@ Top 5 healthiest and top 5 needs-attention AHUs for a level.
 **Example:**
 ```bash
 curl "http://localhost:8081/api/dashboard/ranking?level=5&time_range=last_30d" \
-  -H "X-API-Key: $API_KEY"
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 **Response:**
@@ -167,7 +167,7 @@ Health index time-series with FAIR component scores for all AHUs on a level.
 **Example:**
 ```bash
 curl "http://localhost:8081/api/dashboard/trend?level=5&range=7d" \
-  -H "X-API-Key: $API_KEY"
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 **Response:**
@@ -213,7 +213,7 @@ List all available building levels.
 
 **Example:**
 ```bash
-curl "http://localhost:8081/api/levels" -H "X-API-Key: $API_KEY"
+curl "http://localhost:8081/api/levels" -H "Authorization: Bearer $API_KEY"
 ```
 
 **Response:**
@@ -234,7 +234,7 @@ Five FAIR-score breakdown for all AHUs on a level, read from CSV.
 **Example:**
 ```bash
 curl "http://localhost:8081/api/level/5/scores?time_range=7d" \
-  -H "X-API-Key: $API_KEY"
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 **Response:**
@@ -312,7 +312,7 @@ Arbitrary metric time-series from InfluxDB for a single device.
 **Example:**
 ```bash
 curl "http://localhost:8081/api/device/e0501/measurements?metrics=power_factor_avg,current_l1&range=24h" \
-  -H "X-API-Key: $API_KEY"
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 **Response:**
@@ -348,7 +348,7 @@ Financial impact report — excess energy cost, PF penalties, demand charges, an
 **Example:**
 ```bash
 curl "http://localhost:8081/api/financial-impact?level=5&time_range=30d" \
-  -H "X-API-Key: $API_KEY"
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 **Response:**
@@ -391,7 +391,7 @@ Fleet-wide summary: total AHUs, average site health, alerts count, level tiles, 
 **Example:**
 ```bash
 curl "http://localhost:8081/api/site/summary?range=7d" \
-  -H "X-API-Key: $API_KEY"
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 **Response:**
@@ -445,7 +445,7 @@ Note: `estMonthlyCostMYR` and `monthlyCostMYR` are `0.0` in the current release.
 **Example:**
 ```bash
 curl "http://localhost:8081/api/forecast/e0202" \
-  -H "X-API-Key: $API_KEY"
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 **Response:**
@@ -482,7 +482,7 @@ Math-predicted measurements, FAIR scores, and health index at multiple future ho
 **Example:**
 ```bash
 curl "http://localhost:8081/api/predictions/e0501?horizons=1h,24h" \
-  -H "X-API-Key: $API_KEY"
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 **Response:** Shape determined by `core.prediction_engine.compute_predictions_async`. See `/docs` for the full schema.
@@ -518,7 +518,7 @@ FAIR scores are five component penalty scores: **F**requency anomaly (energy), p
 | Status | Meaning |
 |--------|---------|
 | `400 Bad Request` | Invalid query params (e.g., unknown level, unsupported range) |
-| `401 Unauthorized` | Missing or invalid `X-API-Key` |
+| `401 Unauthorized` | Missing or invalid `Authorization: Bearer` token |
 | `404 Not Found` | Device or level has no data in the selected time range |
 | `422 Unprocessable Entity` | Invalid request body (check field types/constraints) |
 | `429 Too Many Requests` | Rate limit exceeded (default: 100 req/min) |
