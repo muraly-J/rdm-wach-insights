@@ -1,0 +1,80 @@
+# ward_config.example.yml
+# ═══════════════════════════════════════════════════════════════════
+# WACH Insight — Ward Topology Configuration
+# Women and Child Ward, Hospital Kuala Lumpur
+# ═══════════════════════════════════════════════════════════════════
+#
+# Copy this file to ward_config.yml and fill in your ward's details.
+#
+# Two ways to specify devices per level:
+#   ahus: N          → generates sequential IDs: e{level:02d}01 to e{level:02d}NN
+#   devices: [...]   → use exact device IDs (for non-sequential real-world layouts)
+#
+# Run `docker compose up --build` after editing this file.
+# ═══════════════════════════════════════════════════════════════════
+
+hospital: Hospital Kuala Lumpur
+ward: Women and Child Ward
+hospital_id: hkl-wcw
+device_prefix: "e"
+
+levels:
+  - level: 1
+    name: "Level 1"
+    devices: [e0101, e0102, e0103, e0104, e0105, e0106, e0107, e0108,
+              e0109, e0110, e0111, e0112, e0113, e0114, e0115, e0116,
+              e0117, e0118, e0120, e0121]
+
+  - level: 2
+    name: "Level 2"
+    devices: [e0201, e0202, e0203, e0204, e0205, e0206, e0207, e0208,
+              e0209, e0212, e0213, e0214, e0215, e0216, e0217, e0218]
+
+  - level: 3
+    name: "Level 3"
+    devices: [e0210, e0211, e0214, e0301, e0303, e0304, e0306, e0307,
+              e0308, e0311, e0312, e0313, e0314, e0315, e0401, e0402, e0403]
+
+  - level: 4
+    name: "Level 4"
+    devices: [e0314, e0403, e0404, e0406, e0407, e0408, e0409, e0411,
+              e0412, e0413, e0414, e0415, e0416, e0419]
+
+  - level: 5
+    name: "Level 5"
+    devices: [e0501, e0502, e0503, e0504, e0505, e0506, e0507, e0508,
+              e0509, e0510, e0511]
+
+  - level: 6
+    name: "Level 6"
+    devices: [e0602, e0603, e0604, e0605, e0606, e0607, e0611, e0622,
+              e0625, e0626, e0627, e0628]
+
+  - level: 7
+    name: "Level 7"
+    devices: [e0701, e0702, e0703, e0704]
+
+  - level: 8
+    name: "Level 8"
+    devices: [e0801, e0802, e0803, e0804, e0805]
+
+  - level: 9
+    name: "Level 9"
+    devices: [e0901, e0902, e0903, e0904, e0905, e0906, e0907, e0908]
+
+  - level: 10
+    name: "Level 10"
+    devices: [e1001, e1002, e1003, e1004, e1005, e1006, e1007, e1008]
+
+  - level: 11
+    name: "Level 11"
+    devices: [e1101, e1102, e1103, e1104, e1105, e1106, e1107, e1108]
+
+# ── Example: count-based format (for clean new deployments) ─────────
+# levels:
+#   - level: 3
+#     name: "Level 3 — General ICU"
+#     ahus: 8         # generates e0301, e0302 ... e0308
+#   - level: 4
+#     name: "Level 4 — Cardiac ICU"
+#     ahus: 6         # generates e0401 ... e0406
