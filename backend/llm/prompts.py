@@ -473,15 +473,91 @@ PERSONA_BLOCKS: dict[str, str] = {
 }
 
 
+# ── Ward config helpers ───────────────────────────────────────────────────────
+
+def _resolve_devices(level: dict, prefix: str) -> list[str]:
+    """Mirror of scripts/generate_ward_docs.resolve_devices — kept local to avoid cross-package imports."""
+    if "devices" in level:
+        return list(level["devices"])
+    if "ahus" in level:
+        lvl = level["level"]
+        return [f"{prefix}{lvl:02d}{n:02d}" for n in range(1, level["ahus"] + 1)]
+    raise ValueError(f"Level {level.get('level')} must have 'devices' or 'ahus'.")
+
+
+def load_ward_config() -> dict | None:
+    """Load ward_config.yml (or example fallback). Returns None if unavailable."""
+    import os
+    from pathlib import Path
+    try:
+        import yaml
+    except ImportError:
+        return None
+
+    custom_path = os.getenv("WARD_CONFIG_PATH")
+    candidates = (
+        [Path(custom_path)] if custom_path
+        else [
+            Path("/app/ward_config.yml"),
+            Path("/app/ward_config.example.yml"),
+            # Local dev fallback (project root relative to this file: backend/llm/prompts.py)
+            Path(__file__).resolve().parents[2] / "ward_config.yml",
+            Path(__file__).resolve().parents[2] / "ward_config.example.yml",
+        ]
+    )
+
+    for path in candidates:
+        if path.exists() and path.stat().st_size > 0:
+            try:
+                with open(path) as f:
+                    return yaml.safe_load(f)
+            except Exception:
+                continue
+    return None
+
+
+def _topology_block() -> str:
+    """Return topology description string for the system prompt."""
+    config = load_ward_config()
+    if config:
+        prefix = config.get("device_prefix", "e")
+        levels = config["levels"]
+        all_devices: list[str] = []
+        for lvl in levels:
+            try:
+                all_devices.extend(_resolve_devices(lvl, prefix))
+            except ValueError:
+                pass
+        total = len(all_devices)
+        num_levels = len(levels)
+        first_id = all_devices[0] if all_devices else "—"
+        last_id = all_devices[-1] if all_devices else "—"
+        first_lvl = levels[0]["level"]
+        last_lvl = levels[-1]["level"]
+        return (
+            f"You monitor Air Handling Units (AHUs) across {num_levels} levels "
+            f"(Level {first_lvl}–Level {last_lvl}), totalling {total} AHUs.\n"
+            f"Device IDs follow the format {prefix}[LEVEL][NN], "
+            f"e.g. {first_id} (first device) through {last_id} (last device)."
+        )
+    # WACH defaults
+    return (
+        "You monitor Air Handling Units (AHUs) across 11 levels "
+        "(Level 1–Level 11), totalling 121 AHUs.\n"
+        "Device IDs follow the format e[LEVEL][NN], "
+        "e.g. e0101 (Level 1, unit 01) through e1108 (Level 11, unit 08)."
+    )
+
+
 def build_system_prompt(persona: str = "general") -> str:
     building = get_building_name()
     department = get_department()
     persona_block = PERSONA_BLOCKS.get(persona, PERSONA_BLOCKS["general"])
+    topology = _topology_block()
 
     return f"""You are WACH AI, an AHU health assistant for {building} ({department}).
 
-You monitor Air Handling Units (AHUs) across 11 building levels (Level 1–Level 11), totalling 121 AHUs.
-Device IDs follow the format e[LEVEL][NN], e.g. e0101 (Level 1, unit 01) through e1108 (Level 11, unit 08).
+{topology}
 
 ## Health Scoring (FAIR)
 Health Index: 0–100 scale.
