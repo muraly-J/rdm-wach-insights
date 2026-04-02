@@ -1,2 +1,6 @@
 data/*.csv filter=lfs diff=lfs merge=lfs -text
 data/healthdb.duckdb filter=lfs diff=lfs merge=lfs -text
+
+# Always use LF for shell scripts in Docker — CRLF breaks shebang lines in Linux containers
+*.sh    text eol=lf
+*.cron  text eol=lf

@@ -44,5 +44,13 @@ else
     echo "[init] Sentinel found — skipping initialisation."
 fi
 
-echo "[cron] Starting supercronic with schedule: ${ETL_SCHEDULE:-0 * * * *}"
-exec supercronic "$CRON_FILE"
+SCHEDULE="${ETL_SCHEDULE:-0 * * * *}"
+echo "[cron] Starting supercronic with schedule: ${SCHEDULE}"
+
+# Supercronic does not expand shell variables in cron files.
+# Generate a resolved cron file with the literal schedule.
+RESOLVED_CRON=$(mktemp)
+echo "${SCHEDULE} cd /app && python -m scripts.etl.run_prediction_etl --level all" > "$RESOLVED_CRON"
+echo "${SCHEDULE} cd /app && python -m scripts.etl.run_health_etl --level all --output-hourly" >> "$RESOLVED_CRON"
+
+exec supercronic "$RESOLVED_CRON"

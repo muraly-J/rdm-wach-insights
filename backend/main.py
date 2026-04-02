@@ -76,8 +76,8 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
     """API Key Authentication Middleware."""
 
     async def dispatch(self, request: Request, call_next):
-        # Skip auth for health check endpoint
-        if request.url.path == "/health":
+        # Skip auth for health check and Swagger UI endpoints
+        if request.url.path in ("/health", "/docs", "/redoc", "/openapi.json"):
             return await call_next(request)
 
         # Skip auth for OPTIONS requests (CORS preflight)
