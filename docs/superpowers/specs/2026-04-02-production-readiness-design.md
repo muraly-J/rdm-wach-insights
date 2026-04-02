@@ -36,12 +36,47 @@ Replace `README.md` with a structured document containing:
 
 The README is the front door — concise, not exhaustive.
 
-### Remove debug artifacts
+### Root directory cleanup
+
+The root currently mixes deployment configs, documentation, macOS system files, deprecated scripts, and debug artifacts. Target state: only files that must live at root (Docker, git, CI, package manifests, example configs) stay there. Everything else moves or is deleted.
+
+**Delete outright:**
+- `tunnel.sh` — self-described as DEPRECATED
+- `frontend_backup_20260310.tar.gz` — stale binary backup
+- `nohup.out` — runtime log artifact
+
+**Add to `.gitignore`:**
+- `.DS_Store`
+- `nohup.out`
+- `frontend_backup_20260310.tar.gz`
+
+**Move to `docs/reference/`:**
+- `qwen.md` → `docs/reference/qwen.md` (LLM/model reference notes)
+
+**Move to `docs/`:**
+- `CONSTITUTION.md` → `docs/CONSTITUTION.md` (AI session priming doc; update any load instructions to point to new path)
+
+**Move to `scripts/`:**
+- `run_history.sh` → `scripts/run_history.sh`
+
+**Move to `scripts/infra/`:**
+- `launchd_start.sh` → `scripts/infra/launchd_start.sh`
+- `com.wach.insight.plist` → `scripts/infra/com.wach.insight.plist`
+
+**Move to `scripts/debug/`:**
+- `test_site_summary.py` → `scripts/debug/test_site_summary.py`
+
+**Audit and resolve:**
+- `requirements.txt` at root — compare with `backend/requirements.txt`; if it's a subset or duplicate, delete it and update any references (the root `package.json` `dev` script uses `backend/` directly, so root-level Python deps are likely stale)
+- `DEPLOYMENT.md` — keep at root for now; consolidate into `docs/` in Phase 5
+
+**Files that legitimately stay at root:**
+`Dockerfile`, `docker-compose.yml`, `.dockerignore`, `.gitignore`, `.gitattributes`, `.env.example`, `ward_config.example.yml`, `gunicorn.conf.py`, `start.sh`, `package.json`, `pyproject.toml`, `railway.toml`, `vercel.json`, `README.md`
+
+### Remove backend debug artifacts
 
 - Delete `backend/core/risk_engine.py.bak`, `.bak2`, `.bak3`
-- Move one-off debug scripts (`tests/trace_*.py`, `tests/debug_*.py`, `tests/check_*.py`) to `scripts/debug/` with a note that these are not part of the test suite
-- Remove `nohup.out` from git tracking; add to `.gitignore`
-- Remove `frontend_backup_20260310.tar.gz` from the repo; add to `.gitignore`
+- Move one-off debug scripts (`tests/trace_*.py`, `tests/debug_*.py`, `tests/check_*.py`) to `scripts/debug/` (consolidated with the root-level `test_site_summary.py` move above)
 
 ### `.env.example`
 
@@ -254,7 +289,7 @@ The overhauled README from Phase 1 links to all five of the above by Phase 5. No
 
 | Phase | Deliverable | Key files touched |
 |-------|-------------|-------------------|
-| 1 | First impressions & CI scaffold | `README.md`, `.env.example`, `.github/workflows/ci.yml`, `CONTRIBUTING.md`, artifact cleanup |
+| 1 | First impressions & CI scaffold | `README.md`, `.env.example`, `.github/workflows/ci.yml`, `CONTRIBUTING.md`, root dir cleanup, backend artifact cleanup |
 | 2 | Test suite | `backend/tests/unit/`, `backend/tests/integration/`, `backend/tests/e2e/`, `frontend/src/**/*.test.tsx` |
 | 3 | Observability & reliability | `backend/core/logger.py`, `backend/middleware/rate_limiter.py`, `backend/main.py`, `docker-compose.yml` |
 | 4 | Code hygiene | `backend/config.py`, all `backend/**/*.py` (type hints + docstrings), `ruff`/`prettier` CI gates |
