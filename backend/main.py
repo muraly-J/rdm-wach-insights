@@ -168,11 +168,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # --- CSP: Allow same-origin + Vercel/Cloudflare for production ---
         csp = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
             "font-src 'self' https://fonts.gstatic.com; "
             "connect-src 'self' https://*.vercel.app https://*.railway.app; "
-            "img-src 'self' data:; "
+            "img-src 'self' data: https://fastapi.tiangolo.com; "
             "frame-ancestors 'none';"
         )
         response.headers['Content-Security-Policy'] = csp
@@ -195,6 +195,26 @@ def create_app():
         description="Conversational AHU energy analytics for the WACH ward.",
         version="1.0.0",
     )
+
+    # Declare Bearer auth scheme so Swagger UI shows the Authorize button
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        from fastapi.openapi.utils import get_openapi
+        schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=app.routes,
+        )
+        schema.setdefault("components", {})["securitySchemes"] = {
+            "BearerAuth": {"type": "http", "scheme": "bearer"}
+        }
+        schema["security"] = [{"BearerAuth": []}]
+        app.openapi_schema = schema
+        return schema
+
+    app.openapi = custom_openapi
 
     # Add security middleware in order of execution (first to last)
     app.add_middleware(APIKeyAuthMiddleware)  # Authentication
