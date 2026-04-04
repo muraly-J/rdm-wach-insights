@@ -1,9 +1,9 @@
 name: ETL Scheduler
 
 on:
-  schedule:
-    # Runs every 30 minutes
-    - cron: '0,30 * * * *'
+  # Schedule disabled — re-enable by uncommenting below
+  # schedule:
+  #   - cron: '0,30 * * * *'
   # Allow manual trigger from GitHub UI for testing
   workflow_dispatch:
 
