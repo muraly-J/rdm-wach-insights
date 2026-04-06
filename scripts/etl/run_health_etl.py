@@ -1227,18 +1227,19 @@ def run_etl_pipeline(output_path=None, dry_run=False, level=None, scheduled=Fals
         print("\n[DRY RUN] Skipping file write")
         results["rows_loaded"] = len(df_scores)
     else:
-        start_timer("STEP 3: Load to CSV")
-        rows_written = load_to_csv(df_scores, output_path)
-        step_timings["load"] = end_timer("STEP 3: Load to CSV")
-        results["rows_loaded"] = rows_written
+        # CSV writes disabled — DuckDB is now the sole LOAD destination
+        # start_timer("STEP 3: Load to CSV")
+        # rows_written = load_to_csv(df_scores, output_path)
+        # step_timings["load"] = end_timer("STEP 3: Load to CSV")
+        results["rows_loaded"] = len(df_scores)
 
         # STEP 3b: Load hourly CSV (append-only for 24h chart) - conditional
-        if output_hourly:
-            start_timer("STEP 3b: Load hourly CSV")
-            hourly_written = save_hourly_health(df_scores)
-            step_timings["load_hourly"] = end_timer("STEP 3b: Load hourly CSV")
-            if hourly_written:
-                results["rows_loaded_hourly"] = len(df_scores)
+        # if output_hourly:
+        #     start_timer("STEP 3b: Load hourly CSV")
+        #     hourly_written = save_hourly_health(df_scores)
+        #     step_timings["load_hourly"] = end_timer("STEP 3b: Load hourly CSV")
+        #     if hourly_written:
+        #         results["rows_loaded_hourly"] = len(df_scores)
 
     # STEP 3c: Load to DuckDB (always runs, passes dry_run flag)
     save_health_duckdb(df_scores, dry_run=dry_run)
