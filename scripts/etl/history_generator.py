@@ -661,18 +661,28 @@ def run_health_etl_historical(
         'timestamp', 'ahu_id', 'level',
         'health_index', 'tier',
         'energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload',
-        'raw_power_total', 'raw_energy_import', 'raw_hourly_delta',
-        'raw_predicted_delta', 'raw_energy_anomaly_raw',
-        'raw_power_factor_avg', 'raw_current_unbalance', 'raw_composite_thd',
-        # New per-phase columns
-        'raw_apparent_power_total',
-        'raw_current_l1', 'raw_current_l2', 'raw_current_l3',
+        # Derived
+        'raw_hourly_delta', 'raw_predicted_delta', 'raw_energy_anomaly_raw',
+        'raw_composite_thd', 'raw_nema_voltage_imbalance', 'raw_p95_current',
+        # All 46 raw InfluxDB metrics
+        'raw_power_total', 'raw_power_l1', 'raw_power_l2', 'raw_power_l3',
+        'raw_power_demand', 'raw_max_power_demand',
+        'raw_apparent_power_total', 'raw_apparent_power_l1', 'raw_apparent_power_l2',
+        'raw_apparent_power_l3', 'raw_apparent_power_demand',
+        'raw_reactive_power_total', 'raw_reactive_power_l1', 'raw_reactive_power_l2',
+        'raw_reactive_power_l3', 'raw_reactive_power_demand',
+        'raw_energy_import', 'raw_energy_export',
+        'raw_reactive_energy_import', 'raw_reactive_energy_export', 'raw_apparent_energy',
+        'raw_current_avg', 'raw_current_l1', 'raw_current_l2', 'raw_current_l3',
+        'raw_current_l1_thd', 'raw_current_l3_thd', 'raw_current_unbalance',
+        'raw_power_factor_avg', 'raw_power_factor_l1', 'raw_power_factor_l2', 'raw_power_factor_l3',
+        'raw_freq',
+        'raw_volts_l_n_avg', 'raw_volts_l_l_avg',
         'raw_volts_l1_n', 'raw_volts_l2_n', 'raw_volts_l3_n',
-        'raw_current_l1_thd', 'raw_current_l3_thd',
+        'raw_volts_l1_l2', 'raw_volts_l2_l3', 'raw_volts_l3_l1',
         'raw_volts_l1_thd', 'raw_volts_l2_thd', 'raw_volts_l3_thd',
-        'raw_nema_voltage_imbalance',
-        'raw_p95_current',
-        'safety_flags'
+        'raw_volts_unbalance', 'raw_digital_input_1_and_2',
+        'safety_flags',
     ]
 
     all_health_records = []
@@ -722,11 +732,33 @@ def run_health_etl_historical(
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     METRICS = [
-        'power_total', 'energy_import', 'power_factor_avg', 'current_unbalance',
-        'current_l1_thd', 'current_l3_thd', 'apparent_power_total',
-        'current_l1', 'current_l2', 'current_l3',
+        # Power
+        'power_total', 'power_l1', 'power_l2', 'power_l3',
+        'power_demand', 'max_power_demand',
+        'apparent_power_total', 'apparent_power_l1', 'apparent_power_l2', 'apparent_power_l3',
+        'apparent_power_demand',
+        'reactive_power_total', 'reactive_power_l1', 'reactive_power_l2', 'reactive_power_l3',
+        'reactive_power_demand',
+        # Energy
+        'energy_import', 'energy_export',
+        'reactive_energy_import', 'reactive_energy_export',
+        'apparent_energy',
+        # Current
+        'current_avg', 'current_l1', 'current_l2', 'current_l3',
+        'current_l1_thd', 'current_l3_thd',
+        'current_unbalance',
+        # Power factor
+        'power_factor_avg', 'power_factor_l1', 'power_factor_l2', 'power_factor_l3',
+        # Frequency
+        'freq',
+        # Voltage
+        'volts_l_n_avg', 'volts_l_l_avg',
         'volts_l1_n', 'volts_l2_n', 'volts_l3_n',
+        'volts_l1_l2', 'volts_l2_l3', 'volts_l3_l1',
         'volts_l1_thd', 'volts_l2_thd', 'volts_l3_thd',
+        'volts_unbalance',
+        # Other
+        'digital_input_1_and_2',
     ]
 
     cached_count = 0
@@ -798,22 +830,58 @@ def run_health_etl_historical(
         )
         return pd.DataFrame(columns=health_columns)
 
-    df_power          = metric_dfs['power_total']
-    df_energy         = metric_dfs['energy_import']
-    df_pf             = metric_dfs['power_factor_avg']
-    df_unbalance      = metric_dfs['current_unbalance']
-    df_l1_thd         = metric_dfs['current_l1_thd']
-    df_l3_thd         = metric_dfs['current_l3_thd']
-    df_apparent_power = metric_dfs['apparent_power_total']
-    df_current_l1     = metric_dfs['current_l1']
-    df_current_l2     = metric_dfs['current_l2']
-    df_current_l3     = metric_dfs['current_l3']
-    df_volts_l1_n     = metric_dfs['volts_l1_n']
-    df_volts_l2_n     = metric_dfs['volts_l2_n']
-    df_volts_l3_n     = metric_dfs['volts_l3_n']
-    df_volts_l1_thd   = metric_dfs['volts_l1_thd']
-    df_volts_l2_thd   = metric_dfs['volts_l2_thd']
-    df_volts_l3_thd   = metric_dfs['volts_l3_thd']
+    # Helper: get a metric DataFrame, returning empty DF if not fetched
+    def _mdf(m): return metric_dfs.get(m, pd.DataFrame())
+
+    # Scoring inputs (required)
+    df_power    = _mdf('power_total')
+    df_energy   = _mdf('energy_import')
+    df_pf       = _mdf('power_factor_avg')
+    df_unbalance= _mdf('current_unbalance')
+    df_l1_thd   = _mdf('current_l1_thd')
+    df_l3_thd   = _mdf('current_l3_thd')
+
+    # All 46 raw metric DFs
+    df_power_l1              = _mdf('power_l1')
+    df_power_l2              = _mdf('power_l2')
+    df_power_l3              = _mdf('power_l3')
+    df_power_demand          = _mdf('power_demand')
+    df_max_power_demand      = _mdf('max_power_demand')
+    df_apparent_power        = _mdf('apparent_power_total')
+    df_apparent_power_l1     = _mdf('apparent_power_l1')
+    df_apparent_power_l2     = _mdf('apparent_power_l2')
+    df_apparent_power_l3     = _mdf('apparent_power_l3')
+    df_apparent_power_demand = _mdf('apparent_power_demand')
+    df_reactive_power_total  = _mdf('reactive_power_total')
+    df_reactive_power_l1     = _mdf('reactive_power_l1')
+    df_reactive_power_l2     = _mdf('reactive_power_l2')
+    df_reactive_power_l3     = _mdf('reactive_power_l3')
+    df_reactive_power_demand = _mdf('reactive_power_demand')
+    df_energy_export         = _mdf('energy_export')
+    df_reactive_energy_import= _mdf('reactive_energy_import')
+    df_reactive_energy_export= _mdf('reactive_energy_export')
+    df_apparent_energy       = _mdf('apparent_energy')
+    df_current_avg           = _mdf('current_avg')
+    df_current_l1            = _mdf('current_l1')
+    df_current_l2            = _mdf('current_l2')
+    df_current_l3            = _mdf('current_l3')
+    df_pf_l1                 = _mdf('power_factor_l1')
+    df_pf_l2                 = _mdf('power_factor_l2')
+    df_pf_l3                 = _mdf('power_factor_l3')
+    df_freq                  = _mdf('freq')
+    df_volts_l_n_avg         = _mdf('volts_l_n_avg')
+    df_volts_l_l_avg         = _mdf('volts_l_l_avg')
+    df_volts_l1_n            = _mdf('volts_l1_n')
+    df_volts_l2_n            = _mdf('volts_l2_n')
+    df_volts_l3_n            = _mdf('volts_l3_n')
+    df_volts_l1_l2           = _mdf('volts_l1_l2')
+    df_volts_l2_l3           = _mdf('volts_l2_l3')
+    df_volts_l3_l1           = _mdf('volts_l3_l1')
+    df_volts_l1_thd          = _mdf('volts_l1_thd')
+    df_volts_l2_thd          = _mdf('volts_l2_thd')
+    df_volts_l3_thd          = _mdf('volts_l3_thd')
+    df_volts_unbalance       = _mdf('volts_unbalance')
+    df_digital_input         = _mdf('digital_input_1_and_2')
 
     def _asof_value(df, ahu_id, ts):
         """Look up nearest-prior value for ahu_id at timestamp ts."""
@@ -871,26 +939,25 @@ def run_health_etl_historical(
             predicted_delta_val = row.get('predicted_delta')
             energy_anomaly_raw = row.get('energy_anomaly')
 
-            # Look up raw metric values at this timestamp using .asof()
-            current_power = _asof_value(df_power, ahu_id, ts)
-            current_pf = _asof_value(df_pf, ahu_id, ts)
-            current_unbalance = _asof_value(df_unbalance, ahu_id, ts)
-            current_energy = _asof_value(df_energy, ahu_id, ts)
+            # Look up all raw metric values at this timestamp using .asof()
+            def _av(df): return _asof_value(df, ahu_id, ts)
 
-            # New per-phase lookups
-            apparent_power = _asof_value(df_apparent_power, ahu_id, ts)
-            current_l1     = _asof_value(df_current_l1,     ahu_id, ts)
-            current_l2     = _asof_value(df_current_l2,     ahu_id, ts)
-            current_l3     = _asof_value(df_current_l3,     ahu_id, ts)
-            volts_l1_n     = _asof_value(df_volts_l1_n,     ahu_id, ts)
-            volts_l2_n     = _asof_value(df_volts_l2_n,     ahu_id, ts)
-            volts_l3_n     = _asof_value(df_volts_l3_n,     ahu_id, ts)
-            volts_l1_thd   = _asof_value(df_volts_l1_thd,   ahu_id, ts)
-            volts_l2_thd   = _asof_value(df_volts_l2_thd,   ahu_id, ts)
-            volts_l3_thd   = _asof_value(df_volts_l3_thd,   ahu_id, ts)
-            # current_l1_thd and current_l3_thd already fetched as l1/l3 above
-            current_l1_thd = _asof_value(df_l1_thd, ahu_id, ts)
-            current_l3_thd = _asof_value(df_l3_thd, ahu_id, ts)
+            current_power    = _av(df_power)
+            current_energy   = _av(df_energy)
+            current_pf       = _av(df_pf)
+            current_unbalance= _av(df_unbalance)
+            current_l1_thd   = _av(df_l1_thd)
+            current_l3_thd   = _av(df_l3_thd)
+
+            current_l1 = _av(df_current_l1)
+            current_l2 = _av(df_current_l2)
+            current_l3 = _av(df_current_l3)
+            volts_l1_n = _av(df_volts_l1_n)
+            volts_l2_n = _av(df_volts_l2_n)
+            volts_l3_n = _av(df_volts_l3_n)
+            volts_l1_thd = _av(df_volts_l1_thd)
+            volts_l2_thd = _av(df_volts_l2_thd)
+            volts_l3_thd = _av(df_volts_l3_thd)
 
             # NEMA voltage imbalance (%)
             nema_voltage_imbalance = None
@@ -955,34 +1022,65 @@ def run_health_etl_historical(
                 'level': level_val,
                 'health_index': result['health_index'],
                 'tier': result['health_tier'],
-                'energy_anomaly': round(risk_scores.get('energy_anomaly', 0) * 100, 2),
-                'pf_degradation': round(risk_scores.get('power_factor', 0) * 100, 2),
+                'energy_anomaly':  round(risk_scores.get('energy_anomaly',  0) * 100, 2),
+                'pf_degradation':  round(risk_scores.get('power_factor',    0) * 100, 2),
                 'phase_imbalance': round(risk_scores.get('phase_imbalance', 0) * 100, 2),
-                'thd_drift': round(risk_scores.get('thd_drift', 0) * 100, 2),
-                'overload': round(risk_scores.get('overload', 0) * 100, 2),
-                'raw_power_total': current_power,
-                'raw_energy_import': current_energy,
-                # Raw values for energy anomaly score derivation
-                'raw_hourly_delta': float(hourly_delta_val) if hourly_delta_val is not None else None,
-                'raw_predicted_delta': float(predicted_delta_val) if predicted_delta_val is not None else None,
-                'raw_energy_anomaly_raw': float(energy_anomaly_raw) if energy_anomaly_raw is not None else None,
-                'raw_power_factor_avg': current_pf,
-                'raw_current_unbalance': current_unbalance,
-                'raw_composite_thd': current_composite_thd,
-                'raw_apparent_power_total': apparent_power,
-                'raw_current_l1': current_l1,
-                'raw_current_l2': current_l2,
-                'raw_current_l3': current_l3,
-                'raw_volts_l1_n': volts_l1_n,
-                'raw_volts_l2_n': volts_l2_n,
-                'raw_volts_l3_n': volts_l3_n,
-                'raw_current_l1_thd': current_l1_thd,
-                'raw_current_l3_thd': current_l3_thd,
-                'raw_volts_l1_thd': volts_l1_thd,
-                'raw_volts_l2_thd': volts_l2_thd,
-                'raw_volts_l3_thd': volts_l3_thd,
+                'thd_drift':       round(risk_scores.get('thd_drift',       0) * 100, 2),
+                'overload':        round(risk_scores.get('overload',        0) * 100, 2),
+                # Derived columns
+                'raw_hourly_delta':           float(hourly_delta_val)    if hourly_delta_val    is not None else None,
+                'raw_predicted_delta':        float(predicted_delta_val) if predicted_delta_val is not None else None,
+                'raw_energy_anomaly_raw':     float(energy_anomaly_raw)  if energy_anomaly_raw  is not None else None,
+                'raw_composite_thd':          current_composite_thd,
                 'raw_nema_voltage_imbalance': nema_voltage_imbalance,
-                'raw_p95_current': p95_current,
+                'raw_p95_current':            p95_current,
+                # All 46 raw InfluxDB metrics
+                'raw_power_total':            current_power,
+                'raw_power_l1':               _av(df_power_l1),
+                'raw_power_l2':               _av(df_power_l2),
+                'raw_power_l3':               _av(df_power_l3),
+                'raw_power_demand':           _av(df_power_demand),
+                'raw_max_power_demand':       _av(df_max_power_demand),
+                'raw_apparent_power_total':   _av(df_apparent_power),
+                'raw_apparent_power_l1':      _av(df_apparent_power_l1),
+                'raw_apparent_power_l2':      _av(df_apparent_power_l2),
+                'raw_apparent_power_l3':      _av(df_apparent_power_l3),
+                'raw_apparent_power_demand':  _av(df_apparent_power_demand),
+                'raw_reactive_power_total':   _av(df_reactive_power_total),
+                'raw_reactive_power_l1':      _av(df_reactive_power_l1),
+                'raw_reactive_power_l2':      _av(df_reactive_power_l2),
+                'raw_reactive_power_l3':      _av(df_reactive_power_l3),
+                'raw_reactive_power_demand':  _av(df_reactive_power_demand),
+                'raw_energy_import':          current_energy,
+                'raw_energy_export':          _av(df_energy_export),
+                'raw_reactive_energy_import': _av(df_reactive_energy_import),
+                'raw_reactive_energy_export': _av(df_reactive_energy_export),
+                'raw_apparent_energy':        _av(df_apparent_energy),
+                'raw_current_avg':            _av(df_current_avg),
+                'raw_current_l1':             current_l1,
+                'raw_current_l2':             current_l2,
+                'raw_current_l3':             current_l3,
+                'raw_current_l1_thd':         current_l1_thd,
+                'raw_current_l3_thd':         current_l3_thd,
+                'raw_current_unbalance':      current_unbalance,
+                'raw_power_factor_avg':       current_pf,
+                'raw_power_factor_l1':        _av(df_pf_l1),
+                'raw_power_factor_l2':        _av(df_pf_l2),
+                'raw_power_factor_l3':        _av(df_pf_l3),
+                'raw_freq':                   _av(df_freq),
+                'raw_volts_l_n_avg':          _av(df_volts_l_n_avg),
+                'raw_volts_l_l_avg':          _av(df_volts_l_l_avg),
+                'raw_volts_l1_n':             volts_l1_n,
+                'raw_volts_l2_n':             volts_l2_n,
+                'raw_volts_l3_n':             volts_l3_n,
+                'raw_volts_l1_l2':            _av(df_volts_l1_l2),
+                'raw_volts_l2_l3':            _av(df_volts_l2_l3),
+                'raw_volts_l3_l1':            _av(df_volts_l3_l1),
+                'raw_volts_l1_thd':           volts_l1_thd,
+                'raw_volts_l2_thd':           volts_l2_thd,
+                'raw_volts_l3_thd':           volts_l3_thd,
+                'raw_volts_unbalance':        _av(df_volts_unbalance),
+                'raw_digital_input_1_and_2':  _av(df_digital_input),
                 'safety_flags': ';'.join(safety_flags) if safety_flags else ''
             }
 
@@ -1073,14 +1171,28 @@ def save_to_duckdb(health_df: pd.DataFrame) -> int:
         _SCHEMA_COLS = [
             'timestamp', 'ahu_id', 'level', 'health_index', 'tier',
             'energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload',
-            'raw_power_total', 'raw_energy_import', 'raw_hourly_delta', 'raw_predicted_delta',
-            'raw_energy_anomaly_raw', 'raw_power_factor_avg', 'raw_current_unbalance',
-            'raw_composite_thd', 'raw_apparent_power_total',
-            'raw_current_l1', 'raw_current_l2', 'raw_current_l3',
+            # Derived
+            'raw_hourly_delta', 'raw_predicted_delta', 'raw_energy_anomaly_raw',
+            'raw_composite_thd', 'raw_nema_voltage_imbalance', 'raw_p95_current',
+            # All 46 raw InfluxDB metrics
+            'raw_power_total', 'raw_power_l1', 'raw_power_l2', 'raw_power_l3',
+            'raw_power_demand', 'raw_max_power_demand',
+            'raw_apparent_power_total', 'raw_apparent_power_l1', 'raw_apparent_power_l2',
+            'raw_apparent_power_l3', 'raw_apparent_power_demand',
+            'raw_reactive_power_total', 'raw_reactive_power_l1', 'raw_reactive_power_l2',
+            'raw_reactive_power_l3', 'raw_reactive_power_demand',
+            'raw_energy_import', 'raw_energy_export',
+            'raw_reactive_energy_import', 'raw_reactive_energy_export', 'raw_apparent_energy',
+            'raw_current_avg', 'raw_current_l1', 'raw_current_l2', 'raw_current_l3',
+            'raw_current_l1_thd', 'raw_current_l3_thd', 'raw_current_unbalance',
+            'raw_power_factor_avg', 'raw_power_factor_l1', 'raw_power_factor_l2', 'raw_power_factor_l3',
+            'raw_freq',
+            'raw_volts_l_n_avg', 'raw_volts_l_l_avg',
             'raw_volts_l1_n', 'raw_volts_l2_n', 'raw_volts_l3_n',
-            'raw_current_l1_thd', 'raw_current_l3_thd',
+            'raw_volts_l1_l2', 'raw_volts_l2_l3', 'raw_volts_l3_l1',
             'raw_volts_l1_thd', 'raw_volts_l2_thd', 'raw_volts_l3_thd',
-            'raw_nema_voltage_imbalance', 'raw_p95_current', 'safety_flags',
+            'raw_volts_unbalance', 'raw_digital_input_1_and_2',
+            'safety_flags',
         ]
         db_df = db_df[[c for c in _SCHEMA_COLS if c in db_df.columns]]
 

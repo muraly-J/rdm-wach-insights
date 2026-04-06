@@ -49,43 +49,111 @@ CREATE TABLE IF NOT EXISTS predictions (
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS health_hourly (
-    timestamp                  TIMESTAMPTZ NOT NULL,
-    ahu_id                     VARCHAR     NOT NULL,
-    level                      INTEGER     NOT NULL,
-    health_index               FLOAT,
-    tier                       VARCHAR,
-    energy_anomaly             FLOAT,
-    pf_degradation             FLOAT,
-    phase_imbalance            FLOAT,
-    thd_drift                  FLOAT,
-    overload                   FLOAT,
-    raw_power_total            FLOAT,
-    raw_energy_import          FLOAT,
-    raw_hourly_delta           FLOAT,
-    raw_predicted_delta        FLOAT,
-    raw_energy_anomaly_raw     FLOAT,
-    raw_power_factor_avg       FLOAT,
-    raw_current_unbalance      FLOAT,
-    raw_composite_thd          FLOAT,
-    raw_apparent_power_total   FLOAT,
-    raw_current_l1             FLOAT,
-    raw_current_l2             FLOAT,
-    raw_current_l3             FLOAT,
-    raw_volts_l1_n             FLOAT,
-    raw_volts_l2_n             FLOAT,
-    raw_volts_l3_n             FLOAT,
-    raw_current_l1_thd         FLOAT,
-    raw_current_l3_thd         FLOAT,
-    raw_volts_l1_thd           FLOAT,
-    raw_volts_l2_thd           FLOAT,
-    raw_volts_l3_thd           FLOAT,
-    raw_nema_voltage_imbalance FLOAT,
-    raw_p95_current            FLOAT,
-    safety_flags               VARCHAR DEFAULT '',
+    timestamp                       TIMESTAMPTZ NOT NULL,
+    ahu_id                          VARCHAR     NOT NULL,
+    level                           INTEGER     NOT NULL,
+    -- FAIR health scores
+    health_index                    FLOAT,
+    tier                            VARCHAR,
+    energy_anomaly                  FLOAT,
+    pf_degradation                  FLOAT,
+    phase_imbalance                 FLOAT,
+    thd_drift                       FLOAT,
+    overload                        FLOAT,
+    -- Derived / computed columns (not direct InfluxDB reads)
+    raw_hourly_delta                FLOAT,
+    raw_predicted_delta             FLOAT,
+    raw_energy_anomaly_raw          FLOAT,
+    raw_composite_thd               FLOAT,
+    raw_nema_voltage_imbalance      FLOAT,
+    raw_p95_current                 FLOAT,
+    -- All 46 raw InfluxDB metrics (prefixed raw_)
+    raw_power_total                 FLOAT,
+    raw_power_l1                    FLOAT,
+    raw_power_l2                    FLOAT,
+    raw_power_l3                    FLOAT,
+    raw_power_demand                FLOAT,
+    raw_max_power_demand            FLOAT,
+    raw_apparent_power_total        FLOAT,
+    raw_apparent_power_l1           FLOAT,
+    raw_apparent_power_l2           FLOAT,
+    raw_apparent_power_l3           FLOAT,
+    raw_apparent_power_demand       FLOAT,
+    raw_reactive_power_total        FLOAT,
+    raw_reactive_power_l1           FLOAT,
+    raw_reactive_power_l2           FLOAT,
+    raw_reactive_power_l3           FLOAT,
+    raw_reactive_power_demand       FLOAT,
+    raw_energy_import               FLOAT,
+    raw_energy_export               FLOAT,
+    raw_reactive_energy_import      FLOAT,
+    raw_reactive_energy_export      FLOAT,
+    raw_apparent_energy             FLOAT,
+    raw_current_avg                 FLOAT,
+    raw_current_l1                  FLOAT,
+    raw_current_l2                  FLOAT,
+    raw_current_l3                  FLOAT,
+    raw_current_l1_thd              FLOAT,
+    raw_current_l3_thd              FLOAT,
+    raw_current_unbalance           FLOAT,
+    raw_power_factor_avg            FLOAT,
+    raw_power_factor_l1             FLOAT,
+    raw_power_factor_l2             FLOAT,
+    raw_power_factor_l3             FLOAT,
+    raw_freq                        FLOAT,
+    raw_volts_l_n_avg               FLOAT,
+    raw_volts_l_l_avg               FLOAT,
+    raw_volts_l1_n                  FLOAT,
+    raw_volts_l2_n                  FLOAT,
+    raw_volts_l3_n                  FLOAT,
+    raw_volts_l1_l2                 FLOAT,
+    raw_volts_l2_l3                 FLOAT,
+    raw_volts_l3_l1                 FLOAT,
+    raw_volts_l1_thd                FLOAT,
+    raw_volts_l2_thd                FLOAT,
+    raw_volts_l3_thd                FLOAT,
+    raw_volts_unbalance             FLOAT,
+    raw_digital_input_1_and_2       FLOAT,
+    safety_flags                    VARCHAR DEFAULT '',
     PRIMARY KEY (timestamp, ahu_id)
 );
 CREATE INDEX IF NOT EXISTS idx_ahu_time   ON health_hourly (ahu_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_level_time ON health_hourly (level, timestamp);
+"""
+
+# ALTER statements to migrate existing databases — safe to run repeatedly
+# (DuckDB silently ignores ADD COLUMN if the column already exists via IF NOT EXISTS)
+_MIGRATE_SCHEMA_SQL = """
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_power_l1                 FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_power_l2                 FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_power_l3                 FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_power_demand             FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_max_power_demand         FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_apparent_power_l1        FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_apparent_power_l2        FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_apparent_power_l3        FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_apparent_power_demand    FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_reactive_power_total     FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_reactive_power_l1        FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_reactive_power_l2        FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_reactive_power_l3        FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_reactive_power_demand    FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_energy_export            FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_reactive_energy_import   FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_reactive_energy_export   FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_apparent_energy          FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_current_avg              FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_power_factor_l1          FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_power_factor_l2          FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_power_factor_l3          FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_freq                     FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_volts_l_n_avg            FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_volts_l_l_avg            FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_volts_l1_l2              FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_volts_l2_l3              FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_volts_l3_l1              FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_volts_unbalance          FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_digital_input_1_and_2   FLOAT;
 """
 
 
@@ -105,6 +173,11 @@ class HealthDB:
         with self._conn(write=True) as conn:
             conn.execute(_SCHEMA_SQL)
             conn.execute(_PREDICTIONS_SCHEMA_SQL)
+            # Migrate existing DBs: add new columns (no-op if already present)
+            for stmt in _MIGRATE_SCHEMA_SQL.strip().split(';'):
+                stmt = stmt.strip()
+                if stmt:
+                    conn.execute(stmt)
 
     # ── Write ──────────────────────────────────────────────────────────────────
 

@@ -429,22 +429,33 @@ def extract_raw_data(metrics_to_fetch=None, level_filter=None):
 
     if metrics_to_fetch is None:
         metrics_to_fetch = [
-            "power_total",
-            "energy_import",
-            "power_factor_avg",
+            # Power (kW / kVA / kVAR)
+            "power_total", "power_l1", "power_l2", "power_l3",
+            "power_demand", "max_power_demand",
+            "apparent_power_total", "apparent_power_l1", "apparent_power_l2", "apparent_power_l3",
+            "apparent_power_demand",
+            "reactive_power_total", "reactive_power_l1", "reactive_power_l2", "reactive_power_l3",
+            "reactive_power_demand",
+            # Energy (kWh / kVARh / kVAh)
+            "energy_import", "energy_export",
+            "reactive_energy_import", "reactive_energy_export",
+            "apparent_energy",
+            # Current (A / %)
+            "current_avg", "current_l1", "current_l2", "current_l3",
+            "current_l1_thd", "current_l3_thd",
             "current_unbalance",
-            "current_l1_thd",
-            "current_l3_thd",
-            "apparent_power_total",
-            "current_l1",
-            "current_l2",
-            "current_l3",
-            "volts_l1_n",
-            "volts_l2_n",
-            "volts_l3_n",
-            "volts_l1_thd",
-            "volts_l2_thd",
-            "volts_l3_thd",
+            # Power factor
+            "power_factor_avg", "power_factor_l1", "power_factor_l2", "power_factor_l3",
+            # Frequency
+            "freq",
+            # Voltage (V / %)
+            "volts_l_n_avg", "volts_l_l_avg",
+            "volts_l1_n", "volts_l2_n", "volts_l3_n",
+            "volts_l1_l2", "volts_l2_l3", "volts_l3_l1",
+            "volts_l1_thd", "volts_l2_thd", "volts_l3_thd",
+            "volts_unbalance",
+            # Other
+            "digital_input_1_and_2",
         ]
 
     # Gap-filling: resume from the last timestamp in the hourly CSV.
@@ -634,26 +645,21 @@ def transform_health_scores(df_raw):
         ahu_id = row['device_id']
         baseline = ahu_baselines[ahu_id]
 
-        # Get current values
-        power_current = float(row['power_total']) if pd.notna(row.get('power_total')) else None
-        energy_current = float(row['energy_import']) if pd.notna(row.get('energy_import')) else None
-        pf_current = float(row['power_factor_avg']) if pd.notna(row.get('power_factor_avg')) else None
-        unbalance_current = float(row['current_unbalance']) if pd.notna(row.get('current_unbalance')) else None
-        thd_24h = float(row['composite_thd']) if pd.notna(row.get('composite_thd')) else None
+        # Helper: safely extract float from row
+        def _f(col): return float(row[col]) if pd.notna(row.get(col)) else None
 
-        # Extract new per-phase raw values
-        apparent_power_current = float(row['apparent_power_total']) if pd.notna(row.get('apparent_power_total')) else None
-        current_l1 = float(row['current_l1']) if pd.notna(row.get('current_l1')) else None
-        current_l2 = float(row['current_l2']) if pd.notna(row.get('current_l2')) else None
-        current_l3 = float(row['current_l3']) if pd.notna(row.get('current_l3')) else None
-        volts_l1_n = float(row['volts_l1_n']) if pd.notna(row.get('volts_l1_n')) else None
-        volts_l2_n = float(row['volts_l2_n']) if pd.notna(row.get('volts_l2_n')) else None
-        volts_l3_n = float(row['volts_l3_n']) if pd.notna(row.get('volts_l3_n')) else None
-        current_l1_thd = float(row['current_l1_thd']) if pd.notna(row.get('current_l1_thd')) else None
-        current_l3_thd = float(row['current_l3_thd']) if pd.notna(row.get('current_l3_thd')) else None
-        volts_l1_thd = float(row['volts_l1_thd']) if pd.notna(row.get('volts_l1_thd')) else None
-        volts_l2_thd = float(row['volts_l2_thd']) if pd.notna(row.get('volts_l2_thd')) else None
-        volts_l3_thd = float(row['volts_l3_thd']) if pd.notna(row.get('volts_l3_thd')) else None
+        # Scoring inputs
+        power_current     = _f('power_total')
+        energy_current    = _f('energy_import')
+        pf_current        = _f('power_factor_avg')
+        unbalance_current = _f('current_unbalance')
+        thd_24h           = _f('composite_thd')
+
+        # All 46 raw InfluxDB metrics
+        current_l1  = _f('current_l1');  current_l2  = _f('current_l2');  current_l3  = _f('current_l3')
+        volts_l1_n  = _f('volts_l1_n');  volts_l2_n  = _f('volts_l2_n');  volts_l3_n  = _f('volts_l3_n')
+        volts_l1_thd = _f('volts_l1_thd'); volts_l2_thd = _f('volts_l2_thd'); volts_l3_thd = _f('volts_l3_thd')
+        current_l1_thd = _f('current_l1_thd'); current_l3_thd = _f('current_l3_thd')
 
         # NEMA voltage imbalance (%)
         nema_voltage_imbalance = None
@@ -780,31 +786,60 @@ def transform_health_scores(df_raw):
             "thd_drift": round(thd_score, 4),
             "overload": round(overload_score, 4),
 
-            # === Raw Metrics (Current Hour) ===
-            "raw_power_total": power_current,
-            "raw_energy_import": energy_current,
-            "raw_hourly_delta": pred_data.get(ahu_id, {}).get("hourly_delta") or delta_kwh,
-            "raw_predicted_delta": pred_data.get(ahu_id, {}).get("predicted_delta"),
-            "raw_energy_anomaly_raw": pred_data.get(ahu_id, {}).get("energy_anomaly"),
-            "raw_power_factor_avg": pf_current,
-            "raw_current_unbalance": unbalance_current,
-            "raw_composite_thd": thd_24h,
-
-            # === New Per-Phase Raw Metrics ===
-            "raw_apparent_power_total": apparent_power_current,
-            "raw_current_l1": current_l1,
-            "raw_current_l2": current_l2,
-            "raw_current_l3": current_l3,
-            "raw_volts_l1_n": volts_l1_n,
-            "raw_volts_l2_n": volts_l2_n,
-            "raw_volts_l3_n": volts_l3_n,
-            "raw_current_l1_thd": current_l1_thd,
-            "raw_current_l3_thd": current_l3_thd,
-            "raw_volts_l1_thd": volts_l1_thd,
-            "raw_volts_l2_thd": volts_l2_thd,
-            "raw_volts_l3_thd": volts_l3_thd,
+            # === Derived columns ===
+            "raw_hourly_delta":           pred_data.get(ahu_id, {}).get("hourly_delta") or delta_kwh,
+            "raw_predicted_delta":        pred_data.get(ahu_id, {}).get("predicted_delta"),
+            "raw_energy_anomaly_raw":     pred_data.get(ahu_id, {}).get("energy_anomaly"),
+            "raw_composite_thd":          thd_24h,
             "raw_nema_voltage_imbalance": nema_voltage_imbalance,
-            "raw_p95_current": baseline.get("max_phase_current", {}).get("p95"),
+            "raw_p95_current":            baseline.get("max_phase_current", {}).get("p95"),
+            # === All 46 raw InfluxDB metrics ===
+            "raw_power_total":            power_current,
+            "raw_power_l1":               _f('power_l1'),
+            "raw_power_l2":               _f('power_l2'),
+            "raw_power_l3":               _f('power_l3'),
+            "raw_power_demand":           _f('power_demand'),
+            "raw_max_power_demand":       _f('max_power_demand'),
+            "raw_apparent_power_total":   _f('apparent_power_total'),
+            "raw_apparent_power_l1":      _f('apparent_power_l1'),
+            "raw_apparent_power_l2":      _f('apparent_power_l2'),
+            "raw_apparent_power_l3":      _f('apparent_power_l3'),
+            "raw_apparent_power_demand":  _f('apparent_power_demand'),
+            "raw_reactive_power_total":   _f('reactive_power_total'),
+            "raw_reactive_power_l1":      _f('reactive_power_l1'),
+            "raw_reactive_power_l2":      _f('reactive_power_l2'),
+            "raw_reactive_power_l3":      _f('reactive_power_l3'),
+            "raw_reactive_power_demand":  _f('reactive_power_demand'),
+            "raw_energy_import":          energy_current,
+            "raw_energy_export":          _f('energy_export'),
+            "raw_reactive_energy_import": _f('reactive_energy_import'),
+            "raw_reactive_energy_export": _f('reactive_energy_export'),
+            "raw_apparent_energy":        _f('apparent_energy'),
+            "raw_current_avg":            _f('current_avg'),
+            "raw_current_l1":             current_l1,
+            "raw_current_l2":             current_l2,
+            "raw_current_l3":             current_l3,
+            "raw_current_l1_thd":         current_l1_thd,
+            "raw_current_l3_thd":         current_l3_thd,
+            "raw_current_unbalance":      unbalance_current,
+            "raw_power_factor_avg":       pf_current,
+            "raw_power_factor_l1":        _f('power_factor_l1'),
+            "raw_power_factor_l2":        _f('power_factor_l2'),
+            "raw_power_factor_l3":        _f('power_factor_l3'),
+            "raw_freq":                   _f('freq'),
+            "raw_volts_l_n_avg":          _f('volts_l_n_avg'),
+            "raw_volts_l_l_avg":          _f('volts_l_l_avg'),
+            "raw_volts_l1_n":             volts_l1_n,
+            "raw_volts_l2_n":             volts_l2_n,
+            "raw_volts_l3_n":             volts_l3_n,
+            "raw_volts_l1_l2":            _f('volts_l1_l2'),
+            "raw_volts_l2_l3":            _f('volts_l2_l3'),
+            "raw_volts_l3_l1":            _f('volts_l3_l1'),
+            "raw_volts_l1_thd":           volts_l1_thd,
+            "raw_volts_l2_thd":           volts_l2_thd,
+            "raw_volts_l3_thd":           volts_l3_thd,
+            "raw_volts_unbalance":        _f('volts_unbalance'),
+            "raw_digital_input_1_and_2":  _f('digital_input_1_and_2'),
 
             # === Baseline Statistics (30-day) ===
             "baseline_power_median": baseline["power_total"]["median"],
@@ -1054,15 +1089,29 @@ def save_health_duckdb(results_df: pd.DataFrame, dry_run: bool = False) -> None:
         # Select only schema columns (drop any extra ETL columns)
         schema_cols = [
             "timestamp", "ahu_id", "level", "health_index", "tier",
-            "energy_anomaly", "pf_degradation", "phase_imbalance",
-            "thd_drift", "overload", "raw_power_total", "raw_energy_import",
+            "energy_anomaly", "pf_degradation", "phase_imbalance", "thd_drift", "overload",
+            # Derived
             "raw_hourly_delta", "raw_predicted_delta", "raw_energy_anomaly_raw",
-            "raw_power_factor_avg", "raw_current_unbalance", "raw_composite_thd",
-            "raw_apparent_power_total", "raw_current_l1", "raw_current_l2",
-            "raw_current_l3", "raw_volts_l1_n", "raw_volts_l2_n", "raw_volts_l3_n",
-            "raw_current_l1_thd", "raw_current_l3_thd", "raw_volts_l1_thd",
-            "raw_volts_l2_thd", "raw_volts_l3_thd", "raw_nema_voltage_imbalance",
-            "raw_p95_current", "safety_flags",
+            "raw_composite_thd", "raw_nema_voltage_imbalance", "raw_p95_current",
+            # All 46 raw InfluxDB metrics
+            "raw_power_total", "raw_power_l1", "raw_power_l2", "raw_power_l3",
+            "raw_power_demand", "raw_max_power_demand",
+            "raw_apparent_power_total", "raw_apparent_power_l1", "raw_apparent_power_l2",
+            "raw_apparent_power_l3", "raw_apparent_power_demand",
+            "raw_reactive_power_total", "raw_reactive_power_l1", "raw_reactive_power_l2",
+            "raw_reactive_power_l3", "raw_reactive_power_demand",
+            "raw_energy_import", "raw_energy_export",
+            "raw_reactive_energy_import", "raw_reactive_energy_export", "raw_apparent_energy",
+            "raw_current_avg", "raw_current_l1", "raw_current_l2", "raw_current_l3",
+            "raw_current_l1_thd", "raw_current_l3_thd", "raw_current_unbalance",
+            "raw_power_factor_avg", "raw_power_factor_l1", "raw_power_factor_l2", "raw_power_factor_l3",
+            "raw_freq",
+            "raw_volts_l_n_avg", "raw_volts_l_l_avg",
+            "raw_volts_l1_n", "raw_volts_l2_n", "raw_volts_l3_n",
+            "raw_volts_l1_l2", "raw_volts_l2_l3", "raw_volts_l3_l1",
+            "raw_volts_l1_thd", "raw_volts_l2_thd", "raw_volts_l3_thd",
+            "raw_volts_unbalance", "raw_digital_input_1_and_2",
+            "safety_flags",
         ]
         missing = [c for c in schema_cols if c not in df.columns]
         if missing:
