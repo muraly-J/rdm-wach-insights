@@ -19,10 +19,10 @@ from typing import Optional
 from fastapi import APIRouter, Query, HTTPException
 
 from models.schemas import AHU_LEVEL_CONFIG
-from core.csv_reader import (
+from core.db_reader import (
     get_score_breakdown,
     get_health_index_series,
-    get_raw_score_relationship as csv_raw_score,
+    get_raw_score_relationship as db_raw_score,
 )
 
 router = APIRouter()
@@ -167,7 +167,7 @@ async def get_raw_score_relationship(
             detail=f"Device {device_id} not found"
         )
 
-    scores = await asyncio.to_thread(csv_raw_score, device_id, range)
+    scores = await asyncio.to_thread(db_raw_score, device_id, range)
     return {
         "device_id": device_id,
         "range": range,
