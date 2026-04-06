@@ -87,7 +87,7 @@ async def get_financial_impact(
 # ── Calculation helpers ────────────────────────────────────────────────────────
 
 def _compute_impact(level: int, time_range: str, device_id: Optional[str] = None) -> dict:
-    from core.csv_reader import _load_csv, _filter_time_range
+    from core.db_reader import get_dataframe
 
     cfg = _load_config()
     tariff           = cfg["tariff_rate"]
@@ -96,14 +96,10 @@ def _compute_impact(level: int, time_range: str, device_id: Optional[str] = None
     multiplier    = cfg["emergency_multiplier"]
     currency      = cfg["currency"]
 
-    df = _load_csv(time_range=time_range)
+    df = get_dataframe(level=level, time_range=time_range)
     if df.empty:
         return _empty_response(currency, level, time_range)
-
-    df = df[df['level'] == f"Level {level}"]
-    df = _filter_time_range(df, time_range).sort_values('timestamp')
-    if df.empty:
-        return _empty_response(currency, level, time_range)
+    df = df.sort_values('timestamp')
 
     if device_id:
         df = df[df['ahu_id'] == device_id]
