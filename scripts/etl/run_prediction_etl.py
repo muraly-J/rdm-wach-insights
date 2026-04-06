@@ -517,6 +517,32 @@ def run_prediction_etl(level_filter=None, output_path=None, dry_run=False, sched
     # Step 3: LOAD
     rows_written = load_to_csv(df_predictions, output_path, dry_run)
 
+    # === DuckDB write (added for migration) ===
+    if not dry_run:
+        try:
+            from pathlib import Path as _Path
+            import sys as _etl_sys
+            _etl_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent / "backend"))
+            from core.healthdb import HealthDB as _HealthDB
+            _db = _HealthDB()
+            _db_df = df_predictions.copy()
+            # Normalize column names
+            if "device_id" in _db_df.columns:
+                _db_df = _db_df.rename(columns={"device_id": "ahu_id"})
+            # Convert "Level N" string → integer
+            if _db_df["level"].dtype == object:
+                _db_df["level"] = _db_df["level"].str.replace("Level ", "").astype(int)
+            # Select only schema columns that exist in the DataFrame
+            _schema_cols = ["timestamp", "ahu_id", "level", "energy_current", "hourly_delta",
+                            "predicted_delta", "energy_anomaly", "yesterday_kwh", "delta_yesterday",
+                            "last_week_kwh", "delta_last_week", "two_weeks_kwh", "delta_two_weeks",
+                            "available_delta_slots", "insufficient_history"]
+            _db_df = _db_df[[c for c in _schema_cols if c in _db_df.columns]]
+            _rows = _db.upsert_predictions(_db_df)
+            print(f"[OK] Written {_rows} prediction rows to DuckDB predictions table")
+        except Exception as _e:
+            print(f"[WARN] DuckDB predictions write failed: {_e}")
+
     # Determine actual output path
     if output_path is None:
         actual_output = OUTPUT_FILE

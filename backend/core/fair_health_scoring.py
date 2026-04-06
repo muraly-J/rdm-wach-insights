@@ -168,7 +168,8 @@ SAFETY_FLAGS_DEF = {
 
 def load_prediction_deltas(ahu_ids: List[str]) -> Dict[str, float]:
     """
-    Load prediction-based energy_anomaly from predictions.csv.
+    Load prediction-based energy_anomaly from DuckDB predictions table.
+    Falls back to predictions.csv if DuckDB table is empty.
 
     The prediction ETL computes:
       hourly_delta(t)     = E(t) - E(t-1h)
@@ -185,7 +186,27 @@ def load_prediction_deltas(ahu_ids: List[str]) -> Dict[str, float]:
         Dict mapping ahu_id -> energy_anomaly (from prediction ETL)
     """
     import os
-    # Resolve path relative to project root (not current working directory)
+    import sys as _sys
+    _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        from core.healthdb import HealthDB
+        db = HealthDB()
+        df = db.get_latest_predictions(ahu_ids=ahu_ids if ahu_ids else None)
+        if not df.empty and "energy_anomaly" in df.columns:
+            result = {
+                str(row["ahu_id"]): float(row["energy_anomaly"])
+                for _, row in df.iterrows()
+                if pd.notna(row.get("energy_anomaly"))
+            }
+            # Fill in missing ahu_ids with 0.0
+            for ahu_id in ahu_ids:
+                if ahu_id not in result:
+                    result[ahu_id] = 0.0
+            return result
+    except Exception as e:
+        print(f"[WARN] DuckDB predictions lookup failed ({e}), falling back to CSV")
+
+    # Fallback: read predictions.csv if it exists
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     DATA_DIR = os.environ.get("DATA_DIR", "data")
     PREDICTIONS_FILE = os.path.join(PROJECT_ROOT, DATA_DIR, "predictions.csv")
@@ -195,31 +216,24 @@ def load_prediction_deltas(ahu_ids: List[str]) -> Dict[str, float]:
         return {ahu_id: 0.0 for ahu_id in ahu_ids}
 
     try:
-        df = pd.read_csv(PREDICTIONS_FILE)
-
-        if 'device_id' not in df.columns or 'energy_anomaly' not in df.columns:
-            return {ahu_id: 0.0 for ahu_id in ahu_ids}
-
-        # Get latest energy anomaly per AHU (use most recent row for each device)
-        result = {}
+        pred_df = pd.read_csv(PREDICTIONS_FILE)
+        if "device_id" in pred_df.columns and "ahu_id" not in pred_df.columns:
+            pred_df = pred_df.rename(columns={"device_id": "ahu_id"})
+        if ahu_ids:
+            pred_df = pred_df[pred_df["ahu_id"].isin(ahu_ids)]
+        latest = pred_df.sort_values("timestamp").groupby("ahu_id").last().reset_index()
+        result = {
+            str(row["ahu_id"]): float(row["energy_anomaly"])
+            for _, row in latest.iterrows()
+            if pd.notna(row.get("energy_anomaly"))
+        }
+        # Fill in missing ahu_ids with 0.0
         for ahu_id in ahu_ids:
-            if ahu_id in df['device_id'].values:
-                rows = df[df['device_id'] == ahu_id]
-                if len(rows) > 0:
-                    # Use the most recent anomaly (last row)
-                    latest_anomaly = rows.iloc[-1]['energy_anomaly']
-                    result[ahu_id] = float(latest_anomaly) if not pd.isna(latest_anomaly) else 0.0
-                else:
-                    result[ahu_id] = 0.0
-            else:
-                # AHU not in predictions file - use neutral anomaly
+            if ahu_id not in result:
                 result[ahu_id] = 0.0
-
         return result
-
     except Exception as e:
-        # On error, return neutral anomalies
-        print(f"[WARNING] Could not load prediction deltas: {e}")
+        print(f"[WARN] predictions.csv fallback also failed: {e}")
         return {ahu_id: 0.0 for ahu_id in ahu_ids}
 
 
