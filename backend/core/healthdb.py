@@ -155,11 +155,12 @@ class HealthDB:
         start: Optional[str] = None,
         end: Optional[str] = None,
         metrics: Optional[list] = None,
+        limit: Optional[int] = 5000,
     ) -> pd.DataFrame:
         """
         Return rows within a time window, optionally filtered by device/level.
         metrics: list of column names to return (None = all columns).
-        Capped at 5000 rows to prevent overloading the context window.
+        limit: max rows to return (None = no cap; default 5000).
         """
         conditions, params = [], []
         if ahu_ids:
@@ -180,12 +181,13 @@ class HealthDB:
             f"timestamp, ahu_id, level, {', '.join(metrics)}"
             if metrics else "*"
         )
+        limit_clause = f"LIMIT {limit}" if limit is not None else ""
         query = f"""
             SELECT {col_clause}
             FROM health_hourly
             {where}
             ORDER BY timestamp DESC
-            LIMIT 5000
+            {limit_clause}
         """
         with self._conn() as conn:
             return conn.execute(query, params).df()
