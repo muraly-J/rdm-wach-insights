@@ -36,13 +36,12 @@ async def get_site_summary(range: str = Query(default="7d", alias="range")):
     # Rename to avoid shadowing Python's built-in range()
     time_range_param = range
     try:
-        from core.csv_reader import _load_csv, _filter_time_range
+        from core.db_reader import get_dataframe
 
-        df = _load_csv(time_range=time_range_param)
+        df = get_dataframe(time_range=time_range_param)
         if df.empty:
             raise HTTPException(status_code=503, detail="No data available")
 
-        df = _filter_time_range(df, time_range_param)
         df = df.sort_values("timestamp")
 
         # Latest snapshot per AHU (most recent row per device)
@@ -59,9 +58,9 @@ async def get_site_summary(range: str = Query(default="7d", alias="range")):
 
         # ── Per-level tiles ───────────────────────────────────────────────────
         level_tiles = []
-        for lvl_str, grp in latest.groupby("level"):
+        for lvl_num, grp in latest.groupby("level"):
             try:
-                lvl_num = int(str(lvl_str).replace("Level ", ""))
+                lvl_num = int(lvl_num)
             except (ValueError, AttributeError):
                 continue
             avg_h = round(float(grp["health_index"].mean()), 1)
@@ -76,7 +75,7 @@ async def get_site_summary(range: str = Query(default="7d", alias="range")):
         def make_spotlight(row, monthly_cost: float = 0.0) -> dict:
             ahu_id = str(row["ahu_id"])
             try:
-                level_num = int(str(row["level"]).replace("Level ", ""))
+                level_num = int(row["level"])
             except (ValueError, AttributeError):
                 level_num = 0
             return {
