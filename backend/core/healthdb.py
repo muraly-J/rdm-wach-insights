@@ -26,6 +26,27 @@ _DEFAULT_DB_PATH = os.path.join(
     os.path.dirname(__file__), '..', '..', 'data', 'healthdb.duckdb'
 )
 
+_PREDICTIONS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS predictions (
+    timestamp       TIMESTAMPTZ NOT NULL,
+    ahu_id          VARCHAR     NOT NULL,
+    level           INTEGER     NOT NULL,
+    energy_current  FLOAT,
+    hourly_delta    FLOAT,
+    predicted_delta FLOAT,
+    energy_anomaly  FLOAT,
+    yesterday_kwh   FLOAT,
+    delta_yesterday FLOAT,
+    last_week_kwh   FLOAT,
+    delta_last_week FLOAT,
+    two_weeks_kwh          FLOAT,
+    delta_two_weeks        FLOAT,
+    available_delta_slots  INTEGER,
+    insufficient_history   BOOLEAN,
+    PRIMARY KEY (timestamp, ahu_id)
+);
+"""
+
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS health_hourly (
     timestamp                  TIMESTAMPTZ NOT NULL,
@@ -83,6 +104,7 @@ class HealthDB:
     def _ensure_schema(self):
         with self._conn(write=True) as conn:
             conn.execute(_SCHEMA_SQL)
+            conn.execute(_PREDICTIONS_SCHEMA_SQL)
 
     # ── Write ──────────────────────────────────────────────────────────────────
 
@@ -217,3 +239,40 @@ class HealthDB:
                 return ts.replace(tzinfo=timezone.utc)
             return ts.astimezone(timezone.utc)
         return None
+
+    def upsert_predictions(self, df: pd.DataFrame) -> int:
+        """Insert or replace prediction rows."""
+        _PREDICTION_COLS = [
+            "timestamp", "ahu_id", "level", "energy_current", "hourly_delta",
+            "predicted_delta", "energy_anomaly", "yesterday_kwh", "delta_yesterday",
+            "last_week_kwh", "delta_last_week", "two_weeks_kwh", "delta_two_weeks",
+            "available_delta_slots", "insufficient_history",
+        ]
+        cols = [c for c in _PREDICTION_COLS if c in df.columns]
+        col_list = ", ".join(cols)
+        with self._conn(write=True) as conn:
+            sub = df[cols]
+            conn.execute(
+                f"INSERT OR REPLACE INTO predictions ({col_list}) SELECT * FROM sub"
+            )
+        return len(df)
+
+    def get_latest_predictions(
+        self,
+        ahu_ids: Optional[list] = None,
+    ) -> pd.DataFrame:
+        """Return the most recent prediction row per AHU."""
+        conditions, params = [], []
+        if ahu_ids:
+            placeholders = ", ".join("?" * len(ahu_ids))
+            conditions.append(f"ahu_id IN ({placeholders})")
+            params.extend(ahu_ids)
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        query = f"""
+            SELECT * FROM predictions
+            {where}
+            QUALIFY ROW_NUMBER() OVER (PARTITION BY ahu_id ORDER BY timestamp DESC) = 1
+            ORDER BY ahu_id
+        """
+        with self._conn() as conn:
+            return conn.execute(query, params).df()

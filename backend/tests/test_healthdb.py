@@ -168,3 +168,39 @@ def test_get_latest_timestamp_empty_db(tmp_path):
     """Returns None when DB is empty."""
     db = HealthDB(str(tmp_path / "empty.duckdb"))
     assert db.get_latest_timestamp() is None
+
+
+def test_predictions_upsert_and_query(tmp_path):
+    db = HealthDB(str(tmp_path / "test.duckdb"))
+    df = pd.DataFrame([{
+        "timestamp": pd.Timestamp("2026-04-01 00:00:00+00:00"),
+        "ahu_id": "e0101",
+        "level": 1,
+        "energy_current": 10000.0,
+        "hourly_delta": 2.0,
+        "predicted_delta": 1.5,
+        "energy_anomaly": 0.5,
+        "yesterday_kwh": 9900.0,
+        "delta_yesterday": 0.3,
+        "last_week_kwh": 9500.0,
+        "delta_last_week": 0.8,
+        "two_weeks_kwh": 9200.0,
+        "delta_two_weeks": 0.9,
+    }])
+    rows = db.upsert_predictions(df)
+    assert rows == 1
+    result = db.get_latest_predictions(ahu_ids=["e0101"])
+    assert len(result) == 1
+    assert abs(result.iloc[0]["energy_anomaly"] - 0.5) < 1e-6
+
+    # Verify INSERT OR REPLACE idempotency — same PK with new value should replace
+    df2 = df.copy()
+    df2["energy_anomaly"] = 9.9
+    db.upsert_predictions(df2)
+    result2 = db.get_latest_predictions(ahu_ids=["e0101"])
+    assert len(result2) == 1, "Duplicate PK should replace, not append"
+    assert abs(result2.iloc[0]["energy_anomaly"] - 9.9) < 1e-6
+
+    # Verify no-filter path returns all AHUs
+    all_results = db.get_latest_predictions()
+    assert len(all_results) == 1
