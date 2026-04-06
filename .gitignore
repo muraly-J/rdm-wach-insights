@@ -247,6 +247,7 @@ documentation/startup.md
 # =========================
 *.sqlite3
 *.db
+*.duckdb
 backend/data/chroma/
 backend/data/query_logs*
 
