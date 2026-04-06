@@ -1045,6 +1045,54 @@ def save_hourly_scores(health_df: pd.DataFrame):
     return True
 
 
+def save_to_duckdb(health_df: pd.DataFrame) -> int:
+    """
+    Upsert health records into DuckDB (healthdb.duckdb).
+    Normalizes column names and level format to match the HealthDB schema.
+    Returns number of rows written, or 0 on failure.
+    """
+    from core.healthdb import HealthDB
+
+    log_info("Saving health scores to DuckDB...")
+    if health_df.empty:
+        log_error("No data to save to DuckDB!")
+        return 0
+
+    try:
+        db_df = health_df.copy()
+
+        # Normalize device identifier column
+        if 'device_id' in db_df.columns and 'ahu_id' not in db_df.columns:
+            db_df = db_df.rename(columns={'device_id': 'ahu_id'})
+
+        # Convert "Level N" string → integer
+        if db_df['level'].dtype == object:
+            db_df['level'] = db_df['level'].str.replace('Level ', '', regex=False).astype(int)
+
+        # Select only columns that exist in the DuckDB schema
+        _SCHEMA_COLS = [
+            'timestamp', 'ahu_id', 'level', 'health_index', 'tier',
+            'energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload',
+            'raw_power_total', 'raw_energy_import', 'raw_hourly_delta', 'raw_predicted_delta',
+            'raw_energy_anomaly_raw', 'raw_power_factor_avg', 'raw_current_unbalance',
+            'raw_composite_thd', 'raw_apparent_power_total',
+            'raw_current_l1', 'raw_current_l2', 'raw_current_l3',
+            'raw_volts_l1_n', 'raw_volts_l2_n', 'raw_volts_l3_n',
+            'raw_current_l1_thd', 'raw_current_l3_thd',
+            'raw_volts_l1_thd', 'raw_volts_l2_thd', 'raw_volts_l3_thd',
+            'raw_nema_voltage_imbalance', 'raw_p95_current', 'safety_flags',
+        ]
+        db_df = db_df[[c for c in _SCHEMA_COLS if c in db_df.columns]]
+
+        db = HealthDB()
+        rows = db.upsert(db_df)
+        log_info(f"[OK] Written {rows} rows to DuckDB (healthdb.duckdb)")
+        return rows
+    except Exception as e:
+        log_error(f"DuckDB write failed: {e}")
+        return 0
+
+
 def main():
     """Main entry point - runs ETL pipeline once."""
     start_time = datetime.now()
@@ -1278,6 +1326,7 @@ Cache (resume support):
     else:
         save_health_scores(health_df)
         save_hourly_scores(health_df)
+        save_to_duckdb(health_df)
 
     # Summary
     elapsed = (datetime.now() - start_time).total_seconds()

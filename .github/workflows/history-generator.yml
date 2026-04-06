@@ -199,27 +199,26 @@ jobs:
           path: data/metric_cache
           key: metric-cache-${{ github.run_id }}
 
-      - name: Commit generated CSVs
+      - name: Commit predictions CSV
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git pull --rebase
-          git add data/predictions.csv data/health_all_levels.csv data/health_hourly.csv
+          git add data/predictions.csv
           if git diff --staged --quiet; then
-            echo "No CSV changes to commit."
+            echo "No predictions.csv changes to commit."
           else
-            git commit -m "chore(data): regenerate historical ETL outputs [skip ci]"
+            git commit -m "chore(data): regenerate predictions [skip ci]"
             git push
           fi
 
-      - name: Upload generated CSVs as artifacts
+      - name: Upload DuckDB and predictions as artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: history-csvs-${{ github.run_number }}
+          name: history-data-${{ github.run_number }}
           path: |
             data/predictions.csv
-            data/health_all_levels.csv
-            data/health_hourly.csv
+            data/healthdb.duckdb
           retention-days: 14
