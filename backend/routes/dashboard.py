@@ -514,59 +514,39 @@ async def dashboard_summary(
 
         summaries = {}
 
-        # Health Index - extract from CSV if available
-        # Look in both backend/data and project root data directory (wach-insight/data)
-        health_csv_path = get_data_dir() / "level1_hourly_health.csv"
-        if not health_csv_path.exists():
-            # Try parent of backend/data (which is wach-insight) then data subfolder
-            health_csv_path = Path(get_data_dir()).resolve().parent.parent / "data" / "level1_hourly_health.csv"
-        
-        if level == "1" and health_csv_path.exists():
-            df = pd.read_csv(health_csv_path)
-            # Filter for time range
-            now = datetime.now()
-            if time_range == "last_24h":
-                cutoff = pd.Timestamp(now - timedelta(hours=24), tz="UTC")
-            elif time_range == "last_7d":
-                cutoff = pd.Timestamp(now - timedelta(days=7), tz="UTC")
+        # Load level-1 data from DuckDB for metric summaries
+        if level == "1":
+            from core.db_reader import get_dataframe
+            _df = get_dataframe(level=1, time_range=time_range)
+            if not _df.empty:
+                _df = _df.sort_values("timestamp")
+                metric_data = []
+                for _, row in _df.tail(50).iterrows():
+                    metric_data.append({
+                        "device_id": str(row.get("ahu_id", "unknown")),
+                        "value": float(row.get("health_index", 100)),
+                        "timestamp": row["timestamp"].isoformat(),
+                    })
+                summaries["health_index"] = metric_data
             else:
-                cutoff = pd.Timestamp(now - timedelta(days=30), tz="UTC")
-
-            df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
-            recent_data = df[df['timestamp'] >= cutoff].sort_values('timestamp')
-            
-            metric_data = []
-            for _, row in recent_data.tail(50).iterrows():
-                metric_data.append({
-                    "device_id": row.get("device_id", "unknown"),
-                    "value": float(row.get("health_index", 100)),
-                    "timestamp": str(row.get("timestamp", ""))
-                })
-            
-            summaries["health_index"] = {
-                "title": "Health Index",
-                "summary": await generate_summary(
-                    chart_payload={"data": metric_data[:10]},
-                    query_type="ranking",
-                    device_ids=[d["device_id"] for d in metric_data[:5]],
-                    metric="health_index",
-                    time_range=time_range
-                ) if metric_data else "No health index data available."
-            }
+                summaries["health_index"] = {
+                    "title": "Health Index",
+                    "summary": "Health index data unavailable for this level."
+                }
         else:
             summaries["health_index"] = {
                 "title": "Health Index",
                 "summary": "Health index data unavailable for this level."
             }
 
-        # Energy Anomaly - extract from CSV if available
-        if level == "1" and health_csv_path.exists():
+        # Energy Anomaly - extract from DuckDB if available
+        if level == "1" and not _df.empty:
             metric_data = []
-            for _, row in recent_data.tail(50).iterrows():
+            for _, row in _df.tail(50).iterrows():
                 metric_data.append({
-                    "device_id": row.get("device_id", "unknown"),
+                    "device_id": str(row.get("ahu_id", "unknown")),
                     "value": float(row.get("energy_anomaly", 0.0)),
-                    "timestamp": str(row.get("timestamp", ""))
+                    "timestamp": row["timestamp"].isoformat(),
                 })
             summaries["energy_anomaly"] = {
                 "title": "Energy Anomaly",
@@ -584,14 +564,14 @@ async def dashboard_summary(
                 "summary": "Energy consumption patterns across devices are within normal parameters."
             }
 
-        # Power Factor Degradation - extract from CSV if available
-        if level == "1" and health_csv_path.exists():
+        # Power Factor Degradation - extract from DuckDB if available
+        if level == "1" and not _df.empty:
             metric_data = []
-            for _, row in recent_data.tail(50).iterrows():
+            for _, row in _df.tail(50).iterrows():
                 metric_data.append({
-                    "device_id": row.get("device_id", "unknown"),
+                    "device_id": str(row.get("ahu_id", "unknown")),
                     "value": float(row.get("pf_degradation", 0.0)),
-                    "timestamp": str(row.get("timestamp", ""))
+                    "timestamp": row["timestamp"].isoformat(),
                 })
             summaries["pf_degradation"] = {
                 "title": "Power Factor Degradation",
@@ -609,14 +589,14 @@ async def dashboard_summary(
                 "summary": "Power factor metrics show stable performance across the fleet."
             }
 
-        # Phase Imbalance - extract from CSV if available
-        if level == "1" and health_csv_path.exists():
+        # Phase Imbalance - extract from DuckDB if available
+        if level == "1" and not _df.empty:
             metric_data = []
-            for _, row in recent_data.tail(50).iterrows():
+            for _, row in _df.tail(50).iterrows():
                 metric_data.append({
-                    "device_id": row.get("device_id", "unknown"),
+                    "device_id": str(row.get("ahu_id", "unknown")),
                     "value": float(row.get("phase_imbalance", 0.0)),
-                    "timestamp": str(row.get("timestamp", ""))
+                    "timestamp": row["timestamp"].isoformat(),
                 })
             summaries["phase_imbalance"] = {
                 "title": "Phase Imbalance",
@@ -634,14 +614,14 @@ async def dashboard_summary(
                 "summary": "Phase imbalance levels are within acceptable thresholds."
             }
 
-        # THD Drift - extract from CSV if available
-        if level == "1" and health_csv_path.exists():
+        # THD Drift - extract from DuckDB if available
+        if level == "1" and not _df.empty:
             metric_data = []
-            for _, row in recent_data.tail(50).iterrows():
+            for _, row in _df.tail(50).iterrows():
                 metric_data.append({
-                    "device_id": row.get("device_id", "unknown"),
+                    "device_id": str(row.get("ahu_id", "unknown")),
                     "value": float(row.get("thd_drift", 0.0)),
-                    "timestamp": str(row.get("timestamp", ""))
+                    "timestamp": row["timestamp"].isoformat(),
                 })
             summaries["thd_drift"] = {
                 "title": "THD Drift",
@@ -659,14 +639,14 @@ async def dashboard_summary(
                 "summary": "Total Harmonic Distortion remains stable across monitoring period."
             }
 
-        # Overload - extract from CSV if available
-        if level == "1" and health_csv_path.exists():
+        # Overload - extract from DuckDB if available
+        if level == "1" and not _df.empty:
             metric_data = []
-            for _, row in recent_data.tail(50).iterrows():
+            for _, row in _df.tail(50).iterrows():
                 metric_data.append({
-                    "device_id": row.get("device_id", "unknown"),
+                    "device_id": str(row.get("ahu_id", "unknown")),
                     "value": float(row.get("overload", 0.0)),
-                    "timestamp": str(row.get("timestamp", ""))
+                    "timestamp": row["timestamp"].isoformat(),
                 })
             summaries["overload"] = {
                 "title": "Overload",
@@ -830,25 +810,15 @@ async def ahu_heatmap(
         if time_range not in valid_ranges:
             raise HTTPException(status_code=400, detail=f"Range must be one of: {', '.join(valid_ranges)}")
 
-        from core.csv_reader import _load_csv, _filter_time_range, _read_csv_cached, HOURLY_CSV_PATH
-        import os
+        from core.db_reader import get_dataframe
 
-        # Always load raw hourly data for heatmap — _load_csv('30d') resamples
-        # to daily (timestamps normalized to midnight), making dt.hour always 0.
-        # Use _read_csv_cached (not pd.read_csv directly) so ahu_id column
-        # normalisation is applied (device_id → ahu_id).
-        if os.path.exists(HOURLY_CSV_PATH) and os.path.getsize(HOURLY_CSV_PATH) > 0:
-            df = await asyncio.to_thread(_read_csv_cached, HOURLY_CSV_PATH)
-        else:
-            df = await asyncio.to_thread(_load_csv, time_range=time_range)
+        df = await asyncio.to_thread(get_dataframe, time_range=time_range)
         if df.empty:
             raise HTTPException(status_code=404, detail="No health data available")
 
         df = df[df["ahu_id"] == ahu_id]
         if df.empty:
             raise HTTPException(status_code=404, detail=f"No data found for AHU {ahu_id}")
-
-        df = _filter_time_range(df, time_range)
         if df.empty:
             raise HTTPException(status_code=404, detail=f"No data in range for AHU {ahu_id}")
 
