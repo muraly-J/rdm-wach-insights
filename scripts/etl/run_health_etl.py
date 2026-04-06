@@ -594,6 +594,24 @@ def transform_health_scores(df_raw):
 
     results = []
 
+    # Load latest prediction data per AHU (for raw_hourly_delta, raw_predicted_delta, raw_energy_anomaly_raw)
+    pred_data: dict = {}
+    try:
+        import sys as _sys, os as _os
+        _sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), '..', 'backend'))
+        from core.healthdb import HealthDB as _HealthDB
+        _db = _HealthDB()
+        _pred_df = _db.get_latest_predictions()
+        for _, _row in _pred_df.iterrows():
+            pred_data[str(_row["ahu_id"])] = {
+                "hourly_delta":    _row.get("hourly_delta"),
+                "predicted_delta": _row.get("predicted_delta"),
+                "energy_anomaly":  _row.get("energy_anomaly"),
+            }
+        print(f"[OK] Loaded prediction data for {len(pred_data)} AHUs")
+    except Exception as _e:
+        print(f"[WARN] Could not load predictions for raw columns: {_e}")
+
     # Build per-AHU baselines
     print(f"Building baselines for {df_raw['device_id'].nunique()} AHUs...")
     ahu_baselines = build_baselines(df_raw)
@@ -765,6 +783,9 @@ def transform_health_scores(df_raw):
             # === Raw Metrics (Current Hour) ===
             "raw_power_total": power_current,
             "raw_energy_import": energy_current,
+            "raw_hourly_delta": pred_data.get(ahu_id, {}).get("hourly_delta") or delta_kwh,
+            "raw_predicted_delta": pred_data.get(ahu_id, {}).get("predicted_delta"),
+            "raw_energy_anomaly_raw": pred_data.get(ahu_id, {}).get("energy_anomaly"),
             "raw_power_factor_avg": pf_current,
             "raw_current_unbalance": unbalance_current,
             "raw_composite_thd": thd_24h,
