@@ -8,7 +8,7 @@ API endpoints for UI Revamp:
     GET /api/level/{id}/health-index             - Health index time series per device
     GET /api/device/{id}/raw-score-relationship  - Raw data ↔ Score mapping
 
-These endpoints serve real data from health_all_levels.csv via csv_reader.
+These endpoints serve real data from DuckDB via db_reader.
 """
 
 import asyncio
