@@ -16,6 +16,7 @@ DuckDB `level` column is INTEGER (1-11), not "Level N" string.
 from __future__ import annotations
 
 import os
+import threading
 from datetime import timedelta
 from typing import Optional
 
@@ -110,9 +111,19 @@ _RANGE_DELTA: dict[str, timedelta] = {
     "30d": timedelta(days=30),
 }
 
+# Singleton cache: avoids creating multiple HealthDB instances (and concurrent
+# write connections) on every request. Keyed by path so test monkeypatching works.
+_DB_INSTANCES: dict = {}
+_DB_LOCK = threading.Lock()
+
 
 def _db() -> HealthDB:
-    return HealthDB(_DB_PATH) if _DB_PATH else HealthDB()
+    key = _DB_PATH
+    if key not in _DB_INSTANCES:
+        with _DB_LOCK:
+            if key not in _DB_INSTANCES:  # double-checked
+                _DB_INSTANCES[key] = HealthDB(_DB_PATH) if _DB_PATH else HealthDB()
+    return _DB_INSTANCES[key]
 
 
 def _get_df(
