@@ -36,7 +36,7 @@ import numpy as np
 from core.influx_client import fetch_latest_hourly_data, get_available_devices
 
 # Add models for AHU level config
-from models.schemas import AHU_LEVEL_CONFIG, get_devices_by_level
+from models.schemas import AHU_LEVEL_CONFIG, get_devices_by_level, DEVICE_TO_LEVEL as _DEVICE_TO_LEVEL
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -763,7 +763,7 @@ def transform_health_scores(df_raw):
         results.append({
             "timestamp": row['timestamp'],
             "device_id": ahu_id,
-            "level": row.get('level', f"Level {ahu_id[1:3]}"),
+            "level": row.get('level') or _DEVICE_TO_LEVEL.get(ahu_id, f"Level {int(ahu_id[1:3])}"),
 
             # === Health Index ===
             "health_index": round(health_index, 1),

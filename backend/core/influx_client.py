@@ -657,9 +657,9 @@ def fetch_latest_hourly_data(
                                 val = record.get_value()
 
                                 if val is not None and not math.isnan(float(val)):
-                                    # Determine level from AHU ID
-                                    level_code = ahu_id[1:3]  # "01" from "e0101"
-                                    level = f"Level {int(level_code)}"
+                                    # Determine level from authoritative config (handles cross-level IDs)
+                                    from models.schemas import DEVICE_TO_LEVEL
+                                    level = DEVICE_TO_LEVEL.get(ahu_id, f"Level {int(ahu_id[1:3])}")
 
                                     records.append({
                                         "timestamp": record.get_time(),
