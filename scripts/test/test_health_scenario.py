@@ -123,7 +123,7 @@ def scenario_dashboard_live_scores() -> bool:
     if not ok:
         return False
 
-    api_by_device = {d["device_id"]: d for d in r.json()}
+    api_by_device = {d["id"]: d for d in r.json().get("devices", [])}
 
     if csv_device not in api_by_device:
         print(f"  [{SKIP}] {csv_device} not in API response — API may use a different device set")
@@ -219,7 +219,7 @@ def scenario_energy_anomaly_coherence() -> bool:
     if not ok:
         return False
 
-    api_by_device = {d["device_id"]: d for d in r.json()}
+    api_by_device = {d["id"]: d for d in r.json().get("devices", [])}
 
     if device_id not in api_by_device:
         print(f"  [{SKIP}] {device_id} not in API response for level {level_num}")
