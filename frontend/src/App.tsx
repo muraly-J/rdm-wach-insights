@@ -41,7 +41,7 @@ import ChatWidget from './components/chat/ChatWidget';
 import { useAppStore } from './store/useAppStore';
 
 // API
-import { fetchHealthIndex, fetchRawScoreRelationship, fetchScoreBreakdown, fetchSiteSummary } from './api/client';
+import { fetchHealthIndex, fetchLevelDevices, fetchRawScoreRelationship, fetchScoreBreakdown, fetchSiteSummary } from './api/client';
 import type { HealthIndexResponse, RawScoreResponse, ScoresResponse } from './types';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -137,28 +137,31 @@ function App() {
       });
   }, [timeRange, setSiteSummaryData]);
 
-  // ── Devices list derived from health data ────────────────────────────────────
+  // ── Devices list: fetched from static /level/{id}/devices — no DuckDB dep ────
+  const [levelDevices, setLevelDevices] = React.useState<
+    Array<{ id: string; label: string; department: string; area: string }>
+  >([]);
+  React.useEffect(() => {
+    if (!selectedLevel) { setLevelDevices([]); return; }
+    fetchLevelDevices(selectedLevel)
+      .then((r) => setLevelDevices(r.devices))
+      .catch(() => setLevelDevices([]));
+  }, [selectedLevel]);
+
   const devices = React.useMemo(
     () =>
-      (healthData?.devices ?? []).map((d) => ({
+      levelDevices.map((d) => ({
         id: d.id,
-        name: d.name,
+        name: d.id,
         label: d.label,
         department: d.department,
         level: selectedLevel!,
       })),
-    [healthData, selectedLevel]
+    [levelDevices, selectedLevel]
   );
 
-  // ── Stable full device list for the DEV dropdown ─────────────────────────────
-  // Only updated when no device is selected (full-level fetch), so the dropdown
-  // always shows all devices even after one is chosen.
-  const [navDevices, setNavDevices] = React.useState<typeof devices>([]);
-  React.useEffect(() => {
-    if ((!selectedDevice || selectedDevice === 'all') && devices.length > 0) {
-      setNavDevices(devices);
-    }
-  }, [devices, selectedDevice]);
+  // navDevices = full level device list (always, regardless of selectedDevice)
+  const navDevices = devices;
 
   // ── Health Index chart data ──────────────────────────────────────────────────
   const healthChartData = React.useMemo(() => {

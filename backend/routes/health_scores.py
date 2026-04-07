@@ -20,6 +20,7 @@ from fastapi import APIRouter, Query, HTTPException
 
 from models.schemas import AHU_LEVEL_CONFIG
 from core.db_reader import (
+    get_level_devices,
     get_score_breakdown,
     get_health_index_series,
     get_raw_score_relationship as db_raw_score,
@@ -42,6 +43,27 @@ async def get_levels():
     """
     return {
         "levels": list(AHU_LEVEL_CONFIG.keys())
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# GET /api/level/{id}/devices — Static AHU list for a level (no DuckDB)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/level/{level_id}/devices")
+async def get_level_device_list(level_id: int):
+    """
+    Get the list of AHU devices for a building level.
+    Reads from static config — always available regardless of DuckDB state.
+    """
+    if level_id not in AHU_LEVEL_CONFIG:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Level {level_id} is invalid. Valid levels: 1-11"
+        )
+    return {
+        "level": level_id,
+        "devices": get_level_devices(level_id),
     }
 
 

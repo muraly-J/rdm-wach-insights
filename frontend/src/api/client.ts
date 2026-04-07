@@ -44,6 +44,16 @@ export async function fetchLevels(): Promise<LevelsResponse> {
 }
 
 /**
+ * GET /api/level/{id}/devices — Static AHU device list for a level
+ */
+export async function fetchLevelDevices(levelId: number): Promise<{
+  level: number;
+  devices: Array<{ id: string; label: string; department: string; area: string }>;
+}> {
+  return apiFetch(`/level/${levelId}/devices`);
+}
+
+/**
  * GET /api/level/{id}/health-index — Health index time series
  */
 export async function fetchHealthIndex(

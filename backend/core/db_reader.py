@@ -160,6 +160,25 @@ def _get_df(
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
+def get_level_devices(level: int) -> list[dict]:
+    """
+    Return [{id, label, department, area}] for a level from the static AHU config.
+    No DuckDB required — always fast and reliable.
+    """
+    from models.schemas import AHU_LEVEL_CONFIG
+    device_ids = AHU_LEVEL_CONFIG.get(level, {}).get("device_ids", [])
+    labels = _load_ahu_labels()
+    return [
+        {
+            "id": did,
+            "label": labels.get(did, {}).get("label", ""),
+            "department": labels.get(did, {}).get("department", ""),
+            "area": labels.get(did, {}).get("area", ""),
+        }
+        for did in device_ids
+    ]
+
+
 def get_health_index_series(
     level: int,
     device_id: Optional[str],
