@@ -39,7 +39,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onNavigat
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-2">
       {messages.length === 0 && (
-        <div className="text-center text-[#8A95A5] py-8">
+        <div className="text-center text-[#6d6e71] py-8">
           Start a conversation with WACH AI
         </div>
       )}

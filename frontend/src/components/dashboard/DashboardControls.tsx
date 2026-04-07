@@ -37,9 +37,9 @@ const DropdownSegment: React.FC<SegmentProps> = ({
   const segRef = React.useRef<HTMLDivElement>(null);
 
   // Resolve text colour
-  let textColour = '#8A95A5';
+  let textColour = '#6d6e71';
   if (isDisabled) textColour = '#4A5568';
-  else if (isActive) textColour = '#00E5A0';
+  else if (isActive) textColour = '#4fbd95';
 
   const segBg = isOpen ? '#1A2330' : 'transparent';
 
@@ -97,7 +97,7 @@ const DropdownSegment: React.FC<SegmentProps> = ({
             top: 'calc(100% + 6px)',
             left: panelLeft,
             background: '#141D28',
-            border: '1px solid #1E2A3A',
+            border: '1px solid #2e3f55',
             borderRadius: '10px',
             padding: '6px',
             minWidth: '140px',
@@ -128,19 +128,19 @@ const PanelItem: React.FC<{
       padding: '7px 10px',
       borderRadius: '6px',
       fontSize: '12px',
-      color: disabled ? '#4A5568' : selected ? '#00E5A0' : '#8A95A5',
+      color: disabled ? '#4A5568' : selected ? '#4fbd95' : '#6d6e71',
       fontWeight: selected ? 600 : 400,
       cursor: disabled ? 'default' : 'pointer',
     }}
     onMouseEnter={(e) => {
-      if (!disabled) (e.currentTarget as HTMLElement).style.background = '#1E2A3A';
+      if (!disabled) (e.currentTarget as HTMLElement).style.background = '#2e3f55';
     }}
     onMouseLeave={(e) => {
       (e.currentTarget as HTMLElement).style.background = 'transparent';
     }}
   >
     <span>{label}</span>
-    {selected && <span style={{ fontSize: '6px', color: '#00E5A0' }}>●</span>}
+    {selected && <span style={{ fontSize: '6px', color: '#4fbd95' }}>●</span>}
   </div>
 );
 
@@ -187,8 +187,8 @@ const DashboardControls: React.FC<DashboardControlsProps> = ({ devices }) => {
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              background: '#111820',
-              border: '1px solid #1E2A3A',
+              background: '#222d3d',
+              border: '1px solid #2e3f55',
               borderRadius: '10px',
               overflow: 'visible',
             }}
@@ -224,7 +224,7 @@ const DashboardControls: React.FC<DashboardControlsProps> = ({ devices }) => {
             </DropdownSegment>
 
             {/* Separator */}
-            <div style={{ width: '1px', height: '20px', background: '#1E2A3A', flexShrink: 0 }} />
+            <div style={{ width: '1px', height: '20px', background: '#2e3f55', flexShrink: 0 }} />
 
             {/* DEV segment */}
             <DropdownSegment
@@ -243,8 +243,8 @@ const DashboardControls: React.FC<DashboardControlsProps> = ({ devices }) => {
                 onChange={(e) => setDeviceSearch(e.target.value)}
                 style={{
                   width: '100%',
-                  background: '#0B0F14',
-                  border: '1px solid #1E2A3A',
+                  background: '#1c2431',
+                  border: '1px solid #2e3f55',
                   borderRadius: '6px',
                   padding: '6px 10px',
                   fontSize: '11px',
@@ -292,7 +292,7 @@ const DashboardControls: React.FC<DashboardControlsProps> = ({ devices }) => {
             </DropdownSegment>
 
             {/* Separator */}
-            <div style={{ width: '1px', height: '20px', background: '#1E2A3A', flexShrink: 0 }} />
+            <div style={{ width: '1px', height: '20px', background: '#2e3f55', flexShrink: 0 }} />
 
             {/* RANGE segment */}
             <DropdownSegment

@@ -24,7 +24,7 @@ const SCORE_NAMES: ScoreName[] = ['energy_anomaly', 'pf_degradation', 'phase_imb
 const SCORE_COLORS = ['#3B82F6', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444'];
 
 const REFERENCE_LINES: Record<string, Array<{ value: number; label: string; color: string }>> = {
-  thd_drift: [{ value: 5.0, label: 'IEEE 519: 5%', color: '#FFB020' }],
+  thd_drift: [{ value: 5.0, label: 'IEEE 519: 5%', color: '#f9a020' }],
 };
 
 const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
@@ -51,7 +51,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
         >
           Score Derivation — {deviceName}
         </h3>
-        <p className="text-[#8A95A5] mt-2">
+        <p className="text-[#6d6e71] mt-2">
           Visualising how raw sensor data maps to computed scores over time.
         </p>
       </div>
@@ -95,7 +95,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                     <p className="text-yellow-500 font-semibold mb-1 text-sm">
                       No Data Available
                     </p>
-                    <p className="text-[#8A95A5] text-xs leading-tight">
+                    <p className="text-[#6d6e71] text-xs leading-tight">
                       {score}: No valid data points
                     </p>
                   </div>
@@ -122,7 +122,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
       </div>
 
       {/* Scroll Hint */}
-      <p className="text-center text-[#8A95A5] text-xs mt-6 opacity-70">
+      <p className="text-center text-[#6d6e71] text-xs mt-6 opacity-70">
         Scroll horizontally to explore all score derivation charts
       </p>
     </motion.div>

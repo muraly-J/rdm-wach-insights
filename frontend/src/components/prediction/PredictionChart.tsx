@@ -73,7 +73,7 @@ export default function PredictionChart({ data, metric }: PredictionChartProps) 
   return (
     <ResponsiveContainer width="100%" height={320}>
       <ComposedChart data={chartData} margin={{ top: 16, right: 24, bottom: 8, left: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1E2A3A" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#2e3f55" />
         <XAxis
           dataKey="x"
           type="number"
@@ -81,14 +81,14 @@ export default function PredictionChart({ data, metric }: PredictionChartProps) 
           ticks={[-48, -24, 0, 1, 12, 24, 168]}
           tickFormatter={(v) => v === 0 ? 'Now' : v > 0 ? `+${v}h` : `${v}h`}
           stroke="#4A5568"
-          tick={{ fill: '#8A95A5', fontSize: 11 }}
+          tick={{ fill: '#6d6e71', fontSize: 11 }}
         />
-        <YAxis stroke="#4A5568" tick={{ fill: '#8A95A5', fontSize: 11 }} label={{ value: METRIC_LABELS[metric], angle: -90, position: 'insideLeft', fill: '#8A95A5', fontSize: 10 }} />
+        <YAxis stroke="#4A5568" tick={{ fill: '#6d6e71', fontSize: 11 }} label={{ value: METRIC_LABELS[metric], angle: -90, position: 'insideLeft', fill: '#6d6e71', fontSize: 10 }} />
         <Tooltip
-          contentStyle={{ backgroundColor: '#131A23', border: '1px solid #1E2A3A', borderRadius: 8 }}
+          contentStyle={{ backgroundColor: '#131A23', border: '1px solid #2e3f55', borderRadius: 8 }}
           labelFormatter={(v) => `Offset: ${v}h`}
         />
-        <Legend wrapperStyle={{ fontSize: 12, color: '#8A95A5' }} />
+        <Legend wrapperStyle={{ fontSize: 12, color: '#6d6e71' }} />
 
         {horizonOffsets.map((offset) => (
           <ReferenceLine
@@ -104,8 +104,8 @@ export default function PredictionChart({ data, metric }: PredictionChartProps) 
         <Line dataKey="two_weeks_ago" name="2 Weeks Ago" stroke="#555" strokeDasharray="4 4" dot={false} connectNulls={false} />
         <Line dataKey="last_week" name="Last Week" stroke="#888" dot={false} connectNulls={false} />
         <Line dataKey="yesterday" name="Yesterday" stroke="#60a5fa" dot={false} connectNulls={false} />
-        <Line dataKey="actual" name="Today (actual)" stroke="#00E5A0" strokeWidth={2} dot={false} connectNulls={false} />
-        <Line dataKey="prediction" name="Prediction" stroke="#00E5A0" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 5, fill: '#00E5A0' }} connectNulls={true} />
+        <Line dataKey="actual" name="Today (actual)" stroke="#4fbd95" strokeWidth={2} dot={false} connectNulls={false} />
+        <Line dataKey="prediction" name="Prediction" stroke="#4fbd95" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 5, fill: '#4fbd95' }} connectNulls={true} />
       </ComposedChart>
     </ResponsiveContainer>
   );

@@ -44,8 +44,8 @@ export default function VariableSelector({
         onClick={() => setOpen((v) => !v)}
         className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs border transition-colors ${
           count > 0
-            ? 'border-[#00E5A0] bg-[#00E5A0]/10 text-[#00E5A0]'
-            : 'border-[#1E2A3A] text-[#8A95A5] hover:border-[#2A3A4A]'
+            ? 'border-[#4fbd95] bg-[#4fbd95]/10 text-[#4fbd95]'
+            : 'border-[#2e3f55] text-[#6d6e71] hover:border-[#2A3A4A]'
         }`}
       >
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,7 +54,7 @@ export default function VariableSelector({
         </svg>
         {label}
         {count > 0 && (
-          <span className="bg-[#00E5A0] text-[#0B0F14] text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+          <span className="bg-[#4fbd95] text-[#1c2431] text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
             {count}
           </span>
         )}
@@ -62,7 +62,7 @@ export default function VariableSelector({
 
       {/* Popover */}
       {open && (
-        <div className="absolute z-50 top-full mt-2 right-0 w-64 bg-[#1A2230] border border-[#1E2A3A] rounded-xl shadow-2xl p-3">
+        <div className="absolute z-50 top-full mt-2 right-0 w-64 bg-[#2a3649] border border-[#2e3f55] rounded-xl shadow-2xl p-3">
           <p className="text-[10px] text-[#4A5568] mb-2 uppercase tracking-wider">
             Select up to {maxSelectable}
           </p>
@@ -76,7 +76,7 @@ export default function VariableSelector({
                   className={`flex items-start gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
                     isDisabled
                       ? 'opacity-40 cursor-not-allowed'
-                      : 'hover:bg-[#0B0F14]'
+                      : 'hover:bg-[#1c2431]'
                   }`}
                 >
                   <input
@@ -84,13 +84,13 @@ export default function VariableSelector({
                     checked={isSelected}
                     disabled={isDisabled}
                     onChange={() => toggle(m.key)}
-                    className="mt-0.5 accent-[#00E5A0]"
+                    className="mt-0.5 accent-[#4fbd95]"
                   />
                   <div>
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-white font-medium">{m.label}</span>
                       {m.unit && (
-                        <span className="text-[10px] text-[#4A5568] border border-[#1E2A3A] rounded px-1">
+                        <span className="text-[10px] text-[#4A5568] border border-[#2e3f55] rounded px-1">
                           {m.unit}
                         </span>
                       )}

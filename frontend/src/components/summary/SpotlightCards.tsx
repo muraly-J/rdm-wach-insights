@@ -10,7 +10,7 @@ interface CardProps {
 
 function SpotlightCard({ ahu, type, index }: CardProps) {
   const isStar = type === 'star';
-  const accentColor = isStar ? '#00E5A0' : '#FF4D6A';
+  const accentColor = isStar ? '#4fbd95' : '#e96852';
   const icon = isStar ? '★' : '⚠';
   const title = isStar ? 'Star AHU' : 'Most Critical AHU';
   const subtitle = isStar
@@ -48,7 +48,7 @@ function SpotlightCard({ ahu, type, index }: CardProps) {
           >
             {title}
           </div>
-          <div style={{ fontSize: '11px', color: '#8A95A5', marginTop: '1px' }}>{subtitle}</div>
+          <div style={{ fontSize: '11px', color: '#6d6e71', marginTop: '1px' }}>{subtitle}</div>
         </div>
       </div>
 
@@ -65,7 +65,7 @@ function SpotlightCard({ ahu, type, index }: CardProps) {
         >
           {ahu.name}
         </div>
-        <div style={{ fontSize: '12px', color: '#8A95A5', marginTop: '3px' }}>
+        <div style={{ fontSize: '12px', color: '#6d6e71', marginTop: '3px' }}>
           Level {ahu.level}
         </div>
       </div>
@@ -73,7 +73,7 @@ function SpotlightCard({ ahu, type, index }: CardProps) {
       {/* Stats row */}
       <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: '11px', color: '#8A95A5', marginBottom: '3px' }}>
+          <div style={{ fontSize: '11px', color: '#6d6e71', marginBottom: '3px' }}>
             Health Score
           </div>
           <div
@@ -89,7 +89,7 @@ function SpotlightCard({ ahu, type, index }: CardProps) {
         </div>
 
         <div>
-          <div style={{ fontSize: '11px', color: '#8A95A5', marginBottom: '3px' }}>
+          <div style={{ fontSize: '11px', color: '#6d6e71', marginBottom: '3px' }}>
             Monthly Cost
           </div>
           <div
@@ -106,14 +106,14 @@ function SpotlightCard({ ahu, type, index }: CardProps) {
 
         {ahu.safetyFlags > 0 && (
           <div>
-            <div style={{ fontSize: '11px', color: '#8A95A5', marginBottom: '3px' }}>
+            <div style={{ fontSize: '11px', color: '#6d6e71', marginBottom: '3px' }}>
               Safety Flags
             </div>
             <div
               style={{
                 fontSize: '20px',
                 fontWeight: 700,
-                color: '#FFB020',
+                color: '#f9a020',
                 fontFamily: 'var(--font-display)',
               }}
             >

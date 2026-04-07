@@ -116,10 +116,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
         fixed z-50
         bottom-0 right-0 left-0 sm:bottom-6 sm:right-6 sm:left-auto
         w-full sm:w-[400px]
-        bg-[#0B0F14]
+        bg-[#1c2431]
         rounded-t-[20px] sm:rounded-[20px]
         overflow-hidden max-h-[82dvh]
-        shadow-2xl border border-[#1E2A3A]
+        shadow-2xl border border-[#2e3f55]
         flex flex-col
       "
       animate={{ opacity: 1, scale: 1 }}

@@ -11,48 +11,48 @@
   --tw-ring-offset-shadow: 0 0 #0000;
 }
 
-/* Chat bubble pulse — CSS keyframe replaces Framer Motion boxShadow animation */
+/* Chat bubble pulse */
 @keyframes chat-bubble-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0,229,160,0.15); }
-  50%       { box-shadow: 0 0 0 12px rgba(0,229,160,0.15); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79,189,149,0.15); }
+  50%       { box-shadow: 0 0 0 12px rgba(79,189,149,0.15); }
 }
 .chat-bubble-glow {
   animation: chat-bubble-pulse 3s ease-in-out infinite;
 }
 
-/* WelcomeHero CTA button hover glow — CSS hover replaces Framer Motion boxShadow */
+/* WelcomeHero CTA button hover glow */
 .welcome-cta-btn:hover {
-  box-shadow: 0 0 32px rgba(0,229,160,0.35);
+  box-shadow: 0 0 32px rgba(79,189,149,0.35);
 }
 
 :root {
-  /* Color Palette */
-  --bg-primary: #0B0F14;
-  --bg-secondary: #111820;
-  --bg-tertiary: #1A2230;
-  --border-subtle: #1E2A3A;
-  --border-accent: #00E5A0;
+  /* Color Palette — WACH Brand */
+  --bg-primary: #1c2431;
+  --bg-secondary: #222d3d;
+  --bg-tertiary: #2a3649;
+  --border-subtle: #2e3f55;
+  --border-accent: #4fbd95;
   --text-primary: #E8ECF1;
-  --text-secondary: #8A95A5;
-  --accent: #00E5A0;
-  --accent-glow: rgba(0, 229, 160, 0.15);
-  --accent-secondary: #00B8D4;
-  --danger: #FF4D6A;
-  --warning: #FFB020;
-  --success: #00E5A0;
+  --text-secondary: #6d6e71;
+  --accent: #4fbd95;
+  --accent-glow: rgba(79, 189, 149, 0.15);
+  --accent-secondary: #00a9a5;
+  --danger: #e96852;
+  --warning: #f9a020;
+  --success: #4fbd95;
 
   /* Chart colors */
-  --chart-1: #00E5A0;
-  --chart-2: #00B8D4;
-  --chart-3: #7C5CFC;
-  --chart-4: #FF6B8A;
-  --chart-5: #FFB020;
+  --chart-1: #4fbd95;
+  --chart-2: #00a9a5;
+  --chart-3: #00aeef;
+  --chart-4: #9ccb3d;
+  --chart-5: #f9a020;
 
-  /* Typography */
-  --font-display: 'Plus Jakarta Sans', sans-serif;
-  --font-headings: 'Plus Jakarta Sans', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  /* Typography — Montserrat brand font */
+  --font-display: 'Montserrat', 'Verdana', sans-serif;
+  --font-headings: 'Montserrat', 'Verdana', sans-serif;
+  --font-body: 'Montserrat', 'Verdana', sans-serif;
+  --font-mono: 'Oswald', 'Verdana', monospace;
 
   /* Spacing (8px base) */
   --space-1: 4px;
@@ -88,39 +88,82 @@ body {
   line-height: 1.65;
 }
 
-/* Plus Jakarta Sans Display Styling (Section 1.2) */
+/* ── Montserrat typography scale ──────────────────────────────
+   Heading (display):  Regular (400), lowercase, 0 tracking
+   H1:                 Medium  (500), lowercase, tracking 0.025em
+   H2:                 Bold    (700), UPPERCASE,  tracking 0.15em
+   H3:                 Bold    (700), lowercase,  0 tracking
+   H4:                 Bold    (700), UPPERCASE,  0 tracking
+   Body:               Light   (300), lowercase,  0 tracking
+   Numbers/mono:       Oswald Medium (500)
+   ─────────────────────────────────────────────────────────── */
+
 .display-heading {
   font-family: var(--font-display);
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-weight: 400;
+  text-transform: lowercase;
+  letter-spacing: 0;
 }
 
 .headings {
   font-family: var(--font-headings);
-  font-weight: 600;
+  font-weight: 500;
+}
+
+/* H1 — Body Highlight */
+h1, .h1 {
+  font-family: var(--font-headings);
+  font-weight: 500;
+  text-transform: lowercase;
+  letter-spacing: 0.025em;
+}
+
+/* H2 — Pre-header */
+h2, .h2 {
+  font-family: var(--font-headings);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* H3 — Bullets */
+h3, .h3 {
+  font-family: var(--font-headings);
+  font-weight: 700;
+  text-transform: lowercase;
+  letter-spacing: 0;
+}
+
+/* H4 — Prebody header */
+h4, .h4 {
+  font-family: var(--font-headings);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .body-text {
   font-family: var(--font-body);
-  font-weight: 400;
+  font-weight: 300;
+  text-transform: lowercase;
+  letter-spacing: 0;
 }
 
-.mono {
+/* Numbers / mono — Oswald Medium */
+.mono, .numeric {
   font-family: var(--font-mono);
-  font-weight: 400;
+  font-weight: 500;
 }
 
-/* Letter-spacing on display headings (Section 1.2) */
 .display-letter-spaced {
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
-/* Line-height on body (Section 1.2) */
 .body-line-height {
   line-height: 1.65;
 }
 
-/* Custom noise overlay SVG (Section 3.1) */
+/* Noise overlay */
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
@@ -152,16 +195,6 @@ body {
 .scrollbar-hidden {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-/* Custom noise overlay SVG */
-.noise-overlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.03;
-  mix-blend-mode: overlay;
 }
 
 /* Health tier colors */

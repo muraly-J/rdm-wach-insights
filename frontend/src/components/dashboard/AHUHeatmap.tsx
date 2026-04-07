@@ -30,16 +30,16 @@ interface Props {
 const SHADOW_NONE = '0 0 0px rgba(0,0,0,0)';
 
 function healthColor(score: number | null): { bg: string; text: string; glow: string; accent: string } {
-  if (score === null) return { bg: '#1A2230', text: '#3A4455', glow: SHADOW_NONE, accent: '#3A4455' };
-  if (score >= 80) return { bg: '#00E5A0', text: '#0B0F14', glow: '0 0 18px rgba(0,229,160,0.55)', accent: '#00E5A0' };
-  if (score >= 60) return { bg: '#F59E0B', text: '#0B0F14', glow: '0 0 18px rgba(245,158,11,0.55)', accent: '#F59E0B' };
-  if (score >= 40) return { bg: '#F97316', text: '#0B0F14', glow: '0 0 18px rgba(249,115,22,0.55)', accent: '#F97316' };
+  if (score === null) return { bg: '#2a3649', text: '#3A4455', glow: SHADOW_NONE, accent: '#3A4455' };
+  if (score >= 80) return { bg: '#4fbd95', text: '#1c2431', glow: '0 0 18px rgba(79,189,149,0.55)', accent: '#4fbd95' };
+  if (score >= 60) return { bg: '#F59E0B', text: '#1c2431', glow: '0 0 18px rgba(245,158,11,0.55)', accent: '#F59E0B' };
+  if (score >= 40) return { bg: '#F97316', text: '#1c2431', glow: '0 0 18px rgba(249,115,22,0.55)', accent: '#F97316' };
   return { bg: '#EF4444', text: '#ffffff', glow: '0 0 18px rgba(239,68,68,0.55)', accent: '#EF4444' };
 }
 
 function scoreColor(score: number | null): string {
   if (score === null) return '#3A4455';
-  if (score >= 80) return '#00E5A0';
+  if (score >= 80) return '#4fbd95';
   if (score >= 60) return '#F59E0B';
   if (score >= 40) return '#F97316';
   return '#EF4444';
@@ -109,7 +109,7 @@ function HoverTooltip({ entry, bg }: { entry: HourEntry; bg: string }) {
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: 11,
-                color: '#8A95A5',
+                color: '#6d6e71',
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
               }}
@@ -256,21 +256,21 @@ const AHUHeatmap: React.FC<Props> = ({ ahuId }) => {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
       {/* Header */}
-      <div className="px-6 py-4 border-b border-[#1E2A3A] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div className="px-6 py-4 border-b border-[#2e3f55] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h3 className="font-display text-[18px] font-bold tracking-tight flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-[#00E5A0] shadow-[0_0_8px_rgba(0,229,160,0.7)]" />
+            <span className="inline-block w-2 h-2 rounded-full bg-[#4fbd95] shadow-[0_0_8px_rgba(79,189,149,0.7)]" />
             Hourly Health Pattern
           </h3>
-          <p className="text-xs text-[#8A95A5] mt-0.5">
+          <p className="text-xs text-[#6d6e71] mt-0.5">
             Average health index by hour of day · {rangeLabel}
           </p>
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-3 text-[10px] text-[#8A95A5]">
+        <div className="flex items-center gap-3 text-[10px] text-[#6d6e71]">
           {[
-            { label: 'Healthy',          color: '#00E5A0' },
+            { label: 'Healthy',          color: '#4fbd95' },
             { label: 'Monitor',          color: '#F59E0B' },
             { label: 'Maintenance Soon', color: '#F97316' },
             { label: 'Critical',         color: '#EF4444' },
@@ -288,13 +288,13 @@ const AHUHeatmap: React.FC<Props> = ({ ahuId }) => {
         {loading && (
           <div className="grid grid-cols-6 gap-2">
             {Array.from({ length: 24 }).map((_, i) => (
-              <div key={i} className="aspect-square rounded-lg bg-[#1A2230] animate-pulse" />
+              <div key={i} className="aspect-square rounded-lg bg-[#2a3649] animate-pulse" />
             ))}
           </div>
         )}
 
         {error && !loading && (
-          <div className="flex items-center justify-center h-32 text-[#8A95A5] text-sm">
+          <div className="flex items-center justify-center h-32 text-[#6d6e71] text-sm">
             Failed to load heatmap data
           </div>
         )}
@@ -352,15 +352,15 @@ const AHUHeatmap: React.FC<Props> = ({ ahuId }) => {
             {(bestHour || worstHour) && (
               <div className="mt-4 grid grid-cols-2 gap-3">
                 {bestHour && (
-                  <div className="rounded-lg border border-[#00E5A0]/20 bg-[#00E5A0]/5 px-4 py-3">
-                    <p className="text-[10px] text-[#8A95A5] mb-0.5">Best period</p>
-                    <p className="font-mono text-sm font-bold text-[#00E5A0]">{formatHour(bestHour.hour)}</p>
+                  <div className="rounded-lg border border-[#4fbd95]/20 bg-[#4fbd95]/5 px-4 py-3">
+                    <p className="text-[10px] text-[#6d6e71] mb-0.5">Best period</p>
+                    <p className="font-mono text-sm font-bold text-[#4fbd95]">{formatHour(bestHour.hour)}</p>
                     <p className="font-mono text-xs text-[#E8ECF1]">{bestHour.avg_health!.toFixed(1)} avg</p>
                   </div>
                 )}
                 {worstHour && (
                   <div className="rounded-lg border border-[#EF4444]/20 bg-[#EF4444]/5 px-4 py-3">
-                    <p className="text-[10px] text-[#8A95A5] mb-0.5">Worst period</p>
+                    <p className="text-[10px] text-[#6d6e71] mb-0.5">Worst period</p>
                     <p className="font-mono text-sm font-bold text-[#EF4444]">{formatHour(worstHour.hour)}</p>
                     <p className="font-mono text-xs text-[#E8ECF1]">{worstHour.avg_health!.toFixed(1)} avg</p>
                   </div>

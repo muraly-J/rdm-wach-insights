@@ -37,16 +37,16 @@ const PillButton: React.FC<PillButtonProps> = ({
   // Variant styles (matches WACH_INSIGHT_UI_REVAMP_PLAN.md Section 5.1)
   const variantStyles: Record<PillVariant, string> = {
     idle: `
-      bg-transparent text-[#8A95A5] border-1 border-[#1E2A3A]
-      hover:border-[#00E5A0] hover:text-[#8A95A5]
+      bg-transparent text-[#6d6e71] border-1 border-[#2e3f55]
+      hover:border-[#4fbd95] hover:text-[#6d6e71]
     `,
     active: `
-      bg-[#00E5A0] text-[#0B0F14]
-      shadow-[0_0_20px_rgba(0,229,160,0.5)]
-      border-0 hover:bg-[#00E5A0] hover:text-[#0B0F14]
+      bg-[#4fbd95] text-[#1c2431]
+      shadow-[0_0_20px_rgba(79,189,149,0.5)]
+      border-0 hover:bg-[#4fbd95] hover:text-[#1c2431]
     `,
     hover: `
-      bg-transparent text-[#8A95A5] border-1 border-[#00E5A0]
+      bg-transparent text-[#6d6e71] border-1 border-[#4fbd95]
     `,
   };
 

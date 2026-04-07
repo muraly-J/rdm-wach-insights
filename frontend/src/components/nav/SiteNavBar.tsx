@@ -17,9 +17,9 @@ function HamburgerIcon() {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <rect y="0" width="18" height="2" rx="1" fill="#00E5A0" />
-      <rect y="6" width="18" height="2" rx="1" fill="#00E5A0" />
-      <rect y="12" width="18" height="2" rx="1" fill="#00E5A0" />
+      <rect y="0" width="18" height="2" rx="1" fill="#4fbd95" />
+      <rect y="6" width="18" height="2" rx="1" fill="#4fbd95" />
+      <rect y="12" width="18" height="2" rx="1" fill="#4fbd95" />
     </svg>
   );
 }
@@ -60,7 +60,7 @@ export default function SiteNavBar({ devices }: SiteNavBarProps) {
               cursor: 'pointer',
               padding: '6px 8px',
               fontSize: 20,
-              color: '#00E5A0',
+              color: '#4fbd95',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

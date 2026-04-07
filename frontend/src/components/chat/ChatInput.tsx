@@ -48,7 +48,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="bg-[#111820] border-t border-[#1E2A3A]">
+    <div className="bg-[#222d3d] border-t border-[#2e3f55]">
       {showRoles && (
         <div className="flex gap-2 px-4 pt-2 pb-1 flex-wrap">
           {PERSONAS.map(({ value, label }) => (
@@ -58,8 +58,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
               className={`
                 text-xs px-3 py-1 rounded-full border transition-colors
                 ${selectedPersona === value
-                  ? 'bg-[#00E5A0] text-[#0B0F14] border-[#00E5A0]'
-                  : 'bg-transparent text-[#8A95A5] border-[#1E2A3A] hover:border-[#00E5A0] hover:text-[#00E5A0]'}
+                  ? 'bg-[#4fbd95] text-[#1c2431] border-[#4fbd95]'
+                  : 'bg-transparent text-[#6d6e71] border-[#2e3f55] hover:border-[#4fbd95] hover:text-[#4fbd95]'}
               `}
             >
               {label}
@@ -74,8 +74,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
           className={`
             w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center transition-colors
             ${selectedPersona
-              ? 'bg-[#00E5A0] text-[#0B0F14]'
-              : 'text-[#8A95A5] hover:text-[#00E5A0]'}
+              ? 'bg-[#4fbd95] text-[#1c2431]'
+              : 'text-[#6d6e71] hover:text-[#4fbd95]'}
           `}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -93,7 +93,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           placeholder="Ask about your AHUs…"
           className="
             flex-1 bg-transparent border-none outline-none
-            text-[#E8ECF1] placeholder-[#8A95A5]
+            text-[#E8ECF1] placeholder-[#6d6e71]
             text-sm
           "
         />
@@ -105,7 +105,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           disabled={!input.trim()}
           className="
             w-11 h-11 rounded-full flex-shrink-0
-            bg-[#00E5A0] text-[#0B0F14]
+            bg-[#4fbd95] text-[#1c2431]
             flex items-center justify-center
             disabled:opacity-30 disabled:cursor-not-allowed
           "

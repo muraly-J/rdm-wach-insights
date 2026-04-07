@@ -17,14 +17,14 @@ export default function MetricMiniChart({
   label, unit, data, color, loading,
 }: MetricMiniChartProps) {
   if (loading) {
-    return <div className="mt-3 h-[104px] bg-[#1A2230] rounded-lg animate-pulse" />;
+    return <div className="mt-3 h-[104px] bg-[#2a3649] rounded-lg animate-pulse" />;
   }
 
   return (
-    <div className="mt-3 border-t border-[#1E2A3A] pt-3">
+    <div className="mt-3 border-t border-[#2e3f55] pt-3">
       <div className="flex items-center gap-1.5 mb-1">
         <span className="inline-block w-4 h-px" style={{ backgroundColor: color }} />
-        <span className="text-[11px] text-[#8A95A5] font-mono">{label}</span>
+        <span className="text-[11px] text-[#6d6e71] font-mono">{label}</span>
         {unit && (
           <span className="text-[10px] text-[#4A5568]">{unit}</span>
         )}
@@ -34,7 +34,7 @@ export default function MetricMiniChart({
       </div>
       <ResponsiveContainer width="100%" height={80}>
         <LineChart data={data} margin={{ top: 2, right: 36, left: 0, bottom: 0 }}>
-          <CartesianGrid stroke="#1E2A3A" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke="#2e3f55" strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="timestamp" hide />
           <YAxis
             width={34}
@@ -48,7 +48,7 @@ export default function MetricMiniChart({
           <Tooltip
             contentStyle={{
               backgroundColor: '#131A23',
-              border: '1px solid #1E2A3A',
+              border: '1px solid #2e3f55',
               borderRadius: 6,
               fontSize: 11,
             }}

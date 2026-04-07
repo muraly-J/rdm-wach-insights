@@ -19,10 +19,10 @@ interface ExpandableHealthRankingsProps {
 // ──────────────────────────────────────────────────────────────────────────────
 
 const getHealthColor = (index: number) => {
-  if (index >= 80) return 'text-[#00E5A0]';
-  if (index >= 60) return 'text-[#FFB020]';
+  if (index >= 80) return 'text-[#4fbd95]';
+  if (index >= 60) return 'text-[#f9a020]';
   if (index >= 40) return 'text-[#FFA500]';
-  return 'text-[#FF4D6A]';
+  return 'text-[#e96852]';
 };
 
 const getTierLabel = (index: number) => {
@@ -33,20 +33,20 @@ const getTierLabel = (index: number) => {
 };
 
 const getTierColor = (index: number) => {
-  if (index >= 80) return 'bg-[#00E5A0]/10 border-[#00E5A0]/30 text-[#00E5A0]';
-  if (index >= 60) return 'bg-[#FFB020]/10 border-[#FFB020]/30 text-[#FFB020]';
+  if (index >= 80) return 'bg-[#4fbd95]/10 border-[#4fbd95]/30 text-[#4fbd95]';
+  if (index >= 60) return 'bg-[#f9a020]/10 border-[#f9a020]/30 text-[#f9a020]';
   if (index >= 40) return 'bg-[#FFA500]/10 border-[#FFA500]/30 text-[#FFA500]';
-  return 'bg-[#FF4D6A]/10 border-[#FF4D6A]/30 text-[#FF4D6A]';
+  return 'bg-[#e96852]/10 border-[#e96852]/30 text-[#e96852]';
 };
 
 const getRankBadgeColor = (index: number, isBest: boolean) => {
   if (isBest) {
-    if (index >= 80) return 'bg-[#00E5A0]/10 text-[#00E5A0]';
-    if (index >= 60) return 'bg-[#FFB020]/10 text-[#FFB020]';
+    if (index >= 80) return 'bg-[#4fbd95]/10 text-[#4fbd95]';
+    if (index >= 60) return 'bg-[#f9a020]/10 text-[#f9a020]';
     return 'bg-[#FFA500]/10 text-[#FFA500]';
   } else {
-    if (index >= 40) return 'bg-[#FF4D6A]/10 text-[#FF4D6A]';
-    return 'bg-[#7C5CFC]/10 text-[#7C5CFC]';
+    if (index >= 40) return 'bg-[#e96852]/10 text-[#e96852]';
+    return 'bg-[#00aeef]/10 text-[#00aeef]';
   }
 };
 
@@ -66,12 +66,12 @@ const DeviceRankCard: React.FC<{ rank: number; device: DeviceRank; isBest: boole
     <div
       className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 hover:border-current ${
         isBest
-          ? 'border-[#00E5A0]/20 hover:border-[#00E5A0]'
-          : 'border-[#FF4D6A]/20 hover:border-[#FF4D6A]'
+          ? 'border-[#4fbd95]/20 hover:border-[#4fbd95]'
+          : 'border-[#e96852]/20 hover:border-[#e96852]'
       } bg-gradient-to-r ${
         isBest
-          ? 'from-[#00E5A0]/5 to-transparent'
-          : 'from-[#FF4D6A]/5 to-transparent'
+          ? 'from-[#4fbd95]/5 to-transparent'
+          : 'from-[#e96852]/5 to-transparent'
       }`}
     >
       {/* Rank number */}
@@ -102,7 +102,7 @@ const DeviceRankCard: React.FC<{ rank: number; device: DeviceRank; isBest: boole
         <span className={`font-mono text-[24px] font-bold ${colorClass}`}>
           {device.index.toFixed(1)}
         </span>
-        <span className="text-[#8A95A5] text-xs block">/ 100</span>
+        <span className="text-[#6d6e71] text-xs block">/ 100</span>
       </div>
     </div>
   );
@@ -225,7 +225,7 @@ const ExpandableHealthRankings: React.FC<ExpandableHealthRankingsProps> = ({
           onClick={() => setExpanded(!expanded)}
           className="group flex items-center gap-2 text-sm font-medium transition-colors hover:text-[#3B82F6]"
         >
-          <span className="text-[#8A95A5] group-hover:text-[#3B82F6]">
+          <span className="text-[#6d6e71] group-hover:text-[#3B82F6]">
             {expanded ? 'Hide device rankings' : 'Click for more information'}
           </span>
           <motion.span
@@ -250,15 +250,15 @@ const ExpandableHealthRankings: React.FC<ExpandableHealthRankingsProps> = ({
           >
             {/* Best Devices Section */}
             <div className="mb-8">
-              <h4 className="text-[14px] font-semibold text-[#8A95A5] uppercase tracking-wide mb-4 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00E5A0]"></span>
+              <h4 className="text-[14px] font-semibold text-[#6d6e71] uppercase tracking-wide mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#4fbd95]"></span>
                 Top {best.length} Healthiest AHUs
               </h4>
               <div className="space-y-3">
                 {best.length > 0 ? (
                   best.map((device, index) => renderRankCard(device, index, true))
                 ) : (
-                  <div className="text-[#8A95A5] text-sm italic pl-4">
+                  <div className="text-[#6d6e71] text-sm italic pl-4">
                     No health data available for best devices
                   </div>
                 )}
@@ -267,15 +267,15 @@ const ExpandableHealthRankings: React.FC<ExpandableHealthRankingsProps> = ({
 
             {/* Worst Devices Section */}
             <div className="mb-2">
-              <h4 className="text-[14px] font-semibold text-[#8A95A5] uppercase tracking-wide mb-4 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FF4D6A]"></span>
+              <h4 className="text-[14px] font-semibold text-[#6d6e71] uppercase tracking-wide mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#e96852]"></span>
                 Top {worst.length} Needs Attention
               </h4>
               <div className="space-y-3">
                 {worst.length > 0 ? (
                   worst.map((device, index) => renderRankCard(device, index, false))
                 ) : (
-                  <div className="text-[#8A95A5] text-sm italic pl-4">
+                  <div className="text-[#6d6e71] text-sm italic pl-4">
                     No health data available for worst devices
                   </div>
                 )}
@@ -283,7 +283,7 @@ const ExpandableHealthRankings: React.FC<ExpandableHealthRankingsProps> = ({
             </div>
 
             {/* Footer / Time Range Indicator */}
-            <div className="pt-6 border-t border-[#1E2A3A]">
+            <div className="pt-6 border-t border-[#2e3f55]">
               <p className="text-center text-[10px] text-[#64748B]">
                 Time range: {timeRange}
               </p>
@@ -299,19 +299,19 @@ const ExpandableHealthRankings: React.FC<ExpandableHealthRankingsProps> = ({
           <div
             className="card p-4"
             style={{
-              background: 'rgba(0,229,160,0.05)',
+              background: 'rgba(79,189,149,0.05)',
               backdropFilter: 'blur(12px) saturate(180%)',
               WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-              border: '1px solid rgba(0,229,160,0.20)',
+              border: '1px solid rgba(79,189,149,0.20)',
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 40px rgba(0,0,0,0.30)',
             }}
           >
-            <p className="text-xs text-[#8A95A5] uppercase tracking-wide mb-1">Best AHUs Avg</p>
+            <p className="text-xs text-[#6d6e71] uppercase tracking-wide mb-1">Best AHUs Avg</p>
             <div className="flex items-baseline gap-2">
-              <span className="text-[#00E5A0] font-mono text-2xl font-bold">
+              <span className="text-[#4fbd95] font-mono text-2xl font-bold">
                 {bestAvg.toFixed(1)}
               </span>
-              <span className="text-[#8A95A5] text-sm">/ 100</span>
+              <span className="text-[#6d6e71] text-sm">/ 100</span>
             </div>
           </div>
 
@@ -326,12 +326,12 @@ const ExpandableHealthRankings: React.FC<ExpandableHealthRankingsProps> = ({
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 40px rgba(0,0,0,0.30)',
             }}
           >
-            <p className="text-xs text-[#8A95A5] uppercase tracking-wide mb-1">Worst AHUs Avg</p>
+            <p className="text-xs text-[#6d6e71] uppercase tracking-wide mb-1">Worst AHUs Avg</p>
             <div className="flex items-baseline gap-2">
-              <span className="text-[#FF4D6A] font-mono text-2xl font-bold">
+              <span className="text-[#e96852] font-mono text-2xl font-bold">
                 {worstAvg.toFixed(1)}
               </span>
-              <span className="text-[#8A95A5] text-sm">/ 100</span>
+              <span className="text-[#6d6e71] text-sm">/ 100</span>
             </div>
           </div>
         </div>

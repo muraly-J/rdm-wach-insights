@@ -80,7 +80,7 @@ const BotMessage: React.FC<BotMessageProps> = ({
         <div className="max-w-[85%] flex flex-col gap-2">
           <div
             className="
-              bg-[#111820]
+              bg-[#222d3d]
               rounded-[16px_16px_16px_4px]
               px-4 py-3
             "
@@ -98,11 +98,11 @@ const BotMessage: React.FC<BotMessageProps> = ({
                   className="
                     flex items-center gap-1.5
                     text-xs font-medium
-                    text-[#00E5A0]
-                    border border-[#00E5A0]/30
+                    text-[#4fbd95]
+                    border border-[#4fbd95]/30
                     rounded-full
                     px-3 py-2.5 min-h-[44px]
-                    hover:bg-[#00E5A0]/10
+                    hover:bg-[#4fbd95]/10
                     transition-colors duration-150
                   "
                 >
@@ -116,11 +116,11 @@ const BotMessage: React.FC<BotMessageProps> = ({
                   className="
                     flex items-center gap-1.5
                     text-xs font-medium
-                    text-[#00E5A0]
-                    border border-[#00E5A0]/30
+                    text-[#4fbd95]
+                    border border-[#4fbd95]/30
                     rounded-full
                     px-3 py-2.5 min-h-[44px]
-                    hover:bg-[#00E5A0]/10
+                    hover:bg-[#4fbd95]/10
                     transition-colors duration-150
                   "
                 >
@@ -135,11 +135,11 @@ const BotMessage: React.FC<BotMessageProps> = ({
                   className="
                     flex items-center gap-1.5
                     text-xs font-medium
-                    text-[#8A95A5]
-                    border border-[#8A95A5]/20
+                    text-[#6d6e71]
+                    border border-[#6d6e71]/20
                     rounded-full
                     px-3 py-2.5 min-h-[44px]
-                    hover:bg-[#8A95A5]/10
+                    hover:bg-[#6d6e71]/10
                     hover:text-[#E8ECF1]
                     transition-colors duration-150
                   "

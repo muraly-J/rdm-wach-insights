@@ -24,14 +24,14 @@ const AHUWireframeSVG: React.FC = () => {
           width="600"
           height="200"
           fill="none"
-          stroke="#1E2A3A"
+          stroke="#2e3f55"
           strokeWidth="0.5"
         />
         
         {/* Internal components - fan section */}
-        <circle cx="200" cy="200" r="40" fill="none" stroke="#1E2A3A" strokeWidth="0.5" />
-        <line x1="160" y1="200" x2="240" y2="200" stroke="#1E2A3A" strokeWidth="0.5" />
-        <line x1="200" y1="160" x2="200" y2="240" stroke="#1E2A3A" strokeWidth="0.5" />
+        <circle cx="200" cy="200" r="40" fill="none" stroke="#2e3f55" strokeWidth="0.5" />
+        <line x1="160" y1="200" x2="240" y2="200" stroke="#2e3f55" strokeWidth="0.5" />
+        <line x1="200" y1="160" x2="200" y2="240" stroke="#2e3f55" strokeWidth="0.5" />
         
         {/* Filter section */}
         <rect
@@ -40,7 +40,7 @@ const AHUWireframeSVG: React.FC = () => {
           width="80"
           height="160"
           fill="none"
-          stroke="#1E2A3A"
+          stroke="#2e3f55"
           strokeWidth="0.5"
         />
         
@@ -51,7 +51,7 @@ const AHUWireframeSVG: React.FC = () => {
           width="60"
           height="140"
           fill="none"
-          stroke="#1E2A3A"
+          stroke="#2e3f55"
           strokeWidth="0.5"
         />
         
@@ -59,13 +59,13 @@ const AHUWireframeSVG: React.FC = () => {
         <path
           d="M40 200 L100 200"
           fill="none"
-          stroke="#1E2A3A"
+          stroke="#2e3f55"
           strokeWidth="0.5"
         />
         <path
           d="M700 200 L760 200"
           fill="none"
-          stroke="#1E2A3A"
+          stroke="#2e3f55"
           strokeWidth="0.5"
         />
         
@@ -74,7 +74,7 @@ const AHUWireframeSVG: React.FC = () => {
           x="400"
           y="80"
           textAnchor="middle"
-          fill="#1E2A3A"
+          fill="#2e3f55"
           fontSize="14"
           fontFamily="monospace"
         >

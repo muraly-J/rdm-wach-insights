@@ -24,7 +24,7 @@ const FloatingParticles: React.FC = () => {
       {particles.map((particle) => (
         <div
           key={particle.id}
-          className="absolute rounded-full bg-[#00E5A0]"
+          className="absolute rounded-full bg-[#4fbd95]"
           style={{
             top: particle.top,
             left: particle.left,

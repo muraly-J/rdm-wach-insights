@@ -23,15 +23,15 @@ const SafetyFlagCard: React.FC<SafetyFlagCardProps> = ({
   data,
 }) => {
   const getRiskColor = (val: number) => {
-    if (val <= 20) return 'text-[#00E5A0]';
-    if (val <= 50) return 'text-[#FFB020]';
-    return 'text-[#FF4D6A]';
+    if (val <= 20) return 'text-[#4fbd95]';
+    if (val <= 50) return 'text-[#f9a020]';
+    return 'text-[#e96852]';
   };
 
   const getRiskBadgeColor = (val: number) => {
-    if (val <= 20) return 'bg-[#00E5A0]/10 border-[#00E5A0]/30 text-[#00E5A0]';
-    if (val <= 50) return 'bg-[#FFB020]/10 border-[#FFB020]/30 text-[#FFB020]';
-    return 'bg-[#FF4D6A]/10 border-[#FF4D6A]/30 text-[#FF4D6A]';
+    if (val <= 20) return 'bg-[#4fbd95]/10 border-[#4fbd95]/30 text-[#4fbd95]';
+    if (val <= 50) return 'bg-[#f9a020]/10 border-[#f9a020]/30 text-[#f9a020]';
+    return 'bg-[#e96852]/10 border-[#e96852]/30 text-[#e96852]';
   };
 
   const getRiskLabel = (val: number) => {
@@ -40,7 +40,7 @@ const SafetyFlagCard: React.FC<SafetyFlagCardProps> = ({
     return 'High Risk';
   };
 
-  const trendColor = trend <= 0 ? 'text-[#00E5A0]' : 'text-[#FF4D6A]';
+  const trendColor = trend <= 0 ? 'text-[#4fbd95]' : 'text-[#e96852]';
   const trendIcon = trend >= 0 ? '↑' : '↓';
   const numberColor = getRiskColor(value);
 
@@ -59,7 +59,7 @@ const SafetyFlagCard: React.FC<SafetyFlagCardProps> = ({
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <span className="text-[#8A95A5] text-xs font-display uppercase tracking-[0.15em]">
+            <span className="text-[#6d6e71] text-xs font-display uppercase tracking-[0.15em]">
               Safety Flag
             </span>
             <span
@@ -77,7 +77,7 @@ const SafetyFlagCard: React.FC<SafetyFlagCardProps> = ({
           <span className={`font-mono text-[48px] font-bold leading-none ${numberColor}`}>
             {value.toFixed(1)}
           </span>
-          <span className="text-[#8A95A5] text-sm block">/ 100</span>
+          <span className="text-[#6d6e71] text-sm block">/ 100</span>
         </div>
       </div>
 
@@ -100,13 +100,13 @@ const SafetyFlagCard: React.FC<SafetyFlagCardProps> = ({
           <span className={`text-sm font-medium ${trendColor}`}>
             {trendIcon} {Math.abs(trend).toFixed(1)}%
           </span>
-          <span className="text-[#8A95A5] text-xs block">vs previous period</span>
+          <span className="text-[#6d6e71] text-xs block">vs previous period</span>
         </div>
       </div>
 
       {/* Explanation */}
-      <div className="border-t border-[#1E2A3A] pt-4">
-        <p className="text-sm text-[#8A95A5] leading-relaxed">{info}</p>
+      <div className="border-t border-[#2e3f55] pt-4">
+        <p className="text-sm text-[#6d6e71] leading-relaxed">{info}</p>
       </div>
     </div>
   );

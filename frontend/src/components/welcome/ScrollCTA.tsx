@@ -19,13 +19,13 @@ const ScrollCTA: React.FC = () => {
         }}
         className="w-6 h-8 flex flex-col items-center justify-start gap-1"
       >
-        <div className="w-1 h-3 bg-[#8A95A5] rounded-full" />
+        <div className="w-1 h-3 bg-[#6d6e71] rounded-full" />
         <svg
           width="16"
           height="16"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="#8A95A5"
+          stroke="#6d6e71"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -34,7 +34,7 @@ const ScrollCTA: React.FC = () => {
         </svg>
       </motion.div>
       
-      <span className="text-[13px] font-mono text-[#8A95A5] tracking-wide">
+      <span className="text-[13px] font-mono text-[#6d6e71] tracking-wide">
         Scroll to explore
       </span>
     </div>

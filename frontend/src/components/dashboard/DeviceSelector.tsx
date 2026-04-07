@@ -26,12 +26,12 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         <span
           className="
             font-display uppercase tracking-[0.2em]
-            text-xs text-[#8A95A5]
+            text-xs text-[#6d6e71]
           "
         >
           DEVICE
         </span>
-        <div className="h-px flex-1 bg-[#1E2A3A]" />
+        <div className="h-px flex-1 bg-[#2e3f55]" />
       </div>
 
       <div className="flex flex-wrap items-center gap-2.5 scrollbar-hidden">
@@ -44,8 +44,8 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
             px-4 py-3 min-h-[44px] sm:py-2 sm:min-h-0 text-xs font-medium rounded-full transition-all duration-0.25s flex items-center justify-center
             border relative
             ${selectedDevice === null || selectedDevice === 'all'
-              ? 'bg-[#00E5A0] text-[#0B0F14] border-0'
-              : 'bg-transparent text-[#8A95A5] border-[#1E2A3A] hover:border-[#00E5A0]'
+              ? 'bg-[#4fbd95] text-[#1c2431] border-0'
+              : 'bg-transparent text-[#6d6e71] border-[#2e3f55] hover:border-[#4fbd95]'
             }
           `}
         >
@@ -64,8 +64,8 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
               px-4 py-3 min-h-[44px] sm:py-2 sm:min-h-0 text-xs font-medium rounded-full transition-all duration-0.25s flex items-center justify-center
               border relative
               ${selectedDevice === device.id
-                ? 'bg-[#00E5A0] text-[#0B0F14] border-0'
-                : 'bg-transparent text-[#8A95A5] border-[#1E2A3A] hover:border-[#00E5A0]'
+                ? 'bg-[#4fbd95] text-[#1c2431] border-0'
+                : 'bg-transparent text-[#6d6e71] border-[#2e3f55] hover:border-[#4fbd95]'
               }
             `}
           >

@@ -24,13 +24,13 @@ export default function KPIStrip() {
     {
       label: 'Avg Site Health',
       value: `${data.avgSiteHealth}`,
-      color: '#00E5A0',
+      color: '#4fbd95',
       borderColor: 'rgba(255,255,255,0.08)',
     },
     {
       label: 'AHUs in Alert',
       value: String(data.ahusInAlert),
-      color: '#FF4D6A',
+      color: '#e96852',
       borderColor: 'rgba(255,77,106,0.3)',
     },
     {
@@ -66,7 +66,7 @@ export default function KPIStrip() {
               fontSize: '10px',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
-              color: '#8A95A5',
+              color: '#6d6e71',
               marginBottom: '6px',
             }}
           >

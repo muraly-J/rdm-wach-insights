@@ -3,19 +3,19 @@ import { motion } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 
 function getHealthColor(health: number): string {
-  if (health >= 80) return '#00E5A0';
-  if (health >= 50) return '#FFB020';
-  return '#FF4D6A';
+  if (health >= 80) return '#4fbd95';
+  if (health >= 50) return '#f9a020';
+  return '#e96852';
 }
 
 function getHealthBg(health: number): string {
-  if (health >= 80) return 'rgba(0,229,160,0.08)';
+  if (health >= 80) return 'rgba(79,189,149,0.08)';
   if (health >= 50) return 'rgba(255,176,32,0.08)';
   return 'rgba(255,77,106,0.08)';
 }
 
 function getHealthGlow(health: number): string {
-  if (health >= 80) return 'inset 0 1px 0 rgba(255,255,255,0.10), 0 0 20px rgba(0,229,160,0.13)';
+  if (health >= 80) return 'inset 0 1px 0 rgba(255,255,255,0.10), 0 0 20px rgba(79,189,149,0.13)';
   if (health >= 50) return 'inset 0 1px 0 rgba(255,255,255,0.10), 0 0 20px rgba(255,176,32,0.13)';
   return 'inset 0 1px 0 rgba(255,255,255,0.10), 0 0 20px rgba(255,77,106,0.13)';
 }
@@ -38,7 +38,7 @@ export default function LevelHeatMap() {
           fontSize: '12px',
           textTransform: 'uppercase',
           letterSpacing: '0.1em',
-          color: '#8A95A5',
+          color: '#6d6e71',
           marginBottom: '12px',
         }}
       >
@@ -80,7 +80,7 @@ export default function LevelHeatMap() {
                 transition: 'box-shadow 0.15s ease',
               }}
             >
-              <div style={{ fontSize: '10px', color: '#8A95A5', marginBottom: '6px' }}>
+              <div style={{ fontSize: '10px', color: '#6d6e71', marginBottom: '6px' }}>
                 L{tile.level}
               </div>
               <div
@@ -94,7 +94,7 @@ export default function LevelHeatMap() {
               >
                 {tile.avgHealth}
               </div>
-              <div style={{ fontSize: '10px', color: '#8A95A5', marginTop: '6px' }}>
+              <div style={{ fontSize: '10px', color: '#6d6e71', marginTop: '6px' }}>
                 {tile.ahuCount} AHUs
               </div>
             </motion.button>
@@ -105,13 +105,13 @@ export default function LevelHeatMap() {
       {/* Legend */}
       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '12px' }}>
         {[
-          { color: '#00E5A0', label: '≥ 80 Healthy' },
-          { color: '#FFB020', label: '50–79 Monitor' },
-          { color: '#FF4D6A', label: '< 50 Critical' },
+          { color: '#4fbd95', label: '≥ 80 Healthy' },
+          { color: '#f9a020', label: '50–79 Monitor' },
+          { color: '#e96852', label: '< 50 Critical' },
         ].map(({ color, label }) => (
           <div
             key={label}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#8A95A5' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#6d6e71' }}
           >
             <span style={{ color, fontSize: '10px' }}>●</span>
             {label}

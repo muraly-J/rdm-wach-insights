@@ -29,11 +29,11 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
   // Generate colors from chart palette (repeating)
   const getColor = (index: number) => {
     const colors = [
-      '#00E5A0', // teal-green (original accent)
-      '#00B8D4', // cyan
-      '#7C5CFC', // purple
-      '#FF6B8A', // pink-red
-      '#FFB020', // amber
+      '#4fbd95', // teal-green (original accent)
+      '#00a9a5', // cyan
+      '#00aeef', // purple
+      '#e96852', // pink-red
+      '#f9a020', // amber
       '#F97316', // orange
       '#84CC16', // lime
       '#38BDF8', // sky-blue
@@ -61,8 +61,8 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-[#1A2230] p-4 rounded-xl border border-[#1E2A3A]">
-          <p className="text-[#8A95A5] text-xs mb-2 font-mono">{label}</p>
+        <div className="bg-[#2a3649] p-4 rounded-xl border border-[#2e3f55]">
+          <p className="text-[#6d6e71] text-xs mb-2 font-mono">{label}</p>
           {payload.map((entry: any, index: number) => (
             <p
               key={index}
@@ -91,7 +91,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: entry.color }}
               />
-              <span className="text-xs text-[#8A95A5]">{entry.value}</span>
+              <span className="text-xs text-[#6d6e71]">{entry.value}</span>
             </div>
           );
         })}
@@ -110,7 +110,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
   if (!data || data.length === 0) {
     return (
       <div className="card p-4 sm:p-6 h-[200px] sm:h-[320px] flex items-center justify-center" style={glassStyle}>
-        <span className="text-[#8A95A5]">No health index data available</span>
+        <span className="text-[#6d6e71]">No health index data available</span>
       </div>
     );
   }
@@ -133,14 +133,14 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
               <p>Weighted sum of five FAIR sub-scores, each normalised 0–100. Higher is healthier.</p>
               <div>
                 <p className="text-[#E8ECF1] font-medium mb-1">Formula</p>
-                <p className="font-mono bg-[#0B0F14] rounded px-2 py-1 text-[10px]">
+                <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
                   HI = 0.25·PF + 0.25·PI + 0.20·OL + 0.15·EA + 0.15·THD
                 </p>
               </div>
               <div>
                 <p className="text-[#E8ECF1] font-medium mb-1">Tiers</p>
                 <div className="space-y-0.5">
-                  <p><span className="text-[#00E5A0]">■</span> 80–100 Healthy — normal operation</p>
+                  <p><span className="text-[#4fbd95]">■</span> 80–100 Healthy — normal operation</p>
                   <p><span className="text-yellow-400">■</span> 60–79 Monitor — watch for drift</p>
                   <p><span className="text-orange-400">■</span> 40–59 Maintenance Soon — schedule service</p>
                   <p><span className="text-red-400">■</span> 0–39 Critical — urgent intervention</p>
@@ -151,7 +151,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
           } />
         </h3>
         
-        <p className="mt-2 text-sm text-[#8A95A5]">
+        <p className="mt-2 text-sm text-[#6d6e71]">
           {devices.length} AHUs monitored • Last updated {new Date().toLocaleDateString()}
         </p>
       </div>
@@ -161,14 +161,14 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
           <CartesianGrid
-            stroke="#1E2A3A"
+            stroke="#2e3f55"
             strokeDasharray="3 3"
             vertical={false}
           />
 
           <XAxis
             dataKey="timestamp"
-            stroke="#8A95A5"
+            stroke="#6d6e71"
             fontSize={12}
             tickLine={false}
             axisLine={false}
@@ -177,7 +177,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
 
           <YAxis
             domain={[0, 100]}
-            stroke="#8A95A5"
+            stroke="#6d6e71"
             fontSize={12}
             tickLine={false}
             axisLine={false}

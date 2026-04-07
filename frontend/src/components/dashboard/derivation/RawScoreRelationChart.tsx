@@ -25,7 +25,7 @@ interface RawScoreRelationChartProps {
 
 // Color palette for up to 7 left-axis series
 const SERIES_PALETTE = [
-  '#8A95A5', // grey
+  '#6d6e71', // grey
   '#60A5FA', // blue
   '#34D399', // green
   '#F97316', // orange
@@ -77,8 +77,8 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="bg-[#1A2230] p-4 rounded-xl border border-[#1E2A3A] shadow-2xl max-w-[220px]">
-        <p className="text-[#8A95A5] text-xs mb-3 font-mono">
+      <div className="bg-[#2a3649] p-4 rounded-xl border border-[#2e3f55] shadow-2xl max-w-[220px]">
+        <p className="text-[#6d6e71] text-xs mb-3 font-mono">
           {formatTickByRange(label, timeRange)}
         </p>
         {payload.map((entry: any) => {
@@ -98,7 +98,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
           );
         })}
         {payload.find((p: any) => p.dataKey === 'scoreValue') && (
-          <div className="mt-2 pt-2 border-t border-[#1E2A3A]">
+          <div className="mt-2 pt-2 border-t border-[#2e3f55]">
             <span className="text-xs" style={{ color: chartColor }}>Score:</span>{' '}
             <span className="text-xs font-medium" style={{ color: chartColor }}>
               {payload.find((p: any) => p.dataKey === 'scoreValue').value?.toFixed(1)} / 100
@@ -110,7 +110,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
   };
 
   return (
-    <div className="card p-6 hover:border-[#1E2A3A] transition-all duration-300 w-full">
+    <div className="card p-6 hover:border-[#2e3f55] transition-all duration-300 w-full">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <h4 className="text-[18px] font-semibold text-white">{scoreName}</h4>
@@ -118,17 +118,17 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
       </div>
 
       {/* Subtitle: list series */}
-      <p className="text-[13px] text-[#8A95A5] mb-4 font-mono">
+      <p className="text-[13px] text-[#6d6e71] mb-4 font-mono">
         {series.map((s) => s.label).join(' · ')} → Score 0–100
       </p>
 
       <ResponsiveContainer width="100%" height={560}>
         <LineChart data={mergedData} margin={{ top: 15, right: 40, left: 0, bottom: 25 }}>
-          <CartesianGrid stroke="#1E2A3A" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke="#2e3f55" strokeDasharray="3 3" vertical={false} />
 
           <XAxis
             dataKey="timestamp"
-            stroke="#8A95A5"
+            stroke="#6d6e71"
             fontSize={11}
             tickLine={false}
             axisLine={false}
@@ -145,10 +145,10 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
           {/* Left Y-axis: raw series */}
           <YAxis
             yAxisId="left"
-            stroke="#8A95A5"
+            stroke="#6d6e71"
             fontSize={11}
             tickLine={false}
-            axisLine={{ stroke: '#8A95A5' } as any}
+            axisLine={{ stroke: '#6d6e71' } as any}
             domain={['auto', 'auto']}
           />
 
@@ -221,7 +221,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
               className="inline-block w-4 h-0.5 rounded-full"
               style={{ backgroundColor: SERIES_PALETTE[si % SERIES_PALETTE.length] }}
             />
-            <span className="text-[#8A95A5]">
+            <span className="text-[#6d6e71]">
               {s.label}{s.unit ? ` (${s.unit})` : ''}
             </span>
           </div>
@@ -231,7 +231,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
             className="inline-block w-4 h-0.5 rounded-full"
             style={{ backgroundColor: chartColor }}
           />
-          <span className="text-[#8A95A5]">Score</span>
+          <span className="text-[#6d6e71]">Score</span>
         </div>
       </div>
     </div>

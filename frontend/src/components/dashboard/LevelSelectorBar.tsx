@@ -16,15 +16,15 @@ const LevelSelectorBar: React.FC = () => {
 
   return (
     <motion.div
-      className="sticky top-0 z-30 backdrop-blur-xl bg-[rgba(11,15,20,0.85)] border-b border-[#1E2A3A]"
+      className="sticky top-0 z-30 backdrop-blur-xl bg-[rgba(11,15,20,0.85)] border-b border-[#2e3f55]"
     >
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-3 sm:py-4">
         {/* Header */}
         <div className="mb-4 flex items-center gap-3">
-          <span className="font-display uppercase tracking-[0.2em] text-xs sm:text-sm text-[#8A95A5]">
+          <span className="font-display uppercase tracking-[0.2em] text-xs sm:text-sm text-[#6d6e71]">
             LEVEL
           </span>
-          <div className="h-px flex-1 bg-[#1E2A3A]" />
+          <div className="h-px flex-1 bg-[#2e3f55]" />
         </div>
 
         {/* Level pills */}
@@ -40,8 +40,8 @@ const LevelSelectorBar: React.FC = () => {
                 transition-colors duration-200 border whitespace-nowrap
                 ${
                   selectedLevel === level
-                    ? 'bg-[#00E5A0] text-[#0B0F14] border-transparent shadow-[0_0_20px_rgba(0,229,160,0.4)]'
-                    : 'bg-transparent text-[#8A95A5] border-[#1E2A3A] hover:border-[#00E5A0] hover:text-[#E8ECF1]'
+                    ? 'bg-[#4fbd95] text-[#1c2431] border-transparent shadow-[0_0_20px_rgba(79,189,149,0.4)]'
+                    : 'bg-transparent text-[#6d6e71] border-[#2e3f55] hover:border-[#4fbd95] hover:text-[#E8ECF1]'
                 }
               `}
             >

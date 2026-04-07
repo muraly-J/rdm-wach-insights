@@ -129,7 +129,7 @@ const AHUCoverageDisclaimer: React.FC = () => {
               <div className="px-3 py-2">
                 <p className="text-[11px] text-[#4B5563] leading-relaxed">
                   These AHUs exist in the physical asset register but their monitoring device IDs could not be confirmed.
-                  Data gaps are under investigation. Currently <span className="text-[#00E5A0]">121 AHUs</span> across 11 levels are actively monitored.
+                  Data gaps are under investigation. Currently <span className="text-[#4fbd95]">121 AHUs</span> across 11 levels are actively monitored.
                 </p>
               </div>
             </div>

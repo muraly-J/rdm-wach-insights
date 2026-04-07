@@ -26,7 +26,7 @@ export default function SiteSummaryView() {
         >
           Site Overview
         </h2>
-        <p style={{ fontSize: '13px', color: '#8A95A5' }}>
+        <p style={{ fontSize: '13px', color: '#6d6e71' }}>
           Select a level from the heat map below to drill into AHU health data.
         </p>
       </div>

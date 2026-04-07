@@ -52,9 +52,9 @@ const CapabilityPills: React.FC = () => {
           variants={item}
           className="
             inline-flex items-center px-4 py-1.5
-            bg-[#111820]
-            border border-[#1E2A3A]
-            text-[#8A95A5]
+            bg-[#222d3d]
+            border border-[#2e3f55]
+            text-[#6d6e71]
             text-[13px]
             rounded-full
           "

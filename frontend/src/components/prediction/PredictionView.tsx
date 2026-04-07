@@ -24,14 +24,14 @@ export default function PredictionView({ deviceId }: PredictionViewProps) {
 
   if (loading) {
     return (
-      <div className="card p-6 h-48 animate-pulse bg-[#1A2230] rounded-xl" />
+      <div className="card p-6 h-48 animate-pulse bg-[#2a3649] rounded-xl" />
     );
   }
 
   if (error || !data) {
     return (
       <div className="card p-6 h-48 flex items-center justify-center">
-        <span className="text-[#8A95A5] text-sm">Forecast unavailable</span>
+        <span className="text-[#6d6e71] text-sm">Forecast unavailable</span>
       </div>
     );
   }

@@ -34,7 +34,7 @@ const ChatChartModal: React.FC<ChatChartModalProps> = ({ title, entries, unit, o
 
       {/* Modal panel */}
       <motion.div
-        className="relative z-10 bg-[#0B0F14] border border-[#1E2633] rounded-2xl
+        className="relative z-10 bg-[#1c2431] border border-[#1E2633] rounded-2xl
                    w-[min(90vw,900px)] h-[min(85vh,560px)] flex flex-col overflow-hidden"
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -46,7 +46,7 @@ const ChatChartModal: React.FC<ChatChartModalProps> = ({ title, entries, unit, o
           <h2 className="text-sm font-semibold text-[#E8ECF1] tracking-wide">{title}</h2>
           <button
             onClick={onClose}
-            className="text-[#8A95A5] hover:text-[#E8ECF1] transition-colors text-base leading-none"
+            className="text-[#6d6e71] hover:text-[#E8ECF1] transition-colors text-base leading-none"
             aria-label="Close chart"
           >
             ✕
@@ -62,31 +62,31 @@ const ChatChartModal: React.FC<ChatChartModalProps> = ({ title, entries, unit, o
             >
               <XAxis
                 dataKey="label"
-                tick={{ fill: '#8A95A5', fontSize: 10, fontFamily: 'JetBrains Mono, monospace' }}
+                tick={{ fill: '#6d6e71', fontSize: 10, fontFamily: 'Oswald, monospace' }}
                 angle={-45}
                 textAnchor="end"
                 interval={0}
               />
               <YAxis
-                tick={{ fill: '#8A95A5', fontSize: 11 }}
+                tick={{ fill: '#6d6e71', fontSize: 11 }}
                 tickFormatter={(v: number) => `${v}${unit ? ' ' + unit : ''}`}
                 width={60}
               />
               <Tooltip
-                cursor={{ fill: 'rgba(0,229,160,0.05)' }}
+                cursor={{ fill: 'rgba(79,189,149,0.05)' }}
                 contentStyle={{
-                  background: '#111820',
+                  background: '#222d3d',
                   border: '1px solid #1E2633',
                   borderRadius: 8,
                   fontSize: 12,
                 }}
-                labelStyle={{ color: '#E8ECF1', fontFamily: 'JetBrains Mono, monospace' }}
-                itemStyle={{ color: '#00E5A0' }}
+                labelStyle={{ color: '#E8ECF1', fontFamily: 'Oswald, monospace' }}
+                itemStyle={{ color: '#4fbd95' }}
                 formatter={(v: number) => [`${v}${unit ? ' ' + unit : ''}`, '']}
               />
               <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={40}>
                 {entries.map((_, i) => (
-                  <Cell key={i} fill="#00E5A0" fillOpacity={0.75} />
+                  <Cell key={i} fill="#4fbd95" fillOpacity={0.75} />
                 ))}
               </Bar>
             </BarChart>

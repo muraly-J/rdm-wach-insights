@@ -19,11 +19,11 @@ export default function MeasurementHistoryChart({
   label, unit, data, color, loading, isCoreMetric, tNow,
 }: MeasurementHistoryChartProps) {
   if (loading) {
-    return <div className="h-[220px] bg-[#131A23] rounded-xl border border-[#1E2A3A] animate-pulse" />;
+    return <div className="h-[220px] bg-[#131A23] rounded-xl border border-[#2e3f55] animate-pulse" />;
   }
 
   return (
-    <div className="bg-[#131A23] rounded-xl border border-[#1E2A3A] p-4">
+    <div className="bg-[#131A23] rounded-xl border border-[#2e3f55] p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="inline-block w-4 h-px" style={{ backgroundColor: color }} />
@@ -31,12 +31,12 @@ export default function MeasurementHistoryChart({
           {unit && <span className="text-xs text-[#4A5568]">{unit}</span>}
         </div>
         {!isCoreMetric && (
-          <span className="text-[10px] text-[#4A5568] border border-[#1E2A3A] rounded-full px-2 py-0.5">
+          <span className="text-[10px] text-[#4A5568] border border-[#2e3f55] rounded-full px-2 py-0.5">
             Historical only
           </span>
         )}
         {isCoreMetric && (
-          <span className="text-[10px] text-[#00E5A0]/60 border border-[#00E5A0]/20 rounded-full px-2 py-0.5">
+          <span className="text-[10px] text-[#4fbd95]/60 border border-[#4fbd95]/20 rounded-full px-2 py-0.5">
             Use metric toggle for forecast
           </span>
         )}
@@ -44,7 +44,7 @@ export default function MeasurementHistoryChart({
 
       <ResponsiveContainer width="100%" height={160}>
         <LineChart data={data} margin={{ top: 4, right: 24, bottom: 4, left: 4 }}>
-          <CartesianGrid stroke="#1E2A3A" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke="#2e3f55" strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="timestamp"
             stroke="#4A5568"
@@ -66,8 +66,8 @@ export default function MeasurementHistoryChart({
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: '#1A2230',
-              border: '1px solid #1E2A3A',
+              backgroundColor: '#2a3649',
+              border: '1px solid #2e3f55',
               borderRadius: 8,
               fontSize: 11,
             }}

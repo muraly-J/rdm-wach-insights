@@ -15,7 +15,7 @@ export default function DeltaBadge({ deltaKwh, horizon, baseline }: DeltaBadgePr
   const color =
     deltaKwh > 3 ? 'text-red-400' :
     deltaKwh < -3 ? 'text-yellow-400' :
-    'text-[#00E5A0]';
+    'text-[#4fbd95]';
 
   const label =
     deltaKwh >= 0
@@ -23,7 +23,7 @@ export default function DeltaBadge({ deltaKwh, horizon, baseline }: DeltaBadgePr
       : `Predicted −${absVal} kWh below baseline${pct} over next ${horizon}`;
 
   return (
-    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1E2A3A] border border-[#2A3A4A] ${color}`}>
+    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2e3f55] border border-[#2A3A4A] ${color}`}>
       <span className="text-sm font-semibold font-mono">{label}</span>
     </div>
   );

@@ -19,7 +19,7 @@ const ChatBubbleButton: React.FC<ChatBubbleButtonProps> = ({ onClick }) => {
       className="
         fixed bottom-6 right-6 z-50
         w-[56px] h-[56px]
-        bg-[#00E5A0]
+        bg-[#4fbd95]
         rounded-full
         flex items-center justify-center
         chat-bubble-glow
@@ -34,7 +34,7 @@ const ChatBubbleButton: React.FC<ChatBubbleButtonProps> = ({ onClick }) => {
         height="24"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="#0B0F14"
+        stroke="#1c2431"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"

@@ -43,16 +43,16 @@ const FinancialImpactView: React.FC<Props> = ({ level, range = '30d', deviceId }
 
   if (loading) return (
     <div className="space-y-4">
-      <div className="card h-32 animate-pulse bg-[#1A2230]" />
+      <div className="card h-32 animate-pulse bg-[#2a3649]" />
       <div className="grid grid-cols-3 gap-4">
-        {[0,1,2].map(i => <div key={i} className="card h-28 animate-pulse bg-[#1A2230]" />)}
+        {[0,1,2].map(i => <div key={i} className="card h-28 animate-pulse bg-[#2a3649]" />)}
       </div>
     </div>
   );
 
   if (error || !impact || !config) return (
     <div className="card p-6 flex items-center justify-center h-32">
-      <span className="text-[#8A95A5] text-sm">Financial data unavailable</span>
+      <span className="text-[#6d6e71] text-sm">Financial data unavailable</span>
     </div>
   );
 
@@ -71,13 +71,13 @@ const FinancialImpactView: React.FC<Props> = ({ level, range = '30d', deviceId }
           <h3 className="font-display text-[22px] sm:text-[28px] font-bold tracking-[-0.01em]">
             Financial Impact
           </h3>
-          <p className="text-[#8A95A5] mt-1 text-sm">
+          <p className="text-[#6d6e71] mt-1 text-sm">
             {deviceId ? `${deviceId} · ` : ''}Estimated cost of current AHU health issues · Last {range}
           </p>
         </div>
         <button
           onClick={() => setDrawerOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#1E2A3A] text-[#8A95A5] text-sm hover:border-[#00E5A0] hover:text-[#00E5A0] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#2e3f55] text-[#6d6e71] text-sm hover:border-[#4fbd95] hover:text-[#4fbd95] transition-colors"
         >
           ⚙ Configure
         </button>
@@ -86,8 +86,8 @@ const FinancialImpactView: React.FC<Props> = ({ level, range = '30d', deviceId }
       {/* Headline card */}
       <div className="card p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <p className="text-[#8A95A5] text-sm mb-1">Estimated monthly savings opportunity</p>
-          <div className="text-[30px] sm:text-[42px] font-bold font-mono text-[#00E5A0]">
+          <p className="text-[#6d6e71] text-sm mb-1">Estimated monthly savings opportunity</p>
+          <div className="text-[30px] sm:text-[42px] font-bold font-mono text-[#4fbd95]">
             {cur} {impact.grand_total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-xs text-[#4A5568] mt-1">
@@ -97,7 +97,7 @@ const FinancialImpactView: React.FC<Props> = ({ level, range = '30d', deviceId }
             }
           </p>
         </div>
-        <div className="text-[#8A95A5] text-xs text-right hidden md:block max-w-[200px]">
+        <div className="text-[#6d6e71] text-xs text-right hidden md:block max-w-[200px]">
           Based on TNB tariff {cur} {config.tariff_rate}/kWh and{' '}
           {cur} {config.planned_maintenance_cost} planned maintenance cost.{' '}
           Maintenance risk is a projection.

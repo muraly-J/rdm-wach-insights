@@ -20,14 +20,14 @@ const Skeleton: React.FC<SkeletonProps> = ({
   className = '',
 }) => {
   // Base shimmer animation
-  const baseStyles = 'shimmer bg-[#1E2A3A] animate-shimmer';
+  const baseStyles = 'shimmer bg-[#2e3f55] animate-shimmer';
 
   // Shape-specific styles
   const shapeStyles: Record<SkeletonShape, string> = {
     rect: 'rounded',
     circle: 'rounded-full',
     text: 'h-4 rounded w-full',
-    card: `rounded-[16px] p-[24px] bg-[#111820] border border-[#1E2A3A]`,
+    card: `rounded-[16px] p-[24px] bg-[#222d3d] border border-[#2e3f55]`,
   };
 
   // Size-specific dimensions
@@ -82,9 +82,9 @@ export const SkeletonChart: React.FC<{ bars?: number }> = ({ bars = 5 }) => {
       {Array.from({ length: bars }).map((_, i) => {
         const height = 20 + Math.random() * 70;
         return (
-          <div key={i} className="w-full bg-[#1E2A3A] rounded-t">
+          <div key={i} className="w-full bg-[#2e3f55] rounded-t">
             <div
-              className="shimmer bg-[#1A2230] w-full rounded-t"
+              className="shimmer bg-[#2a3649] w-full rounded-t"
               style={{ height: `${height}%` }}
             />
           </div>

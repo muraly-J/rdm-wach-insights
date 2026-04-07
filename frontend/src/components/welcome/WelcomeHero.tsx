@@ -22,9 +22,9 @@ export default function WelcomeHero({ onContinue }: { onContinue: () => void }) 
       <div
         className="absolute inset-0 z-0"
         style={{
-          background: `radial-gradient(ellipse 60% 50% at 20% 30%, rgba(0,229,160,0.06), transparent),
+          background: `radial-gradient(ellipse 60% 50% at 20% 30%, rgba(79,189,149,0.06), transparent),
                        radial-gradient(ellipse 50% 60% at 80% 70%, rgba(0,184,212,0.05), transparent),
-                       #0B0F14`,
+                       #1c2431`,
         }}
       />
 
@@ -48,7 +48,7 @@ export default function WelcomeHero({ onContinue }: { onContinue: () => void }) 
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: '28px',
           boxShadow:
-            'inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.20), 0 32px 80px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,229,160,0.06)',
+            'inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.20), 0 32px 80px rgba(0,0,0,0.40), 0 0 0 1px rgba(79,189,149,0.06)',
           padding: '56px 64px',
           maxWidth: '680px',
           width: '90%',
@@ -76,7 +76,7 @@ export default function WelcomeHero({ onContinue }: { onContinue: () => void }) 
             className="mb-6"
           >
             <span
-              className="font-display text-[20px] uppercase tracking-[0.15em] text-[#00E5A0]"
+              className="font-display text-[20px] uppercase tracking-[0.15em] text-[#4fbd95]"
             >
               ✦ WACH-INSIGHT
             </span>
@@ -98,7 +98,7 @@ export default function WelcomeHero({ onContinue }: { onContinue: () => void }) 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-4 text-[15px] sm:text-[18px] text-[#8A95A5] max-w-[600px] mx-auto"
+            className="mt-4 text-[15px] sm:text-[18px] text-[#6d6e71] max-w-[600px] mx-auto"
           >
             Real-time health scoring, trend analysis, and anomaly detection for your air handling units —
             across every level of your building.
@@ -112,7 +112,7 @@ export default function WelcomeHero({ onContinue }: { onContinue: () => void }) 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-8 text-[14px] text-[#8A95A5] italic"
+            className="mt-8 text-[14px] text-[#6d6e71] italic"
           >
             Note: Scores are model-derived estimates and should complement — not replace — physical inspections.
           </motion.p>
@@ -129,10 +129,10 @@ export default function WelcomeHero({ onContinue }: { onContinue: () => void }) 
             style={{
               marginTop: '40px',
               padding: '14px 40px',
-              background: 'rgba(0,229,160,0.12)',
-              border: '1px solid rgba(0,229,160,0.40)',
+              background: 'rgba(79,189,149,0.12)',
+              border: '1px solid rgba(79,189,149,0.40)',
               borderRadius: '999px',
-              color: '#00E5A0',
+              color: '#4fbd95',
               fontSize: '15px',
               fontWeight: 600,
               fontFamily: 'var(--font-display)',
@@ -140,7 +140,7 @@ export default function WelcomeHero({ onContinue }: { onContinue: () => void }) 
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
               cursor: 'pointer',
-              boxShadow: '0 0 0px rgba(0,229,160,0)',
+              boxShadow: '0 0 0px rgba(79,189,149,0)',
               transition: 'box-shadow 0.2s ease',
             }}
           >

@@ -19,17 +19,17 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ isOpen, onClose, isMinimized, o
     <div
       className="
         flex items-center justify-between px-4 py-3
-        bg-[#1A2230]
-        border-b border-[#1E2A3A]
+        bg-[#2a3649]
+        border-b border-[#2e3f55]
       "
     >
       <div className="flex items-center gap-2">
         <div
-          className="w-3 h-3 rounded-full bg-[#00E5A0]"
-          style={{ boxShadow: '0 0 8px rgba(0,229,160,0.5)' }}
+          className="w-3 h-3 rounded-full bg-[#4fbd95]"
+          style={{ boxShadow: '0 0 8px rgba(79,189,149,0.5)' }}
         />
         <span className="font-semibold text-sm">WACH AI</span>
-        <span className="inline-block w-2 h-2 rounded-full bg-[#00E5A0] ml-1.5" />
+        <span className="inline-block w-2 h-2 rounded-full bg-[#4fbd95] ml-1.5" />
       </div>
 
       <div className="flex items-center gap-1">
@@ -38,7 +38,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ isOpen, onClose, isMinimized, o
           onClick={onMinimize}
           title={isMinimized ? 'Expand' : 'Minimize'}
           className="
-            w-11 h-11 rounded-full hover:bg-[#1E2A3A]
+            w-11 h-11 rounded-full hover:bg-[#2e3f55]
             flex items-center justify-center
           "
         >
@@ -59,7 +59,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ isOpen, onClose, isMinimized, o
         <button
           onClick={onClose}
           className="
-            w-11 h-11 rounded-full hover:bg-[#1E2A3A]
+            w-11 h-11 rounded-full hover:bg-[#2e3f55]
             flex items-center justify-center
           "
         >

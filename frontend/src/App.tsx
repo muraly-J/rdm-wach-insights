@@ -227,7 +227,7 @@ function App() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0B0F14] text-[#E8ECF1]">
+    <div className="min-h-screen bg-[#1c2431] text-[#E8ECF1]">
       {/* ZONE A — Fixed hero overlay */}
       <AnimatePresence>
         {heroVisible && (
@@ -262,7 +262,7 @@ function App() {
               {/* Loading indicator */}
               {isLoading && (
                 <div className="flex justify-center py-4">
-                  <span className="text-[#8A95A5] text-sm animate-pulse">Loading data…</span>
+                  <span className="text-[#6d6e71] text-sm animate-pulse">Loading data…</span>
                 </div>
               )}
 
@@ -325,7 +325,7 @@ function App() {
                     <React.Suspense
                       fallback={
                         <div className="card p-6 h-40 flex items-center justify-center">
-                          <span className="text-[#8A95A5]">Loading derivation charts…</span>
+                          <span className="text-[#6d6e71]">Loading derivation charts…</span>
                         </div>
                       }
                     >
@@ -345,7 +345,7 @@ function App() {
               {/* Prediction View (single-device mode only) */}
               {selectedDevice && selectedDevice !== 'all' && (
                 <div id="section-predictions" style={{ scrollMarginTop: '56px' }}>
-                  <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#1E2A3A] rounded-xl" />}>
+                  <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#2e3f55] rounded-xl" />}>
                     <PredictionView deviceId={selectedDevice} />
                   </React.Suspense>
                 </div>
@@ -354,7 +354,7 @@ function App() {
               {/* Financial Impact Section */}
               {selectedLevel && (
                 <div id="section-financial" style={{ scrollMarginTop: '56px' }} className="pt-8">
-                  <React.Suspense fallback={<div className="card h-48 animate-pulse bg-[#1A2230] rounded-xl" />}>
+                  <React.Suspense fallback={<div className="card h-48 animate-pulse bg-[#2a3649] rounded-xl" />}>
                     <FinancialImpactView
                       level={selectedLevel}
                       range={timeRange}

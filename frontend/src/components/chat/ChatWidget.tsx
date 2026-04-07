@@ -33,7 +33,7 @@ const ChatWidget: React.FC = () => {
           <motion.div
             className="
               fixed bottom-[70px] right-6 z-50
-              bg-[#1A2230] text-[#E8ECF1]
+              bg-[#2a3649] text-[#E8ECF1]
               px-3 py-1.5 rounded-lg text-sm
               shadow-xl
             "

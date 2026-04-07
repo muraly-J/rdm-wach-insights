@@ -23,8 +23,8 @@ const UserMessage: React.FC<UserMessageProps> = ({ content }) => {
       <div
         className="
           max-w-[85%]
-          bg-[#00E5A0]
-          text-[#0B0F14]
+          bg-[#4fbd95]
+          text-[#1c2431]
           rounded-[16px_16px_4px_16px]
           px-4 py-3
         "

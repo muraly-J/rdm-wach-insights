@@ -26,13 +26,13 @@ const SafetyFlagsCombinedCard: React.FC<SafetyFlagsCombinedCardProps> = ({
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'High':
-        return 'border-[#FF4D6A] bg-[#FF4D6A]/5 text-[#FF4D6A]';
+        return 'border-[#e96852] bg-[#e96852]/5 text-[#e96852]';
       case 'Moderate':
-        return 'border-[#FFB020] bg-[#FFB020]/5 text-[#FFB020]';
+        return 'border-[#f9a020] bg-[#f9a020]/5 text-[#f9a020]';
       case 'Low':
-        return 'border-[#00E5A0] bg-[#00E5A0]/5 text-[#00E5A0]';
+        return 'border-[#4fbd95] bg-[#4fbd95]/5 text-[#4fbd95]';
       default:
-        return 'border-[#8A95A5] bg-[#8A95A5]/5 text-[#8A95A5]';
+        return 'border-[#6d6e71] bg-[#6d6e71]/5 text-[#6d6e71]';
     }
   };
 
@@ -68,9 +68,9 @@ const SafetyFlagsCombinedCard: React.FC<SafetyFlagsCombinedCardProps> = ({
     return (
       <div className="card p-6 mb-6">
         <h4 className="text-[20px] font-semibold text-[#E8ECF1] mb-4">Safety Flags</h4>
-        <div className="text-[#00E5A0] flex items-center gap-2">
+        <div className="text-[#4fbd95] flex items-center gap-2">
           <span className="text-xl">✓</span>
-          <p className="text-sm text-[#8A95A5]">No safety flags detected for this device</p>
+          <p className="text-sm text-[#6d6e71]">No safety flags detected for this device</p>
         </div>
       </div>
     );
@@ -80,7 +80,7 @@ const SafetyFlagsCombinedCard: React.FC<SafetyFlagsCombinedCardProps> = ({
     <div className="card p-6 mb-6">
       {/* Header */}
       <h4 className="text-[20px] font-semibold text-[#E8ECF1] mb-4 flex items-center gap-2">
-        <span className="text-[#8A95A5]">⚠️</span>
+        <span className="text-[#6d6e71]">⚠️</span>
         Safety Flags
       </h4>
 
@@ -96,7 +96,7 @@ const SafetyFlagsCombinedCard: React.FC<SafetyFlagsCombinedCardProps> = ({
               <div>
                 <p className="font-medium text-[#E8ECF1]">{flag.label}</p>
                 {flag.threshold && (
-                  <p className="text-[11px] text-[#8A95A5] mt-0.5">
+                  <p className="text-[11px] text-[#6d6e71] mt-0.5">
                     Threshold: {flag.threshold}
                   </p>
                 )}
@@ -106,10 +106,10 @@ const SafetyFlagsCombinedCard: React.FC<SafetyFlagsCombinedCardProps> = ({
             <span
               className={`text-[10px] font-bold uppercase px-2 py-1 rounded ${
                 flag.severity === 'High'
-                  ? 'bg-[#FF4D6A]/20 text-[#FF4D6A]'
+                  ? 'bg-[#e96852]/20 text-[#e96852]'
                   : flag.severity === 'Moderate'
-                  ? 'bg-[#FFB020]/20 text-[#FFB020]'
-                  : 'bg-[#00E5A0]/20 text-[#00E5A0]'
+                  ? 'bg-[#f9a020]/20 text-[#f9a020]'
+                  : 'bg-[#4fbd95]/20 text-[#4fbd95]'
               }`}
             >
               {getSeverityLabel(flag.severity)}
@@ -119,8 +119,8 @@ const SafetyFlagsCombinedCard: React.FC<SafetyFlagsCombinedCardProps> = ({
       </div>
 
       {/* Summary footer */}
-      <div className="border-t border-[#1E2A3A] pt-4 mt-4">
-        <p className="text-[11px] text-[#8A95A5]">
+      <div className="border-t border-[#2e3f55] pt-4 mt-4">
+        <p className="text-[11px] text-[#6d6e71]">
           {safetyFlags.length} safety flag{safetyFlags.length === 1 ? '' : 's'} detected for {deviceName || deviceId}
         </p>
       </div>

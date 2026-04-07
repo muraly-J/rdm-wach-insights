@@ -26,10 +26,10 @@ const HealthRankSection: React.FC<HealthRankSectionProps> = ({
 
   // Health index color and badge logic
   const getHealthColor = (index: number) => {
-    if (index >= 80) return 'text-[#00E5A0]';
-    if (index >= 60) return 'text-[#FFB020]';
+    if (index >= 80) return 'text-[#4fbd95]';
+    if (index >= 60) return 'text-[#f9a020]';
     if (index >= 40) return 'text-[#FFA500]';
-    return 'text-[#FF4D6A]';
+    return 'text-[#e96852]';
   };
 
   const getTierLabel = (index: number) => {
@@ -40,10 +40,10 @@ const HealthRankSection: React.FC<HealthRankSectionProps> = ({
   };
 
   const getTierColor = (index: number) => {
-    if (index >= 80) return 'bg-[#00E5A0]/10 border-[#00E5A0]/30 text-[#00E5A0]';
-    if (index >= 60) return 'bg-[#FFB020]/10 border-[#FFB020]/30 text-[#FFB020]';
+    if (index >= 80) return 'bg-[#4fbd95]/10 border-[#4fbd95]/30 text-[#4fbd95]';
+    if (index >= 60) return 'bg-[#f9a020]/10 border-[#f9a020]/30 text-[#f9a020]';
     if (index >= 40) return 'bg-[#FFA500]/10 border-[#FFA500]/30 text-[#FFA500]';
-    return 'bg-[#FF4D6A]/10 border-[#FF4D6A]/30 text-[#FF4D6A]';
+    return 'bg-[#e96852]/10 border-[#e96852]/30 text-[#e96852]';
   };
 
   const RankCard: React.FC<{ rank: number; device: DeviceRank; isBest: boolean }> = ({
@@ -57,19 +57,19 @@ const HealthRankSection: React.FC<HealthRankSectionProps> = ({
     return (
       <div
         className={`flex items-center justify-between p-4 rounded-xl border ${
-          isBest ? 'border-[#00E5A0]/20' : 'border-[#FF4D6A]/20'
+          isBest ? 'border-[#4fbd95]/20' : 'border-[#e96852]/20'
         } bg-gradient-to-r ${
           isBest
-            ? 'from-[#00E5A0]/5 to-transparent'
-            : 'from-[#FF4D6A]/5 to-transparent'
+            ? 'from-[#4fbd95]/5 to-transparent'
+            : 'from-[#e96852]/5 to-transparent'
         }`}
       >
         {/* Rank number */}
         <div
           className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-bold mr-4 ${
             isBest
-              ? 'bg-[#00E5A0]/10 text-[#00E5A0]'
-              : 'bg-[#FF4D6A]/10 text-[#FF4D6A]'
+              ? 'bg-[#4fbd95]/10 text-[#4fbd95]'
+              : 'bg-[#e96852]/10 text-[#e96852]'
           }`}
         >
           #{rank}
@@ -94,7 +94,7 @@ const HealthRankSection: React.FC<HealthRankSectionProps> = ({
           <span className={`font-mono text-[24px] font-bold ${colorClass}`}>
             {device.index.toFixed(1)}
           </span>
-          <span className="text-[#8A95A5] text-xs block">/ 100</span>
+          <span className="text-[#6d6e71] text-xs block">/ 100</span>
         </div>
       </div>
     );
@@ -109,8 +109,8 @@ const HealthRankSection: React.FC<HealthRankSectionProps> = ({
 
       {/* Best Devices Column */}
       <div className="mb-6">
-        <h4 className="text-[14px] font-semibold text-[#8A95A5] uppercase tracking-wide mb-3 flex items-center gap-2">
-          <span className="text-[#00E5A0]">✓</span>
+        <h4 className="text-[14px] font-semibold text-[#6d6e71] uppercase tracking-wide mb-3 flex items-center gap-2">
+          <span className="text-[#4fbd95]">✓</span>
           Top {bestDevices.length} Healthiest
         </h4>
         <div className="space-y-3">
@@ -124,7 +124,7 @@ const HealthRankSection: React.FC<HealthRankSectionProps> = ({
               />
             ))
           ) : (
-            <div className="text-[#8A95A5] text-sm italic">
+            <div className="text-[#6d6e71] text-sm italic">
               No health data available
             </div>
           )}
@@ -133,8 +133,8 @@ const HealthRankSection: React.FC<HealthRankSectionProps> = ({
 
       {/* Worst Devices Column */}
       <div>
-        <h4 className="text-[14px] font-semibold text-[#8A95A5] uppercase tracking-wide mb-3 flex items-center gap-2">
-          <span className="text-[#FF4D6A]">⚠</span>
+        <h4 className="text-[14px] font-semibold text-[#6d6e71] uppercase tracking-wide mb-3 flex items-center gap-2">
+          <span className="text-[#e96852]">⚠</span>
           Top {worstDevices.length} Needs Attention
         </h4>
         <div className="space-y-3">
@@ -148,7 +148,7 @@ const HealthRankSection: React.FC<HealthRankSectionProps> = ({
               />
             ))
           ) : (
-            <div className="text-[#8A95A5] text-sm italic">
+            <div className="text-[#6d6e71] text-sm italic">
               No health data available
             </div>
           )}

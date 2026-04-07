@@ -24,19 +24,19 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
 }) => {
   // Risk direction: low value = green (good), high value = red (bad)
   const getRiskColor = (val: number) => {
-    if (val <= 20) return 'text-[#00E5A0]';  // low risk
-    if (val <= 50) return 'text-[#FFB020]';  // moderate risk
-    return 'text-[#FF4D6A]';                 // high risk
+    if (val <= 20) return 'text-[#4fbd95]';  // low risk
+    if (val <= 50) return 'text-[#f9a020]';  // moderate risk
+    return 'text-[#e96852]';                 // high risk
   };
 
   const numberColor = getRiskColor(value);
   // For risk scores: increasing trend is bad (red), decreasing is good (green)
-  const trendColor = trendValue <= 0 ? 'text-[#00E5A0]' : 'text-[#FF4D6A]';
+  const trendColor = trendValue <= 0 ? 'text-[#4fbd95]' : 'text-[#e96852]';
   const trendIcon = trendValue >= 0 ? '↑' : '↓';
 
   return (
     <div
-      className="card p-4 sm:p-6 transition-all duration-0.25s ease hover:border-[#1E2A3A]"
+      className="card p-4 sm:p-6 transition-all duration-0.25s ease hover:border-[#2e3f55]"
       style={{
         background: 'rgba(255,255,255,0.04)',
         backdropFilter: 'blur(20px) saturate(180%)',
@@ -56,7 +56,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
         <span className={`font-mono text-[28px] sm:text-[36px] font-bold ${numberColor}`}>
           {value.toFixed(1)}
         </span>
-        <span className="text-[#8A95A5] text-sm">/ 100</span>
+        <span className="text-[#6d6e71] text-sm">/ 100</span>
       </div>
 
       {/* Sparkline */}
@@ -79,7 +79,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
         <span className={`font-medium ${trendColor}`}>
           {trendIcon} {Math.abs(trendValue).toFixed(1)}%
         </span>
-        <span className="text-[#8A95A5]">vs previous period</span>
+        <span className="text-[#6d6e71]">vs previous period</span>
       </div>
     </div>
   );

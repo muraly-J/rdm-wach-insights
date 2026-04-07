@@ -16,7 +16,7 @@ const SCORE_NAMES = [
         <p>Detects over-consumption vs a seasonal-naive baseline derived from the same hour on D−1, D−7, and D−14.</p>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Formula</p>
-          <p className="font-mono bg-[#0B0F14] rounded px-2 py-1 text-[10px]">
+          <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
             excess = kWh_actual − mean(kWh_D-1, D-7, D-14)<br/>
             score = clip(excess / σ_baseline, 0, 1) × 100
           </p>
@@ -38,7 +38,7 @@ const SCORE_NAMES = [
         <p>Measures drop in power factor from the AHU's own historical average. Low PF means reactive power waste and TNB surcharges.</p>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Formula</p>
-          <p className="font-mono bg-[#0B0F14] rounded px-2 py-1 text-[10px]">
+          <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
             PF = P / S = P / √(P² + Q²)<br/>
             score = clip((PF_baseline − PF_now) / PF_baseline, 0, 1) × 100
           </p>
@@ -60,7 +60,7 @@ const SCORE_NAMES = [
         <p>Unbalanced current across L1/L2/L3 causes torque ripple, heat, and premature motor failure. Scored relative to this AHU's normal operating band.</p>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Formula (NEMA definition)</p>
-          <p className="font-mono bg-[#0B0F14] rounded px-2 py-1 text-[10px]">
+          <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
             imbalance = max|Iₙ − Iₐᵥg| / Iₐᵥg × 100%<br/>
             score = clip((imbalance − μ) / σ_baseline, 0, 1) × 100
           </p>
@@ -82,7 +82,7 @@ const SCORE_NAMES = [
         <p>Waveform distortion from VFDs and non-linear loads. High THD stresses winding insulation and causes additional heat. Scored when current THD drifts above this AHU's historical baseline.</p>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Formula</p>
-          <p className="font-mono bg-[#0B0F14] rounded px-2 py-1 text-[10px]">
+          <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
             THD = √(I₂² + I₃² + … + Iₙ²) / I₁ × 100%<br/>
             score = clip((THD_now − μ_baseline) / σ_baseline, 0, 1) × 100
           </p>
@@ -104,7 +104,7 @@ const SCORE_NAMES = [
         <p>Compares current power draw to this AHU's historical 99th-percentile peak. Sustained operation near capacity risks motor burnout and tripped breakers.</p>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Formula</p>
-          <p className="font-mono bg-[#0B0F14] rounded px-2 py-1 text-[10px]">
+          <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
             ratio = P_now / P_99th_percentile<br/>
             score = clip((ratio − 0.8) / 0.2, 0, 1) × 100
           </p>
@@ -119,7 +119,7 @@ const SCORE_NAMES = [
   },
 ];
 
-const SCORE_COLORS = ['#00E5A0', '#00B8D4', '#7C5CFC', '#FF6B8A', '#FFB020'];
+const SCORE_COLORS = ['#4fbd95', '#00a9a5', '#00aeef', '#e96852', '#f9a020'];
 
 const ScoreCardsGrid: React.FC<ScoreCardsGridProps> = ({ scoreData }) => {
   // Find the score with the highest current value for the safety flag card

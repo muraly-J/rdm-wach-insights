@@ -10,7 +10,7 @@ const TypingIndicator: React.FC = () => {
       {[0, 1, 2].map((i) => (
         <motion.div
           key={i}
-          className="w-2 h-2 rounded-full bg-[#8A95A5]"
+          className="w-2 h-2 rounded-full bg-[#6d6e71]"
           animate={{ opacity: [0.3, 1, 0.3] }}
           transition={{
             duration: 0.6,

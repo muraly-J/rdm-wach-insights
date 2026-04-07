@@ -114,7 +114,7 @@ export default function HamburgerMenu() {
             <div
               style={{
                 height: 2,
-                background: '#00E5A0',
+                background: '#4fbd95',
                 flexShrink: 0,
               }}
             />
@@ -137,7 +137,7 @@ export default function HamburgerMenu() {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#8A95A5',
+                  color: '#6d6e71',
                   fontSize: 20,
                   lineHeight: 1,
                   padding: '4px 6px',
@@ -182,9 +182,9 @@ export default function HamburgerMenu() {
                       background: 'transparent',
                       border: 'none',
                       cursor: 'pointer',
-                      fontFamily: 'DM Sans, sans-serif',
+                      fontFamily: 'Montserrat, sans-serif',
                     }}
-                    whileHover={{ backgroundColor: 'rgba(0,229,160,0.08)', color: '#00E5A0' }}
+                    whileHover={{ backgroundColor: 'rgba(79,189,149,0.08)', color: '#4fbd95' }}
                   >
                     {label}
                   </motion.button>
@@ -197,16 +197,16 @@ export default function HamburgerMenu() {
               style={{
                 padding: '12px 16px 20px',
                 flexShrink: 0,
-                borderTop: '1px solid #1E2A3A',
+                borderTop: '1px solid #2e3f55',
               }}
             >
               <span
                 style={{
-                  fontFamily: 'JetBrains Mono, monospace',
+                  fontFamily: 'Oswald, monospace',
                   fontSize: 11,
                   fontWeight: 600,
                   letterSpacing: '0.12em',
-                  color: '#1E2A3A',
+                  color: '#2e3f55',
                   userSelect: 'none',
                 }}
               >

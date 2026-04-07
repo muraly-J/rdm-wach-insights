@@ -6,7 +6,7 @@ function getDeltaColor(delta: TrendDelta): string {
   const isGood =
     (delta.direction === 'up' && delta.label === 'Health') ||
     (delta.direction === 'down' && delta.label !== 'Health');
-  return isGood ? '#00E5A0' : '#FF4D6A';
+  return isGood ? '#4fbd95' : '#e96852';
 }
 
 export default function TrendDeltas() {
@@ -20,7 +20,7 @@ export default function TrendDeltas() {
           fontSize: '12px',
           textTransform: 'uppercase',
           letterSpacing: '0.1em',
-          color: '#8A95A5',
+          color: '#6d6e71',
           marginBottom: '12px',
         }}
       >
@@ -50,7 +50,7 @@ export default function TrendDeltas() {
                 boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
               }}
             >
-              <div style={{ fontSize: '11px', color: '#8A95A5', marginBottom: '6px' }}>
+              <div style={{ fontSize: '11px', color: '#6d6e71', marginBottom: '6px' }}>
                 {delta.label}
               </div>
               <div

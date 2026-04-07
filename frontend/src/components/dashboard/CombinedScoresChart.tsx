@@ -54,8 +54,8 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-[#1A2230] p-4 rounded-xl border border-[#1E2A3A]">
-          <p className="text-[#8A95A5] text-xs mb-2 font-mono">{formatTickByRange(label, timeRange)}</p>
+        <div className="bg-[#2a3649] p-4 rounded-xl border border-[#2e3f55]">
+          <p className="text-[#6d6e71] text-xs mb-2 font-mono">{formatTickByRange(label, timeRange)}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {entry.name}: {Number(entry.value).toFixed(1)}
@@ -78,7 +78,7 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
   if (mergedData.length === 0) {
     return (
       <div className="card p-4 sm:p-6 mb-6 sm:mb-8 h-[200px] sm:h-[320px] flex items-center justify-center" style={glassStyle}>
-        <span className="text-[#8A95A5]">No score data available</span>
+        <span className="text-[#6d6e71]">No score data available</span>
       </div>
     );
   }
@@ -92,10 +92,10 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
       <div className="h-[220px] sm:h-[280px] lg:h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={mergedData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-          <CartesianGrid stroke="#1E2A3A" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke="#2e3f55" strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="timestamp"
-            stroke="#8A95A5"
+            stroke="#6d6e71"
             fontSize={12}
             tickLine={false}
             axisLine={false}
@@ -104,7 +104,7 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
           />
           <YAxis
             domain={[0, 100]}
-            stroke="#8A95A5"
+            stroke="#6d6e71"
             fontSize={12}
             tickLine={false}
             axisLine={false}
@@ -128,7 +128,7 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
       </ResponsiveContainer>
       </div>
 
-      <p className="text-xs text-[#8A95A5] mt-4 text-center">
+      <p className="text-xs text-[#6d6e71] mt-4 text-center">
         Click legend items to toggle individual scores
       </p>
     </div>
