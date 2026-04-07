@@ -143,9 +143,18 @@ def _get_df(
     delta = _RANGE_DELTA.get(time_range, _RANGE_DELTA["7d"])
     start = (latest_ts - delta).isoformat()
 
+    # Resolve level to its authoritative device list so cross-level devices
+    # (e.g. e0212 stored with level=2 but belonging to Level 1) are included.
+    # Only apply when no explicit ahu_ids are provided.
+    db_level = None
+    effective_ahu_ids = ahu_ids
+    if level is not None and not ahu_ids:
+        from models.schemas import AHU_LEVEL_CONFIG
+        effective_ahu_ids = AHU_LEVEL_CONFIG.get(level, {}).get("device_ids")
+
     # 30d queries need full data for accurate daily resampling — no row cap
     row_limit = None if time_range == "30d" else 5000
-    df = db.get_time_range(level=level, ahu_ids=ahu_ids, start=start, limit=row_limit)
+    df = db.get_time_range(level=db_level, ahu_ids=effective_ahu_ids, start=start, limit=row_limit)
     if df.empty:
         return df
 
