@@ -21,7 +21,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://synthesis-steering-logistics-proprietary.trycloudflare.com/api/$1"
+      "destination": "https://sisters-donate-continue-pets.trycloudflare.com/api/$1"
     },
     {
       "source": "/(.*)",
