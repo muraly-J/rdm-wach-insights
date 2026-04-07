@@ -4,7 +4,6 @@ core/healthdb.py
 DuckDB-backed Health Database.
 
 Stores hourly FAIR health scores for all AHUs.
-Column names mirror data/health_hourly.csv exactly.
 
 Usage:
   db = HealthDB()                          # default path: data/healthdb.duckdb
@@ -183,12 +182,13 @@ class HealthDB:
 
     def upsert(self, df: pd.DataFrame) -> int:
         """
-        Insert or replace rows. df must contain all schema columns.
-        Returns number of rows written.
+        Insert or replace rows. df may contain a subset of schema columns;
+        missing columns are left as NULL. Returns number of rows written.
         """
+        cols = ", ".join(df.columns.tolist())
         with self._conn(write=True) as conn:
             conn.execute(
-                "INSERT OR REPLACE INTO health_hourly SELECT * FROM df"
+                f"INSERT OR REPLACE INTO health_hourly ({cols}) SELECT * FROM df"
             )
         return len(df)
 
@@ -331,6 +331,22 @@ class HealthDB:
                 f"INSERT OR REPLACE INTO predictions ({col_list}) SELECT * FROM sub"
             )
         return len(df)
+
+    def get_all_predictions(
+        self,
+        ahu_ids: Optional[list] = None,
+    ) -> pd.DataFrame:
+        """Return all prediction rows, optionally filtered by device."""
+        conditions, params = [], []
+        if ahu_ids:
+            placeholders = ", ".join("?" * len(ahu_ids))
+            conditions.append(f"ahu_id IN ({placeholders})")
+            params.extend(ahu_ids)
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        with self._conn() as conn:
+            return conn.execute(
+                f"SELECT * FROM predictions {where} ORDER BY timestamp", params
+            ).df()
 
     def get_latest_predictions(
         self,
