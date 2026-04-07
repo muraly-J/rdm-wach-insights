@@ -157,7 +157,7 @@ def get_health_index_series(
     """Returns [{id, name, label, department, area, data: [{timestamp, value}]}]"""
     ahu_ids = [device_id] if device_id else None
     df = _get_df(level=level, ahu_ids=ahu_ids, time_range=time_range)
-    if df.empty:
+    if df.empty or "health_index" not in df.columns:
         return []
 
     labels = _load_ahu_labels()

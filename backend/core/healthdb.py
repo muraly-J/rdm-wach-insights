@@ -123,6 +123,8 @@ CREATE INDEX IF NOT EXISTS idx_level_time ON health_hourly (level, timestamp);
 # ALTER statements to migrate existing databases — safe to run repeatedly
 # (DuckDB silently ignores ADD COLUMN if the column already exists via IF NOT EXISTS)
 _MIGRATE_SCHEMA_SQL = """
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS health_index                 FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS tier                         VARCHAR;
 ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_power_l1                 FLOAT;
 ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_power_l2                 FLOAT;
 ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_power_l3                 FLOAT;
