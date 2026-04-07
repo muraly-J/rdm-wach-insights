@@ -1,0 +1,55 @@
+# Railway upload ignore — mirrors .dockerignore but allows data/healthdb.duckdb
+# (*.duckdb is gitignored so railway up would normally skip it — this overrides that)
+
+# Git internals
+.git/
+.gitignore
+
+# Python virtual environment
+backend/venv/
+venv/
+__pycache__/
+*.py[codz]
+*$py.class
+*.so
+
+# Frontend build artefacts (not needed for backend container)
+frontend/
+dist/
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Test files
+backend/tests/
+tests/
+test_*.py
+*_test.py
+
+# Docs archive
+docs/archive/
+
+# Worktrees
+.worktrees/
+
+# Secrets
+.env
+*.env
+.env.local
+
+# Jupyter
+*.ipynb
+
+# Temp
+tmp/
+temp/
+*.tmp
+.cache/

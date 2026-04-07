@@ -274,3 +274,43 @@ try:
     logger.info("[Startup] Query logging initialized")
 except Exception as e:
     logger.warning(f"[Startup] Warning: Could not initialize query logger: {e}")
+
+
+# ── Background ETL backfill (runs once on cold start when DB is empty) ────────
+
+def _run_etl_backfill():
+    """
+    Run health ETL in the background if the DuckDB is empty.
+    Called once at startup — safe to skip if InfluxDB is unreachable.
+    """
+    import threading
+    import subprocess
+
+    def _backfill():
+        try:
+            from core.healthdb import HealthDB
+            db = HealthDB()
+            latest = db.get_latest_timestamp()
+            if latest is not None:
+                logger.info("[ETL] DB already has data (latest: %s) — skipping backfill", latest)
+                return
+            logger.info("[ETL] DB is empty — running health ETL backfill...")
+            script = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'etl', 'run_health_etl.py')
+            result = subprocess.run(
+                [sys.executable, script, '--level', 'all'],
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
+            if result.returncode == 0:
+                logger.info("[ETL] Backfill completed successfully")
+            else:
+                logger.warning("[ETL] Backfill exited with code %d: %s", result.returncode, result.stderr[:500])
+        except Exception as exc:
+            logger.warning("[ETL] Backfill skipped: %s", exc)
+
+    t = threading.Thread(target=_backfill, daemon=True, name="etl-backfill")
+    t.start()
+
+
+_run_etl_backfill()
