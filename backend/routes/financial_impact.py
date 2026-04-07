@@ -5,7 +5,7 @@ GET  /api/financial-config         — Load saved financial parameters
 POST /api/financial-config         — Save financial parameters
 GET  /api/financial-impact?level=N&range=30d  — Compute cost breakdown
 
-All calculations use existing health_hourly.csv data — no new ETL required.
+All calculations use DuckDB health data — no new ETL required.
 """
 import json
 import logging

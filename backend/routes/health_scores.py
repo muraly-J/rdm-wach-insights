@@ -56,8 +56,6 @@ async def get_level_scores(
 ):
     """
     Get five FAIR-score breakdown for all AHUs on a specific level.
-    Data is read from health_all_levels.csv.
-
     Parameters:
         level_id: Building level (1-11)
         time_range: Time range - 24h, 7d, or 30d
@@ -98,7 +96,6 @@ async def get_level_health_index(
 ):
     """
     Get health index time series for all AHUs on a level (or a single device).
-    Data is read from health_all_levels.csv.
 
     Parameters:
         level_id: Building level (1-11)
@@ -141,7 +138,6 @@ async def get_raw_score_relationship(
 ):
     """
     Get raw sensor data ↔ computed FAIR score relationship for a single device.
-    Data is read from health_all_levels.csv.
 
     Parameters:
         device_id: Device ID (e.g., e0101)
