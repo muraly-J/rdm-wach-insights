@@ -22,6 +22,7 @@ from core.risk_engine import (
     get_level_from_ahu_id,
 )
 from core.influx_client import get_available_devices
+from models.schemas import AHU_LEVEL_CONFIG
 import asyncio
 
 # Flag ID to label mapping
@@ -76,9 +77,9 @@ async def dashboard_ranking(
         # Get all available devices
         available_devices = get_available_devices(time_range)
 
-        # Filter by level prefix (e.g., e05 for Level 5)
-        level_prefix = f"e{str(level_num).zfill(2)}"
-        level_devices = [d for d in available_devices if d.startswith(level_prefix)]
+        # Filter by authoritative level config (handles cross-level device IDs like e0212 in Level 1)
+        level_device_set = set(AHU_LEVEL_CONFIG.get(level_num, {}).get("device_ids", []))
+        level_devices = [d for d in available_devices if d in level_device_set]
 
         if not level_devices:
             raise HTTPException(
@@ -189,9 +190,9 @@ async def dashboard_trend(
         # Get all available devices for this level
         available_devices = get_available_devices(time_range)
 
-        # Filter by level prefix (e.g., e05 for Level 5)
-        level_prefix = f"e{str(level_num).zfill(2)}"
-        level_devices = [d for d in available_devices if d.startswith(level_prefix)]
+        # Filter by authoritative level config (handles cross-level device IDs like e0212 in Level 1)
+        level_device_set = set(AHU_LEVEL_CONFIG.get(level_num, {}).get("device_ids", []))
+        level_devices = [d for d in available_devices if d in level_device_set]
 
         if not level_devices:
             raise HTTPException(
@@ -368,9 +369,9 @@ async def dashboard_trend_csv(
         # Get all available devices for this level
         available_devices = get_available_devices(time_range)
 
-        # Filter by level prefix (e.g., e01 for Level 1)
-        level_prefix = f"e{str(level_num).zfill(2)}"
-        level_devices = [d for d in available_devices if d.startswith(level_prefix)]
+        # Filter by authoritative level config (handles cross-level device IDs like e0212 in Level 1)
+        level_device_set = set(AHU_LEVEL_CONFIG.get(level_num, {}).get("device_ids", []))
+        level_devices = [d for d in available_devices if d in level_device_set]
 
         if not level_devices:
             raise HTTPException(
@@ -711,9 +712,9 @@ async def dashboard_safety_flags(
         # Get all available devices
         available_devices = get_available_devices(time_range)
 
-        # Filter by level prefix (e.g., e05 for Level 5)
-        level_prefix = f"e{str(level_num).zfill(2)}"
-        level_devices = [d for d in available_devices if d.startswith(level_prefix)]
+        # Filter by authoritative level config (handles cross-level device IDs like e0212 in Level 1)
+        level_device_set = set(AHU_LEVEL_CONFIG.get(level_num, {}).get("device_ids", []))
+        level_devices = [d for d in available_devices if d in level_device_set]
 
         if not level_devices:
             raise HTTPException(
