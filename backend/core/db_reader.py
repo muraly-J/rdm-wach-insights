@@ -15,19 +15,91 @@ DuckDB `level` column is INTEGER (1-11), not "Level N" string.
 
 from __future__ import annotations
 
+import os
 from datetime import timedelta
 from typing import Optional
 
 import pandas as pd
 
 from core.healthdb import HealthDB
-# Reuse non-CSV helpers from csv_reader (safe — these don't touch files on import)
-from core.csv_reader import (
-    SCORE_COLUMNS,
-    SCORE_SERIES_MAP,
-    _load_ahu_labels,
-    _resample_to_daily,
-)
+
+# ---------------------------------------------------------------------------
+# Inlined from csv_reader (no CSV I/O — pure constants and helpers)
+# ---------------------------------------------------------------------------
+
+SCORE_COLUMNS = ['energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload', 'health_index']
+
+SCORE_SERIES_MAP: dict[str, list[dict]] = {
+    "energy_anomaly": [
+        {"col": "raw_hourly_delta",    "label": "Actual δ kWh",    "unit": "kWh", "style": "solid"},
+        {"col": "raw_predicted_delta", "label": "Predicted δ kWh", "unit": "kWh", "style": "dashed"},
+    ],
+    "pf_degradation": [
+        {"col": "raw_power_total",          "label": "Real Power",     "unit": "kW",  "style": "solid"},
+        {"col": "raw_apparent_power_total", "label": "Apparent Power", "unit": "kVA", "style": "dashed"},
+    ],
+    "phase_imbalance": [
+        {"col": "raw_volts_l1_n", "label": "V L1", "unit": "V", "style": "solid", "group": "voltage"},
+        {"col": "raw_volts_l2_n", "label": "V L2", "unit": "V", "style": "solid", "group": "voltage"},
+        {"col": "raw_volts_l3_n", "label": "V L3", "unit": "V", "style": "solid", "group": "voltage"},
+        {"col": "raw_current_l1", "label": "I L1", "unit": "A", "style": "solid", "group": "current"},
+        {"col": "raw_current_l2", "label": "I L2", "unit": "A", "style": "solid", "group": "current"},
+        {"col": "raw_current_l3", "label": "I L3", "unit": "A", "style": "solid", "group": "current"},
+        {"col": "raw_nema_voltage_imbalance", "label": "NEMA V Imbalance", "unit": "%", "style": "bold", "group": "imbalance"},
+    ],
+    "thd_drift": [
+        {"col": "raw_current_l1_thd", "label": "I L1 THD", "unit": "%", "style": "solid",  "group": "current_thd"},
+        {"col": "raw_current_l3_thd", "label": "I L3 THD", "unit": "%", "style": "solid",  "group": "current_thd"},
+        {"col": "raw_volts_l1_thd",   "label": "V L1 THD", "unit": "%", "style": "dashed", "group": "voltage_thd"},
+        {"col": "raw_volts_l2_thd",   "label": "V L2 THD", "unit": "%", "style": "dashed", "group": "voltage_thd"},
+        {"col": "raw_volts_l3_thd",   "label": "V L3 THD", "unit": "%", "style": "dashed", "group": "voltage_thd"},
+    ],
+    "overload": [
+        {"col": "raw_current_l1", "label": "I L1",     "unit": "A", "style": "solid", "group": "current"},
+        {"col": "raw_current_l2", "label": "I L2",     "unit": "A", "style": "solid", "group": "current"},
+        {"col": "raw_current_l3", "label": "I L3",     "unit": "A", "style": "solid", "group": "current"},
+        {"col": "raw_p95_current","label": "P95 Peak", "unit": "A", "style": "ref",   "group": "threshold"},
+    ],
+}
+
+_AHU_LABELS: dict[str, dict] = {}
+
+
+def _load_ahu_labels() -> dict[str, dict]:
+    """Load docs/ahu_relationships.tsv → {device_id: {label, department, area}}."""
+    global _AHU_LABELS
+    if _AHU_LABELS:
+        return _AHU_LABELS
+    tsv_path = os.path.join(os.path.dirname(__file__), '..', '..', 'docs', 'ahu_relationships.tsv')
+    if not os.path.exists(tsv_path):
+        return {}
+    df = pd.read_csv(tsv_path, sep='\t')
+    for _, row in df.iterrows():
+        device_id = str(row.get('device_id', '')).strip()
+        if device_id:
+            _AHU_LABELS[device_id] = {
+                'label': str(row.get('AHU Label', '')).strip(),
+                'department': str(row.get('Department Name', '')).strip(),
+                'area': str(row.get('Area Name', '')).strip(),
+            }
+    return _AHU_LABELS
+
+
+def _resample_to_daily(df: pd.DataFrame) -> pd.DataFrame:
+    """Collapse hourly rows into one representative row per device per calendar day."""
+    if df.empty:
+        return df
+    df = df.copy()
+    df['_date'] = pd.to_datetime(df['timestamp'], utc=True).dt.normalize()
+    group_keys = ['ahu_id', 'level', '_date']
+    numeric_cols = [c for c in df.select_dtypes(include='number').columns if c not in group_keys]
+    text_cols = [c for c in df.columns if c not in group_keys + ['timestamp'] + numeric_cols]
+    agg: dict = {c: 'mean' for c in numeric_cols}
+    agg.update({c: 'last' for c in text_cols})
+    daily = df.groupby(group_keys).agg(agg).reset_index()
+    return daily.rename(columns={'_date': 'timestamp'})
+
+# ---------------------------------------------------------------------------
 
 # Override-able path for testing (monkeypatched in tests)
 _DB_PATH: Optional[str] = None  # None → HealthDB uses its default path
