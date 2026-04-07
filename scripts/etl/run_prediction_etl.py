@@ -7,7 +7,7 @@ Prediction ETL Pipeline for AHU Energy Forecasting
 This script implements a 3-step ETL process:
 1. EXTRACT: Fetch E(t), E(t−24h), E(t−168h), E(t−336h) from InfluxDB
 2. TRANSFORM: Compute ŷ(t) and Δkwh per AHU
-3. LOAD: Append results to predictions.csv
+3. LOAD: Upsert results to healthdb.duckdb (predictions table)
 
 Formula:
   ŷ(t)   = (E(t−24h) + E(t−168h) + E(t−336h)) / 3
@@ -15,13 +15,12 @@ Formula:
 
 Usage:
     python scripts/run_prediction_etl.py
-    python scripts/run_prediction_etl.py --output custom_predictions.csv
     python scripts/run_prediction_etl.py --dry-run
     python scripts/run_prediction_etl.py --level 1           # Test Level 1 only
     python scripts/run_prediction_etl.py --level all         # All levels
 
 Output:
-    data/predictions.csv - Energy predictions with actual vs predicted values
+    data/healthdb.duckdb  (predictions table, upserted idempotently)
 """
 
 import sys
@@ -51,7 +50,6 @@ from models.schemas import (
 # ──────────────────────────────────────────────────────────────────────────────
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data')
-OUTPUT_FILE = os.path.join(DATA_DIR, "predictions.csv")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -346,77 +344,6 @@ def transform_predictions(df_raw):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# STEP 3: LOAD - Write to CSV
-# ──────────────────────────────────────────────────────────────────────────────
-
-def load_to_csv(df_predictions, output_path=None, dry_run=False):
-    """
-    Step 3: Append predictions to CSV file.
-
-    Args:
-        df_predictions: DataFrame with prediction results
-        output_path: Path to output CSV file
-        dry_run: If True, don't write file
-
-    Returns:
-        Number of rows written
-    """
-    print("\n" + "="*70)
-    print("STEP 3: LOAD - Writing to predictions.csv")
-    print("="*70)
-
-    if output_path is None:
-        output_path = OUTPUT_FILE
-
-    # Ensure directory exists
-    os.makedirs(DATA_DIR, exist_ok=True)
-
-    if dry_run:
-        print("[DRY RUN] Would write to:", output_path)
-        print(f"[OK] Preview of {len(df_predictions)} rows:")
-        print("\n    First 5 rows:")
-        for i, row in df_predictions.head(5).iterrows():
-            print(f"      {row['device_id']}: E={row.get('energy_current', 'N/A'):.2f}, "
-                  f"δ={row.get('hourly_delta', 'N/A'):.2f}, "
-                  f"ŷ_δ={row.get('predicted_delta', 'N/A'):.2f}, "
-                  f"Δ={row.get('energy_anomaly', 'N/A'):.2f}")
-        return len(df_predictions)
-
-    # Determine if file exists and needs header
-    file_exists = os.path.exists(output_path)
-
-    # Define columns in order (new format with hourly deltas)
-    required_cols = [
-        "timestamp", "device_id", "level",
-        "energy_current", "hourly_delta", "predicted_delta", "energy_anomaly",
-        "yesterday_kwh", "delta_yesterday",
-        "last_week_kwh", "delta_last_week",
-        "two_weeks_kwh", "delta_two_weeks",
-        "available_delta_slots", "insufficient_history"
-    ]
-
-    # Reorder columns
-    df_output = df_predictions[[c for c in required_cols if c in df_predictions.columns]]
-
-    # Always overwrite existing file
-    mode = 'w'
-    header = True
-
-    try:
-        df_output.to_csv(output_path, mode=mode, header=header, index=False)
-
-        print(f"[OK] Overwritten CSV with {len(df_output)} rows: {output_path}")
-
-        return len(df_output)
-
-    except Exception as e:
-        print(f"[ERROR] Failed to write CSV: {e}")
-        import traceback
-        traceback.print_exc()
-        return 0
-
-
-# ──────────────────────────────────────────────────────────────────────────────
 # VALIDATION FUNCTIONS
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -469,14 +396,13 @@ def validate_level_results(df_results: pd.DataFrame, level_num: int) -> bool:
 # MAIN ETL PIPELINE
 # ──────────────────────────────────────────────────────────────────────────────
 
-def run_prediction_etl(level_filter=None, output_path=None, dry_run=False, scheduled=False):
+def run_prediction_etl(level_filter=None, dry_run=False, scheduled=False):
     """
     Run the complete prediction ETL pipeline.
 
     Args:
         level_filter: Optional level number (1-11) to filter devices
-        output_path: Custom output path
-        dry_run: If True, don't write to CSV
+        dry_run: If True, preview rows without writing to DuckDB
         scheduled: If True, run in scheduled mode (quiet output)
 
     Returns:
@@ -514,40 +440,39 @@ def run_prediction_etl(level_filter=None, output_path=None, dry_run=False, sched
         print("[ERROR] Transform phase failed!")
         return None
 
-    # Step 3: LOAD
-    rows_written = load_to_csv(df_predictions, output_path, dry_run)
-
-    # === DuckDB write (added for migration) ===
-    if not dry_run:
-        try:
-            from pathlib import Path as _Path
-            import sys as _etl_sys
-            _etl_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent / "backend"))
-            from core.healthdb import HealthDB as _HealthDB
-            _db = _HealthDB()
-            _db_df = df_predictions.copy()
-            # Normalize column names
-            if "device_id" in _db_df.columns:
-                _db_df = _db_df.rename(columns={"device_id": "ahu_id"})
-            # Convert "Level N" string → integer
-            if _db_df["level"].dtype == object:
-                _db_df["level"] = _db_df["level"].str.replace("Level ", "").astype(int)
-            # Select only schema columns that exist in the DataFrame
-            _schema_cols = ["timestamp", "ahu_id", "level", "energy_current", "hourly_delta",
-                            "predicted_delta", "energy_anomaly", "yesterday_kwh", "delta_yesterday",
-                            "last_week_kwh", "delta_last_week", "two_weeks_kwh", "delta_two_weeks",
-                            "available_delta_slots", "insufficient_history"]
-            _db_df = _db_df[[c for c in _schema_cols if c in _db_df.columns]]
-            _rows = _db.upsert_predictions(_db_df)
-            print(f"[OK] Written {_rows} prediction rows to DuckDB predictions table")
-        except Exception as _e:
-            print(f"[WARN] DuckDB predictions write failed: {_e}")
-
-    # Determine actual output path
-    if output_path is None:
-        actual_output = OUTPUT_FILE
+    # Step 3: LOAD — write to DuckDB (upsert, idempotent)
+    rows_written = 0
+    if dry_run:
+        print("\n" + "="*70)
+        print("STEP 3: LOAD - DuckDB upsert (DRY RUN)")
+        print("="*70)
+        print(f"[DRY RUN] Would upsert {len(df_predictions)} prediction rows to DuckDB")
+        print("[OK] Preview of first 5 rows:")
+        for i, row in df_predictions.head(5).iterrows():
+            print(f"  {row['device_id']}: E={row.get('energy_current', 'N/A'):.2f}, "
+                  f"δ={row.get('hourly_delta', 'N/A'):.2f}, "
+                  f"ŷ_δ={row.get('predicted_delta', 'N/A'):.2f}, "
+                  f"Δ={row.get('energy_anomaly', 'N/A'):.2f}")
+        rows_written = len(df_predictions)
     else:
-        actual_output = output_path
+        try:
+            from core.healthdb import HealthDB
+            db_df = df_predictions.copy()
+            if "device_id" in db_df.columns:
+                db_df = db_df.rename(columns={"device_id": "ahu_id"})
+            if db_df["level"].dtype == object:
+                db_df["level"] = db_df["level"].str.replace("Level ", "", regex=False).astype(int)
+            schema_cols = [
+                "timestamp", "ahu_id", "level", "energy_current", "hourly_delta",
+                "predicted_delta", "energy_anomaly", "yesterday_kwh", "delta_yesterday",
+                "last_week_kwh", "delta_last_week", "two_weeks_kwh", "delta_two_weeks",
+                "available_delta_slots", "insufficient_history",
+            ]
+            db_df = db_df[[c for c in schema_cols if c in db_df.columns]]
+            rows_written = HealthDB().upsert_predictions(db_df)
+            print(f"[OK] Upserted {rows_written} prediction rows to DuckDB predictions table")
+        except Exception as e:
+            print(f"[WARN] DuckDB predictions write failed: {e}")
 
     # Validate results per level
     print("\n" + "="*70)
@@ -572,7 +497,7 @@ def run_prediction_etl(level_filter=None, output_path=None, dry_run=False, sched
         print("[DRY RUN] No file was written (--dry-run flag set)")
     else:
         if all_valid:
-            print(f"[OK] ETL Complete: {rows_written} rows written to {actual_output}")
+            print(f"[OK] ETL Complete: {rows_written} rows upserted to DuckDB predictions table")
             print("[OK] All levels passed validation")
         else:
             print(f"[ERROR] ETL completed but some devices are missing from results")
@@ -599,12 +524,6 @@ def run_prediction_etl(level_filter=None, output_path=None, dry_run=False, sched
 def main():
     parser = argparse.ArgumentParser(
         description="Prediction ETL Pipeline for AHU Energy Forecasting"
-    )
-    parser.add_argument(
-        "--output", "-o",
-        type=str,
-        default=None,
-        help="Custom output CSV path"
     )
     parser.add_argument(
         "--dry-run", "-d",
@@ -640,14 +559,9 @@ def main():
                 print(f"[ERROR] Invalid level value: {args.level}")
                 sys.exit(1)
 
-    # Set default output path if not specified
-    if args.output is None:
-        args.output = OUTPUT_FILE
-
     # Run ETL
     result = run_prediction_etl(
         level_filter=level_filter,
-        output_path=args.output,
         dry_run=args.dry_run,
         scheduled=args.scheduled
     )
