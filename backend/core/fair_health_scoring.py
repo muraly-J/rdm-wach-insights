@@ -169,7 +169,6 @@ SAFETY_FLAGS_DEF = {
 def load_prediction_deltas(ahu_ids: List[str]) -> Dict[str, float]:
     """
     Load prediction-based energy_anomaly from DuckDB predictions table.
-    Falls back to predictions.csv if DuckDB table is empty.
 
     The prediction ETL computes:
       hourly_delta(t)     = E(t) - E(t-1h)
@@ -204,36 +203,7 @@ def load_prediction_deltas(ahu_ids: List[str]) -> Dict[str, float]:
                     result[ahu_id] = 0.0
             return result
     except Exception as e:
-        print(f"[WARN] DuckDB predictions lookup failed ({e}), falling back to CSV")
-
-    # Fallback: read predictions.csv if it exists
-    PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    DATA_DIR = os.environ.get("DATA_DIR", "data")
-    PREDICTIONS_FILE = os.path.join(PROJECT_ROOT, DATA_DIR, "predictions.csv")
-
-    if not os.path.exists(PREDICTIONS_FILE):
-        # Return neutral anomalies (0) if file doesn't exist
-        return {ahu_id: 0.0 for ahu_id in ahu_ids}
-
-    try:
-        pred_df = pd.read_csv(PREDICTIONS_FILE)
-        if "device_id" in pred_df.columns and "ahu_id" not in pred_df.columns:
-            pred_df = pred_df.rename(columns={"device_id": "ahu_id"})
-        if ahu_ids:
-            pred_df = pred_df[pred_df["ahu_id"].isin(ahu_ids)]
-        latest = pred_df.sort_values("timestamp").groupby("ahu_id").last().reset_index()
-        result = {
-            str(row["ahu_id"]): float(row["energy_anomaly"])
-            for _, row in latest.iterrows()
-            if pd.notna(row.get("energy_anomaly"))
-        }
-        # Fill in missing ahu_ids with 0.0
-        for ahu_id in ahu_ids:
-            if ahu_id not in result:
-                result[ahu_id] = 0.0
-        return result
-    except Exception as e:
-        print(f"[WARN] predictions.csv fallback also failed: {e}")
+        print(f"[WARN] DuckDB predictions lookup failed ({e}), returning neutral anomalies")
         return {ahu_id: 0.0 for ahu_id in ahu_ids}
 
 
