@@ -7,18 +7,17 @@ ETL Pipeline for FAIR Health Scoring
 This script implements a 4-step ETL process:
 1. EXTRACT: Fetch latest hourly data from InfluxDB for all AHUs
 2. TRANSFORM: Compute health scores using FAIR algorithm
-3. LOAD: Append results to health_all_levels.csv
+3. LOAD: Upsert results to healthdb.duckdb
 4. SAFETY FLAGS: Generate engineering audit flags
 
 Usage:
     python scripts/run_health_etl.py
-    python scripts/run_health_etl.py --output custom_output.csv
     python scripts/run_health_etl.py --dry-run
     python scripts/run_health_etl.py --level 1           # Test Level 1 only
     python scripts/run_health_etl.py --level all         # All levels
 
 Output:
-    data/health_all_levels.csv - Health scores with all required columns
+    data/healthdb.duckdb  (health_hourly table, upserted idempotently)
 """
 
 import sys
@@ -45,8 +44,6 @@ from models.schemas import AHU_LEVEL_CONFIG, get_devices_by_level
 # ──────────────────────────────────────────────────────────────────────────────
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data')
-OUTPUT_FILE = os.path.join(DATA_DIR, "health_all_levels.csv")
-OUTPUT_HOURLY_FILE = os.path.join(DATA_DIR, "health_hourly.csv")
 
 # Timing utilities
 _timers = {}
@@ -393,21 +390,14 @@ def compute_safety_flags(baseline):
 # STEP 1: EXTRACT - Fetch Raw Data
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _get_latest_csv_timestamp():
+def _get_latest_db_timestamp():
     """
-    Return the latest timestamp in health_hourly.csv as a UTC datetime, or None.
+    Return the latest timestamp in healthdb.duckdb as a UTC datetime, or None.
     Used by the scheduler to determine where to resume fetching from InfluxDB.
     """
-    if not os.path.exists(OUTPUT_HOURLY_FILE) or os.path.getsize(OUTPUT_HOURLY_FILE) == 0:
-        return None
     try:
-        df = pd.read_csv(OUTPUT_HOURLY_FILE, usecols=["timestamp"], parse_dates=["timestamp"])
-        if df.empty:
-            return None
-        latest = pd.to_datetime(df["timestamp"]).max()
-        if latest.tzinfo is None:
-            return latest.to_pydatetime().replace(tzinfo=timezone.utc)
-        return latest.to_pydatetime()
+        from core.healthdb import HealthDB
+        return HealthDB().get_latest_timestamp()
     except Exception:
         return None
 
@@ -458,17 +448,17 @@ def extract_raw_data(metrics_to_fetch=None, level_filter=None):
             "digital_input_1_and_2",
         ]
 
-    # Gap-filling: resume from the last timestamp in the hourly CSV.
+    # Gap-filling: resume from the last timestamp in DuckDB.
     # Always fetch at least 168 h of history so scoring functions have enough
-    # data points (they require ≥ 24). Only rows newer than `since` are saved.
-    since = _get_latest_csv_timestamp()
+    # data points (they require ≥ 24). DuckDB upsert deduplicates any overlap.
+    since = _get_latest_db_timestamp()
     HISTORY_HOURS = 168
     if since is not None:
         history_since = since - timedelta(hours=HISTORY_HOURS)
-        print(f"[gap-fill] Latest CSV timestamp: {since.isoformat()} — fetching {HISTORY_HOURS}h lookback for scoring")
+        print(f"[gap-fill] Latest DuckDB timestamp: {since.isoformat()} — fetching {HISTORY_HOURS}h lookback for scoring")
     else:
         history_since = None
-        print("[gap-fill] No existing CSV — fetching latest snapshot per device")
+        print("[gap-fill] DuckDB is empty — fetching latest snapshot per device")
 
     try:
         df = fetch_latest_hourly_data(
@@ -916,141 +906,6 @@ def transform_health_scores(df_raw):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# STEP 3: LOAD - Write to CSV
-# ──────────────────────────────────────────────────────────────────────────────
-
-def load_to_csv(df_scores, output_path=None):
-    """
-    Step 3: Append health scores to CSV file.
-
-    Args:
-        df_scores: DataFrame with health scores
-        output_path: Path to output CSV file
-
-    Returns:
-        Number of rows written
-    """
-    print("\n" + "="*70)
-    print("STEP 3: LOAD - Writing to health_all_levels.csv")
-    print("="*70)
-
-    if output_path is None:
-        output_path = OUTPUT_FILE
-
-    # Ensure directory exists
-    os.makedirs(DATA_DIR, exist_ok=True)
-
-    # Determine if file exists and needs header
-    file_exists = os.path.exists(output_path)
-
-    # Define columns in order
-    # All columns to include (all diagnostic columns)
-    required_cols = [
-        # Core columns
-        "timestamp", "device_id", "level", "health_index", "tier",
-
-        # Component scores
-        "energy_anomaly", "pf_degradation", "phase_imbalance", "thd_drift", "overload",
-
-        # Raw metrics
-        "raw_power_total", "raw_energy_import", "raw_power_factor_avg",
-        "raw_current_unbalance", "raw_composite_thd",
-        "raw_apparent_power_total",
-        "raw_current_l1", "raw_current_l2", "raw_current_l3",
-        "raw_volts_l1_n", "raw_volts_l2_n", "raw_volts_l3_n",
-        "raw_current_l1_thd", "raw_current_l3_thd",
-        "raw_volts_l1_thd", "raw_volts_l2_thd", "raw_volts_l3_thd",
-        "raw_nema_voltage_imbalance",
-        "raw_p95_current",
-
-        # Baseline statistics
-        "baseline_power_median", "baseline_power_rstd",
-        "baseline_power_p5", "baseline_power_p25", "baseline_power_p75", "baseline_power_p95",
-        "baseline_energy_median", "baseline_energy_rstd",
-        "baseline_energy_p5", "baseline_energy_p25", "baseline_energy_p75", "baseline_energy_p95",
-        "baseline_pf_median", "baseline_pf_rstd",
-        "baseline_pf_p5", "baseline_pf_p25", "baseline_pf_p75", "baseline_pf_p95",
-        "baseline_unbalance_median", "baseline_unbalance_rstd",
-        "baseline_unbalance_p5", "baseline_unbalance_p25", "baseline_unbalance_p75", "baseline_unbalance_p95",
-        "baseline_thd_24h_median", "baseline_thd_24h_rstd",
-        "baseline_thd_24h_p5", "baseline_thd_24h_p95",
-
-        # Z-scores
-        "z_energy", "z_power_factor", "z_phase_imbalance", "z_thd_drift", "z_overload",
-
-        # Level and trend breakdowns
-        "level_energy", "trend_energy",
-        "level_pf", "trend_pf",
-        "level_unbalance", "trend_unbalance",
-        "level_thd", "trend_thd",
-
-        # Overload components
-        "overload_power_ratio", "overload_demand",
-        "score_overload_A", "score_overload_B", "score_overload_C",
-
-        # Safety flags (boolean)
-        "flag_thd_chronic_high", "flag_imbalance_severe",
-        "flag_pf_chronic_low", "flag_overload_chronic",
-
-        # Safety flags (string)
-        "safety_flags"
-    ]
-
-    # Reorder columns - only include columns that exist in the DataFrame
-    available_cols = [c for c in required_cols if c in df_scores.columns]
-    df_output = df_scores[available_cols]
-
-    df_output = df_scores[[c for c in required_cols if c in df_scores.columns]]
-
-    # Deduplicate against existing file before writing.
-    # Guard against LFS pointer files (checked out without LFS objects) —
-    # these look like valid files but contain "version https://git-lfs.github.com/spec/v1"
-    # instead of CSV data. Treat them as non-existent so we write fresh.
-    if file_exists:
-        try:
-            with open(output_path, "r") as _f:
-                first_line = _f.readline()
-            if first_line.startswith("version https://git-lfs.github.com"):
-                print("[WARN] Existing file is a Git LFS pointer (object not fetched) — writing fresh")
-                file_exists = False
-            else:
-                existing = pd.read_csv(output_path)
-                if "timestamp" not in existing.columns:
-                    raise ValueError(f"Existing CSV missing 'timestamp' column (columns: {list(existing.columns)[:5]})")
-                existing["timestamp"] = pd.to_datetime(existing["timestamp"], utc=True, errors="coerce")
-                combined = pd.concat([existing, df_output], ignore_index=True)
-                combined = combined.drop_duplicates(
-                    subset=["timestamp", "device_id"], keep="last"
-                ).sort_values(["timestamp", "device_id"])
-                combined.to_csv(output_path, index=False)
-                new_rows = len(combined) - len(existing)
-                print(f"[OK] Merged {len(df_output)} records into existing file "
-                      f"({new_rows} net new rows, total: {len(combined)})")
-                return len(df_output)
-        except Exception as e:
-            print(f"[WARN] Merge failed ({e}), falling back to append mode")
-
-    mode = 'a' if file_exists else 'w'
-    header = not file_exists
-
-    try:
-        df_output.to_csv(output_path, mode=mode, header=header, index=False)
-
-        if file_exists:
-            print(f"[OK] Appended {len(df_output)} rows to existing file")
-        else:
-            print(f"[OK] Created new file with {len(df_output)} rows")
-
-        return len(df_output)
-
-    except Exception as e:
-        print(f"[ERROR] Failed to write CSV: {e}")
-        import traceback
-        traceback.print_exc()
-        return 0
-
-
-# ──────────────────────────────────────────────────────────────────────────────
 # STEP 3c: LOAD - Write to DuckDB Health DB
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -1127,66 +982,6 @@ def save_health_duckdb(results_df: pd.DataFrame, dry_run: bool = False) -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# STEP 3b: LOAD - Write Hourly CSV (Append-only for 24h chart)
-# ──────────────────────────────────────────────────────────────────────────────
-
-def save_hourly_health(health_df: pd.DataFrame):
-    """
-    Append hourly health records to health_hourly.csv (append-only).
-    This file is used for 24h time range charts.
-
-    Args:
-        health_df: DataFrame with health scores
-
-    Returns:
-        True if successful, False otherwise
-    """
-    print("\n" + "="*70)
-    print("STEP 3b: LOAD - Appending to health_hourly.csv (24h chart)")
-    print("="*70)
-
-    if health_df.empty:
-        print("[ERROR] No hourly data to save!")
-        return False
-
-    os.makedirs(os.path.dirname(OUTPUT_HOURLY_FILE), exist_ok=True)
-
-    # Check if file exists and has data
-    if os.path.exists(OUTPUT_HOURLY_FILE) and os.path.getsize(OUTPUT_HOURLY_FILE) > 0:
-        # Read existing data
-        try:
-            existing_df = pd.read_csv(OUTPUT_HOURLY_FILE, parse_dates=['timestamp'])
-
-            # Combine and dedupe on (timestamp, ahu_id) - keep latest
-            combined = pd.concat([existing_df, health_df], ignore_index=True)
-
-            # Deduplicate on timestamp + ahu_id, keep last (most recent)
-            combined = combined.drop_duplicates(
-                subset=['timestamp', 'device_id'], keep='last'
-            ).sort_values(['timestamp', 'device_id'])
-
-            combined.to_csv(OUTPUT_HOURLY_FILE, index=False)
-            print(f"[OK] Appended {len(health_df)} new hourly records (total: {len(combined)})")
-        except Exception as e:
-            print(f"[ERROR] Failed to merge with existing file: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
-    else:
-        # Create new file
-        try:
-            health_df.to_csv(OUTPUT_HOURLY_FILE, index=False)
-            print(f"[OK] Created health_hourly.csv with {len(health_df)} records")
-        except Exception as e:
-            print(f"[ERROR] Failed to write hourly CSV: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
-
-    return True
-
-
-# ──────────────────────────────────────────────────────────────────────────────
 # STEP 4: Safety Flags Summary
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -1235,16 +1030,14 @@ def print_safety_flags_summary(df_scores):
 # MAIN ETL FUNCTION
 # ──────────────────────────────────────────────────────────────────────────────
 
-def run_etl_pipeline(output_path=None, dry_run=False, level=None, scheduled=False, output_hourly=False):
+def run_etl_pipeline(dry_run=False, level=None, scheduled=False):
     """
     Run the complete ETL pipeline.
 
     Args:
-        output_path: Path to output CSV file
-        dry_run: If True, skip writing to file
+        dry_run: If True, skip writing to DuckDB
         level: Filter by specific level (1-11) or None for all levels
         scheduled: If True, run in scheduled mode (quiet output)
-        output_hourly: If True, also generate health_hourly.csv
 
     Returns:
         Dictionary with ETL results
@@ -1268,7 +1061,6 @@ def run_etl_pipeline(output_path=None, dry_run=False, level=None, scheduled=Fals
         "rows_extracted": 0,
         "rows_transformed": 0,
         "rows_loaded": 0,
-        "output_path": output_path or OUTPUT_FILE,
         "level_filter": level,
     }
 
@@ -1295,21 +1087,7 @@ def run_etl_pipeline(output_path=None, dry_run=False, level=None, scheduled=Fals
     # STEP 3: LOAD
     if dry_run:
         print("\n[DRY RUN] Skipping file write")
-        results["rows_loaded"] = len(df_scores)
-    else:
-        # CSV writes disabled — DuckDB is now the sole LOAD destination
-        # start_timer("STEP 3: Load to CSV")
-        # rows_written = load_to_csv(df_scores, output_path)
-        # step_timings["load"] = end_timer("STEP 3: Load to CSV")
-        results["rows_loaded"] = len(df_scores)
-
-        # STEP 3b: Load hourly CSV (append-only for 24h chart) - conditional
-        # if output_hourly:
-        #     start_timer("STEP 3b: Load hourly CSV")
-        #     hourly_written = save_hourly_health(df_scores)
-        #     step_timings["load_hourly"] = end_timer("STEP 3b: Load hourly CSV")
-        #     if hourly_written:
-        #         results["rows_loaded_hourly"] = len(df_scores)
+    results["rows_loaded"] = len(df_scores)
 
     # STEP 3c: Load to DuckDB (always runs, passes dry_run flag)
     save_health_duckdb(df_scores, dry_run=dry_run)
@@ -1329,7 +1107,6 @@ def run_etl_pipeline(output_path=None, dry_run=False, level=None, scheduled=Fals
         print(f"  Rows extracted:   {results['rows_extracted']}")
         print(f"  Rows transformed: {results['rows_transformed']}")
         print(f"  Rows loaded:      {results['rows_loaded']}")
-        print(f"  Output file:      {results['output_path']}")
         if level:
             print(f"  Level filter:     Level {level} only")
         print("-"*70)
@@ -1364,19 +1141,12 @@ def main():
 Example usage:
   python3 scripts/run_health_etl.py                    # Run full pipeline
   python3 scripts/run_health_etl.py --dry-run          # Test without writing
-  python3 scripts/run_health_etl.py -o custom.csv    # Custom output file
   python3 scripts/run_health_etl.py --level 1          # Test Level 1 only (22 AHUs)
   python3 scripts/run_health_etl.py --level all        # All levels
 
 Output:
-  data/health_all_levels.csv
+  data/healthdb.duckdb  (health_hourly table, upserted idempotently)
 """
-    )
-
-    parser.add_argument(
-        "--output", "-o",
-        default=None,
-        help="Output CSV file path (default: data/health_all_levels.csv)"
     )
 
     parser.add_argument(
@@ -1397,12 +1167,6 @@ Output:
         help="Run in scheduled mode (quiet output, automatic settings)"
     )
 
-    parser.add_argument(
-        "--output-hourly",
-        action="store_true",
-        help="Generate health_hourly.csv (hourly append mode)"
-    )
-
     args = parser.parse_args()
 
     # Parse level filter
@@ -1417,17 +1181,11 @@ Output:
             print(f"Error: Invalid level '{args.level}'. Must be integer 1-11 or 'all'")
             sys.exit(1)
 
-    # Set default output path
-    if args.output is None:
-        args.output = OUTPUT_FILE
-
     # Run pipeline
     results = run_etl_pipeline(
-        output_path=args.output,
         dry_run=args.dry_run,
         level=level_filter,
         scheduled=args.scheduled,
-        output_hourly=args.output_hourly
     )
 
     # Exit with appropriate code
