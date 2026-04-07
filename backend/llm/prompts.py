@@ -443,9 +443,11 @@ Remember: output ONLY the JSON object. Nothing before it. Nothing after it."""
 
 # ── V2 Chat System Prompt (agentic tool-use) ──────────────────────────────────
 
+from typing import Dict, List, Optional
+
 from config import get_building_name, get_department
 
-PERSONA_BLOCKS: dict[str, str] = {
+PERSONA_BLOCKS: Dict[str, str] = {
     "general": (
         "The user is not technical. Use plain language and everyday analogies. "
         "Avoid electrical jargon — if you must use a term, define it immediately. "
@@ -475,7 +477,7 @@ PERSONA_BLOCKS: dict[str, str] = {
 
 # ── Ward config helpers ───────────────────────────────────────────────────────
 
-def _resolve_devices(level: dict, prefix: str) -> list[str]:
+def _resolve_devices(level: dict, prefix: str) -> List[str]:
     """Mirror of scripts/generate_ward_docs.resolve_devices — kept local to avoid cross-package imports."""
     if "devices" in level:
         return list(level["devices"])
@@ -485,7 +487,7 @@ def _resolve_devices(level: dict, prefix: str) -> list[str]:
     raise ValueError(f"Level {level.get('level')} must have 'devices' or 'ahus'.")
 
 
-def load_ward_config() -> dict | None:
+def load_ward_config() -> Optional[dict]:
     """Load ward_config.yml (or example fallback). Returns None if unavailable."""
     import os
     from pathlib import Path
@@ -522,7 +524,7 @@ def _topology_block() -> str:
     if config:
         prefix = config.get("device_prefix", "e")
         levels = config["levels"]
-        all_devices: list[str] = []
+        all_devices: List[str] = []
         for lvl in levels:
             try:
                 all_devices.extend(_resolve_devices(lvl, prefix))
