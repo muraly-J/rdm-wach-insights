@@ -3,7 +3,7 @@
 scheduler.py — Automated ETL Pipeline Scheduler
 
 Runs both ETL pipelines every 30 minutes:
-1. Prediction ETL (generates predictions.csv)
+1. Prediction ETL (upserts predictions to healthdb.duckdb)
 2. Health Scoring ETL (uses predictions for scoring)
 
 Usage:
@@ -234,12 +234,13 @@ Examples:
         log_scheduler("[DRY-RUN] Prediction ETL would run:")
         log_scheduler("  - Fetch hourly energy data for all AHUs")
         log_scheduler("  - Compute predictions using 3-slot average")
-        log_scheduler("  - Store in data/predictions.csv")
+        log_scheduler("  - Upsert to DuckDB predictions table")
         log_scheduler("")
         log_scheduler("[DRY-RUN] Health Scoring ETL would run:")
-        log_scheduler("  - Fetch latest metrics from InfluxDB")
+        log_scheduler("  - Resume from latest DuckDB timestamp")
+        log_scheduler("  - Fetch new metrics from InfluxDB")
         log_scheduler("  - Compute FAIR health scores for all AHUs")
-        log_scheduler("  - Store in data/health_all_levels.csv")
+        log_scheduler("  - Upsert to DuckDB health_hourly table")
     else:
         log_scheduler(f"Scheduler PID: {os.getpid()}")
         log_scheduler("")

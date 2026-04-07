@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-E2E pipeline smoke test: CSV → API → Dashboard → Chat
+E2E pipeline smoke test: DuckDB → API → Dashboard → Chat
 
 Validates the full data path without requiring InfluxDB to be live.
-Uses existing CSVs and calls the running backend.
+Uses existing DuckDB data and calls the running backend.
 
 Usage:
     API_KEY=<your-key> python scripts/test/test_e2e_pipeline.py
@@ -17,7 +17,6 @@ import sys
 import pathlib
 
 import requests
-import pandas as pd
 
 BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8081")
 API_KEY  = os.getenv("API_KEY", "")
@@ -39,39 +38,32 @@ def check(name: str, condition: bool, detail: str = "") -> bool:
 
 
 # ─────────────────────────────────────────────────────────────
-# 1. CSV Integrity
+# 1. DuckDB Integrity
 # ─────────────────────────────────────────────────────────────
 def test_csv_integrity() -> bool:
-    print("\n=== 1. CSV Integrity ===")
+    print("\n=== 1. DuckDB Integrity ===")
     ok = True
+    results = []
 
-    # health_all_levels.csv: expect >100K rows
-    path = DATA_DIR / "health_all_levels.csv"
-    df = pd.read_csv(path)
-    ok &= check(
-        "health_all_levels.csv loaded with >100K rows",
-        len(df) >= 100_000,
-        f"{len(df):,} rows"
-    )
-    ok &= check(
-        "health_all_levels.csv has health_index column",
-        "health_index" in df.columns,
-        str(list(df.columns[:6]))
-    )
+    # healthdb.duckdb: expect >100K rows in health_hourly table
+    import duckdb as _duckdb
+    db_path = DATA_DIR / "healthdb.duckdb"
+    if db_path.exists():
+        conn = _duckdb.connect(str(db_path), read_only=True)
+        row_count = conn.execute("SELECT COUNT(*) FROM health_hourly").fetchone()[0]
+        pred_count = conn.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
+        col_names = conn.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_name='health_hourly'"
+        ).df()["column_name"].tolist()
+        conn.close()
+        results.append((row_count > 100_000, f"health_hourly has >100K rows (got {row_count})"))
+        results.append((pred_count >= 100, f"predictions has >=100 rows (got {pred_count})"))
+        results.append(("ahu_id" in col_names, "health_hourly has ahu_id column"))
+    else:
+        results.append((False, f"healthdb.duckdb not found at {db_path}"))
 
-    # predictions.csv: expect ~121 rows (one per AHU), column is device_id
-    path = DATA_DIR / "predictions.csv"
-    preds = pd.read_csv(path)
-    ok &= check(
-        "predictions.csv loaded with >=100 rows",
-        len(preds) >= 100,
-        f"{len(preds)} rows"
-    )
-    ok &= check(
-        "predictions.csv has device_id column",
-        "device_id" in preds.columns,
-        str(list(preds.columns[:5]))
-    )
+    for condition, detail in results:
+        ok &= check(detail, condition)
 
     return ok
 

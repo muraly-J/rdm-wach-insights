@@ -44,7 +44,7 @@ export async function fetchLevels(): Promise<LevelsResponse> {
 }
 
 /**
- * GET /api/level/{id}/health-index — Health index time series (CSV-backed)
+ * GET /api/level/{id}/health-index — Health index time series
  */
 export async function fetchHealthIndex(
   levelId: number,
@@ -57,7 +57,7 @@ export async function fetchHealthIndex(
 }
 
 /**
- * GET /api/level/{id}/scores — Five FAIR-score breakdown (CSV-backed)
+ * GET /api/level/{id}/scores — Five FAIR-score breakdown
  */
 export async function fetchScoreBreakdown(
   levelId: number,

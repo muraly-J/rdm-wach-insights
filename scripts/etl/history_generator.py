@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 history_generator.py — Full Historical ETL Pipeline (One-Shot)
 
 Generates complete historical data from earliest available timestamp to latest:
-1. Prediction ETL (generates predictions.csv)
-2. Health Scoring ETL (uses predictions for health scores)
+1. Prediction ETL → writes to DuckDB predictions table
+2. Health Scoring ETL → writes to DuckDB health_hourly table
 
 This is a one-shot script - it runs once and exits (no scheduling).
 
@@ -12,18 +13,17 @@ Usage:
     python3 scripts/history_generator.py
     python3 scripts/history_generator.py --level all --verbose
 
-    # Run only Phase 1 (prediction ETL), then exit — saves predictions.csv
+    # Run only Phase 1 (prediction ETL), then exit
     python3 scripts/history_generator.py --phase1-only
 
-    # Skip Phase 1, load predictions from existing CSV, run health scoring
+    # Skip Phase 1, load predictions from DuckDB, run health scoring
     python3 scripts/history_generator.py --skip-phase1
 
     # Resume a cancelled run — load metric parquet cache + skip Phase 1
     python3 scripts/history_generator.py --skip-phase1 --use-cache
 
 Output:
-    data/predictions.csv       - Energy predictions with actual vs predicted values
-    data/health_all_levels.csv - Health scores with tiers and safety flags
+    data/healthdb.duckdb  - Health scores and predictions (DuckDB)
 
 Cache (for resume):
     data/metric_cache/{metric}.parquet  - Per-metric raw data, saved after each fetch
@@ -61,9 +61,6 @@ from models.schemas import (
 # Configuration
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
-PREDICTIONS_FILE = os.path.join(DATA_DIR, "predictions.csv")
-HEALTH_FILE = os.path.join(DATA_DIR, "health_all_levels.csv")
-HOURLY_FILE = os.path.join(DATA_DIR, "health_hourly.csv")
 DEFAULT_CACHE_DIR = os.path.join(DATA_DIR, "metric_cache")
 
 # Statistics
@@ -1104,43 +1101,23 @@ def run_health_etl_historical(
     return df_health
 
 
-def save_predictions(predictions_df: pd.DataFrame):
-    """Save predictions to CSV."""
-    log_info(f"Saving predictions to {PREDICTIONS_FILE}...")
-
+def save_predictions_to_duckdb(predictions_df: pd.DataFrame) -> int:
+    """Upsert predictions into DuckDB predictions table."""
+    from core.healthdb import HealthDB
+    log_info("Saving predictions to DuckDB...")
     if predictions_df.empty:
-        log_error("No data to save!")
-        return False
-
-    os.makedirs(os.path.dirname(PREDICTIONS_FILE), exist_ok=True)
-    predictions_df.to_csv(PREDICTIONS_FILE, index=False)
-    log_info(f"Saved {len(predictions_df)} records to predictions.csv")
-
-    return True
-
-
-def save_health_scores(health_df: pd.DataFrame):
-    """Save health scores to CSV, overwriting any existing data."""
-    log_info(f"Saving health scores to {HEALTH_FILE}...")
-    if health_df.empty:
-        log_error("No data to save!")
-        return False
-    os.makedirs(os.path.dirname(HEALTH_FILE), exist_ok=True)
-    health_df.to_csv(HEALTH_FILE, index=False)
-    log_info(f"Wrote {len(health_df)} records to health_all_levels.csv (overwrite)")
-    return True
-
-
-def save_hourly_scores(health_df: pd.DataFrame):
-    """Save hourly health scores to CSV, overwriting any existing data."""
-    log_info(f"Saving hourly health scores to {HOURLY_FILE}...")
-    if health_df.empty:
-        log_error("No data to save!")
-        return False
-    os.makedirs(os.path.dirname(HOURLY_FILE), exist_ok=True)
-    health_df.to_csv(HOURLY_FILE, index=False)
-    log_info(f"Wrote {len(health_df)} records to health_hourly.csv (overwrite)")
-    return True
+        log_error("No predictions to save!")
+        return 0
+    try:
+        db_df = predictions_df.copy()
+        if 'device_id' in db_df.columns and 'ahu_id' not in db_df.columns:
+            db_df = db_df.rename(columns={'device_id': 'ahu_id'})
+        rows = HealthDB().upsert_predictions(db_df)
+        log_info(f"[OK] Written {rows} rows to DuckDB predictions table")
+        return rows
+    except Exception as e:
+        log_error(f"DuckDB predictions write failed: {e}")
+        return 0
 
 
 def save_to_duckdb(health_df: pd.DataFrame) -> int:
@@ -1215,13 +1192,12 @@ def main():
 Examples:
   python scripts/history_generator.py              # Run complete ETL
   python scripts/history_generator.py --dry-run    # Show plan without executing
-  python scripts/history_generator.py --phase1-only         # Phase 1 only (saves predictions.csv)
-  python scripts/history_generator.py --skip-phase1         # Phase 2 only (loads existing predictions.csv)
+  python scripts/history_generator.py --phase1-only         # Phase 1 only (saves predictions to DuckDB)
+  python scripts/history_generator.py --skip-phase1         # Phase 2 only (loads existing predictions from DuckDB)
   python scripts/history_generator.py --skip-phase1 --use-cache  # Resume a cancelled run
 
 Output:
-  data/predictions.csv       - Energy predictions
-  data/health_all_levels.csv - Health scores with tiers and safety flags
+  data/healthdb.duckdb  - Health scores and predictions (DuckDB)
 
 Cache (resume support):
   data/metric_cache/{metric}.parquet  - Saved after each metric fetch; loaded on --use-cache
@@ -1257,13 +1233,13 @@ Cache (resume support):
     parser.add_argument(
         '--phase1-only',
         action='store_true',
-        help="Run only Phase 1 (prediction ETL), save predictions.csv, then exit"
+        help="Run only Phase 1 (prediction ETL), save predictions to DuckDB, then exit"
     )
 
     parser.add_argument(
         '--skip-phase1',
         action='store_true',
-        help="Skip Phase 1 — load predictions from existing predictions.csv and run health scoring"
+        help="Skip Phase 1 — load predictions from DuckDB and run health scoring"
     )
 
     parser.add_argument(
@@ -1300,7 +1276,7 @@ Cache (resume support):
         log_info("=" * 70)
         log_info("DRY-RUN MODE - Showing plan only")
         log_info("=" * 70)
-        phase1_label = "SKIP (loading predictions.csv)" if args.skip_phase1 else "RUN"
+        phase1_label = "SKIP (loading predictions from DuckDB)" if args.skip_phase1 else "RUN"
         log_info(f"Phase 1: Prediction ETL [{phase1_label}]")
         if not args.skip_phase1:
             log_info(f"  - Query InfluxDB for earliest available data timestamp")
@@ -1308,7 +1284,7 @@ Cache (resume support):
             log_info(f"  - Compute hourly_delta(t) = E(t) - E(t-1h)")
             log_info(f"  - Compute predicted_delta(t) = avg(δ(t−24h), δ(t−168h), δ(t−336h))")
             log_info(f"  - Compute energy_anomaly = hourly_delta(t) − predicted_delta(t)")
-            log_info(f"  - Output: data/predictions.csv")
+            log_info(f"  - Output: DuckDB predictions table")
         if args.phase1_only:
             log_info("  --phase1-only: will exit after Phase 1")
         else:
@@ -1320,7 +1296,7 @@ Cache (resume support):
                 log_info(f"  - Metrics with existing .parquet in {args.cache_dir} will be loaded from cache")
             log_info(f"  - Compute FAIR health scores for all devices")
             log_info(f"  - Apply safety flags for engineering audit")
-            log_info(f"  - Output: data/health_all_levels.csv + data/health_hourly.csv")
+            log_info(f"  - Output: DuckDB health_hourly table")
         log_info("")
         devices = get_all_devices()
         log_info(f"Estimated devices to process: {len(devices)} AHUs across all levels")
@@ -1374,19 +1350,18 @@ Cache (resume support):
     # Phase 1: Prediction ETL
     # -------------------------------------------------------------------------
     if args.skip_phase1:
-        # Load predictions from existing CSV instead of re-fetching InfluxDB
+        # Load predictions from DuckDB instead of re-fetching InfluxDB
         log_info("")
-        log_info("Phase 1: SKIPPED — loading predictions from existing CSV")
+        log_info("Phase 1: SKIPPED — loading predictions from DuckDB")
         log_info("-" * 50)
-        if not os.path.exists(PREDICTIONS_FILE):
-            log_error(f"predictions.csv not found at {PREDICTIONS_FILE} — cannot skip Phase 1!")
+        from core.healthdb import HealthDB
+        predictions_df = HealthDB().get_all_predictions(
+            ahu_ids=devices if args.devices else None
+        )
+        if predictions_df.empty:
+            log_error("No predictions found in DuckDB — cannot skip Phase 1!")
             return 1
-        predictions_df = pd.read_csv(PREDICTIONS_FILE, parse_dates=['timestamp'])
-        log_info(f"Loaded {len(predictions_df)} rows from {PREDICTIONS_FILE}")
-        if args.devices:
-            before = len(predictions_df)
-            predictions_df = predictions_df[predictions_df['ahu_id'].isin(devices)]
-            log_info(f"  --devices filter: {before} → {len(predictions_df)} rows ({len(devices)} devices)")
+        log_info(f"Loaded {len(predictions_df)} rows from DuckDB predictions table")
     else:
         log_info("")
         log_info("Phase 1: Running Prediction ETL")
@@ -1402,7 +1377,7 @@ Cache (resume support):
         if predictions_df.empty:
             log_error("Prediction ETL produced no data!")
         else:
-            save_predictions(predictions_df)
+            save_predictions_to_duckdb(predictions_df)
 
     if args.phase1_only:
         elapsed = (datetime.now() - start_time).total_seconds()
@@ -1436,8 +1411,6 @@ Cache (resume support):
     if health_df.empty:
         log_error("Health Scoring ETL produced no data!")
     else:
-        save_health_scores(health_df)
-        save_hourly_scores(health_df)
         save_to_duckdb(health_df)
 
     # Summary

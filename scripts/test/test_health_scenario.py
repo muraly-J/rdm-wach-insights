@@ -4,9 +4,9 @@ Scenario test: health question → live data → prediction chart → energy ano
 
 Validates the specific user journey described in the project spec:
   A. User asks a health question → chatbot replies with real device IDs
-  B. Dashboard /api/level/{id}/scores reflects current CSV data (not stale cache)
+  B. Dashboard /api/level/{id}/scores reflects current DuckDB data (not stale cache)
   C. Prediction chart is accessible for e0202 via /api/predictions/{device_id}
-  D. Energy anomaly score exists for a device that has a row in predictions.csv
+  D. Energy anomaly score exists for a device that has a row in the predictions table
 
 Usage:
     API_KEY=<your-key> python scripts/test/test_health_scenario.py
@@ -21,7 +21,6 @@ import sys
 import pathlib
 
 import requests
-import pandas as pd
 
 BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8081")
 API_KEY  = os.getenv("API_KEY", "")
@@ -81,34 +80,37 @@ def scenario_chat_health_question() -> bool:
 
 
 # ─────────────────────────────────────────────────────────────
-# Scenario B: Dashboard scores reflect current CSV data
+# Scenario B: Dashboard scores reflect current DuckDB data
 # ─────────────────────────────────────────────────────────────
 def scenario_dashboard_live_scores() -> bool:
     """
     The health_index returned by /api/level/1/scores for a device should be
-    within 5 points of the most recent value in health_all_levels.csv.
+    within 5 points of the most recent value in the DuckDB health_hourly table.
     Tolerance of 5 accounts for rounding and potential use of fresher InfluxDB data.
     """
-    print("\n=== Scenario B: Dashboard scores reflect current CSV data ===")
-    df = pd.read_csv(DATA_DIR / "health_all_levels.csv")
+    print("\n=== Scenario B: Dashboard scores reflect current DuckDB data ===")
+    import sys as _sys
+    _sys.path.insert(0, str(DATA_DIR.parent / "backend"))
+    from core.healthdb import HealthDB
+    df = HealthDB().get_latest_snapshot()
 
-    # Filter to level 1 devices (device_id starts with e01)
-    level1 = df[df["device_id"].str.startswith("e01", na=False)].copy()
+    # Filter to level 1 devices (ahu_id starts with e01)
+    level1 = df[df["ahu_id"].str.startswith("e01", na=False)].copy()
     if level1.empty:
-        print(f"  [{SKIP}] No level-1 rows found in CSV")
+        print(f"  [{SKIP}] No level-1 rows found in DuckDB")
         return True
 
     # Get most recent row per device
     latest = (
         level1.sort_values("timestamp")
-              .groupby("device_id")
+              .groupby("ahu_id")
               .last()
               .reset_index()
     )
     # Pick the first device alphabetically for a deterministic test
-    latest = latest.sort_values("device_id")
+    latest = latest.sort_values("ahu_id")
     sample      = latest.iloc[0]
-    csv_device  = sample["device_id"]
+    csv_device  = sample["ahu_id"]
     csv_hi      = float(sample.get("health_index", -1))
 
     try:
@@ -129,9 +131,9 @@ def scenario_dashboard_live_scores() -> bool:
 
     api_hi = float(api_by_device[csv_device].get("health_index", -999))
     ok &= check(
-        f"{csv_device} health_index within 5 pts of latest CSV value",
+        f"{csv_device} health_index within 5 pts of latest DuckDB value",
         abs(api_hi - csv_hi) <= 5,
-        f"API={api_hi:.1f}  CSV={csv_hi:.1f}  diff={abs(api_hi - csv_hi):.1f}"
+        f"API={api_hi:.1f}  DuckDB={csv_hi:.1f}  diff={abs(api_hi - csv_hi):.1f}"
     )
     return ok
 
@@ -171,32 +173,36 @@ def scenario_prediction_chart_accessible() -> bool:
 
 
 # ─────────────────────────────────────────────────────────────
-# Scenario D: Energy anomaly score exists for a device in predictions.csv
+# Scenario D: Energy anomaly score exists for a device in the predictions table
 # ─────────────────────────────────────────────────────────────
 def scenario_energy_anomaly_coherence() -> bool:
     """
-    predictions.csv stores the energy anomaly baseline per AHU (column: device_id).
+    The predictions DuckDB table stores the energy anomaly baseline per AHU (column: ahu_id).
     The health scores API should include an energy_anomaly component score (0–1)
-    for a device that has a corresponding row in predictions.csv.
+    for a device that has a corresponding row in the predictions table.
     """
-    print("\n=== Scenario D: Energy anomaly score exists for a device in predictions.csv ===")
+    print("\n=== Scenario D: Energy anomaly score exists for a device in predictions table ===")
 
-    preds = pd.read_csv(DATA_DIR / "predictions.csv")
-
-    # predictions.csv uses 'device_id', not 'device_id'
-    if "device_id" not in preds.columns:
-        print(f"  [{SKIP}] predictions.csv missing 'device_id' column — see GAP-003 in INTEGRATION_BUGS.md")
+    import sys as _sys
+    _sys.path.insert(0, str(DATA_DIR.parent / "backend"))
+    from core.healthdb import HealthDB
+    preds = HealthDB().get_latest_predictions()
+    if preds.empty:
+        print(f"  [{SKIP}] No predictions in DuckDB")
+        return True
+    if "ahu_id" not in preds.columns:
+        print(f"  [{SKIP}] predictions missing 'ahu_id' column")
         return True
 
-    valid = preds.dropna(subset=["device_id"])
+    valid = preds.dropna(subset=["ahu_id"])
     if valid.empty:
-        print(f"  [{SKIP}] No valid device_id rows in predictions.csv")
+        print(f"  [{SKIP}] No valid ahu_id rows in predictions table")
         return True
 
     # Pick a stable device: prefer e0202 since it also has XGBoost model
-    preferred = valid[valid["device_id"] == "e0202"]
+    preferred = valid[valid["ahu_id"] == "e0202"]
     sample_row   = preferred.iloc[0] if not preferred.empty else valid.iloc[0]
-    device_id    = sample_row["device_id"]
+    device_id    = sample_row["ahu_id"]
     level_num    = int(str(device_id)[1:3])  # e.g. e0202 → level 2
 
     try:
