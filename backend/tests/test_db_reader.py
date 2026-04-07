@@ -119,3 +119,26 @@ def test_get_health_index_series_30d_resamples(tmp_path, monkeypatch):
     result = dr.get_health_index_series(level=1, device_id=None, time_range="30d")
     assert len(result) == 1  # one AHU
     assert len(result[0]["data"]) == 2  # two daily points
+
+
+# ── API endpoint smoke test ────────────────────────────────────────────────────
+
+def test_level_scores_returns_fair_score_names():
+    """GET /api/level/1/scores must return FAIR score names, not mock/fake names."""
+    import sys, os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    from fastapi.testclient import TestClient
+    from main import app
+    client = TestClient(app)
+    resp = client.get("/api/level/1/scores?time_range=7d")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "devices" in data
+    if data["devices"]:
+        scores = data["devices"][0]["scores"]
+        fake_names = {"temperature", "vibration", "pressure", "airflow", "energy"}
+        fair_names = {"energy_anomaly", "pf_degradation", "phase_imbalance", "thd_drift", "overload"}
+        assert not set(scores.keys()).intersection(fake_names), \
+            f"Found fake score names: {set(scores.keys()).intersection(fake_names)}"
+        assert fair_names.issubset(set(scores.keys())), \
+            f"Missing FAIR score names: {fair_names - set(scores.keys())}"

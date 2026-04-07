@@ -152,7 +152,7 @@ class TestErrorResponseSanitization:
     """HTTP 500 responses must not leak internal exception details."""
 
     def test_health_index_error_does_not_leak_exception(self, monkeypatch):
-        """health-index endpoint must return generic message when csv_reader throws."""
+        """health-index endpoint must not leak internal file paths in error responses."""
         import routes.health_scores as hs_mod
         import main as main_mod
 
