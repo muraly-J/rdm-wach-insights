@@ -1,10 +1,9 @@
 import React from 'react';
 
 interface ChatHeaderProps {
-  isOpen: boolean;
-  onClose: () => void;
   isMinimized: boolean;
   onMinimize: () => void;
+  onClose: () => void;
 }
 
 /**
@@ -14,7 +13,7 @@ interface ChatHeaderProps {
  * Left: accent dot + "WACH AI"
  * Right: minimize button (─) + close button (✕)
  */
-const ChatHeader: React.FC<ChatHeaderProps> = ({ isOpen, onClose, isMinimized, onMinimize }) => {
+const ChatHeader: React.FC<ChatHeaderProps> = ({ isMinimized, onMinimize, onClose }) => {
   return (
     <div
       className="

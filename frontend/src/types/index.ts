@@ -61,11 +61,18 @@ export interface AppState {
 }
 
 // Chat types (from spec Section 6)
+export interface NavigateTarget {
+  level: number;
+  device?: string;
+  view?: 'dashboard' | 'prediction';
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'bot';
   content: string;
   timestamp: Date;
+  navigate?: NavigateTarget | null;
 }
 
 // API Response Types (from spec Section 9)
