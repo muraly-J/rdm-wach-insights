@@ -72,3 +72,44 @@ describe('useAppStore — chat state', () => {
     expect(useAppStore.getState().chatOpen).toBe(false);
   });
 });
+
+describe('useAppStore — dashboard mode', () => {
+  it('dashboardMode defaults to simple', () => {
+    expect(useAppStore.getState().dashboardMode).toBe('simple');
+  });
+
+  it('setDashboardMode updates dashboardMode', () => {
+    useAppStore.getState().setDashboardMode('deepdive');
+    expect(useAppStore.getState().dashboardMode).toBe('deepdive');
+  });
+
+  it('deepDiveSubMode defaults to single', () => {
+    expect(useAppStore.getState().deepDiveSubMode).toBe('single');
+  });
+
+  it('setDeepDiveSubMode updates deepDiveSubMode', () => {
+    useAppStore.getState().setDeepDiveSubMode('compare');
+    expect(useAppStore.getState().deepDiveSubMode).toBe('compare');
+  });
+
+  it('compareDevices defaults to empty array', () => {
+    expect(useAppStore.getState().compareDevices).toEqual([]);
+  });
+
+  it('setCompareDevices replaces the array', () => {
+    useAppStore.getState().setCompareDevices(['e0101', 'e0202']);
+    expect(useAppStore.getState().compareDevices).toEqual(['e0101', 'e0202']);
+  });
+
+  it('setCompareDevices enforces max 3 devices', () => {
+    useAppStore.getState().setCompareDevices(['e0101', 'e0202', 'e0303', 'e0404']);
+    expect(useAppStore.getState().compareDevices).toHaveLength(3);
+  });
+});
+
+describe('useAppStore — timeRange all', () => {
+  it('setTimeRange accepts all', () => {
+    useAppStore.getState().setTimeRange('all');
+    expect(useAppStore.getState().timeRange).toBe('all');
+  });
+});

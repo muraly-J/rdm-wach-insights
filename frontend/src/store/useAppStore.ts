@@ -5,7 +5,7 @@ import { AppState, ChatMessage, DashboardData, FinancialImpact, SiteSummaryData 
 const INITIAL_BOT_MESSAGE: ChatMessage = {
   id: 'init-1',
   role: 'bot',
-  content: "Hey! I'm WACH AI. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
+  content: "Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
   timestamp: new Date(),
 };
 
@@ -20,7 +20,9 @@ export const initialState: AppState = {
   heroVisible: true,
 };
 
-export type TimeRange = '24h' | '7d' | '30d';
+export type TimeRange = '24h' | '7d' | '30d' | 'all';
+export type DashboardMode = 'simple' | 'deepdive';
+export type DeepDiveSubMode = 'single' | 'compare';
 
 // Zustand store (from spec Section 8.1)
 interface AppStore extends AppState {
@@ -65,6 +67,22 @@ interface AppStore extends AppState {
   // Hero visibility
   heroVisible: boolean;
   setHeroVisible: (visible: boolean) => void;
+
+  // Dashboard mode
+  dashboardMode: DashboardMode;
+  setDashboardMode: (mode: DashboardMode) => void;
+
+  // Deep dive sub-mode
+  deepDiveSubMode: DeepDiveSubMode;
+  setDeepDiveSubMode: (mode: DeepDiveSubMode) => void;
+
+  // Compare devices
+  compareDevices: string[];
+  setCompareDevices: (devices: string[]) => void;
+
+  // Chat mode
+  chatMode: 'sidebar' | 'fullscreen';
+  setChatMode: (mode: 'sidebar' | 'fullscreen') => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -112,4 +130,20 @@ export const useAppStore = create<AppStore>((set) => ({
 
   // Hero visibility
   setHeroVisible: (visible) => set({ heroVisible: visible }),
+
+  // Dashboard mode
+  dashboardMode: 'simple',
+  setDashboardMode: (mode) => set({ dashboardMode: mode }),
+
+  // Deep dive sub-mode
+  deepDiveSubMode: 'single',
+  setDeepDiveSubMode: (mode) => set({ deepDiveSubMode: mode }),
+
+  // Compare devices
+  compareDevices: [],
+  setCompareDevices: (devices) => set({ compareDevices: devices.slice(0, 3) }),
+
+  // Chat mode
+  chatMode: 'sidebar',
+  setChatMode: (mode) => set({ chatMode: mode }),
 }));
