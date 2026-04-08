@@ -58,7 +58,7 @@ export async function fetchLevelDevices(levelId: number): Promise<{
  */
 export async function fetchHealthIndex(
   levelId: number,
-  range: '24h' | '7d' | '30d',
+  range: '24h' | '7d' | '30d' | 'all',
   deviceId?: string | null
 ): Promise<HealthIndexResponse> {
   const params = new URLSearchParams({ time_range: range });
@@ -71,7 +71,7 @@ export async function fetchHealthIndex(
  */
 export async function fetchScoreBreakdown(
   levelId: number,
-  range: '24h' | '7d' | '30d'
+  range: '24h' | '7d' | '30d' | 'all'
 ): Promise<ScoresResponse> {
   return apiFetch<ScoresResponse>(`/level/${levelId}/scores?time_range=${range}`);
 }
@@ -82,7 +82,7 @@ export async function fetchScoreBreakdown(
  */
 export async function fetchRawScoreRelationship(
   deviceId: string,
-  range: '24h' | '7d' | '30d'
+  range: '24h' | '7d' | '30d' | 'all'
 ): Promise<Record<string, unknown>> {
   return apiFetch(`/device/${deviceId}/raw-score-relationship?range=${range}`);
 }
@@ -146,7 +146,7 @@ export async function fetchDashboardSafetyFlags(
 export async function fetchMeasurements(
   deviceId: string,
   metrics: string[],
-  range: '24h' | '7d' | '30d'
+  range: '24h' | '7d' | '30d' | 'all'
 ): Promise<MeasurementsResponse> {
   const params = new URLSearchParams({ metrics: metrics.join(','), range });
   return apiFetch<MeasurementsResponse>(`/device/${deviceId}/measurements?${params}`);
@@ -156,7 +156,7 @@ export async function fetchMeasurements(
  * GET /api/site/summary — Site-wide aggregated summary across all levels
  */
 export async function fetchSiteSummary(
-  range: '24h' | '7d' | '30d' = '7d'
+  range: '24h' | '7d' | '30d' | 'all' = '7d'
 ): Promise<SiteSummaryData> {
   return apiFetch<SiteSummaryData>(`/site/summary?range=${range}`);
 }

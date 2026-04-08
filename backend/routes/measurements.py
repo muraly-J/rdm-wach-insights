@@ -21,6 +21,7 @@ _RANGE_MAP = {
     "24h": "last_24h",
     "7d":  "last_7d",
     "30d": "last_30d",
+    "all": "all",
 }
 
 
@@ -28,7 +29,7 @@ _RANGE_MAP = {
 async def get_measurements(
     device_id: str,
     metrics: str = Query(..., description="Comma-separated metric names"),
-    range: str = Query(default="7d", description="24h | 7d | 30d"),
+    range: str = Query(default="7d", description="24h | 7d | 30d | all"),
 ):
     # Validate device ID
     if device_id not in ALLOWED_DEVICES:

@@ -53,10 +53,11 @@ function getStatus(score: number): AHUStatus {
   return 'Critical';
 }
 
-/** Normalise the app's TimeRange (which may be 'all') down to a valid API range */
-function toApiRange(timeRange: string): '24h' | '7d' | '30d' {
+/** Pass through the app's TimeRange, including 'all' if set */
+function toApiRange(timeRange: string): '24h' | '7d' | '30d' | 'all' {
   if (timeRange === '24h') return '24h';
   if (timeRange === '7d') return '7d';
+  if (timeRange === 'all') return 'all';
   return '30d';
 }
 
@@ -94,8 +95,8 @@ function App() {
     setError(null);
     const range = toApiRange(timeRange);
     Promise.all([
-      fetchHealthIndex(selectedLevel, range, selectedDevice),
-      fetchScoreBreakdown(selectedLevel, range),
+      fetchHealthIndex(selectedLevel, range as '24h' | '7d' | '30d' | 'all', selectedDevice),
+      fetchScoreBreakdown(selectedLevel, range as '24h' | '7d' | '30d' | 'all'),
     ])
       .then(([health, scores]) => {
         setHealthData(health);
@@ -108,14 +109,14 @@ function App() {
   React.useEffect(() => {
     if (!selectedDevice || selectedDevice === 'all') { setRawData(null); return; }
     const range = toApiRange(timeRange);
-    fetchRawScoreRelationship(selectedDevice, range)
+    fetchRawScoreRelationship(selectedDevice, range as '24h' | '7d' | '30d' | 'all')
       .then((data) => setRawData(data as RawScoreResponse))
       .catch(() => setRawData(null));
   }, [selectedDevice, timeRange]);
 
   React.useEffect(() => {
     const range = toApiRange(timeRange);
-    fetchSiteSummary(range)
+    fetchSiteSummary(range as '24h' | '7d' | '30d' | 'all')
       .then((data) => setSiteSummaryData(data))
       .catch(() => {});
   }, [timeRange, setSiteSummaryData]);
@@ -123,7 +124,7 @@ function App() {
   React.useEffect(() => {
     if (!selectedLevel) return;
     const range = toApiRange(timeRange);
-    fetchFinancialImpact(selectedLevel, range, selectedDevice !== 'all' ? selectedDevice : null)
+    fetchFinancialImpact(selectedLevel, range as '24h' | '7d' | '30d' | 'all', selectedDevice !== 'all' ? selectedDevice : null)
       .then((data) => setFinancialImpact(data))
       .catch(() => {});
   }, [selectedLevel, selectedDevice, timeRange, setFinancialImpact]);

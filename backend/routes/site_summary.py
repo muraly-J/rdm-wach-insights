@@ -31,7 +31,7 @@ async def get_site_summary(range: str = Query(default="7d", alias="range")):
     Uses CSV data for all health metrics (fast, no InfluxDB calls).
 
     Query params:
-      range: "24h" | "7d" (default) | "30d"
+      range: "24h" | "7d" (default) | "30d" | "all"
     """
     # Rename to avoid shadowing Python's built-in range()
     time_range_param = range

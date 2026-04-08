@@ -146,7 +146,7 @@ async def dashboard_ranking(
 @router.get("/trend")
 async def dashboard_trend(
     level: str = Query(default="1", description="Building level (1-11)"),
-    range: str = Query(default="7d", description="Time range: 24h, 7d, or 30d")
+    range: str = Query(default="7d", description="Time range: 24h, 7d, 30d, or all")
 ):
     """
     Get time-series health index data for all AHUs on a specific level.
@@ -158,10 +158,11 @@ async def dashboard_trend(
         - 24h: hourly data points (last 24 hours)
         - 7d: daily average data points (last 7 days)
         - 30d: daily average data points (last 30 days)
+        - all: all available historical data
 
     Parameters:
         level: Building level number (1-11)
-        range: Time range - 24h, 7d, or 30d
+        range: Time range - 24h, 7d, 30d, or all
 
     Example:
         GET /api/dashboard/trend?level=5&range=7d
@@ -176,7 +177,7 @@ async def dashboard_trend(
             raise HTTPException(status_code=400, detail="Level must be a valid number")
 
         # Validate range
-        valid_ranges = ["24h", "7d", "30d"]
+        valid_ranges = ["24h", "7d", "30d", "all"]
         if range not in valid_ranges:
             raise HTTPException(
                 status_code=400,
@@ -313,7 +314,7 @@ async def dashboard_trend(
 @router.get("/trend/csv")
 async def dashboard_trend_csv(
     level: str = Query(default="1", description="Building level (1-11)"),
-    range: str = Query(default="7d", description="Time range: 24h, 7d, or 30d")
+    range: str = Query(default="7d", description="Time range: 24h, 7d, 30d, or all")
 ):
     """
     Get time-series health index data for all AHUs on a specific level as CSV.
@@ -324,7 +325,7 @@ async def dashboard_trend_csv(
 
     Parameters:
         level: Building level number (1-11)
-        range: Time range - 24h, 7d, or 30d
+        range: Time range - 24h, 7d, 30d, or all
 
     Example:
         GET /api/dashboard/trend/csv?level=1&range=24h
@@ -355,7 +356,7 @@ async def dashboard_trend_csv(
             raise HTTPException(status_code=400, detail="Level must be a valid number")
 
         # Validate range
-        valid_ranges = ["24h", "7d", "30d"]
+        valid_ranges = ["24h", "7d", "30d", "all"]
         if range not in valid_ranges:
             raise HTTPException(
                 status_code=400,
@@ -363,7 +364,7 @@ async def dashboard_trend_csv(
             )
 
         # Map range to time_range parameter for risk engine
-        range_map = {"24h": "last_24h", "7d": "last_7d", "30d": "last_30d"}
+        range_map = {"24h": "last_24h", "7d": "last_7d", "30d": "last_30d", "all": "all"}
         time_range = range_map[range]
 
         # Get all available devices for this level
@@ -465,7 +466,7 @@ async def dashboard_trend_csv(
 @router.get("/summary")
 async def dashboard_summary(
     level: str = Query(default="1", description="Building level (1-11)"),
-    range: str = Query(default="7d", description="Time range: 24h, 7d, or 30d"),
+    range: str = Query(default="7d", description="Time range: 24h, 7d, 30d, or all"),
     ahu_id: str = Query(default=None, description="Optional specific AHU ID for per-device analysis")
 ):
     """
@@ -498,7 +499,7 @@ async def dashboard_summary(
             raise HTTPException(status_code=400, detail="Level must be a valid number")
 
         # Validate range
-        valid_ranges = ["24h", "7d", "30d"]
+        valid_ranges = ["24h", "7d", "30d", "all"]
         if range not in valid_ranges:
             raise HTTPException(
                 status_code=400,
@@ -506,7 +507,7 @@ async def dashboard_summary(
             )
 
         # Map range to time_range parameter
-        range_map = {"24h": "last_24h", "7d": "last_7d", "30d": "last_30d"}
+        range_map = {"24h": "last_24h", "7d": "last_7d", "30d": "last_30d", "all": "all"}
         time_range = range_map[range]
 
         # Import summarizer and config
@@ -794,7 +795,7 @@ async def dashboard_safety_flags(
 @router.get("/ahu-heatmap")
 async def ahu_heatmap(
     ahu_id: str = Query(..., description="AHU device ID, e.g. e0101"),
-    time_range: str = Query(default="7d", alias="range", description="Time range: 24h, 7d, or 30d"),
+    time_range: str = Query(default="7d", alias="range", description="Time range: 24h, 7d, 30d, or all"),
 ):
     """
     Return average health index per hour-of-day (0–23) for a specific AHU.
@@ -807,7 +808,7 @@ async def ahu_heatmap(
         { ahu_id, range, hours: [{hour: 0, avg_health: 87.2}, ...] }  (24 entries)
     """
     try:
-        valid_ranges = ["24h", "7d", "30d"]
+        valid_ranges = ["24h", "7d", "30d", "all"]
         if time_range not in valid_ranges:
             raise HTTPException(status_code=400, detail=f"Range must be one of: {', '.join(valid_ranges)}")
 
