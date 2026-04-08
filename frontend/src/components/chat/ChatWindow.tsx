@@ -8,8 +8,9 @@ import { sendChatMessage, NavigateTarget } from '../../api/client';
 import { useAppStore } from '../../store/useAppStore';
 
 interface ChatWindowProps {
-  isOpen: boolean;
+  mode: 'sidebar' | 'fullscreen';
   onClose: () => void;
+  onToggleMode: () => void;
 }
 
 interface Message {
@@ -22,10 +23,10 @@ interface Message {
 const INITIAL_MESSAGE: Message = {
   id: 'init-1',
   role: 'bot',
-  content: "Hey! I'm WACH AI. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
+  content: "Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
 };
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ mode, onClose, onToggleMode }) => {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [isTyping, setIsTyping] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -113,24 +114,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
     <motion.div
       layoutId="chat-window"
       className="
-        fixed z-50
-        bottom-0 right-0 left-0 sm:bottom-6 sm:right-6 sm:left-auto
-        w-full sm:w-[400px]
         bg-[#1c2431]
-        rounded-t-[20px] sm:rounded-[20px]
-        overflow-hidden max-h-[82dvh]
+        rounded-[12px]
+        overflow-hidden
         shadow-2xl border border-[#2e3f55]
         flex flex-col
       "
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-      initial={{ opacity: 0, scale: 0.9 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      style={{ height: isMinimized ? 'auto' : 'min(560px, 80dvh)' }}
+      style={{
+        height: mode === 'fullscreen' ? '100%' : (isMinimized ? 'auto' : 'min(560px, 80dvh)'),
+        width: mode === 'fullscreen' ? '100%' : undefined,
+      }}
     >
       <ChatHeader
-        isOpen={isOpen}
+        mode={mode}
         onClose={onClose}
+        onToggleMode={onToggleMode}
         isMinimized={isMinimized}
         onMinimize={() => setIsMinimized((v) => !v)}
       />

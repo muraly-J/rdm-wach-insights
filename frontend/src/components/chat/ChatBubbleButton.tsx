@@ -16,6 +16,7 @@ const ChatBubbleButton: React.FC<ChatBubbleButtonProps> = ({ onClick }) => {
   return (
     <motion.button
       onClick={onClick}
+      title="Chat with RDM-Atlas"
       className="
         fixed bottom-6 right-6 z-50
         w-[56px] h-[56px]

@@ -1,20 +1,21 @@
 import React from 'react';
 
 interface ChatHeaderProps {
-  isOpen: boolean;
+  mode: 'sidebar' | 'fullscreen';
   onClose: () => void;
-  isMinimized: boolean;
-  onMinimize: () => void;
+  onToggleMode: () => void;
+  isMinimized?: boolean;
+  onMinimize?: () => void;
 }
 
 /**
  * ChatHeader - Header bar for chat window (Section 6.3)
  *
  * bg: var(--bg-tertiary), border-bottom: 1px solid var(--border-subtle)
- * Left: accent dot + "WACH AI"
- * Right: minimize button (─) + close button (✕)
+ * Left: accent dot + "RDM-Atlas"
+ * Right: toggle mode button + close button (✕)
  */
-const ChatHeader: React.FC<ChatHeaderProps> = ({ isOpen, onClose, isMinimized, onMinimize }) => {
+const ChatHeader: React.FC<ChatHeaderProps> = ({ mode, onClose, onToggleMode, isMinimized, onMinimize }) => {
   return (
     <div
       className="
@@ -25,32 +26,34 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ isOpen, onClose, isMinimized, o
     >
       <div className="flex items-center gap-2">
         <div
-          className="w-3 h-3 rounded-full bg-[#4fbd95]"
-          style={{ boxShadow: '0 0 8px rgba(79,189,149,0.5)' }}
+          className="w-3 h-3 rounded-full bg-[#00E5A0]"
+          style={{ boxShadow: '0 0 8px rgba(0,229,160,0.5)' }}
         />
-        <span className="font-semibold text-sm">WACH AI</span>
-        <span className="inline-block w-2 h-2 rounded-full bg-[#4fbd95] ml-1.5" />
+        <span className="font-semibold text-sm text-[#00E5A0]">RDM-Atlas</span>
+        <span className="inline-block w-2 h-2 rounded-full bg-[#00E5A0] ml-1.5" />
       </div>
 
       <div className="flex items-center gap-1">
-        {/* Minimize button */}
+        {/* Toggle fullscreen/sidebar button */}
         <button
-          onClick={onMinimize}
-          title={isMinimized ? 'Expand' : 'Minimize'}
+          onClick={onToggleMode}
+          title={mode === 'sidebar' ? 'Expand to fullscreen' : 'Collapse to sidebar'}
           className="
             w-11 h-11 rounded-full hover:bg-[#2e3f55]
             flex items-center justify-center
           "
         >
-          {isMinimized ? (
-            /* Expand icon — chevron up */
+          {mode === 'sidebar' ? (
+            /* Expand icon — diagonal arrow up-right */
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8ECF1" strokeWidth="2">
-              <polyline points="18 15 12 9 6 15" />
+              <polyline points="7 17 17 7" />
+              <polyline points="7 7 17 7 17 17" />
             </svg>
           ) : (
-            /* Minimize icon — horizontal dash */
+            /* Collapse icon — diagonal arrow down-left */
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8ECF1" strokeWidth="2">
-              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="17 7 7 17" />
+              <polyline points="17 17 7 17 7 7" />
             </svg>
           )}
         </button>
@@ -58,6 +61,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ isOpen, onClose, isMinimized, o
         {/* Close button */}
         <button
           onClick={onClose}
+          title="Close chat"
           className="
             w-11 h-11 rounded-full hover:bg-[#2e3f55]
             flex items-center justify-center
