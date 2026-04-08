@@ -1,8 +1,20 @@
 import { useAppStore, initialState } from '../store/useAppStore';
 
-// Reset store to initial state before each test
+// Reset store to initial state before each test — merge actions back in to
+// avoid wiping Zustand action functions when using replace mode.
 beforeEach(() => {
-  useAppStore.setState(initialState);
+  const actions = useAppStore.getState();
+  useAppStore.setState(
+    {
+      ...actions,
+      ...initialState,
+      timeRange: '7d',
+      financialImpact: null,
+      hamburgerOpen: false,
+      siteSummaryData: null,
+    },
+    true,
+  );
 });
 
 describe('useAppStore — initial state', () => {
