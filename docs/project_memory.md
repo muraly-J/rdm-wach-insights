@@ -36,7 +36,7 @@ wach-insight/
 │   │   ├── components/
 │   │   │   ├── FleetDashboard.jsx  # NEW dashboard component
 │   │   └── api.js
-├── qwen.md                 # This file
+├── docs/project_memory.md  # This file
 ```
 
 ## Autonomous Codebase Mapping
