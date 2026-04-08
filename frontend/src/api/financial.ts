@@ -14,7 +14,7 @@ export async function saveFinancialConfig(config: FinancialConfig): Promise<Fina
 
 export async function fetchFinancialImpact(
   level: number,
-  range: '24h' | '7d' | '30d' = '30d',
+  range: '24h' | '7d' | '30d' | 'all' = '30d',
   deviceId?: string | null
 ): Promise<FinancialImpact> {
   const params = new URLSearchParams({ time_range: range });

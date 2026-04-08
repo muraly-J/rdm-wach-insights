@@ -1,52 +1,45 @@
-import { AnimatePresence, motion } from 'framer-motion';
 import React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { formatTickByRange } from './utils/formatTick';
-
-// ZONE A — Welcome Hero
-import WelcomeHero from './components/welcome/WelcomeHero';
-
-// ZONE C — Dashboard Components
-import CombinedScoresChart from './components/dashboard/CombinedScoresChart';
-import HealthIndexChart from './components/dashboard/HealthIndexChart';
+import { buildLabelMap } from './utils/deviceLabel';
 
 // Nav
-import SiteNavBar from './components/nav/SiteNavBar';
+import FilterBar from './components/nav/FilterBar';
 
-// Site Summary
-import SiteSummaryView from './components/summary/SiteSummaryView';
+// Dashboard
+import KPIStrip from './components/dashboard/KPIStrip';
+import ModeToggle from './components/dashboard/ModeToggle';
+import AHURankingsTable, { AHURankRow, AHUStatus } from './components/dashboard/AHURankingsTable';
+import DeviceDetailCard from './components/dashboard/DeviceDetailCard';
+import HealthIndexChart from './components/dashboard/HealthIndexChart';
 import ScoreCardsGrid from './components/dashboard/ScoreCardsGrid';
+import CombinedScoresChart from './components/dashboard/CombinedScoresChart';
 
-// Health Rankings and Safety Flags
-import ExpandableHealthRankings from './components/dashboard/ExpandableHealthRankings';
-import AHUHeatmap from './components/dashboard/AHUHeatmap';
+// Deep Dive (lazy)
+const DeepDiveView = React.lazy(() => import('./components/deepdive/DeepDiveView'));
 
-// Score Derivation (lazy-loaded — Section 12)
+// Score Derivation (lazy, device-only)
 const ScoreDerivationSection = React.lazy(
   () => import('./components/dashboard/derivation/ScoreDerivationSection')
 );
 
-// Prediction View (lazy-loaded — per-device predictions)
-const PredictionView = React.lazy(
-  () => import('./components/prediction/PredictionView')
-);
+// Prediction (lazy, device-only)
+const PredictionView = React.lazy(() => import('./components/prediction/PredictionView'));
 
-const FinancialImpactView = React.lazy(
-  () => import('./components/financial/FinancialImpactView')
-);
-
-// ZONE D — Chat Widget
+// Chat
 import ChatWidget from './components/chat/ChatWidget';
 
 // State
 import { useAppStore } from './store/useAppStore';
 
 // API
-import { fetchHealthIndex, fetchLevelDevices, fetchRawScoreRelationship, fetchScoreBreakdown, fetchSiteSummary } from './api/client';
+import {
+  fetchHealthIndex, fetchLevelDevices, fetchRawScoreRelationship,
+  fetchScoreBreakdown, fetchSiteSummary, fetchDashboardRanking,
+} from './api/client';
+import { fetchFinancialImpact } from './api/financial';
 import type { HealthIndexResponse, RawScoreResponse, ScoresResponse } from './types';
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────────────────────────────────────
+import type { TimeRange } from './utils/formatTick';
 
 interface ScoreEntry {
   current: number;
@@ -54,30 +47,56 @@ interface ScoreEntry {
   data: Array<{ timestamp: string; value: number }>;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// App
-// ──────────────────────────────────────────────────────────────────────────────
+function getStatus(score: number): AHUStatus {
+  if (score >= 80) return 'Good';
+  if (score >= 60) return 'Warning';
+  return 'Critical';
+}
+
+/** Pass through the app's TimeRange, including 'all' if set */
+function toApiRange(timeRange: string): '24h' | '7d' | '30d' | 'all' {
+  if (timeRange === '24h') return '24h';
+  if (timeRange === '7d') return '7d';
+  if (timeRange === 'all') return 'all';
+  return '30d';
+}
 
 function App() {
-  const { selectedLevel, selectedDevice, timeRange, setSiteSummaryData, heroVisible, setHeroVisible } = useAppStore();
+  const {
+    selectedLevel, selectedDevice, timeRange,
+    setSiteSummaryData, siteSummaryData,
+    dashboardMode,
+    setFinancialImpact,
+  } = useAppStore();
 
-  // ── API State ────────────────────────────────────────────────────────────────
   const [healthData, setHealthData] = React.useState<HealthIndexResponse | null>(null);
   const [scoresData, setScoresData] = React.useState<ScoresResponse | null>(null);
   const [rawData, setRawData] = React.useState<RawScoreResponse | null>(null);
-  const [safetyFlagsData, setSafetyFlagsData] = React.useState<Record<string, Array<{ flag_id: string; label: string; severity: string }>> | null>(null);
+  const [rankingRows, setRankingRows] = React.useState<AHURankRow[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // ── Fetch health index + score breakdown whenever level/device/range changes ─
+  const [levelDevices, setLevelDevices] = React.useState<
+    Array<{ id: string; label: string; department: string; area: string }>
+  >([]);
+
+  React.useEffect(() => {
+    if (!selectedLevel) { setLevelDevices([]); return; }
+    fetchLevelDevices(selectedLevel)
+      .then((r) => setLevelDevices(r.devices))
+      .catch(() => setLevelDevices([]));
+  }, [selectedLevel]);
+
+  const labelMap = React.useMemo(() => buildLabelMap(levelDevices), [levelDevices]);
+
   React.useEffect(() => {
     if (!selectedLevel) return;
     setIsLoading(true);
     setError(null);
-
+    const range = toApiRange(timeRange);
     Promise.all([
-      fetchHealthIndex(selectedLevel, timeRange, selectedDevice),
-      fetchScoreBreakdown(selectedLevel, timeRange),
+      fetchHealthIndex(selectedLevel, range as '24h' | '7d' | '30d' | 'all', selectedDevice),
+      fetchScoreBreakdown(selectedLevel, range as '24h' | '7d' | '30d' | 'all'),
     ])
       .then(([health, scores]) => {
         setHealthData(health);
@@ -87,128 +106,94 @@ function App() {
       .finally(() => setIsLoading(false));
   }, [selectedLevel, selectedDevice, timeRange]);
 
-  // ── Fetch raw-score relationship when a single device is selected ────────────
   React.useEffect(() => {
-    if (!selectedDevice || selectedDevice === 'all') {
-      setRawData(null);
-      return;
-    }
-    fetchRawScoreRelationship(selectedDevice, timeRange)
+    if (!selectedDevice || selectedDevice === 'all') { setRawData(null); return; }
+    const range = toApiRange(timeRange);
+    fetchRawScoreRelationship(selectedDevice, range as '24h' | '7d' | '30d' | 'all')
       .then((data) => setRawData(data as RawScoreResponse))
       .catch(() => setRawData(null));
   }, [selectedDevice, timeRange]);
 
-  // ── Load site summary data on mount ─────────────────────────────────────────
   React.useEffect(() => {
-    const range = timeRange === '24h' ? '24h' : timeRange === '30d' ? '30d' : '7d';
-    console.log('[App] Fetching site summary data with range:', range);
-    fetchSiteSummary(range)
-      .then((data) => {
-        console.log('[App] Site summary data received:', data);
-        setSiteSummaryData(data);
-      })
-      .catch((err) => {
-        console.error('[App] Failed to load site summary:', err);
-        // Set a default empty object for debugging
-        setSiteSummaryData({
-          totalAHUs: 0,
-          avgSiteHealth: 0,
-          ahusInAlert: 0,
-          estMonthlyCostMYR: 0,
-          starAHU: {
-            id: 'e0101',
-            name: 'AHU-L1-01',
-            level: 1,
-            healthScore: 0,
-            monthlyCostMYR: 0,
-            safetyFlags: 0
-          },
-          criticalAHU: {
-            id: 'e0101',
-            name: 'AHU-L1-01',
-            level: 1,
-            healthScore: 0,
-            monthlyCostMYR: 0,
-            safetyFlags: 0
-          },
-          levelTiles: [],
-          trendDeltas: []
-        });
-      });
+    const range = toApiRange(timeRange);
+    fetchSiteSummary(range as '24h' | '7d' | '30d' | 'all')
+      .then((data) => setSiteSummaryData(data))
+      .catch(() => {});
   }, [timeRange, setSiteSummaryData]);
 
-  // ── Devices list: fetched from static /level/{id}/devices — no DuckDB dep ────
-  const [levelDevices, setLevelDevices] = React.useState<
-    Array<{ id: string; label: string; department: string; area: string }>
-  >([]);
   React.useEffect(() => {
-    if (!selectedLevel) { setLevelDevices([]); return; }
-    fetchLevelDevices(selectedLevel)
-      .then((r) => setLevelDevices(r.devices))
-      .catch(() => setLevelDevices([]));
-  }, [selectedLevel]);
+    if (!selectedLevel) return;
+    const range = toApiRange(timeRange);
+    fetchFinancialImpact(selectedLevel, range as '24h' | '7d' | '30d' | 'all', selectedDevice !== 'all' ? selectedDevice : null)
+      .then((data) => setFinancialImpact(data))
+      .catch(() => {});
+  }, [selectedLevel, selectedDevice, timeRange, setFinancialImpact]);
 
-  const devices = React.useMemo(
-    () =>
-      levelDevices.map((d) => ({
-        id: d.id,
-        name: d.id,
-        label: d.label,
-        department: d.department,
-        level: selectedLevel!,
-      })),
-    [levelDevices, selectedLevel]
-  );
+  React.useEffect(() => {
+    if (!selectedLevel) { setRankingRows([]); return; }
+    const rangeMap: Record<string, 'last_24h' | 'last_7d' | 'last_30d'> = {
+      '24h': 'last_24h', '7d': 'last_7d', '30d': 'last_30d', 'all': 'last_30d',
+    };
+    const apiRange = rangeMap[timeRange] ?? 'last_7d';
+    fetchDashboardRanking(selectedLevel, apiRange)
+      .then((data: any) => {
+        const allDevices = [...(data.best ?? []), ...(data.worst ?? [])];
+        const seen = new Set<string>();
+        const rows: AHURankRow[] = allDevices
+          .filter((d: any) => { if (seen.has(d.ahu_id)) return false; seen.add(d.ahu_id); return true; })
+          .map((d: any) => ({
+            id: d.ahu_id,
+            label: labelMap[d.ahu_id] ?? d.ahu_id,
+            level: selectedLevel,
+            healthScore: d.index,
+            trend: d.trend ?? 0,
+            status: getStatus(d.index),
+          }));
+        setRankingRows(rows);
+      })
+      .catch(() => setRankingRows([]));
+  }, [selectedLevel, timeRange, labelMap]);
 
-  // navDevices = full level device list (always, regardless of selectedDevice)
-  const navDevices = devices;
+  const chartRange = toApiRange(timeRange) as TimeRange;
 
-  // ── Health Index chart data ──────────────────────────────────────────────────
   const healthChartData = React.useMemo(() => {
     if (!healthData?.devices?.length) return [];
-
-    const series =
-      selectedDevice && selectedDevice !== 'all'
-        ? healthData.devices.filter((d) => d.id === selectedDevice)
-        : healthData.devices;
-
+    const series = selectedDevice && selectedDevice !== 'all'
+      ? healthData.devices.filter((d) => d.id === selectedDevice)
+      : healthData.devices;
     const refData = series[0]?.data ?? [];
     return refData.map((point, idx) => {
-      const timestamp = formatTickByRange(point.timestamp, timeRange);
+      const timestamp = formatTickByRange(point.timestamp, chartRange);
       const entry: Record<string, any> = { timestamp };
-      series.forEach(({ name, data }) => {
-        entry[name] = data[idx]?.value ?? null;
+      series.forEach(({ id, data }) => {
+        entry[labelMap[id] ?? id] = data[idx]?.value ?? null;
       });
       return entry;
     });
-  }, [healthData, selectedDevice, timeRange]);
+  }, [healthData, selectedDevice, chartRange, labelMap]);
 
-  // Devices visible in the chart
   const chartDevices = React.useMemo(() => {
     if (selectedDevice && selectedDevice !== 'all') {
-      return devices.filter((d) => d.id === selectedDevice);
+      return levelDevices
+        .filter((d) => d.id === selectedDevice)
+        .map((d) => ({ id: d.id, name: labelMap[d.id] ?? d.id, label: d.label, department: d.department, level: selectedLevel! }));
     }
-    return devices;
-  }, [devices, selectedDevice]);
+    return levelDevices.map((d) => ({
+      id: d.id, name: labelMap[d.id] ?? d.id,
+      label: d.label, department: d.department, level: selectedLevel!,
+    }));
+  }, [levelDevices, selectedDevice, labelMap, selectedLevel]);
 
-  // ── Score card data ──────────────────────────────────────────────────────────
   const scoreCardData = React.useMemo<Record<string, ScoreEntry>>(() => {
     if (!scoresData?.devices?.length) return {};
-
     const scoreNames = ['energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload'] as const;
-
-    const relevantDevices =
-      selectedDevice && selectedDevice !== 'all'
-        ? scoresData.devices.filter((d) => d.id === selectedDevice)
-        : scoresData.devices;
-
+    const relevantDevices = selectedDevice && selectedDevice !== 'all'
+      ? scoresData.devices.filter((d) => d.id === selectedDevice)
+      : scoresData.devices;
     if (relevantDevices.length === 0) return {};
-
     const result: Record<string, ScoreEntry> = {};
     scoreNames.forEach((name) => {
-      const allScores = relevantDevices
-        .map((d) => d.scores[name])
-        .filter(Boolean);
+      const allScores = relevantDevices.map((d) => d.scores[name]).filter(Boolean);
       if (allScores.length === 0) return;
       const count = allScores.length;
       const avgCurrent = allScores.reduce((s, v) => s + v.current, 0) / count;
@@ -223,162 +208,119 @@ function App() {
     return result;
   }, [scoresData, selectedDevice]);
 
+  const deviceHealth = React.useMemo(() => {
+    if (!selectedDevice || selectedDevice === 'all' || !healthData) return null;
+    const dev = healthData.devices.find((d) => d.id === selectedDevice);
+    if (!dev?.data?.length) return null;
+    return dev.data[dev.data.length - 1]?.value ?? null;
+  }, [healthData, selectedDevice]);
+
+  const deviceLabel = selectedDevice ? (labelMap[selectedDevice] ?? selectedDevice) : null;
   const showDerivation = Boolean(selectedDevice && selectedDevice !== 'all');
+  const selectedDeviceRow = rankingRows.find((r) => r.id === selectedDevice);
 
-  // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#1c2431] text-[#E8ECF1]">
-      {/* ZONE A — Fixed hero overlay */}
-      <AnimatePresence>
-        {heroVisible && (
-          <motion.div
-            key="hero-overlay"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.03 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            style={{ position: 'fixed', inset: 0, zIndex: 60 }}
-          >
-            <WelcomeHero onContinue={() => setHeroVisible(false)} />
-          </motion.div>
+    <div className="min-h-screen bg-[#0B0F14] text-[#E8ECF1]">
+      <FilterBar levelDevices={levelDevices} />
+
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 pt-6 pb-16">
+        <KPIStrip
+          summary={siteSummaryData}
+          selectedLevel={selectedLevel}
+          selectedDevice={selectedDevice}
+          deviceLabel={deviceLabel}
+          deviceHealth={deviceHealth}
+        />
+
+        <ModeToggle />
+
+        {isLoading && (
+          <div className="flex justify-center py-4">
+            <span className="text-[#556677] text-sm animate-pulse">Loading data…</span>
+          </div>
         )}
-      </AnimatePresence>
+        {error && !isLoading && (
+          <div className="mb-4 px-4 py-3 rounded bg-red-900/20 border border-red-700 text-red-400 text-sm">
+            Failed to load data: {error}
+          </div>
+        )}
 
-      {/* ZONE C — Dashboard */}
-      <div id="dashboard">
-        {/* Unified controls strip */}
-        <SiteNavBar devices={navDevices} />
-
-        {/* Dashboard content — only shown when a level is selected */}
         <AnimatePresence mode="wait">
-          {selectedLevel ? (
-            <motion.main
-              key={`level-${selectedLevel}`}
-              className="max-w-[1280px] mx-auto px-4 sm:px-6 pt-6 sm:pt-8 pb-16 sm:pb-24"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            >
-              {/* Loading indicator */}
-              {isLoading && (
-                <div className="flex justify-center py-4">
-                  <span className="text-[#6d6e71] text-sm animate-pulse">Loading data…</span>
-                </div>
-              )}
-
-              {/* Error state */}
-              {error && !isLoading && (
-                <div className="mb-4 px-4 py-3 rounded bg-red-900/20 border border-red-700 text-red-400 text-sm">
-                  Failed to load data: {error}
-                </div>
-              )}
-
-              {/* Health Index Chart */}
-              <div id="section-health-index" style={{ scrollMarginTop: '56px' }} className="mb-8">
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <HealthIndexChart data={healthChartData as any} devices={chartDevices} />
-              </div>
-
-              {/* Five-Score Cards */}
-              <ScoreCardsGrid scoreData={scoreCardData} />
-
-              {/* Rankings or AHU Heatmap (toggle based on device selection) */}
-              {selectedLevel && (
-                <div id="section-rankings" style={{ scrollMarginTop: '56px' }}>
-                  <AnimatePresence mode="wait">
-                    {selectedDevice && selectedDevice !== 'all' ? (
-                      <motion.div
-                        key={`heatmap-${selectedDevice}`}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                      >
-                        <AHUHeatmap ahuId={selectedDevice} />
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="rankings"
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                      >
-                        <ExpandableHealthRankings
-                          level={selectedLevel}
-                          timeRange={timeRange}
-                          scoresData={scoresData || undefined}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
-
-              {/* Combined Scores Chart */}
-              <CombinedScoresChart scoreData={scoreCardData} timeRange={timeRange} />
-
-              {/* Score Derivation (single-device mode only) */}
-              <AnimatePresence>
-                {showDerivation && rawData && (
-                  <div id="section-score-derivation" style={{ scrollMarginTop: '56px' }}>
-                    <React.Suspense
-                      fallback={
-                        <div className="card p-6 h-40 flex items-center justify-center">
-                          <span className="text-[#6d6e71]">Loading derivation charts…</span>
-                        </div>
-                      }
-                    >
-                      <ScoreDerivationSection
-                        deviceName={
-                          devices.find((d) => d.id === selectedDevice)?.name ?? selectedDevice ?? ''
-                        }
-                        deviceId={selectedDevice ?? ''}
-                        rawData={rawData.scores}
-                        timeRange={timeRange}
-                      />
-                    </React.Suspense>
-                  </div>
-                )}
-              </AnimatePresence>
-
-              {/* Prediction View (single-device mode only) */}
-              {selectedDevice && selectedDevice !== 'all' && (
-                <div id="section-predictions" style={{ scrollMarginTop: '56px' }}>
-                  <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#2e3f55] rounded-xl" />}>
-                    <PredictionView deviceId={selectedDevice} />
-                  </React.Suspense>
-                </div>
-              )}
-
-              {/* Financial Impact Section */}
-              {selectedLevel && (
-                <div id="section-financial" style={{ scrollMarginTop: '56px' }} className="pt-8">
-                  <React.Suspense fallback={<div className="card h-48 animate-pulse bg-[#2a3649] rounded-xl" />}>
-                    <FinancialImpactView
-                      level={selectedLevel}
-                      range={timeRange}
-                      deviceId={selectedDevice !== 'all' ? selectedDevice : null}
-                    />
-                  </React.Suspense>
-                </div>
-              )}
-            </motion.main>
-          ) : (
+          {dashboardMode === 'simple' ? (
             <motion.div
-              key="no-level"
+              key="simple"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.3 }}
             >
-              <SiteSummaryView />
+              {selectedLevel ? (
+                <>
+                  <div className="mb-8">
+                    <HealthIndexChart data={healthChartData as any} devices={chartDevices} />
+                  </div>
+
+                  <ScoreCardsGrid scoreData={scoreCardData} />
+
+                  <CombinedScoresChart scoreData={scoreCardData} timeRange={chartRange} />
+
+                  {selectedDevice && selectedDevice !== 'all' && selectedDeviceRow ? (
+                    <DeviceDetailCard
+                      label={selectedDeviceRow.label}
+                      level={selectedDeviceRow.level}
+                      healthScore={selectedDeviceRow.healthScore}
+                      trend={selectedDeviceRow.trend}
+                      status={selectedDeviceRow.status}
+                    />
+                  ) : (
+                    <AHURankingsTable rows={rankingRows} />
+                  )}
+
+                  {showDerivation && rawData && (
+                    <React.Suspense fallback={<div className="card p-6 h-40 flex items-center justify-center"><span className="text-[#556677]">Loading derivation…</span></div>}>
+                      <ScoreDerivationSection
+                        deviceName={deviceLabel ?? selectedDevice ?? ''}
+                        deviceId={selectedDevice ?? ''}
+                        rawData={rawData}
+                        timeRange={chartRange}
+                      />
+                    </React.Suspense>
+                  )}
+
+                  {selectedDevice && selectedDevice !== 'all' && (
+                    <div className="mt-8">
+                      <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#2e3f55] rounded-xl" />}>
+                        <PredictionView deviceId={selectedDevice} />
+                      </React.Suspense>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-48 text-[#556677]">
+                  Select a level to view dashboard data.
+                </div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="deepdive"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+            >
+              <React.Suspense fallback={<div className="h-64 animate-pulse bg-[#1a2234] rounded-xl" />}>
+                <DeepDiveView levelDevices={levelDevices} labelMap={labelMap} timeRange={timeRange} />
+              </React.Suspense>
             </motion.div>
           )}
         </AnimatePresence>
+
+        <p className="text-center text-xs mt-12 pb-4" style={{ color: '#3a4a5a' }}>
+          ⚠ Data shown covers monitored AHUs only. Not all devices may be represented.
+        </p>
       </div>
 
-      {/* ZONE D — Floating Chat Widget */}
       <ChatWidget />
     </div>
   );

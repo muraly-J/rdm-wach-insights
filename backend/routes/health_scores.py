@@ -74,15 +74,15 @@ async def get_level_device_list(level_id: int):
 @router.get("/level/{level_id}/scores")
 async def get_level_scores(
     level_id: int,
-    time_range: str = Query(default="7d", description="Time range: 24h, 7d, or 30d")
+    time_range: str = Query(default="7d", description="Time range: 24h, 7d, 30d, or all")
 ):
     """
     Get five FAIR-score breakdown for all AHUs on a specific level.
     Parameters:
         level_id: Building level (1-11)
-        time_range: Time range - 24h, 7d, or 30d
+        time_range: Time range - 24h, 7d, 30d, or all
     """
-    valid_ranges = ["24h", "7d", "30d"]
+    valid_ranges = ["24h", "7d", "30d", "all"]
     if time_range not in valid_ranges:
         raise HTTPException(
             status_code=400,
@@ -114,7 +114,7 @@ async def get_level_scores(
 async def get_level_health_index(
     level_id: int,
     device_id: str = Query(default=None, description="Filter to single device"),
-    time_range: str = Query(default="7d", description="Time range: 24h, 7d, or 30d")
+    time_range: str = Query(default="7d", description="Time range: 24h, 7d, 30d, or all")
 ):
     """
     Get health index time series for all AHUs on a level (or a single device).
@@ -122,9 +122,9 @@ async def get_level_health_index(
     Parameters:
         level_id: Building level (1-11)
         device_id: Optional device filter (e.g., e0101)
-        time_range: Time range - 24h, 7d, or 30d
+        time_range: Time range - 24h, 7d, 30d, or all
     """
-    valid_ranges = ["24h", "7d", "30d"]
+    valid_ranges = ["24h", "7d", "30d", "all"]
     if time_range not in valid_ranges:
         raise HTTPException(
             status_code=400,
@@ -156,16 +156,16 @@ async def get_level_health_index(
 @router.get("/device/{device_id}/raw-score-relationship")
 async def get_raw_score_relationship(
     device_id: str,
-    range: str = Query(default="7d", description="Time range: 24h, 7d, or 30d")
+    range: str = Query(default="7d", description="Time range: 24h, 7d, 30d, or all")
 ):
     """
     Get raw sensor data ↔ computed FAIR score relationship for a single device.
 
     Parameters:
         device_id: Device ID (e.g., e0101)
-        range: Time range - 24h, 7d, or 30d
+        range: Time range - 24h, 7d, 30d, or all
     """
-    valid_ranges = ["24h", "7d", "30d"]
+    valid_ranges = ["24h", "7d", "30d", "all"]
     if range not in valid_ranges:
         raise HTTPException(
             status_code=400,

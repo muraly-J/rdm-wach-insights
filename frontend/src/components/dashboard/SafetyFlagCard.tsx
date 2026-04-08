@@ -1,18 +1,19 @@
 import React from 'react';
-import { LineChart, Line, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, ResponsiveContainer, YAxis } from 'recharts';
+import InfoTooltip from '../shared/InfoTooltip';
 
 interface SafetyFlagCardProps {
   title: string;
   value: number;
   trend: number;
-  info: React.ReactNode;
+  info?: React.ReactNode;
   chartColor: string;
   data: Array<{ timestamp: string; value: number }>;
 }
 
 /**
- * SafetyFlagCard — Full-width centered card for the highest-risk score.
- * Shown below the 3+2 score cards grid.
+ * SafetyFlagCard — highlights the highest-risk score as a prominent banner card.
+ * Shows the score with a wider sparkline area chart to draw attention.
  */
 const SafetyFlagCard: React.FC<SafetyFlagCardProps> = ({
   title,
@@ -23,90 +24,92 @@ const SafetyFlagCard: React.FC<SafetyFlagCardProps> = ({
   data,
 }) => {
   const getRiskColor = (val: number) => {
-    if (val <= 20) return 'text-[#4fbd95]';
-    if (val <= 50) return 'text-[#f9a020]';
-    return 'text-[#e96852]';
+    if (val <= 20) return '#4fbd95';
+    if (val <= 50) return '#f9a020';
+    return '#e96852';
   };
 
-  const getRiskBadgeColor = (val: number) => {
-    if (val <= 20) return 'bg-[#4fbd95]/10 border-[#4fbd95]/30 text-[#4fbd95]';
-    if (val <= 50) return 'bg-[#f9a020]/10 border-[#f9a020]/30 text-[#f9a020]';
-    return 'bg-[#e96852]/10 border-[#e96852]/30 text-[#e96852]';
-  };
-
-  const getRiskLabel = (val: number) => {
-    if (val <= 20) return 'Low Risk';
-    if (val <= 50) return 'Moderate Risk';
-    return 'High Risk';
-  };
-
-  const trendColor = trend <= 0 ? 'text-[#4fbd95]' : 'text-[#e96852]';
+  const riskColor = getRiskColor(value);
+  const trendColor = trend <= 0 ? '#4fbd95' : '#e96852';
   const trendIcon = trend >= 0 ? '↑' : '↓';
-  const numberColor = getRiskColor(value);
+
+  const riskLabel = value <= 20 ? 'Low Risk' : value <= 50 ? 'Moderate Risk' : 'High Risk';
 
   return (
     <div
-      className="card p-6"
       style={{
         background: 'rgba(255,255,255,0.04)',
         backdropFilter: 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 40px rgba(0,0,0,0.30)',
+        border: `1px solid ${riskColor}44`,
+        borderRadius: 12,
+        padding: '16px 20px',
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 40px rgba(0,0,0,0.30), 0 0 0 1px ${riskColor}22`,
       }}
     >
       {/* Header row */}
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <span className="text-[#6d6e71] text-xs font-display uppercase tracking-[0.15em]">
-              Safety Flag
-            </span>
-            <span
-              className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border
- ${getRiskBadgeColor(value)}`}
-            >
-              {getRiskLabel(value)}
-            </span>
-          </div>
-          <h4 className="text-[20px] font-semibold text-[#E8ECF1]">{title}</h4>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: riskColor,
+              background: `${riskColor}18`,
+              border: `1px solid ${riskColor}44`,
+              borderRadius: 4,
+              padding: '2px 6px',
+            }}
+          >
+            Top Risk Score
+          </span>
+          <span style={{ color: '#E8ECF1', fontSize: 14, fontWeight: 600 }}>
+            {title}
+          </span>
+          {info && <InfoTooltip content={info} />}
         </div>
 
-        {/* Big risk number */}
-        <div className="text-right">
-          <span className={`font-mono text-[48px] font-bold leading-none ${numberColor}`}>
-            {value.toFixed(1)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ color: riskColor, fontSize: 10, fontWeight: 600 }}>{riskLabel}</span>
+          <span style={{ color: trendColor, fontSize: 13, fontWeight: 600 }}>
+            {trendIcon} {Math.abs(trend).toFixed(1)}%
           </span>
-          <span className="text-[#6d6e71] text-sm block">/ 100</span>
         </div>
       </div>
 
-      {/* Sparkline + trend */}
-      <div className="flex items-center gap-6 mb-4">
-        <div className="flex-1 h-[60px]">
+      {/* Value + sparkline row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        <div style={{ flexShrink: 0 }}>
+          <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 40, fontWeight: 700, color: riskColor, lineHeight: 1 }}>
+            {value.toFixed(1)}
+          </span>
+          <span style={{ color: '#556677', fontSize: 13, marginLeft: 4 }}>/ 100</span>
+        </div>
+
+        <div style={{ flex: 1, height: 60 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
-              <Line
+            <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 4 }}>
+              <defs>
+                <linearGradient id={`sfg-${chartColor.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={chartColor} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <YAxis domain={[0, 100]} hide />
+              <Area
                 type="monotone"
                 dataKey="value"
                 stroke={chartColor}
-                strokeWidth={2}
+                strokeWidth={1.5}
+                fill={`url(#sfg-${chartColor.replace('#', '')})`}
                 dot={false}
+                connectNulls
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
-        <div className="text-right shrink-0">
-          <span className={`text-sm font-medium ${trendColor}`}>
-            {trendIcon} {Math.abs(trend).toFixed(1)}%
-          </span>
-          <span className="text-[#6d6e71] text-xs block">vs previous period</span>
-        </div>
-      </div>
-
-      {/* Explanation */}
-      <div className="border-t border-[#2e3f55] pt-4">
-        <p className="text-sm text-[#6d6e71] leading-relaxed">{info}</p>
       </div>
     </div>
   );
