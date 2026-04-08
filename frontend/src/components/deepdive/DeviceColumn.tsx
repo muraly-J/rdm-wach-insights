@@ -4,6 +4,7 @@ import {
 } from 'recharts';
 import { fetchMeasurements } from '../../api/client';
 import { METRIC_META } from '../../constants/metricGroups';
+import { CHART_CONFIG } from '../../constants/chartConfig';
 
 interface DeviceColumnProps {
   deviceId: string;
@@ -40,9 +41,12 @@ const DeviceColumn: React.FC<DeviceColumnProps> = ({ deviceId, deviceLabel, sele
         });
         setChartData(data);
       })
-      .catch(() => setChartData([]))
+      .catch((err) => {
+        console.error('Failed to fetch measurements for device', deviceId, ':', err);
+        setChartData([]);
+      })
       .finally(() => setIsLoading(false));
-  }, [deviceId, selectedMetrics, apiRange]);
+  }, [deviceId, selectedMetrics, timeRange]);
 
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
@@ -57,16 +61,16 @@ const DeviceColumn: React.FC<DeviceColumnProps> = ({ deviceId, deviceLabel, sele
       </div>
       <div style={{ background: '#1a2234', border: '1px solid #2a3649', borderRadius: 10, padding: 12 }}>
         {isLoading ? (
-          <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#556677', fontSize: 12 }}>
+          <div style={{ height: CHART_CONFIG.HEIGHTS.DEVICE_COLUMN, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#556677', fontSize: 12 }}>
             Loading…
           </div>
         ) : chartData.length === 0 ? (
-          <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#556677', fontSize: 12 }}>
+          <div style={{ height: CHART_CONFIG.HEIGHTS.DEVICE_COLUMN, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#556677', fontSize: 12 }}>
             No data.
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+          <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHTS.DEVICE_COLUMN}>
+            <LineChart data={chartData} margin={CHART_CONFIG.MARGINS.COMPARE}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a3649" />
               <XAxis dataKey="timestamp" tick={{ fontSize: 9, fill: '#556677' }} />
               <YAxis tick={{ fontSize: 9, fill: '#556677' }} width={36} />
@@ -79,7 +83,7 @@ const DeviceColumn: React.FC<DeviceColumnProps> = ({ deviceId, deviceLabel, sele
                   type="monotone"
                   dataKey={metricKey}
                   name={METRIC_META[metricKey]?.label ?? metricKey}
-                  stroke={colorMap[metricKey] ?? '#00E5A0'}
+                  stroke={colorMap[metricKey] ?? CHART_CONFIG.THEME.ACCENT}
                   dot={false}
                   strokeWidth={1.5}
                 />

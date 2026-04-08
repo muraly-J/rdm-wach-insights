@@ -4,6 +4,8 @@ import {
 } from 'recharts';
 import { fetchMeasurements } from '../../api/client';
 import { SCORE_METRIC_GROUPS, METRIC_META } from '../../constants/metricGroups';
+import { useMetricSelection } from '../../hooks/useMetricSelection';
+import { CHART_CONFIG } from '../../constants/chartConfig';
 
 interface SingleDeviceChartProps {
   deviceId: string;
@@ -11,15 +13,13 @@ interface SingleDeviceChartProps {
   timeRange: string;
 }
 
-const CHART_COLORS = ['#00E5A0', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#EF4444'];
-
 function toApiRange(timeRange: string): '24h' | '7d' | '30d' {
   if (timeRange === '24h' || timeRange === '7d' || timeRange === '30d') return timeRange;
   return '30d';
 }
 
 const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({ deviceId, deviceLabel, timeRange }) => {
-  const [selectedMetrics, setSelectedMetrics] = React.useState<string[]>(['power_total', 'power_factor_avg']);
+  const { selectedMetrics, setSelectedMetrics, toggleMetric } = useMetricSelection();
   const [chartData, setChartData] = React.useState<Record<string, number | string | null>[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [groupOpen, setGroupOpen] = React.useState<string | null>(null);
@@ -42,15 +42,12 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({ deviceId, deviceL
         });
         setChartData(data);
       })
-      .catch(() => setChartData([]))
+      .catch((err) => {
+        console.error('Failed to fetch measurements for device', deviceId, ':', err);
+        setChartData([]);
+      })
       .finally(() => setIsLoading(false));
-  }, [deviceId, selectedMetrics, apiRange]);
-
-  const toggleMetric = (key: string) => {
-    setSelectedMetrics((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
-  };
+  }, [deviceId, selectedMetrics, timeRange]);
 
   return (
     <div>
@@ -106,16 +103,16 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({ deviceId, deviceL
 
       <div style={{ background: '#1a2234', border: '1px solid #2a3649', borderRadius: 12, padding: 16 }}>
         {isLoading ? (
-          <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#556677' }}>
+          <div style={{ height: CHART_CONFIG.HEIGHTS.LOADING_STATE, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#556677' }}>
             Loading data…
           </div>
         ) : chartData.length === 0 ? (
-          <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#556677' }}>
+          <div style={{ height: CHART_CONFIG.HEIGHTS.LOADING_STATE, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#556677' }}>
             No data for selected metrics.
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+          <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHTS.SINGLE_DEVICE}>
+            <LineChart data={chartData} margin={CHART_CONFIG.MARGINS.SINGLE}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a3649" />
               <XAxis dataKey="timestamp" tick={{ fontSize: 10, fill: '#556677' }} />
               <YAxis tick={{ fontSize: 10, fill: '#556677' }} />
@@ -130,7 +127,7 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({ deviceId, deviceL
                   type="monotone"
                   dataKey={metricKey}
                   name={METRIC_META[metricKey]?.label ?? metricKey}
-                  stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                  stroke={CHART_CONFIG.CHART_COLORS[i % CHART_CONFIG.CHART_COLORS.length]}
                   dot={false}
                   strokeWidth={1.5}
                 />

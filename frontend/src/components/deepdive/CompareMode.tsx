@@ -1,6 +1,8 @@
 import React from 'react';
 import { SCORE_METRIC_GROUPS } from '../../constants/metricGroups';
 import DeviceColumn from './DeviceColumn';
+import { useMetricSelection } from '../../hooks/useMetricSelection';
+import { CHART_CONFIG } from '../../constants/chartConfig';
 
 interface CompareModeProps {
   deviceIds: string[];
@@ -8,23 +10,15 @@ interface CompareModeProps {
   timeRange: string;
 }
 
-const CHART_COLORS = ['#00E5A0', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
-
 const CompareMode: React.FC<CompareModeProps> = ({ deviceIds, labelMap, timeRange }) => {
-  const [selectedMetrics, setSelectedMetrics] = React.useState<string[]>(['power_total', 'power_factor_avg']);
+  const { selectedMetrics, setSelectedMetrics, toggleMetric } = useMetricSelection();
   const [groupOpen, setGroupOpen] = React.useState<string | null>(null);
 
   const colorMap = React.useMemo(() => {
     const map: Record<string, string> = {};
-    selectedMetrics.forEach((m, i) => { map[m] = CHART_COLORS[i % CHART_COLORS.length]; });
+    selectedMetrics.forEach((m, i) => { map[m] = CHART_CONFIG.CHART_COLORS[i % CHART_CONFIG.CHART_COLORS.length]; });
     return map;
   }, [selectedMetrics]);
-
-  const toggleMetric = (key: string) => {
-    setSelectedMetrics((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
-  };
 
   return (
     <div>
@@ -64,7 +58,7 @@ const CompareMode: React.FC<CompareModeProps> = ({ deviceIds, labelMap, timeRang
                     >
                       <span style={{
                         width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                        background: selectedMetrics.includes(m.key) ? colorMap[m.key] ?? '#00E5A0' : '#2a3649',
+                        background: selectedMetrics.includes(m.key) ? colorMap[m.key] ?? CHART_CONFIG.THEME.ACCENT : '#2a3649',
                         border: '1px solid #2a3649',
                       }} />
                       {m.label}
