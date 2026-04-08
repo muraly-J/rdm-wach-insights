@@ -279,3 +279,16 @@ data/audit_results*.json
 # Ward configuration (instance-specific)
 # =========================
 ward_config.yml
+
+# ── macOS ──────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ── Runtime artifacts ─────────────────────────────────────────────────
+nohup.out
+
+# ── Backup and archive files ──────────────────────────────────────────
+*.bak
+*.bak[0-9]*
+frontend_backup_*.tar.gz
