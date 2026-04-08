@@ -1,7 +1,7 @@
 #!/bin/bash
 # start.sh — builds the React frontend and starts Gunicorn
 # Run from project root: bash start.sh
-# For production use the LaunchAgent instead (com.wach.insight.plist)
+# For production use the LaunchAgent instead (scripts/infra/com.wach.insight.plist)
 
 set -e  # exit on any error
 

@@ -29,7 +29,7 @@
   <key>ProgramArguments</key>
   <array>
       <string>/bin/bash</string>
-      <string>/Users/rdmasia/wach-insight/launchd_start.sh</string>
+      <string>/Users/rdmasia/wach-insight/scripts/infra/launchd_start.sh</string>
   </array>
   
   <!-- ── Throttle Interval ─────────────────────────────────────────────────── -->
