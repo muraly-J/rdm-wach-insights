@@ -18,6 +18,10 @@ export const initialState: AppState = {
   dashboardData: null,
   isLoading: false,
   heroVisible: true,
+  dashboardMode: 'simple' as const,
+  deepDiveSubMode: 'single' as const,
+  compareDevices: [] as string[],
+  chatMode: 'sidebar' as const,
 };
 
 export type TimeRange = '24h' | '7d' | '30d' | 'all';
