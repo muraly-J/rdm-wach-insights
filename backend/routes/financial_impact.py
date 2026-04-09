@@ -140,13 +140,13 @@ def _compute_impact(level: int, time_range: str, device_id: Optional[str] = None
         total = round(excess_cost + pf_penalty + maintenance_risk + demand_charge, 2)
 
         ahu_rows.append({
-            "ahu_id":             ahu_id,
-            "health_index":       round(latest_hi, 1),
-            "excess_energy_cost": excess_cost,
-            "pf_penalty_cost":    pf_penalty,
-            "maintenance_risk":   maintenance_risk,
-            "demand_charge_myr":  demand_charge,
-            "total_cost":         total,
+            "ahu_id":             str(ahu_id),
+            "health_index":       round(float(latest_hi), 1),
+            "excess_energy_cost": float(excess_cost),
+            "pf_penalty_cost":    float(pf_penalty),
+            "maintenance_risk":   float(maintenance_risk),
+            "demand_charge_myr":  float(demand_charge),
+            "total_cost":         float(total),
         })
 
     ahu_rows.sort(key=lambda r: r["total_cost"], reverse=True)
