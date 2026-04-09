@@ -325,7 +325,7 @@ function MyComponent() {
 1. Create component file in `frontend/src/components/`
 2. Use TypeScript with strict mode
 3. Import Zustand store if state is needed (no props)
-4. Add tests colocated with the component
+4. Add tests in `frontend/src/__tests__/` (e.g., `__tests__/MyComponent.test.tsx`)
 
 ### Styling
 
