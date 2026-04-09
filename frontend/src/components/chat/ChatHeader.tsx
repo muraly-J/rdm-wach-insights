@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface ChatHeaderProps {
-  mode: 'sidebar' | 'fullscreen';
+  mode: 'panel' | 'fullscreen';
   onClose: () => void;
   onToggleMode: () => void;
   isMinimized?: boolean;
@@ -34,26 +34,30 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ mode, onClose, onToggleMode, is
       </div>
 
       <div className="flex items-center gap-1">
-        {/* Toggle fullscreen/sidebar button */}
+        {/* Toggle fullscreen/panel button */}
         <button
           onClick={onToggleMode}
-          title={mode === 'sidebar' ? 'Expand to fullscreen' : 'Collapse to sidebar'}
+          title={mode === 'panel' ? 'Expand to fullscreen' : 'Collapse to panel'}
           className="
             w-11 h-11 rounded-full hover:bg-[#2e3f55]
             flex items-center justify-center
           "
         >
-          {mode === 'sidebar' ? (
-            /* Expand icon — diagonal arrow up-right */
+          {mode === 'panel' ? (
+            /* Expand icon — arrows pointing outward */
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8ECF1" strokeWidth="2">
-              <polyline points="7 17 17 7" />
-              <polyline points="7 7 17 7 17 17" />
+              <polyline points="15 3 21 3 21 9" />
+              <polyline points="9 21 3 21 3 15" />
+              <line x1="21" y1="3" x2="14" y2="10" />
+              <line x1="3" y1="21" x2="10" y2="14" />
             </svg>
           ) : (
-            /* Collapse icon — diagonal arrow down-left */
+            /* Collapse icon — arrows pointing inward */
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8ECF1" strokeWidth="2">
-              <polyline points="17 7 7 17" />
-              <polyline points="17 17 7 17 7 7" />
+              <polyline points="4 14 10 14 10 20" />
+              <polyline points="20 10 14 10 14 4" />
+              <line x1="14" y1="10" x2="21" y2="3" />
+              <line x1="3" y1="21" x2="10" y2="14" />
             </svg>
           )}
         </button>

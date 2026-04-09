@@ -8,7 +8,7 @@ import { sendChatMessage, NavigateTarget } from '../../api/client';
 import { useAppStore } from '../../store/useAppStore';
 
 interface ChatWindowProps {
-  mode: 'sidebar' | 'fullscreen';
+  mode: 'panel' | 'fullscreen';
   onClose: () => void;
   onToggleMode: () => void;
 }
@@ -121,8 +121,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ mode, onClose, onToggleMode }) 
         flex flex-col
       "
       style={{
-        height: mode === 'fullscreen' ? '100%' : (isMinimized ? 'auto' : 'min(560px, 80dvh)'),
-        width: mode === 'fullscreen' ? '100%' : undefined,
+        height: '100%',
+        width: '100%',
       }}
     >
       <ChatHeader

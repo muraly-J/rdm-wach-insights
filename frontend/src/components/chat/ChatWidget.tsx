@@ -7,7 +7,7 @@ import ChatWindow from './ChatWindow';
 const ChatWidget: React.FC = () => {
   const { chatOpen, openChat, closeChat, chatMode, setChatMode } = useAppStore();
 
-  const toggleFullscreen = () => setChatMode(chatMode === 'fullscreen' ? 'sidebar' : 'fullscreen');
+  const toggleFullscreen = () => setChatMode(chatMode === 'fullscreen' ? 'panel' : 'fullscreen');
 
   return (
     <>
@@ -35,26 +35,26 @@ const ChatWidget: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
+      {/* Bottom panel — lower half of screen */}
       <AnimatePresence>
-        {chatOpen && chatMode === 'sidebar' && (
+        {chatOpen && chatMode === 'panel' && (
           <motion.div
-            key="chat-sidebar"
-            initial={{ x: 400, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 400, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            key="chat-panel"
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '100%', opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             style={{
-              position: 'fixed', top: 0, right: 0, bottom: 0,
-              width: 380, zIndex: 70,
+              position: 'fixed', bottom: 0, left: 0, right: 0,
+              height: '50dvh', zIndex: 70,
               background: '#0f1923',
-              borderLeft: '1px solid rgba(0,229,160,0.2)',
-              boxShadow: '-8px 0 40px rgba(0,0,0,0.5)',
+              borderTop: '1px solid rgba(0,229,160,0.2)',
+              boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
               display: 'flex', flexDirection: 'column',
             }}
           >
             <ChatWindow
-              mode="sidebar"
+              mode="panel"
               onClose={closeChat}
               onToggleMode={toggleFullscreen}
             />

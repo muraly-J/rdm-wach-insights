@@ -21,7 +21,7 @@ export const initialState: AppState = {
   dashboardMode: 'simple' as const,
   deepDiveSubMode: 'single' as const,
   compareDevices: [] as string[],
-  chatMode: 'sidebar' as const,
+  chatMode: 'panel' as const,
 };
 
 export type TimeRange = '24h' | '7d' | '30d' | 'all';
@@ -85,8 +85,8 @@ interface AppStore extends AppState {
   setCompareDevices: (devices: string[]) => void;
 
   // Chat mode
-  chatMode: 'sidebar' | 'fullscreen';
-  setChatMode: (mode: 'sidebar' | 'fullscreen') => void;
+  chatMode: 'panel' | 'fullscreen';
+  setChatMode: (mode: 'panel' | 'fullscreen') => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -148,6 +148,6 @@ export const useAppStore = create<AppStore>((set) => ({
   setCompareDevices: (devices) => set({ compareDevices: devices.slice(0, 3) }),
 
   // Chat mode
-  chatMode: 'sidebar',
+  chatMode: 'panel',
   setChatMode: (mode) => set({ chatMode: mode }),
 }));
