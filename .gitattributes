@@ -1,6 +1,39 @@
+# Git attributes for WACH Insight
+
+# Auto-normalize line endings (LF only, except on Windows checkout)
+* text=auto
+
+# Explicitly text files (ensure LF)
+*.md text eol=lf
+*.py text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+
+# Binary files (no conversion)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.tar.gz binary
+*.pdf binary
+
+# Shell scripts should always be executable
+scripts/** text eol=lf
+
+# Docker files
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+
+# LFS files (data)
 data/*.csv filter=lfs diff=lfs merge=lfs -text
 data/healthdb.duckdb filter=lfs diff=lfs merge=lfs -text
 
-# Always use LF for shell scripts in Docker — CRLF breaks shebang lines in Linux containers
-*.sh    text eol=lf
-*.cron  text eol=lf
+# Always use LF for cron files
+*.cron text eol=lf
