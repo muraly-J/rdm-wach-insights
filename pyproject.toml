@@ -13,3 +13,6 @@ include = ["backend*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+asyncio_mode = "auto"
+testpaths = ["backend/tests"]
+addopts = "--tb=short"
