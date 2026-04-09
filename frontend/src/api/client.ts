@@ -4,8 +4,8 @@
 
 import { LevelsResponse, HealthIndexResponse, ScoresResponse, MeasurementsResponse, SiteSummaryData } from '../types';
 
-// API base URL (Vite proxy configuration in vite.config.js)
-const API_BASE = '/api';
+// API base URL: use backend URL from env, fall back to /api (Vite proxy in dev)
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 // Get API key from environment variable
 const API_KEY = import.meta.env.VITE_API_KEY || 'dev-key-local-development';

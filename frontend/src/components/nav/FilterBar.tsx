@@ -90,9 +90,9 @@ const FilterBar: React.FC<FilterBarProps> = ({ levelDevices }) => {
         </span>
 
         {/* Filter pills */}
-        <div className="flex items-center gap-1 flex-1 overflow-x-auto">
+        <div className="flex items-center gap-1 flex-1 overflow-x-auto" style={{ overflow: openPanel ? 'visible' : 'auto' }}>
           {/* Level selector */}
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', zIndex: openPanel === 'level' ? 60 : 'auto' }}>
             <button
               onClick={() => setOpenPanel(openPanel === 'level' ? null : 'level')}
               style={{
@@ -132,7 +132,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ levelDevices }) => {
             <>
               <span style={{ color: '#2e3f55', fontSize: 11 }}>›</span>
               {/* Device selector */}
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', zIndex: openPanel === 'device' ? 60 : 'auto' }}>
                 <button
                   onClick={() => setOpenPanel(openPanel === 'device' ? null : 'device')}
                   style={{

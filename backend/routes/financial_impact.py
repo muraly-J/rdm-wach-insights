@@ -113,19 +113,19 @@ def _compute_impact(level: int, time_range: str, device_id: Optional[str] = None
         # 1. Excess energy cost
         excess_cost = 0.0
         if 'raw_hourly_delta' in grp.columns and 'raw_predicted_delta' in grp.columns:
-            excess_kwh = (grp['raw_hourly_delta'].fillna(0) - grp['raw_predicted_delta'].fillna(0)).clip(lower=0).sum()
-            excess_cost = round(float(excess_kwh) * tariff, 2)
+            excess_kwh = float((grp['raw_hourly_delta'].fillna(0) - grp['raw_predicted_delta'].fillna(0)).clip(lower=0).sum())
+            excess_cost = round(excess_kwh * tariff, 2)
 
         # 2. PF penalty cost (TNB formula)
         pf_penalty = 0.0
         if 'raw_power_factor_avg' in grp.columns and 'raw_hourly_delta' in grp.columns:
-            avg_pf = grp['raw_power_factor_avg'].dropna().mean()
+            avg_pf = float(grp['raw_power_factor_avg'].dropna().mean())
             if pd.notna(avg_pf) and avg_pf < 0.85:
                 steps_below    = (0.85 - avg_pf) / 0.01
                 surcharge_frac = steps_below * 0.015
                 surcharge_frac = min(surcharge_frac, 0.30)  # cap at 30%
-                total_energy   = grp['raw_hourly_delta'].fillna(0).sum()
-                pf_penalty     = round(float(total_energy) * tariff * surcharge_frac, 2)
+                total_energy   = float(grp['raw_hourly_delta'].fillna(0).sum())
+                pf_penalty     = round(total_energy * tariff * surcharge_frac, 2)
 
         # 3. Maintenance risk (latest health index for this AHU)
         latest_hi = float(grp['health_index'].dropna().iloc[-1]) if 'health_index' in grp.columns and not grp['health_index'].dropna().empty else 100.0

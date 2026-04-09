@@ -1,0 +1,17 @@
+backend/
+data/
+logs/
+paraquet_data/
+scripts/
+docker/
+docs/
+.github/
+__pycache__/
+*.pyc
+node_modules/
+.env*
+!.env.example
+.git/
+railway.toml
+Dockerfile
+docker-compose.yml

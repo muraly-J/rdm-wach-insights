@@ -20,10 +20,6 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://sisters-donate-continue-pets.trycloudflare.com/api/$1"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
