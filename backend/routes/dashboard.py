@@ -103,11 +103,21 @@ async def dashboard_ranking(
             )
 
         def make_ranking_entry(row):
+            try:
+                tier = row["tier"] if "tier" in row.index and pd.notna(row["tier"]) else "Unknown"
+            except (KeyError, TypeError):
+                tier = "Unknown"
+
+            try:
+                level_val = int(row["level"]) if "level" in row.index else level_num
+            except (KeyError, ValueError, TypeError):
+                level_val = level_num
+
             return {
                 "device_id": str(row["ahu_id"]),
                 "index": round(float(row["health_index"]), 1),
-                "tier": str(row.get("tier", "Unknown")) if pd.notna(row.get("tier")) else "Unknown",
-                "level": int(row.get("level", level_num))
+                "tier": str(tier),
+                "level": level_val
             }
 
         best = [make_ranking_entry(row) for _, row in best_df.iterrows()] if not best_df.empty else []
