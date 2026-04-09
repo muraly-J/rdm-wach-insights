@@ -42,7 +42,7 @@
 │   ├── tsconfig.json          # TypeScript configuration
 │   ├── index.html             # HTML entry point
 │   ├── package.json           # Dependencies (React, Zustand, Recharts, etc.)
-│   └── tailwind.config.cjs    # Tailwind CSS configuration (must be .cjs for ESM)
+│   └── tailwind.config.ts     # Tailwind CSS configuration
 ├── docs/                      # Project documentation
 │   ├── superpowers/           # Phase plans and feature specs
 │   │   ├── plans/             # Implementation plans (Phase 1, Phase 5, etc.)
@@ -51,8 +51,20 @@
 │   ├── implementation/        # Architecture notes and decisions
 │   └── reference/             # API docs, how-to guides
 ├── scripts/                   # Utility scripts
+│   ├── chatbot_audit.py       # Chatbot auditing utility
+│   ├── data/                  # Data scripts
+│   ├── debug/                 # Debug utilities
+│   ├── etl/                   # ETL pipelines
+│   ├── fetch/                 # Data fetching scripts
+│   ├── generate/              # Data generation utilities
+│   ├── generate_predictions.py # Prediction generation
+│   ├── generate_ward_docs.py  # Ward documentation generation
 │   ├── infra/                 # Infrastructure scripts (Docker, deployment)
-│   └── debug/                 # Debug utilities
+│   ├── migrate_ahu_id.py      # AHU ID migration utility
+│   ├── run_history.sh         # History runner script
+│   ├── scheduler/             # Scheduled task runners
+│   ├── smoke_test.sh          # Smoke test script
+│   └── test/                  # Test utilities
 ├── .github/workflows/         # CI/CD pipelines (GitHub Actions)
 ├── docker/                    # Docker configs (multistage build)
 ├── data/                      # Data files, exports (not in git)
@@ -238,7 +250,7 @@ npm run test:watch         # Watch mode
 npm run test:coverage      # Generate coverage report
 ```
 
-Uses Jest with React Testing Library. Test files should be colocated with components (e.g., `Button.test.tsx` next to `Button.tsx`).
+Uses Jest with React Testing Library. Test files live in `frontend/src/__tests__/` (e.g., `__tests__/Button.test.tsx` for `components/Button.tsx`).
 
 ### Backend
 
@@ -320,7 +332,7 @@ function MyComponent() {
 - Use TailwindCSS utility classes in JSX
 - For complex styles, use `@apply` in CSS files
 - Avoid inline CSS; use TailwindCSS tokens
-- Custom colors defined in `tailwind.config.cjs`
+- Custom colors defined in `tailwind.config.ts`
 
 ---
 
