@@ -74,33 +74,29 @@ async def dashboard_ranking(
         except ValueError:
             raise HTTPException(status_code=400, detail="Level must be a valid number")
 
-        # Get health data from DuckDB (fast, no InfluxDB calls)
-        from core.healthdb import HealthDB
-        db = HealthDB()
+        # Map time_range parameter to db_reader format
+        range_map = {"24h": "24h", "7d": "7d", "30d": "30d", "last_24h": "24h", "last_7d": "7d", "last_30d": "30d", "all_time": "all", "all": "all"}
+        db_time_range = range_map.get(time_range, "7d")
 
-        # Get top 5 best (highest health_index)
-        best_df = await asyncio.to_thread(
-            db.get_ranking,
-            level=level_num,
-            metric="health_index",
-            n=5,
-            order="desc"
-        )
+        # Use db_reader to get data for the specified time range
+        from core.db_reader import get_dataframe
+        df = await asyncio.to_thread(get_dataframe, level=level_num, time_range=db_time_range)
 
-        # Get top 5 worst (lowest health_index)
-        worst_df = await asyncio.to_thread(
-            db.get_ranking,
-            level=level_num,
-            metric="health_index",
-            n=5,
-            order="asc"
-        )
-
-        if best_df.empty and worst_df.empty:
+        if df.empty or "health_index" not in df.columns:
             raise HTTPException(
                 status_code=404,
                 detail=f"No health data available for level {level}"
             )
+
+        # Get latest row per AHU (most recent in the time range)
+        latest = df.sort_values("timestamp").groupby("ahu_id").last().reset_index()
+
+        # Sort by health_index
+        sorted_desc = latest.sort_values("health_index", ascending=False)
+        sorted_asc = latest.sort_values("health_index", ascending=True)
+
+        best = sorted_desc.head(5)
+        worst = sorted_asc.head(5)
 
         def make_ranking_entry(row):
             try:
@@ -108,27 +104,22 @@ async def dashboard_ranking(
             except (KeyError, TypeError):
                 tier = "Unknown"
 
-            try:
-                level_val = int(row["level"]) if "level" in row.index else level_num
-            except (KeyError, ValueError, TypeError):
-                level_val = level_num
-
             return {
                 "device_id": str(row["ahu_id"]),
                 "index": round(float(row["health_index"]), 1),
                 "tier": str(tier),
-                "level": level_val
+                "level": int(level_num)
             }
 
-        best = [make_ranking_entry(row) for _, row in best_df.iterrows()] if not best_df.empty else []
-        worst = [make_ranking_entry(row) for _, row in worst_df.iterrows()] if not worst_df.empty else []
+        best_list = [make_ranking_entry(row) for _, row in best.iterrows()]
+        worst_list = [make_ranking_entry(row) for _, row in worst.iterrows()]
 
         return {
             "level": level,
             "time_range": time_range,
             "snapshot_time": datetime.now().isoformat(),
-            "best": best,
-            "worst": worst,
+            "best": best_list,
+            "worst": worst_list,
         }
 
     except HTTPException:
