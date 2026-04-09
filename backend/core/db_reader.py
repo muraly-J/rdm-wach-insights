@@ -134,14 +134,19 @@ def _get_df(
     """
     Fetch rows from DuckDB, filtered by level / ahu_ids / time window.
     For 30d, collapses hourly rows to daily averages (same as csv_reader).
+    For "all", returns entire database from earliest to latest timestamp.
     """
     db = _db()
     latest_ts = db.get_latest_timestamp()
     if latest_ts is None:
         return pd.DataFrame()
 
-    delta = _RANGE_DELTA.get(time_range, _RANGE_DELTA["7d"])
-    start = (latest_ts - delta).isoformat()
+    # For "all", fetch entire dataset; otherwise use time_range delta
+    if time_range == "all":
+        start = None
+    else:
+        delta = _RANGE_DELTA.get(time_range, _RANGE_DELTA["7d"])
+        start = (latest_ts - delta).isoformat()
 
     # Resolve level to its authoritative device list so cross-level devices
     # (e.g. e0212 stored with level=2 but belonging to Level 1) are included.

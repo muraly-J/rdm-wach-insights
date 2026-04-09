@@ -180,8 +180,8 @@ async def dashboard_trend(
             )
 
         # Map range to time_range parameter for risk engine
-        range_map = {"24h": "last_24h", "7d": "last_7d", "30d": "last_30d"}
-        time_range = range_map[range]
+        range_map = {"24h": "last_24h", "7d": "last_7d", "30d": "last_30d", "all": "all_time"}
+        time_range = range_map.get(range, "last_7d")
 
         # Get all available devices for this level
         available_devices = get_available_devices(time_range)
