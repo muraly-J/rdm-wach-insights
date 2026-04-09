@@ -24,6 +24,20 @@ def device_id_to_name(device_id: str) -> str:
         return device_id.upper()
 
 
+def _empty_response() -> dict:
+    """Return empty but valid site summary response."""
+    return {
+        "totalAHUs": 0,
+        "avgSiteHealth": 0.0,
+        "ahusInAlert": 0,
+        "estMonthlyCostMYR": 0.0,
+        "starAHU": {"id": "", "name": "", "level": 0, "healthScore": 0.0, "monthlyCostMYR": 0.0, "safetyFlags": 0},
+        "criticalAHU": {"id": "", "name": "", "level": 0, "healthScore": 0.0, "monthlyCostMYR": 0.0, "safetyFlags": 0},
+        "levelTiles": [],
+        "trendDeltas": [],
+    }
+
+
 @router.get("/site/summary")
 async def get_site_summary(range: str = Query(default="7d", alias="range")):
     """
@@ -40,7 +54,8 @@ async def get_site_summary(range: str = Query(default="7d", alias="range")):
 
         df = get_dataframe(time_range=time_range_param)
         if df.empty:
-            raise HTTPException(status_code=503, detail="No data available")
+            # Return empty but valid response instead of error
+            return _empty_response()
 
         df = df.sort_values("timestamp")
 
