@@ -74,64 +74,49 @@ async def dashboard_ranking(
         except ValueError:
             raise HTTPException(status_code=400, detail="Level must be a valid number")
 
-        # Get all available devices
-        available_devices = get_available_devices(time_range)
+        # Get health data from DuckDB (fast, no InfluxDB calls)
+        from core.healthdb import HealthDB
+        db = HealthDB()
 
-        # Filter by authoritative level config (handles cross-level device IDs like e0212 in Level 1)
-        level_device_set = set(AHU_LEVEL_CONFIG.get(level_num, {}).get("device_ids", []))
-        level_devices = [d for d in available_devices if d in level_device_set]
-
-        if not level_devices:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No devices found for level {level}. Available levels: 1-11"
-            )
-
-        # Run fleet risk assessment to get health indices
-        result = await asyncio.to_thread(
-            generate_fleet_risk_assessment,
-            time_range=time_range,
-            cluster_by_level=True,
-            devices_filter=level_devices
+        # Get top 5 best (highest health_index)
+        best_df = await asyncio.to_thread(
+            db.get_ranking,
+            level=level_num,
+            metric="health_index",
+            n=5,
+            order="desc"
         )
 
-        assessments = result.get("assessments", [])
+        # Get top 5 worst (lowest health_index)
+        worst_df = await asyncio.to_thread(
+            db.get_ranking,
+            level=level_num,
+            metric="health_index",
+            n=5,
+            order="asc"
+        )
 
-        if not assessments:
+        if best_df.empty and worst_df.empty:
             raise HTTPException(
                 status_code=404,
-                detail=f"No health data available for level {level} in the selected time range"
+                detail=f"No health data available for level {level}"
             )
 
-        # Sort by health_index descending (highest first)
-        sorted_by_health = sorted(assessments, key=lambda x: x.get("health_index", 0), reverse=True)
-
-        # Get top 5 best (highest health index)
-        best = [
-            {
-                "device_id": a["device_id"],
-                "index": round(a["health_index"], 1),
-                "tier": a.get("health_tier", "Unknown"),
-                "level": a.get("level", f"Level {level}")
+        def make_ranking_entry(row):
+            return {
+                "device_id": str(row["ahu_id"]),
+                "index": round(float(row["health_index"]), 1),
+                "tier": str(row.get("tier", "Unknown")) if pd.notna(row.get("tier")) else "Unknown",
+                "level": int(row.get("level", level_num))
             }
-            for a in sorted_by_health[:5]
-        ]
 
-        # Get top 5 worst (lowest health index)
-        worst = [
-            {
-                "device_id": a["device_id"],
-                "index": round(a["health_index"], 1),
-                "tier": a.get("health_tier", "Unknown"),
-                "level": a.get("level", f"Level {level}")
-            }
-            for a in sorted_by_health[-5:][::-1]  # Reverse to show lowest first
-        ]
+        best = [make_ranking_entry(row) for _, row in best_df.iterrows()] if not best_df.empty else []
+        worst = [make_ranking_entry(row) for _, row in worst_df.iterrows()] if not worst_df.empty else []
 
         return {
             "level": level,
             "time_range": time_range,
-            "snapshot_time": result.get("generated_at"),
+            "snapshot_time": datetime.now().isoformat(),
             "best": best,
             "worst": worst,
         }
@@ -139,7 +124,7 @@ async def dashboard_ranking(
     except HTTPException:
         raise
     except Exception as e:
-        logging.getLogger(__name__).error("Dashboard error: %s", e, exc_info=True)
+        logging.getLogger(__name__).error("Dashboard ranking error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")
 
 

@@ -43,8 +43,8 @@ async def get_measurements(
     metric_list = [m.strip() for m in metrics.split(",") if m.strip()]
     if not metric_list:
         raise HTTPException(status_code=400, detail="metrics param is required")
-    if len(metric_list) > 10:
-        raise HTTPException(status_code=400, detail="Maximum 10 metrics per request")
+    if len(metric_list) > 50:
+        raise HTTPException(status_code=400, detail="Maximum 50 metrics per request")
 
     invalid = [m for m in metric_list if m not in ALLOWED_METRICS_WITH_UNITS]
     if invalid:

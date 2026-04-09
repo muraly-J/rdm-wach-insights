@@ -21,10 +21,17 @@ import pandas as pd
 from datetime import datetime, timezone
 from typing import Optional
 
-_DEFAULT_DB_PATH = os.getenv(
-    'HEALTH_DB_PATH',
-    os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'healthdb.duckdb')
-)
+# Use environment variable if set, else use /tmp in production (Railway),
+# or local data/ dir in development
+if os.getenv('RAILWAY_ENVIRONMENT_NAME'):
+    # Railway: use /tmp which persists for the deployment lifetime
+    _DEFAULT_DB_PATH = '/tmp/healthdb.duckdb'
+else:
+    # Local development: use data/ directory
+    _DEFAULT_DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'healthdb.duckdb')
+
+# Override with explicit env var if set
+_DEFAULT_DB_PATH = os.getenv('HEALTH_DB_PATH', _DEFAULT_DB_PATH)
 
 _PREDICTIONS_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS predictions (
