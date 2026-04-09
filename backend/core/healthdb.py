@@ -261,7 +261,7 @@ class HealthDB:
             SELECT {col_clause}
             FROM health_hourly
             {where}
-            ORDER BY timestamp DESC
+            ORDER BY timestamp ASC
             {limit_clause}
         """
         with self._conn() as conn:
