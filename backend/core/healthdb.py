@@ -21,8 +21,9 @@ import pandas as pd
 from datetime import datetime, timezone
 from typing import Optional
 
-_DEFAULT_DB_PATH = os.path.join(
-    os.path.dirname(__file__), '..', '..', 'data', 'healthdb.duckdb'
+_DEFAULT_DB_PATH = os.getenv(
+    'HEALTH_DB_PATH',
+    os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'healthdb.duckdb')
 )
 
 _PREDICTIONS_SCHEMA_SQL = """
