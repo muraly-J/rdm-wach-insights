@@ -33,4 +33,3 @@ data/healthdb.duckdb filter=lfs diff=lfs merge=lfs -text
 *.duckdb binary
 # Always use LF for cron files
 *.cron text eol=lf
-backend/data/healthdb.duckdb filter=lfs diff=lfs merge=lfs -text
