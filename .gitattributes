@@ -23,8 +23,9 @@
 *.ico binary
 *.tar.gz binary
 *.pdf binary
+*.parquet binary
 
-# Shell scripts should always be executable
+# Ensure shell scripts have LF line endings (for Docker/Unix compatibility)
 scripts/** text eol=lf
 
 # Docker files
@@ -34,6 +35,8 @@ docker-compose.yml text eol=lf
 # LFS files (data)
 data/*.csv filter=lfs diff=lfs merge=lfs -text
 data/healthdb.duckdb filter=lfs diff=lfs merge=lfs -text
+*.sqlite3 binary
+*.duckdb binary
 
 # Always use LF for cron files
 *.cron text eol=lf
