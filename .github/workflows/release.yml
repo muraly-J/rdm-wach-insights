@@ -17,23 +17,18 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.11'
           cache: 'pip'
 
       # Frontend build
       - name: Build frontend
         run: cd frontend && npm install && npm run build
 
-      # Backend build (using Python wheel)
-      - name: Build backend distribution
-        run: cd backend && pip install -r requirements.txt && python setup.py sdist bdist_wheel
-
       # Create GitHub release with artifacts
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@c062e08bd532815e2082a7e09ce9571a6e1ccde3
         with:
           files: |
             frontend/dist/**
-            backend/dist/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
