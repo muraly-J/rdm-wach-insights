@@ -152,9 +152,9 @@ def _get_df(
         from models.schemas import AHU_LEVEL_CONFIG
         effective_ahu_ids = AHU_LEVEL_CONFIG.get(level, {}).get("device_ids")
 
-    # 30d queries need full data for accurate daily resampling — no row cap
-    row_limit = None if time_range == "30d" else 5000
-    df = db.get_time_range(level=db_level, ahu_ids=effective_ahu_ids, start=start, limit=row_limit)
+    # Don't limit rows for time-range queries — we need all data in the window
+    # (5000 limit is too small when there are 121 AHUs; would only cover ~1-2 days)
+    df = db.get_time_range(level=db_level, ahu_ids=effective_ahu_ids, start=start, limit=None)
     if df.empty:
         return df
 
