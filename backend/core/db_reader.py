@@ -169,6 +169,15 @@ def _get_df(
     if time_range == "30d":
         df = _resample_to_daily(df)
 
+    # Derive is_on: AHU is "off" when L1, L2, and L3 currents are all < 2A
+    current_cols = ["raw_current_l1", "raw_current_l2", "raw_current_l3"]
+    if all(c in df.columns for c in current_cols):
+        df["is_on"] = (
+            (df["raw_current_l1"].fillna(0) >= 2)
+            | (df["raw_current_l2"].fillna(0) >= 2)
+            | (df["raw_current_l3"].fillna(0) >= 2)
+        )
+
     return df.sort_values("timestamp")
 
 
