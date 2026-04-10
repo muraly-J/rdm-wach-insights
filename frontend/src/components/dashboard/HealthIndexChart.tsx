@@ -15,6 +15,7 @@ import InfoTooltip from '../shared/InfoTooltip';
 interface HealthIndexChartProps {
   data: Array<{ timestamp: string; [key: string]: number }>;
   devices: Array<{ id: string; name: string; label?: string; department?: string }>;
+  isOn?: boolean;
 }
 
 /**
@@ -25,7 +26,7 @@ interface HealthIndexChartProps {
  * Series: One line per AHU in selected level
  * Fill: Gradient from accent at 30% → transparent
  */
-const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) => {
+const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, isOn = true }) => {
   // Generate colors from chart palette (repeating)
   const getColor = (index: number) => {
     const colors = [
@@ -118,7 +119,11 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
   return (
     <motion.div
       className="card p-4 sm:p-6"
-      style={glassStyle}
+      style={{
+        ...glassStyle,
+        opacity: isOn ? 1 : 0.45,
+        filter: isOn ? 'none' : 'grayscale(80%)',
+      }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
