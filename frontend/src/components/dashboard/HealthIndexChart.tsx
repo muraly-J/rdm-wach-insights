@@ -60,18 +60,6 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, show
     return colors[index % colors.length];
   };
 
-  // Invert a hex color
-  const invertColor = (hex: string): string => {
-    hex = hex.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    const invR = (255 - r).toString(16).padStart(2, '0');
-    const invG = (255 - g).toString(16).padStart(2, '0');
-    const invB = (255 - b).toString(16).padStart(2, '0');
-    return `#${invR}${invG}${invB}`;
-  };
-
   // Custom tooltip (Section 5.2)
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -218,7 +206,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, show
           {/* Single device: render on/off color segments */}
           {showColorSegments && devices.map((device, index) => {
             const baseColor = getColor(index);
-            const invertedColor = invertColor(baseColor);
+            const greyColor = '#888888';
 
             return (
               <React.Fragment key={device.id}>
@@ -248,17 +236,16 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, show
                   }}
                 />
 
-                {/* Off-time: inverted color */}
+                {/* Off-time: grey color */}
                 <Area
                   type="monotone"
                   dataKey={device.name}
                   data={data}
-                  stroke={invertedColor}
+                  stroke={greyColor}
                   strokeWidth={2}
                   fill="none"
                   connectNulls
                   dot={false}
-                  opacity={0.7}
                   shape={(props: any) => {
                     const { points } = props;
                     if (!points || points.length === 0) return null;
@@ -271,7 +258,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, show
                         pathD += `${cmd} ${point.x} ${point.y} `;
                       }
                     }
-                    return <path d={pathD} stroke={invertedColor} strokeWidth={2} fill="none" opacity={0.7} />;
+                    return <path d={pathD} stroke={greyColor} strokeWidth={2} fill="none" />;
                   }}
                 />
               </React.Fragment>
