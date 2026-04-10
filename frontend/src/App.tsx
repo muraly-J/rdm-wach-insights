@@ -162,29 +162,28 @@ function App() {
       ? healthData.devices.filter((d) => d.id === selectedDevice)
       : healthData.devices;
 
-    // Merge all device data by original timestamp (not by index) so devices with different
-    // data availability don't cause misalignment or compression
-    const dataByTimestamp = new Map<string, { originalTs: string; formatted: string; values: Record<string, any> }>();
+    // For single device: preserve all data points with is_on field
+    if (selectedDevice && selectedDevice !== 'all') {
+      return series[0]?.data?.map((point: any) => ({
+        timestamp: formatTickByRange(point.timestamp, chartRange),
+        value: point.value,
+        is_on: point.is_on,
+      })) || [];
+    }
 
-    series.forEach(({ id, data }) => {
-      data.forEach((point: any) => {
-        const formatted = formatTickByRange(point.timestamp, chartRange);
-        if (!dataByTimestamp.has(point.timestamp)) {
-          dataByTimestamp.set(point.timestamp, {
-            originalTs: point.timestamp,
-            formatted,
-            values: { timestamp: formatted }
-          });
-        }
-        dataByTimestamp.get(point.timestamp)!.values[labelMap[id] ?? id] = point.value;
+    // For all devices: merge by index (simple approach), no on/off logic
+    const refData = series[0]?.data ?? [];
+    return refData.map((point, idx) => {
+      const timestamp = formatTickByRange(point.timestamp, chartRange);
+      const entry: Record<string, any> = { timestamp };
+      series.forEach(({ id, data }) => {
+        entry[labelMap[id] ?? id] = data[idx]?.value ?? null;
       });
+      return entry;
     });
-
-    // Sort by original ISO timestamp (chronologically), then return with formatted timestamps
-    return Array.from(dataByTimestamp.values())
-      .sort((a, b) => a.originalTs.localeCompare(b.originalTs))
-      .map(({ values }) => values);
   }, [healthData, selectedDevice, chartRange, labelMap]);
+
+  const isSingleDevice = selectedDevice && selectedDevice !== 'all';
 
   const chartDevices = React.useMemo(() => {
     if (selectedDevice && selectedDevice !== 'all') {
@@ -277,7 +276,7 @@ function App() {
               {selectedLevel ? (
                 <>
                   <div className="mb-8">
-                    <HealthIndexChart data={healthChartData as any} devices={chartDevices} />
+                    <HealthIndexChart data={healthChartData as any} devices={chartDevices} showColorSegments={isSingleDevice} />
                   </div>
 
                   <ScoreCardsGrid scoreData={scoreCardData} />
