@@ -41,6 +41,7 @@ from middleware.query_logger import init_db, log_query
 from middleware.request_id import RequestIDMiddleware
 from middleware.rate_limiter import RateLimitMiddleware
 from routes.query import router as query_router
+from core.alerter import record_response, check_and_alert
 
 
 # ── API Key Authentication Middleware ────────────────────────────────────────
@@ -134,6 +135,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "frame-ancestors 'none';"
         )
         response.headers['Content-Security-Policy'] = csp
+        return response
+
+
+# ── Alerting middleware ───────────────────────────────────────────────────────
+
+class AlertingMiddleware(BaseHTTPMiddleware):
+    """Records response status codes for 5xx rate alerting."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        webhook_url = os.getenv("ALERT_WEBHOOK_URL", "")
+        if webhook_url:
+            record_response(response.status_code)
+            await check_and_alert(webhook_url)
         return response
 
 
@@ -231,6 +246,7 @@ def create_app():
     app.add_middleware(APIKeyAuthMiddleware)  # Authentication
     app.add_middleware(RateLimitMiddleware)   # Rate limiting
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(AlertingMiddleware)    # 5xx error rate alerting
     app.add_middleware(RequestIDMiddleware)   # Request ID tracing
 
     # CORS — restrict to specific origins (not all methods/headers)
