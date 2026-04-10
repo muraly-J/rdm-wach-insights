@@ -7,9 +7,7 @@ POST /api/query — main endpoint with security hardening:
 - LLM output allowlist validation (prevents injection via structured output)
 """
 import re
-import time
 import uuid
-from collections import defaultdict
 from typing import Optional
 
 import pandas as pd
@@ -24,6 +22,7 @@ logger = get_logger(__name__)
 from llm.translator import translate_query
 from middleware.validator import validate_structured_query
 from middleware.query_logger import log_query
+from middleware.rate_limiter import make_rate_limiter
 from core.influx_client import fetch_time_series, fetch_ranking
 from core.charts import build_chart
 from core.summarizer import summarize
@@ -32,20 +31,7 @@ from models.schemas import ALLOWED_METRICS, ALLOWED_DEVICES, QueryType
 router = APIRouter()
 
 # ── Rate limiter (in-memory, per IP) ────────────────────────────────────────
-_rate_store: dict = defaultdict(list)
-RATE_LIMIT        = 20   # requests
-RATE_WINDOW       = 60   # seconds
-
-def _check_rate_limit(ip: str) -> None:
-    now  = time.time()
-    hits = [t for t in _rate_store[ip] if now - t < RATE_WINDOW]
-    hits.append(now)
-    _rate_store[ip] = hits
-    if len(hits) > RATE_LIMIT:
-        raise HTTPException(
-            status_code=429,
-            detail={"error": "Too many requests. Please wait a moment before trying again."}
-        )
+_check_rate_limit = make_rate_limiter(limit=20, window=60)
 
 # ── Injection & abuse patterns ───────────────────────────────────────────────
 _INJECTION_PATTERNS = [

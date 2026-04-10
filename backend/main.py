@@ -12,8 +12,6 @@ Backend and frontend communicate via /api endpoints.
 """
 import os
 import sys
-import time
-from collections import defaultdict
 
 from core.logger import get_logger
 logger = get_logger(__name__)
@@ -38,22 +36,8 @@ from routes.site_summary import router as site_summary_router
 from dotenv import load_dotenv
 from middleware.query_logger import init_db, log_query
 from middleware.request_id import RequestIDMiddleware
+from middleware.rate_limiter import RateLimitMiddleware
 from routes.query import router as query_router
-
-
-# ── Rate Limiter (in-memory, per IP) ───────────────────────────────────────
-_rate_store: dict = defaultdict(list)
-RATE_LIMIT        = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
-RATE_WINDOW       = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
-
-
-def _check_rate_limit(ip: str) -> bool:
-    """Returns True if the request should be rate-limited."""
-    now  = time.time()
-    hits = [t for t in _rate_store[ip] if now - t < RATE_WINDOW]
-    hits.append(now)
-    _rate_store[ip] = hits
-    return len(hits) > RATE_LIMIT
 
 
 # ── API Key Authentication Middleware ────────────────────────────────────────
@@ -121,31 +105,6 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
                 }
             )
             return response
-
-        return await call_next(request)
-
-
-# ── Rate Limiting Middleware ─────────────────────────────────────────────────
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Rate Limiting Middleware - applied to forecast endpoints."""
-
-    async def dispatch(self, request: Request, call_next):
-        # Skip rate limiting for health check
-        if request.url.path == "/health":
-            return await call_next(request)
-
-        # Get client IP
-        client_ip = request.client.host or "unknown"
-
-        # Check rate limit for /api endpoints
-        # NOTE: Must return JSONResponse directly — raising HTTPException inside
-        # BaseHTTPMiddleware is swallowed by Starlette and surfaces as 500.
-        if request.url.path.startswith("/api/"):
-            if _check_rate_limit(client_ip):
-                return JSONResponse(
-                    status_code=429,
-                    content={"detail": {"error": "Too many requests. Please wait a moment before trying again."}}
-                )
 
         return await call_next(request)
 

@@ -21,44 +21,43 @@ AUTH = {"Authorization": "Bearer test-key"}
 class TestCheckRateLimitDirect:
     """Tests _check_rate_limit() as a pure function — no HTTP stack."""
 
-    def setup_method(self):
-        """Reset the rate store and use a fresh IP for each test."""
-        import routes.query as qmod
-        qmod._rate_store.clear()
-
     def test_requests_within_limit_do_not_raise(self):
-        from routes.query import _check_rate_limit, RATE_LIMIT
+        from middleware.rate_limiter import make_rate_limiter
+        check = make_rate_limiter(limit=20, window=60)
         # Fill up to the limit — should not raise
-        for _ in range(RATE_LIMIT):
-            _check_rate_limit("test-direct-ip")
+        for _ in range(20):
+            check("test-direct-ip")
 
     def test_request_over_limit_raises_429(self):
-        from routes.query import _check_rate_limit, RATE_LIMIT
-        for _ in range(RATE_LIMIT):
-            _check_rate_limit("test-over-ip")
+        from middleware.rate_limiter import make_rate_limiter
+        check = make_rate_limiter(limit=20, window=60)
+        for _ in range(20):
+            check("test-over-ip")
 
         with pytest.raises(HTTPException) as exc:
-            _check_rate_limit("test-over-ip")
+            check("test-over-ip")
 
         assert exc.value.status_code == 429
 
     def test_different_ips_have_independent_limits(self):
-        from routes.query import _check_rate_limit, RATE_LIMIT
-        for _ in range(RATE_LIMIT):
-            _check_rate_limit("ip-a")
+        from middleware.rate_limiter import make_rate_limiter
+        check = make_rate_limiter(limit=20, window=60)
+        for _ in range(20):
+            check("ip-a")
 
         # ip-b has its own counter — should not raise
-        _check_rate_limit("ip-b")
+        check("ip-b")
 
 
 class TestRateLimitHTTP:
-    """Tests 429 response over HTTP with RATE_LIMIT patched to 2."""
+    """Tests 429 response over HTTP with rate limit patched to 2."""
 
     @pytest.fixture
     def client_with_low_limit(self, monkeypatch):
         import routes.query as qmod
-        monkeypatch.setattr(qmod, "RATE_LIMIT", 2)
-        monkeypatch.setattr(qmod, "_rate_store", defaultdict(list))
+        from middleware.rate_limiter import make_rate_limiter
+        # Replace _check_rate_limit with a new instance that has limit=2
+        monkeypatch.setattr(qmod, "_check_rate_limit", make_rate_limiter(limit=2, window=60))
         from main import app
         return TestClient(app)
 
