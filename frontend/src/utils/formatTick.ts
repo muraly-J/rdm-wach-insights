@@ -2,7 +2,7 @@
  * formatTickByRange
  * ─────────────────
  * Returns a human-readable tick label for a chart X-axis given a timestamp
- * string (ISO 8601) and the active time range.
+ * string (ISO 8601) and the active time range. All times displayed in MYT (UTC+8).
  *
  *   24h  →  "14:00"           (time-of-day only; all points are within today)
  *   7d   →  "Mar 10 14:00"    (date + time; hourly granularity)
@@ -10,18 +10,60 @@
  */
 export type TimeRange = '24h' | '7d' | '30d';
 
+const MYT_TIMEZONE = 'Asia/Kuala_Lumpur';
+
+// Format date in MYT (Asia/Kuala_Lumpur)
+export function formatDateMYT(date: Date, options?: Intl.DateTimeFormatOptions): string {
+  return date.toLocaleDateString('en-US', {
+    ...options,
+    timeZone: MYT_TIMEZONE
+  });
+}
+
+// Format time in MYT (Asia/Kuala_Lumpur)
+export function formatTimeMYT(date: Date, options?: Intl.DateTimeFormatOptions): string {
+  return date.toLocaleTimeString('en-US', {
+    ...options,
+    timeZone: MYT_TIMEZONE
+  });
+}
+
+// Format both date and time in MYT
+export function formatDateTimeMYT(date: Date, options?: Intl.DateTimeFormatOptions): string {
+  return date.toLocaleString('en-US', {
+    ...options,
+    timeZone: MYT_TIMEZONE
+  });
+}
+
 export function formatTickByRange(timestamp: string, range: TimeRange): string {
   const d = new Date(timestamp);
+  const tzOptions = { timeZone: MYT_TIMEZONE };
+
   if (range === '24h') {
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return formatTimeMYT(d, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
   }
   if (range === '7d') {
-    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const date = formatDateMYT(d, {
+      month: 'short',
+      day: 'numeric'
+    });
+    const time = formatTimeMYT(d, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
     return `${date} ${time}`;
   }
   // 30d
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return formatDateMYT(d, {
+    month: 'short',
+    day: 'numeric'
+  });
 }
 
 /**

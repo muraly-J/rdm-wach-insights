@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatTickByRange, tickIntervalByRange, type TimeRange } from '../../../utils/formatTick';
+import { formatTickByRange, tickIntervalByRange, formatDateMYT, type TimeRange } from '../../../utils/formatTick';
 import {
   LineChart,
   Line,
@@ -134,8 +134,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
             axisLine={false}
             tickFormatter={(v) => {
               if (timeRange === '7d') {
-                const d = new Date(v);
-                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return formatDateMYT(new Date(v), { month: 'short', day: 'numeric' });
               }
               return formatTickByRange(v, timeRange);
             }}

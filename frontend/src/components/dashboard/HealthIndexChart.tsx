@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 import InfoTooltip from '../shared/InfoTooltip';
+import { formatDateMYT } from '../../utils/formatTick';
 
 interface HealthIndexChartProps {
   data: Array<{ timestamp: string; [key: string]: number }>;
@@ -165,7 +166,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
         </h3>
         
         <p className="mt-2 text-sm text-[#6d6e71]">
-          {devices.length} AHUs monitored • Last updated {new Date().toLocaleDateString()}
+          {devices.length} AHUs monitored • Last updated {formatDateMYT(new Date(), { month: 'short', day: 'numeric', year: 'numeric' })}
         </p>
       </div>
 

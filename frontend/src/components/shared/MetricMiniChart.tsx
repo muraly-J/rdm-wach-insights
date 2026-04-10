@@ -4,6 +4,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { MeasurementPoint } from '../../types';
+import { formatDateTimeMYT } from '../../utils/formatTick';
 
 interface MetricMiniChartProps {
   label: string;
@@ -52,7 +53,13 @@ export default function MetricMiniChart({
               borderRadius: 6,
               fontSize: 11,
             }}
-            labelFormatter={(l: string) => new Date(l).toLocaleString()}
+            labelFormatter={(l: string) => formatDateTimeMYT(new Date(l), {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            })}
             formatter={(v: number) => [`${v.toFixed(2)} ${unit}`, label]}
           />
           <Line

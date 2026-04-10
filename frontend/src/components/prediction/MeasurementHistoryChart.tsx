@@ -4,6 +4,7 @@ import {
   ReferenceLine, ResponsiveContainer,
 } from 'recharts';
 import type { MeasurementPoint } from '../../types';
+import { formatDateMYT, formatDateTimeMYT } from '../../utils/formatTick';
 
 interface MeasurementHistoryChartProps {
   label: string;
@@ -53,7 +54,7 @@ export default function MeasurementHistoryChart({
             axisLine={false}
             minTickGap={48}
             tickFormatter={(ts: string) =>
-              new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              formatDateMYT(new Date(ts), { month: 'short', day: 'numeric' })
             }
           />
           <YAxis
@@ -71,7 +72,13 @@ export default function MeasurementHistoryChart({
               borderRadius: 8,
               fontSize: 11,
             }}
-            labelFormatter={(l: string) => new Date(l).toLocaleString()}
+            labelFormatter={(l: string) => formatDateTimeMYT(new Date(l), {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            })}
             formatter={(v: number) => [`${v.toFixed(2)} ${unit}`, label]}
           />
           {tNow && (
