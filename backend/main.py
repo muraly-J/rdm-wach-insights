@@ -26,6 +26,7 @@ from starlette.responses import Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 from routes.forecast import router as forecast_router
 from routes.dashboard import router as dashboard_router
 from routes.health_scores import router as health_scores_router
@@ -267,9 +268,12 @@ def create_app():
 
     # Static files for local development
     DIST_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
-    
+
     if os.path.isdir(DIST_DIR):
         app.mount('/assets', StaticFiles(directory=os.path.join(DIST_DIR, 'assets')), name='assets')
+
+    # ── Prometheus metrics ────────────────────────────────────────────────────
+    Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
     return app
 
