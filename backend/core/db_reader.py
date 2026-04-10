@@ -143,7 +143,11 @@ def _get_df(
     if latest_ts is None:
         return pd.DataFrame()
 
-    # For "all", fetch entire dataset; otherwise use time_range delta
+    # Calculate time window from latest_ts working backwards
+    # "24h" → last 24 hours from latest_ts
+    # "7d"  → last 7 days from latest_ts
+    # "30d" → last 30 days from latest_ts
+    # "all" → entire database from earliest to latest
     if time_range == "all":
         start = None
     else:
@@ -159,8 +163,7 @@ def _get_df(
         from models.schemas import AHU_LEVEL_CONFIG
         effective_ahu_ids = AHU_LEVEL_CONFIG.get(level, {}).get("device_ids")
 
-    # Don't limit rows for time-range queries — we need all data in the window
-    # (5000 limit is too small when there are 121 AHUs; would only cover ~1-2 days)
+    # Fetch all rows in the time window (no limit; we need complete data for aggregation)
     df = db.get_time_range(level=db_level, ahu_ids=effective_ahu_ids, start=start, limit=None)
     if df.empty:
         return df

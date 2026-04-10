@@ -161,15 +161,25 @@ function App() {
     const series = selectedDevice && selectedDevice !== 'all'
       ? healthData.devices.filter((d) => d.id === selectedDevice)
       : healthData.devices;
-    const refData = series[0]?.data ?? [];
-    return refData.map((point, idx) => {
-      const timestamp = formatTickByRange(point.timestamp, chartRange);
-      const entry: Record<string, any> = { timestamp };
-      series.forEach(({ id, data }) => {
-        entry[labelMap[id] ?? id] = data[idx]?.value ?? null;
+
+    // Merge all device data by timestamp (not by index) so devices with different
+    // data availability don't cause misalignment or compression
+    const dataByTimestamp = new Map<string, Record<string, any>>();
+
+    series.forEach(({ id, data }) => {
+      data.forEach((point: any) => {
+        const timestamp = formatTickByRange(point.timestamp, chartRange);
+        if (!dataByTimestamp.has(timestamp)) {
+          dataByTimestamp.set(timestamp, { timestamp });
+        }
+        dataByTimestamp.get(timestamp)![labelMap[id] ?? id] = point.value;
       });
-      return entry;
     });
+
+    // Return sorted by timestamp
+    return Array.from(dataByTimestamp.values()).sort((a, b) =>
+      a.timestamp.localeCompare(b.timestamp)
+    );
   }, [healthData, selectedDevice, chartRange, labelMap]);
 
   const chartDevices = React.useMemo(() => {
