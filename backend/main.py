@@ -12,6 +12,8 @@ Backend and frontend communicate via /api endpoints.
 """
 import os
 import sys
+import signal
+from contextlib import asynccontextmanager
 
 from core.logger import get_logger
 logger = get_logger(__name__)
@@ -134,6 +136,58 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+# ── Startup checks and SIGTERM handler ────────────────────────────────────────
+
+def _handle_sigterm(*_) -> None:
+    """Flush query log and shut down cleanly on SIGTERM (e.g. Docker stop)."""
+    logger.info("SIGTERM received — flushing query log and shutting down")
+    # SQLite commits happen inside context managers in query_logger.py,
+    # so no explicit flush is needed; log the path for ops visibility.
+    from middleware.query_logger import _DB_PATH
+    logger.info("Query log location", extra={"db_path": str(_DB_PATH)})
+    sys.exit(0)
+
+
+def _startup_checks() -> None:
+    """
+    Verify DuckDB and ChromaDB are accessible on boot.
+    Logs a warning (does not crash) if either is unavailable — this allows
+    the app to start without data and serve the /health endpoint.
+    """
+    import duckdb
+
+    db_path = os.path.join(os.path.dirname(__file__), "..", "data", "healthdb.duckdb")
+    if os.path.exists(db_path):
+        try:
+            conn = duckdb.connect(db_path, read_only=True)
+            conn.close()
+            logger.info("DuckDB startup check passed", extra={"db": db_path})
+        except Exception as e:
+            logger.error("DuckDB startup check failed — health scores may be unavailable", extra={"error": str(e)})
+    else:
+        logger.warning("DuckDB not found — health scores will be empty on first boot", extra={"db": db_path})
+
+    chroma_dir = os.getenv("CHROMA_PERSIST_DIR", os.path.join(os.path.dirname(__file__), "data", "chroma"))
+    if os.path.isdir(chroma_dir):
+        logger.info("ChromaDB directory present", extra={"dir": chroma_dir})
+    else:
+        logger.warning("ChromaDB directory not found — RAG will be unavailable until ingestion runs", extra={"dir": chroma_dir})
+
+
+@asynccontextmanager
+async def lifespan(app):
+    """FastAPI lifespan: startup checks + SIGTERM registration."""
+    _startup_checks()
+    signal.signal(signal.SIGTERM, _handle_sigterm)
+    try:
+        init_db()
+        logger.info("Query logging initialized")
+    except Exception as e:
+        logger.warning("Could not initialize query logger", extra={"error": str(e)})
+    yield
+    logger.info("Application shutdown complete")
+
+
 # ── App setup ─────────────────────────────────────────────────────────────────
 
 def get_cors_origins():
@@ -149,6 +203,7 @@ def create_app():
         title="WACH Insight API",
         description="Conversational AHU energy analytics for the WACH ward.",
         version="1.0.0",
+        lifespan=lifespan,
     )
 
     # Declare Bearer auth scheme so Swagger UI shows the Authorize button
@@ -221,15 +276,6 @@ def create_app():
 # ── Create the app instance ───────────────────────────────────────────────────
 
 app = create_app()
-
-
-# ── Initialize database on startup ───────────────────────────────────────────
-
-try:
-    init_db()
-    logger.info("[Startup] Query logging initialized")
-except Exception as e:
-    logger.warning(f"[Startup] Warning: Could not initialize query logger: {e}")
 
 
 # ── Background ETL backfill (runs once on cold start when DB is empty) ────────
