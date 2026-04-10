@@ -162,24 +162,28 @@ function App() {
       ? healthData.devices.filter((d) => d.id === selectedDevice)
       : healthData.devices;
 
-    // Merge all device data by timestamp (not by index) so devices with different
+    // Merge all device data by original timestamp (not by index) so devices with different
     // data availability don't cause misalignment or compression
-    const dataByTimestamp = new Map<string, Record<string, any>>();
+    const dataByTimestamp = new Map<string, { originalTs: string; formatted: string; values: Record<string, any> }>();
 
     series.forEach(({ id, data }) => {
       data.forEach((point: any) => {
-        const timestamp = formatTickByRange(point.timestamp, chartRange);
-        if (!dataByTimestamp.has(timestamp)) {
-          dataByTimestamp.set(timestamp, { timestamp });
+        const formatted = formatTickByRange(point.timestamp, chartRange);
+        if (!dataByTimestamp.has(point.timestamp)) {
+          dataByTimestamp.set(point.timestamp, {
+            originalTs: point.timestamp,
+            formatted,
+            values: { timestamp: formatted }
+          });
         }
-        dataByTimestamp.get(timestamp)![labelMap[id] ?? id] = point.value;
+        dataByTimestamp.get(point.timestamp)!.values[labelMap[id] ?? id] = point.value;
       });
     });
 
-    // Return sorted by timestamp
-    return Array.from(dataByTimestamp.values()).sort((a, b) =>
-      a.timestamp.localeCompare(b.timestamp)
-    );
+    // Sort by original ISO timestamp (chronologically), then return with formatted timestamps
+    return Array.from(dataByTimestamp.values())
+      .sort((a, b) => a.originalTs.localeCompare(b.originalTs))
+      .map(({ values }) => values);
   }, [healthData, selectedDevice, chartRange, labelMap]);
 
   const chartDevices = React.useMemo(() => {
