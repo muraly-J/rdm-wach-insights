@@ -1,0 +1,13 @@
+# Prometheus scrape config for WACH Insight local monitoring.
+# Used by the optional sidecar in docker-compose.yml.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: wach_insight_backend
+    static_configs:
+      - targets:
+          - backend:8000   # Docker service name
+    metrics_path: /metrics
