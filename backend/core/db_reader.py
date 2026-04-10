@@ -93,8 +93,10 @@ def _resample_to_daily(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df['_date'] = pd.to_datetime(df['timestamp'], utc=True).dt.normalize()
     group_keys = ['ahu_id', 'level', '_date']
-    numeric_cols = [c for c in df.select_dtypes(include='number').columns if c not in group_keys]
-    text_cols = [c for c in df.columns if c not in group_keys + ['timestamp'] + numeric_cols]
+    # is_on is a derived bool — exclude from generic averaging; caller restores it
+    _skip = set(group_keys + ['timestamp', 'is_on'])
+    numeric_cols = [c for c in df.select_dtypes(include='number').columns if c not in _skip]
+    text_cols = [c for c in df.columns if c not in _skip and c not in numeric_cols]
     agg: dict = {c: 'mean' for c in numeric_cols}
     agg.update({c: 'last' for c in text_cols})
     daily = df.groupby(group_keys).agg(agg).reset_index()
@@ -166,10 +168,7 @@ def _get_df(
     # Normalize to UTC so .isoformat() always emits +00:00 (matches csv_reader behavior)
     df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
 
-    if time_range == "30d":
-        df = _resample_to_daily(df)
-
-    # Derive is_on: AHU is "off" when L1, L2, and L3 currents are all < 2A
+    # Derive is_on BEFORE any resampling so the flag is available row-level
     current_cols = ["raw_current_l1", "raw_current_l2", "raw_current_l3"]
     if all(c in df.columns for c in current_cols):
         df["is_on"] = (
@@ -177,6 +176,18 @@ def _get_df(
             | (df["raw_current_l2"].fillna(0) >= 2)
             | (df["raw_current_l3"].fillna(0) >= 2)
         )
+
+    if time_range == "30d":
+        if "is_on" in df.columns:
+            # Save true current status per device (most recent raw row) before filtering
+            latest_status: pd.Series = df.groupby("ahu_id")["is_on"].last()
+            # Daily averages should only reflect on-time hours
+            df_active = df[df["is_on"]]
+            df = _resample_to_daily(df_active if not df_active.empty else df)
+            # Restore accurate current on/off per device after resample
+            df["is_on"] = df["ahu_id"].map(latest_status)
+        else:
+            df = _resample_to_daily(df)
 
     return df.sort_values("timestamp")
 
@@ -217,7 +228,9 @@ def get_health_index_series(
     result = []
     for ahu_id, group in df.groupby("ahu_id"):
         meta = labels.get(str(ahu_id), {})
-        result.append({
+        # Only include data points from on-time rows (no flat off-time periods in chart)
+        plot_rows = group[group["is_on"]] if "is_on" in group.columns else group
+        entry: dict = {
             "id": ahu_id,
             "name": ahu_id,
             "label": meta.get("label", ""),
@@ -225,10 +238,14 @@ def get_health_index_series(
             "area": meta.get("area", ""),
             "data": [
                 {"timestamp": row["timestamp"].isoformat(), "value": round(float(row["health_index"]), 2)}
-                for _, row in group.iterrows()
+                for _, row in plot_rows.iterrows()
                 if pd.notna(row["health_index"])
             ],
-        })
+        }
+        # is_on reflects the most recent raw reading (before any filtering)
+        if "is_on" in group.columns:
+            entry["is_on"] = bool(group["is_on"].iloc[-1])
+        result.append(entry)
     return result
 
 
@@ -241,11 +258,17 @@ def get_score_breakdown(level: int, time_range: str) -> list[dict]:
     labels = _load_ahu_labels()
     result = []
     for ahu_id, group in df.groupby("ahu_id"):
+        # Only compute scores from on-time rows; fall back to all rows if none qualify
+        if "is_on" in group.columns:
+            active = group[group["is_on"]]
+            score_group = active if not active.empty else group
+        else:
+            score_group = group
         scores = {}
         for col in SCORE_COLUMNS:
-            if col not in group.columns:
+            if col not in score_group.columns:
                 continue
-            series = group[["timestamp", col]].dropna(subset=[col])
+            series = score_group[["timestamp", col]].dropna(subset=[col])
             if series.empty:
                 continue
             values = series[col].astype(float)
@@ -257,13 +280,16 @@ def get_score_breakdown(level: int, time_range: str) -> list[dict]:
             trend = round(float(values.iloc[-1] - values.iloc[0]), 2) if len(values) > 1 else 0.0
             scores[col] = {"current": current, "trend": trend, "data": data_points}
         meta = labels.get(str(ahu_id), {})
-        result.append({
+        entry: dict = {
             "id": ahu_id,
             "name": ahu_id,
             "label": meta.get("label", ""),
             "department": meta.get("department", ""),
             "scores": scores,
-        })
+        }
+        if "is_on" in group.columns:
+            entry["is_on"] = bool(group["is_on"].iloc[-1])
+        result.append(entry)
     return result
 
 
