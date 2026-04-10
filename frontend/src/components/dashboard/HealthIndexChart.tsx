@@ -58,6 +58,18 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
     return colors[index % colors.length];
   };
 
+  // Invert a hex color
+  const invertColor = (hex: string): string => {
+    hex = hex.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const invR = (255 - r).toString(16).padStart(2, '0');
+    const invG = (255 - g).toString(16).padStart(2, '0');
+    const invB = (255 - b).toString(16).padStart(2, '0');
+    return `#${invR}${invG}${invB}`;
+  };
+
   // Custom tooltip (Section 5.2)
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -187,47 +199,91 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) =>
 
           <Tooltip content={<CustomTooltip />} />
 
-          {/* Render on-time and off-time segments for each device */}
+          {/* Render each device with normal color for on-time, inverted for off-time */}
           {devices.map((device, index) => {
             const baseColor = getColor(index);
-            const greyColor = '#8899aa'; // Off-time grey
+            const invertedColor = invertColor(baseColor);
 
-            // Split into on-time and off-time data points
-            const onTimeData = data.map((point) => ({
+            // Prepare data with stroke color based on is_on status
+            const enrichedData = data.map((point) => ({
               ...point,
-              [device.name]: (point as any).is_on !== false ? point[device.name] : null,
-            }));
-
-            const offTimeData = data.map((point) => ({
-              ...point,
-              [device.name]: (point as any).is_on === false ? point[device.name] : null,
+              [`${device.name}_color`]: (point as any).is_on !== false ? baseColor : invertedColor,
             }));
 
             return (
               <React.Fragment key={device.id}>
-                {/* On-time: normal color */}
+                {/* Single continuous line with colors based on is_on status */}
                 <Area
                   type="monotone"
                   dataKey={device.name}
-                  data={onTimeData}
+                  data={enrichedData}
                   stroke={baseColor}
                   strokeWidth={2}
                   fill="none"
                   connectNulls
                   dot={false}
-                />
+                  shape={(props: any) => {
+                    const { points } = props;
+                    if (!points || points.length === 0) return null;
 
-                {/* Off-time: grey color and reduced opacity */}
-                <Area
-                  type="monotone"
-                  dataKey={device.name}
-                  data={offTimeData}
-                  stroke={greyColor}
-                  strokeWidth={2}
-                  fill="none"
-                  connectNulls
-                  dot={false}
-                  opacity={0.45}
+                    let pathD = '';
+                    for (let i = 0; i < points.length; i++) {
+                      const point = points[i];
+                      if (point) {
+                        const dataPoint = data[i] as any;
+                        const color = dataPoint.is_on !== false ? baseColor : invertedColor;
+                        const cmd = i === 0 ? 'M' : 'L';
+                        pathD += `${cmd} ${point.x} ${point.y} `;
+                      }
+                    }
+
+                    return (
+                      <g>
+                        {/* Render segments with appropriate colors */}
+                        {(() => {
+                          let currentPath = '';
+                          let currentColor = baseColor;
+                          const paths: Array<{ d: string; color: string }> = [];
+
+                          for (let i = 0; i < points.length; i++) {
+                            const point = points[i];
+                            if (!point) continue;
+
+                            const dataPoint = data[i] as any;
+                            const newColor = dataPoint.is_on !== false ? baseColor : invertedColor;
+
+                            if (newColor !== currentColor) {
+                              // Color changed, save current path
+                              if (currentPath) {
+                                paths.push({ d: currentPath, color: currentColor });
+                              }
+                              currentPath = `M ${point.x} ${point.y} `;
+                              currentColor = newColor;
+                            } else {
+                              // Same color, continue path
+                              const cmd = currentPath === '' ? 'M' : 'L';
+                              currentPath += `${cmd} ${point.x} ${point.y} `;
+                            }
+                          }
+
+                          // Add final path
+                          if (currentPath) {
+                            paths.push({ d: currentPath, color: currentColor });
+                          }
+
+                          return paths.map((pathItem, idx) => (
+                            <path
+                              key={idx}
+                              d={pathItem.d}
+                              stroke={pathItem.color}
+                              strokeWidth={2}
+                              fill="none"
+                            />
+                          ));
+                        })()}
+                      </g>
+                    );
+                  }}
                 />
               </React.Fragment>
             );
