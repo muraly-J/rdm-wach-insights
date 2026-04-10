@@ -8,7 +8,6 @@ Load any Qwen model in LM Studio and enable the local server.
 """
 
 import asyncio
-import logging
 import re
 from functools import partial
 from typing import Optional
@@ -16,8 +15,9 @@ from typing import Optional
 from openai import OpenAI
 
 from config import get_lms_base_url, get_lms_model, get_lms_api_key
+from core.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 

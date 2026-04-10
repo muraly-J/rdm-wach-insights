@@ -6,11 +6,9 @@ POST /api/query — main endpoint with security hardening:
 - Session ID validation
 - LLM output allowlist validation (prevents injection via structured output)
 """
-import logging
 import re
 import time
 import uuid
-import logging
 from collections import defaultdict
 from typing import Optional
 
@@ -19,7 +17,9 @@ import pandas as pd
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel, validator
 
-logger = logging.getLogger(__name__)
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 from llm.translator import translate_query
 from middleware.validator import validate_structured_query
@@ -264,7 +264,7 @@ async def handle_query(request: Request, body: QueryRequest):
                 top_n=structured.top_n,  # Pass through None for all devices
             )
     except Exception as e:
-        logging.getLogger(__name__).error("Query processing error: %s", e, exc_info=True)
+        logger.error("Query processing error: %s", e, exc_info=True)
         log_query(
             session_id=session_id,
             user_query=body.user_query,

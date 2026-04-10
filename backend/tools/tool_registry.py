@@ -7,10 +7,11 @@ TOOLS: list of dicts in OpenAI function-calling schema.
 dispatch_tool(name, args): routes a tool call to its handler.
 """
 
-import logging
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 TOOLS = [
     {

@@ -7,9 +7,10 @@ Model downloads ~300MB to ~/.cache/huggingface/ on first use.
 """
 
 import asyncio
-import logging
 
-logger = logging.getLogger(__name__)
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 _MODEL_NAME = "Qwen/Qwen3-Embedding-0.6B"
 _model = None

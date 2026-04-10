@@ -7,12 +7,13 @@ Each handler is called by dispatch_tool() in tool_registry.py.
 Handlers receive keyword arguments matching the tool's parameter schema.
 Each returns a plain Python dict serialisable to JSON.
 """
-import logging
 from typing import Optional, Any
 
 import pandas as pd
 
-logger = logging.getLogger(__name__)
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # ── Lazy singletons ────────────────────────────────────────────────────────────

@@ -13,15 +13,10 @@ Backend and frontend communicate via /api endpoints.
 import os
 import sys
 import time
-import logging
 from collections import defaultdict
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-logger = logging.getLogger(__name__)
+from core.logger import get_logger
+logger = get_logger(__name__)
 
 sys.path.insert(0, os.path.dirname(__file__))
 from fastapi import FastAPI, HTTPException, Request

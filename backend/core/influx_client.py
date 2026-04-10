@@ -22,6 +22,7 @@ from influxdb_client import InfluxDBClient
 
 from models.schemas import ALLOWED_TIME_RANGES, ALLOWED_DEVICES
 from config import get_influx_url, get_influx_token, get_influx_org, get_influx_bucket
+from core.logger import get_logger
 
 warnings.filterwarnings("ignore")
 
@@ -31,9 +32,7 @@ _TOKEN  = get_influx_token() or ""  # Empty token will cause InfluxDB to fail, b
 _ORG    = get_influx_org() or "wach"
 _BUCKET = get_influx_bucket()
 
-import logging
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Resample granularity per time range — keeps charts readable
 _RESAMPLE_MAP = {

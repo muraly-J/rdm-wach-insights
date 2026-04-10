@@ -16,7 +16,6 @@ Exports:
 from __future__ import annotations
 
 import asyncio
-import logging
 from datetime import datetime, timezone, timedelta
 from typing import Awaitable, Optional
 
@@ -32,8 +31,9 @@ from core.fair_health_scoring import (
     score_power_factor,
     score_thd_drift,
 )
+from core.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Supported forecast horizons (hours)
 DEFAULT_HORIZONS = ["1h", "12h", "24h", "168h"]

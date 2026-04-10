@@ -16,7 +16,6 @@ Architecture:
   6. Return final reply + thinking_mode indicator
 """
 
-import logging
 import re
 from typing import Optional
 
@@ -29,8 +28,9 @@ from llm.prompts import build_system_prompt
 from models.schemas import ChatHistoryItem
 from core.query_classifier import classify_query_complexity
 from tools.tool_registry import TOOLS, dispatch_tool
+from core.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter()
 
 # Patterns to strip from LLM replies before returning to the user

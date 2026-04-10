@@ -16,12 +16,12 @@ Example usage in FastAPI routes:
         return handle_error(e, "Failed to process query")
 """
 
-import logging
 import traceback
 from typing import Optional, Union
 from fastapi import HTTPException
 
-logger = logging.getLogger(__name__)
+from core.logger import get_logger
+logger = get_logger(__name__)
 
 
 def log_error(error: Exception, context: str = "") -> None:

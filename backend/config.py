@@ -11,9 +11,9 @@ This module handles:
 
 import os
 from pathlib import Path
-import logging
 
-logger = logging.getLogger(__name__)
+from core.logger import get_logger
+logger = get_logger(__name__)
 
 
 # ── Base paths ────────────────────────────────────────────────────────────────
