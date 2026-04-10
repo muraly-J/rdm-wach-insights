@@ -203,63 +203,48 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, show
             />
           ))}
 
-          {/* Single device: render on/off color segments */}
+          {/* Single device: two lines for on/off segments */}
           {showColorSegments && devices.map((device, index) => {
             const baseColor = getColor(index);
             const greyColor = '#888888';
 
+            // Create datasets with nulls for the opposite state
+            const onData = data.map((point: any) =>
+              point.is_on !== false
+                ? point
+                : { ...point, [device.name]: null }
+            );
+
+            const offData = data.map((point: any) =>
+              point.is_on === false
+                ? point
+                : { ...point, [device.name]: null }
+            );
+
             return (
               <React.Fragment key={device.id}>
-                {/* On-time: normal color */}
+                {/* On-time line: normal color */}
                 <Area
                   type="monotone"
                   dataKey={device.name}
-                  data={data}
+                  data={onData}
                   stroke={baseColor}
                   strokeWidth={2}
                   fill="none"
                   connectNulls
                   dot={false}
-                  shape={(props: any) => {
-                    const { points } = props;
-                    if (!points || points.length === 0) return null;
-
-                    let pathD = '';
-                    for (let i = 0; i < points.length; i++) {
-                      const point = points[i];
-                      if (point && (data[i] as any).is_on !== false) {
-                        const cmd = i === 0 ? 'M' : 'L';
-                        pathD += `${cmd} ${point.x} ${point.y} `;
-                      }
-                    }
-                    return <path d={pathD} stroke={baseColor} strokeWidth={2} fill="none" />;
-                  }}
                 />
 
-                {/* Off-time: grey color */}
+                {/* Off-time line: grey color */}
                 <Area
                   type="monotone"
                   dataKey={device.name}
-                  data={data}
+                  data={offData}
                   stroke={greyColor}
                   strokeWidth={2}
                   fill="none"
                   connectNulls
                   dot={false}
-                  shape={(props: any) => {
-                    const { points } = props;
-                    if (!points || points.length === 0) return null;
-
-                    let pathD = '';
-                    for (let i = 0; i < points.length; i++) {
-                      const point = points[i];
-                      if (point && (data[i] as any).is_on === false) {
-                        const cmd = i === 0 ? 'M' : 'L';
-                        pathD += `${cmd} ${point.x} ${point.y} `;
-                      }
-                    }
-                    return <path d={pathD} stroke={greyColor} strokeWidth={2} fill="none" />;
-                  }}
                 />
               </React.Fragment>
             );
