@@ -88,7 +88,7 @@ export interface HealthIndexResponse {
     department?: string;
     area?: string;
     is_on?: boolean;
-    data: { timestamp: string; value: number }[];
+    data: { timestamp: string; value: number; is_on?: boolean }[];
   }[];
 }
 

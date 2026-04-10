@@ -263,7 +263,7 @@ function App() {
               {selectedLevel ? (
                 <>
                   <div className="mb-8">
-                    <HealthIndexChart data={healthChartData as any} devices={chartDevices} isOn={isSelectedDeviceOn} />
+                    <HealthIndexChart data={healthChartData as any} devices={chartDevices} />
                   </div>
 
                   <ScoreCardsGrid scoreData={scoreCardData} />

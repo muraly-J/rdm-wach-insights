@@ -15,18 +15,18 @@ import InfoTooltip from '../shared/InfoTooltip';
 interface HealthIndexChartProps {
   data: Array<{ timestamp: string; [key: string]: number }>;
   devices: Array<{ id: string; name: string; label?: string; department?: string }>;
-  isOn?: boolean;
 }
 
 /**
  * HealthIndexChart - Time-series health index chart (Section 5.2)
- * 
+ *
  * Library: Recharts AreaChart
  * Y-axis: Health Index (0-100)
  * Series: One line per AHU in selected level
  * Fill: Gradient from accent at 30% → transparent
+ * Off-time sections: Greyed out stroke and reduced opacity
  */
-const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, isOn = true }) => {
+const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) => {
   // Generate colors from chart palette (repeating)
   const getColor = (index: number) => {
     const colors = [
@@ -119,11 +119,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, isOn
   return (
     <motion.div
       className="card p-4 sm:p-6"
-      style={{
-        ...glassStyle,
-        opacity: isOn ? 1 : 0.45,
-        filter: isOn ? 'none' : 'grayscale(80%)',
-      }}
+      style={glassStyle}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
@@ -191,18 +187,51 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, isOn
 
           <Tooltip content={<CustomTooltip />} />
 
-          {/* Render area for each device */}
-          {devices.map((device, index) => (
-            <Area
-              key={device.id}
-              type="monotone"
-              dataKey={device.name}
-              stroke={getColor(index)}
-              strokeWidth={2}
-              fill="none"
-              connectNulls
-            />
-          ))}
+          {/* Render on-time and off-time segments for each device */}
+          {devices.map((device, index) => {
+            const baseColor = getColor(index);
+            const greyColor = '#8899aa'; // Off-time grey
+
+            // Split into on-time and off-time data points
+            const onTimeData = data.map((point) => ({
+              ...point,
+              [device.name]: (point as any).is_on !== false ? point[device.name] : null,
+            }));
+
+            const offTimeData = data.map((point) => ({
+              ...point,
+              [device.name]: (point as any).is_on === false ? point[device.name] : null,
+            }));
+
+            return (
+              <React.Fragment key={device.id}>
+                {/* On-time: normal color */}
+                <Area
+                  type="monotone"
+                  dataKey={device.name}
+                  data={onTimeData}
+                  stroke={baseColor}
+                  strokeWidth={2}
+                  fill="none"
+                  connectNulls
+                  dot={false}
+                />
+
+                {/* Off-time: grey color and reduced opacity */}
+                <Area
+                  type="monotone"
+                  dataKey={device.name}
+                  data={offTimeData}
+                  stroke={greyColor}
+                  strokeWidth={2}
+                  fill="none"
+                  connectNulls
+                  dot={false}
+                  opacity={0.45}
+                />
+              </React.Fragment>
+            );
+          })}
         </AreaChart>
       </ResponsiveContainer>
       </div>

@@ -228,8 +228,7 @@ def get_health_index_series(
     result = []
     for ahu_id, group in df.groupby("ahu_id"):
         meta = labels.get(str(ahu_id), {})
-        # Only include data points from on-time rows (no flat off-time periods in chart)
-        plot_rows = group[group["is_on"]] if "is_on" in group.columns else group
+        # Include all data points (both on and off) so chart can grey out off-time sections
         entry: dict = {
             "id": ahu_id,
             "name": ahu_id,
@@ -237,8 +236,12 @@ def get_health_index_series(
             "department": meta.get("department", ""),
             "area": meta.get("area", ""),
             "data": [
-                {"timestamp": row["timestamp"].isoformat(), "value": round(float(row["health_index"]), 2)}
-                for _, row in plot_rows.iterrows()
+                {
+                    "timestamp": row["timestamp"].isoformat(),
+                    "value": round(float(row["health_index"]), 2),
+                    "is_on": bool(row["is_on"]) if "is_on" in group.columns else True
+                }
+                for _, row in group.iterrows()
                 if pd.notna(row["health_index"])
             ],
         }
