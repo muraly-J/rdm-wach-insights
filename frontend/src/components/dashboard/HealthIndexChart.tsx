@@ -14,8 +14,9 @@ import InfoTooltip from '../shared/InfoTooltip';
 import { formatDateMYT } from '../../utils/formatTick';
 
 interface HealthIndexChartProps {
-  data: Array<{ timestamp: string; [key: string]: number }>;
+  data: Array<{ timestamp: string; [key: string]: number; originalTs?: string; is_on?: boolean }>;
   devices: Array<{ id: string; name: string; label?: string; department?: string }>;
+  showColorSegments?: boolean;
 }
 
 /**
@@ -27,7 +28,7 @@ interface HealthIndexChartProps {
  * Fill: Gradient from accent at 30% → transparent
  * Off-time sections: Greyed out stroke and reduced opacity
  */
-const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices }) => {
+const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, showColorSegments = false }) => {
   // Generate colors from chart palette (repeating)
   const getColor = (index: number) => {
     const colors = [
