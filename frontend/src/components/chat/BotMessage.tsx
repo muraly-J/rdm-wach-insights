@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { NavigateTarget } from '../../api/client'
 import ChatChartModal, { ChartEntry } from './ChatChartModal'
+import { replaceDeviceIds } from '../../utils/deviceNames'
 
 interface BotMessageProps {
   content: string
@@ -86,7 +87,7 @@ const BotMessage: React.FC<BotMessageProps> = ({
             "
           >
             <div className="text-sm text-[#E8ECF1] leading-relaxed prose prose-invert prose-sm max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{replaceDeviceIds(content)}</ReactMarkdown>
             </div>
           </div>
 

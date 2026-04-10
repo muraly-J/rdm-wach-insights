@@ -7,17 +7,21 @@ import ChatInput from './ChatInput';
 import { sendChatMessage, NavigateTarget } from '../../api/client';
 import { useAppStore } from '../../store/useAppStore';
 
-interface ChatWindowProps {
-  mode: 'panel' | 'fullscreen';
-  onClose: () => void;
-  onToggleMode: () => void;
-}
-
-interface Message {
+export interface Message {
   id: string;
   role: 'user' | 'bot';
   content: string;
   navigate?: NavigateTarget | null;
+}
+
+interface ChatWindowProps {
+  mode: 'panel' | 'fullscreen';
+  onClose: () => void;
+  onToggleMode: () => void;
+  messages: Message[];
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  isMinimized: boolean;
+  onMinimize: () => void;
 }
 
 const INITIAL_MESSAGE: Message = {
@@ -26,10 +30,16 @@ const INITIAL_MESSAGE: Message = {
   content: "Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
 };
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ mode, onClose, onToggleMode }) => {
-  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
+const ChatWindow: React.FC<ChatWindowProps> = ({
+  mode,
+  onClose,
+  onToggleMode,
+  messages,
+  setMessages,
+  isMinimized,
+  onMinimize,
+}) => {
   const [isTyping, setIsTyping] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const [selectedPersona, setSelectedPersona] = useState<'general' | 'technical' | 'technician' | 'financial' | null>(null);
 
   const selectedLevel = useAppStore((s) => s.selectedLevel);
@@ -78,7 +88,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ mode, onClose, onToggleMode }) 
 
     // Build history for the API (exclude the initial bot greeting)
     const history = messages
-      .slice(1) // skip initial bot message
+      .slice(1)
       .map((m) => ({
         role: m.role === 'bot' ? ('model' as const) : ('user' as const),
         content: m.content,
@@ -120,17 +130,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ mode, onClose, onToggleMode }) 
         shadow-2xl border border-[#2e3f55]
         flex flex-col
       "
-      style={{
-        height: '100%',
-        width: '100%',
-      }}
+      style={{ height: '100%', width: '100%' }}
     >
       <ChatHeader
         mode={mode}
         onClose={onClose}
         onToggleMode={onToggleMode}
         isMinimized={isMinimized}
-        onMinimize={() => setIsMinimized((v) => !v)}
+        onMinimize={onMinimize}
       />
 
       <AnimatePresence initial={false}>
@@ -150,10 +157,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ mode, onClose, onToggleMode }) 
               onClearChat={handleClearChat}
             />
             <ChatInput
-                onSendMessage={handleSendMessage}
-                onPersonaChange={handlePersonaChange}
-                selectedPersona={selectedPersona}
-              />
+              onSendMessage={handleSendMessage}
+              onPersonaChange={handlePersonaChange}
+              selectedPersona={selectedPersona}
+            />
           </motion.div>
         )}
       </AnimatePresence>

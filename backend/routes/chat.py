@@ -17,6 +17,7 @@ Architecture:
 """
 
 import logging
+import re
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -31,6 +32,31 @@ from tools.tool_registry import TOOLS, dispatch_tool
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Patterns to strip from LLM replies before returning to the user
+_TOOL_CALL_XML_RE = re.compile(r"<tool_call>.*?</tool_call>", re.DOTALL)
+_TOOL_RESPONSE_XML_RE = re.compile(r"<tool_response>.*?</tool_response>", re.DOTALL)
+_FUNCTION_CALL_JSON_RE = re.compile(
+    r"```(?:json)?\s*\{[^`]*[\"'](?:name|function)[\"']\s*:[^`]*\}[^`]*```",
+    re.DOTALL,
+)
+_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+
+
+def _sanitize_reply(text: str) -> str:
+    """Strip tool-call artifacts and code blocks from LLM reply text."""
+    text = _THINK_RE.sub("", text)
+    text = _TOOL_CALL_XML_RE.sub("", text)
+    text = _TOOL_RESPONSE_XML_RE.sub("", text)
+    text = _FUNCTION_CALL_JSON_RE.sub("", text)
+    # Remove lines that are purely internal commentary about tool dispatch
+    lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if re.match(r"^(Calling|Executing|Invoking|Running)\s+\w+", stripped, re.IGNORECASE):
+            continue
+        lines.append(line)
+    return "\n".join(lines).strip()
 
 
 # ── Request / Response models ──────────────────────────────────────────────────
@@ -95,7 +121,7 @@ async def chat(body: ChatRequest):
         raise HTTPException(status_code=503, detail=f"AI service unavailable: {e}")
 
     return {
-        "reply": reply,
+        "reply": _sanitize_reply(reply),
         "navigate": None,
         "thinking_mode": thinking_mode,
     }

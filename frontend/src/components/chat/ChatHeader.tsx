@@ -8,13 +8,6 @@ interface ChatHeaderProps {
   onMinimize?: () => void;
 }
 
-/**
- * ChatHeader - Header bar for chat window (Section 6.3)
- *
- * bg: var(--bg-tertiary), border-bottom: 1px solid var(--border-subtle)
- * Left: accent dot + "RDM-Atlas"
- * Right: toggle mode button + close button (✕)
- */
 const ChatHeader: React.FC<ChatHeaderProps> = ({ mode, onClose, onToggleMode, isMinimized, onMinimize }) => {
   return (
     <div
@@ -23,6 +16,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ mode, onClose, onToggleMode, is
         bg-[#2a3649]
         border-b border-[#2e3f55]
       "
+      style={{ flexShrink: 0 }}
     >
       <div className="flex items-center gap-2">
         <div
@@ -34,6 +28,30 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ mode, onClose, onToggleMode, is
       </div>
 
       <div className="flex items-center gap-1">
+        {/* Minimize button — collapses panel to header bar */}
+        {onMinimize && (
+          <button
+            onClick={onMinimize}
+            title={isMinimized ? 'Restore chat' : 'Minimize chat'}
+            className="
+              w-11 h-11 rounded-full hover:bg-[#2e3f55]
+              flex items-center justify-center
+            "
+          >
+            {isMinimized ? (
+              /* Restore icon — chevron up */
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8ECF1" strokeWidth="2">
+                <polyline points="18 15 12 9 6 15" />
+              </svg>
+            ) : (
+              /* Minimize icon — dash */
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8ECF1" strokeWidth="2">
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            )}
+          </button>
+        )}
+
         {/* Toggle fullscreen/panel button */}
         <button
           onClick={onToggleMode}
@@ -44,7 +62,6 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ mode, onClose, onToggleMode, is
           "
         >
           {mode === 'panel' ? (
-            /* Expand icon — arrows pointing outward */
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8ECF1" strokeWidth="2">
               <polyline points="15 3 21 3 21 9" />
               <polyline points="9 21 3 21 3 15" />
@@ -52,7 +69,6 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ mode, onClose, onToggleMode, is
               <line x1="3" y1="21" x2="10" y2="14" />
             </svg>
           ) : (
-            /* Collapse icon — arrows pointing inward */
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8ECF1" strokeWidth="2">
               <polyline points="4 14 10 14 10 20" />
               <polyline points="20 10 14 10 14 4" />
