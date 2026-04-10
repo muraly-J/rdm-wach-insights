@@ -37,6 +37,7 @@ from routes.site_summary import router as site_summary_router
 
 from dotenv import load_dotenv
 from middleware.query_logger import init_db, log_query
+from middleware.request_id import RequestIDMiddleware
 from routes.query import router as query_router
 
 
@@ -72,7 +73,7 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         # Skip auth for health check and Swagger UI endpoints
-        if request.url.path in ("/health", "/docs", "/redoc", "/openapi.json"):
+        if request.url.path in ("/health", "/docs", "/redoc", "/openapi.json", "/metrics"):
             return await call_next(request)
 
         # Skip auth for OPTIONS requests (CORS preflight)
@@ -215,6 +216,7 @@ def create_app():
     app.add_middleware(APIKeyAuthMiddleware)  # Authentication
     app.add_middleware(RateLimitMiddleware)   # Rate limiting
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RequestIDMiddleware)   # Request ID tracing
 
     # CORS — restrict to specific origins (not all methods/headers)
     _cors_origins = get_cors_origins()
