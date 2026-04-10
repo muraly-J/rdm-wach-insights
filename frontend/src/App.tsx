@@ -164,9 +164,10 @@ function App() {
 
     // For single device: preserve all data points with is_on field
     if (selectedDevice && selectedDevice !== 'all') {
+      const deviceName = labelMap[series[0]?.id] ?? series[0]?.id;
       return series[0]?.data?.map((point: any) => ({
         timestamp: formatTickByRange(point.timestamp, chartRange),
-        value: point.value,
+        [deviceName]: point.value,
         is_on: point.is_on,
       })) || [];
     }
