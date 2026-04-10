@@ -11,6 +11,7 @@ interface SingleDeviceChartProps {
   deviceId: string;
   deviceLabel: string;
   timeRange: string;
+  isOn?: boolean;
 }
 
 function toApiRange(timeRange: string): '24h' | '7d' | '30d' {
@@ -18,7 +19,7 @@ function toApiRange(timeRange: string): '24h' | '7d' | '30d' {
   return '30d';
 }
 
-const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({ deviceId, deviceLabel, timeRange }) => {
+const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({ deviceId, deviceLabel, timeRange, isOn = true }) => {
   const { selectedMetrics, setSelectedMetrics, toggleMetric } = useMetricSelection();
   const [chartData, setChartData] = React.useState<Record<string, number | string | null>[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -50,10 +51,15 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({ deviceId, deviceL
   }, [deviceId, selectedMetrics, timeRange]);
 
   return (
-    <div>
+    <div style={{ opacity: isOn ? 1 : 0.45, filter: isOn ? 'none' : 'grayscale(80%)', transition: 'opacity 0.2s, filter 0.2s' }}>
       <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 12, color: '#8899aa' }}>Metrics for</span>
-        <span style={{ fontSize: 13, color: '#00E5A0', fontWeight: 600 }}>{deviceLabel}</span>
+        <span style={{ fontSize: 13, color: isOn ? '#00E5A0' : '#8899aa', fontWeight: 600 }}>{deviceLabel}</span>
+        {!isOn && (
+          <span style={{ fontSize: 10, color: '#556677', background: '#1a2234', border: '1px solid #2a3649', borderRadius: 4, padding: '2px 6px', fontWeight: 600, letterSpacing: '0.05em' }}>
+            OFF
+          </span>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>

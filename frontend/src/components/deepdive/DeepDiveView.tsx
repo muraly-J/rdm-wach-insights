@@ -8,9 +8,10 @@ interface DeepDiveViewProps {
   levelDevices: DeviceInfo[];
   labelMap: Record<string, string>;
   timeRange: string;
+  isSelectedDeviceOn?: boolean;
 }
 
-const DeepDiveView: React.FC<DeepDiveViewProps> = ({ levelDevices, labelMap, timeRange }) => {
+const DeepDiveView: React.FC<DeepDiveViewProps> = ({ levelDevices, labelMap, timeRange, isSelectedDeviceOn = true }) => {
   const { selectedDevice, deepDiveSubMode, setDeepDiveSubMode, compareDevices } = useAppStore();
 
   const hasDevice = Boolean(selectedDevice && selectedDevice !== 'all');
@@ -45,6 +46,7 @@ const DeepDiveView: React.FC<DeepDiveViewProps> = ({ levelDevices, labelMap, tim
             deviceId={selectedDevice!}
             deviceLabel={labelMap[selectedDevice!] ?? selectedDevice!}
             timeRange={timeRange}
+            isOn={isSelectedDeviceOn}
           />
         ) : (
           <div style={{ padding: 40, textAlign: 'center', color: '#556677', fontSize: 13 }}>

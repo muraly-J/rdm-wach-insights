@@ -219,6 +219,12 @@ function App() {
   const showDerivation = Boolean(selectedDevice && selectedDevice !== 'all');
   const selectedDeviceRow = rankingRows.find((r) => r.id === selectedDevice);
 
+  const isSelectedDeviceOn = React.useMemo(() => {
+    if (!selectedDevice || selectedDevice === 'all' || !healthData) return true;
+    const dev = healthData.devices.find((d) => d.id === selectedDevice);
+    return dev?.is_on ?? true;
+  }, [healthData, selectedDevice]);
+
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#E8ECF1]">
       <FilterBar levelDevices={levelDevices} />
@@ -271,6 +277,7 @@ function App() {
                       healthScore={selectedDeviceRow.healthScore}
                       trend={selectedDeviceRow.trend}
                       status={selectedDeviceRow.status}
+                      isOn={isSelectedDeviceOn}
                     />
                   ) : (
                     <AHURankingsTable rows={rankingRows} />
@@ -310,7 +317,7 @@ function App() {
               transition={{ duration: 0.3 }}
             >
               <React.Suspense fallback={<div className="h-64 animate-pulse bg-[#1a2234] rounded-xl" />}>
-                <DeepDiveView levelDevices={levelDevices} labelMap={labelMap} timeRange={timeRange} />
+                <DeepDiveView levelDevices={levelDevices} labelMap={labelMap} timeRange={timeRange} isSelectedDeviceOn={isSelectedDeviceOn} />
               </React.Suspense>
             </motion.div>
           )}
