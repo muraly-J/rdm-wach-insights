@@ -28,9 +28,9 @@ def test_vector_store_add_and_query():
         store.add_documents(
             ids=["doc1", "doc2", "doc3"],
             documents=["power factor measures efficiency", "energy import is daily kWh", "voltage unbalance causes motor damage"],
-            embeddings=[[0.1]*3072, [0.2]*3072, [0.3]*3072],
+            embeddings=[[0.1]*1024, [0.2]*1024, [0.3]*1024],
         )
-        results = store.query_by_embedding(embedding=[0.1]*3072, top_k=1)
+        results = store.query_by_embedding(embedding=[0.1]*1024, top_k=1)
         assert len(results) == 1
         assert "power factor" in results[0]
 
@@ -44,7 +44,7 @@ async def test_retriever_returns_snippets():
         store.add_documents(
             ids=["p1"],
             documents=["A power factor below 0.85 indicates reactive power losses."],
-            embeddings=[[0.5]*3072],
+            embeddings=[[0.5]*1024],
         )
         retriever = Retriever(vector_store=store)
         snippets = await retriever.retrieve("what is a good power factor", top_k=1)
