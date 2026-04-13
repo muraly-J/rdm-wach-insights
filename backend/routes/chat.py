@@ -92,7 +92,7 @@ def _to_openai_messages(history: list[ChatHistoryItem]) -> list[dict]:
 # ── Chat endpoint ──────────────────────────────────────────────────────────────
 
 @router.post("/chat")
-async def chat(body: ChatRequest):
+async def chat(body: ChatRequest) -> dict:
     history = body.history or []
     history_messages = _to_openai_messages(history)
 

@@ -34,7 +34,7 @@ router = APIRouter()
 # ──────────────────────────────────────────────────────────────────────────────
 
 @router.get("/levels")
-async def get_levels():
+async def get_levels() -> dict:
     """
     Get list of available building levels (1-11).
 
@@ -51,7 +51,7 @@ async def get_levels():
 # ──────────────────────────────────────────────────────────────────────────────
 
 @router.get("/level/{level_id}/devices")
-async def get_level_device_list(level_id: int):
+async def get_level_device_list(level_id: int) -> dict:
     """
     Get the list of AHU devices for a building level.
     Reads from static config — always available regardless of DuckDB state.
@@ -75,7 +75,7 @@ async def get_level_device_list(level_id: int):
 async def get_level_scores(
     level_id: int,
     time_range: str = Query(default="7d", description="Time range: 24h, 7d, 30d, or all")
-):
+) -> dict:
     """
     Get five FAIR-score breakdown for all AHUs on a specific level.
     Parameters:
@@ -115,7 +115,7 @@ async def get_level_health_index(
     level_id: int,
     device_id: str = Query(default=None, description="Filter to single device"),
     time_range: str = Query(default="7d", description="Time range: 24h, 7d, 30d, or all")
-):
+) -> dict:
     """
     Get health index time series for all AHUs on a level (or a single device).
 
@@ -157,7 +157,7 @@ async def get_level_health_index(
 async def get_raw_score_relationship(
     device_id: str,
     range: str = Query(default="7d", description="Time range: 24h, 7d, 30d, or all")
-):
+) -> dict:
     """
     Get raw sensor data ↔ computed FAIR score relationship for a single device.
 

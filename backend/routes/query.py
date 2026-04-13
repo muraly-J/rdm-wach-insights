@@ -166,7 +166,7 @@ class QueryRequest(BaseModel):
 # ── Endpoint ──────────────────────────────────────────────────────────────────
 
 @router.post('/query')
-async def handle_query(request: Request, body: QueryRequest):
+async def handle_query(request: Request, body: QueryRequest) -> dict:
     client_ip = request.client.host or 'unknown'
 
     # 1. Rate limit

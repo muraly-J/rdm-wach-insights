@@ -14,6 +14,7 @@ import os
 import sys
 import signal
 from contextlib import asynccontextmanager
+from typing import Callable
 
 from config import settings
 from core.logger import get_logger
@@ -54,7 +55,7 @@ def get_api_key() -> str:
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):
     """API Key Authentication Middleware."""
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Skip auth for health check and Swagger UI endpoints
         if request.url.path in ("/health", "/docs", "/redoc", "/openapi.json", "/metrics"):
             return await call_next(request)
@@ -111,7 +112,7 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
 # ── Security headers middleware ───────────────────────────────────────────────
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: callable) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         response = await call_next(request)
         response.headers['X-Content-Type-Options']    = 'nosniff'
         response.headers['X-Frame-Options']           = 'DENY'
@@ -138,7 +139,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 class AlertingMiddleware(BaseHTTPMiddleware):
     """Records response status codes for 5xx rate alerting."""
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         response = await call_next(request)
         webhook_url = settings.alert_webhook_url
         if webhook_url:
@@ -201,12 +202,12 @@ async def lifespan(app):
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
-def get_cors_origins():
+def get_cors_origins() -> list[str]:
     """Get CORS origins from env or use defaults."""
     return settings.cors_origins_list
 
 
-def create_app():
+def create_app() -> FastAPI:
     """Create and configure the FastAPI app."""
     app = FastAPI(
         title="WACH Insight API",
@@ -273,7 +274,7 @@ def create_app():
     app.include_router(on_off_periods_router, prefix="/api")
 
     @app.get('/health')
-    async def health():
+    async def health() -> dict:
         return {'status': 'ok'}
 
     # Static files for local development
