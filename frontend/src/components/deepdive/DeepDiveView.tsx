@@ -1,6 +1,8 @@
 import React from 'react';
 import { useAppStore, DeepDiveSubMode } from '../../store/useAppStore';
 import { DeviceInfo } from '../../utils/deviceLabel';
+import { fetchOffPeriods } from '../../api/client';
+import type { OffPeriod } from '../../types';
 import SingleDeviceChart from './SingleDeviceChart';
 import CompareMode from './CompareMode';
 
@@ -13,6 +15,15 @@ interface DeepDiveViewProps {
 
 const DeepDiveView: React.FC<DeepDiveViewProps> = ({ levelDevices, labelMap, timeRange, isSelectedDeviceOn = true }) => {
   const { selectedDevice, deepDiveSubMode, setDeepDiveSubMode, compareDevices } = useAppStore();
+  const [offPeriods, setOffPeriods] = React.useState<OffPeriod[]>([]);
+
+  React.useEffect(() => {
+    if (!selectedDevice || selectedDevice === 'all') {
+      setOffPeriods([]);
+      return;
+    }
+    fetchOffPeriods(selectedDevice, timeRange as '24h' | '7d' | '30d').then(setOffPeriods);
+  }, [selectedDevice, timeRange]);
 
   const hasDevice = Boolean(selectedDevice && selectedDevice !== 'all');
   const hasCompareDevices = compareDevices.length >= 2;
@@ -47,6 +58,7 @@ const DeepDiveView: React.FC<DeepDiveViewProps> = ({ levelDevices, labelMap, tim
             deviceLabel={labelMap[selectedDevice!] ?? selectedDevice!}
             timeRange={timeRange}
             isOn={isSelectedDeviceOn}
+            offPeriods={offPeriods}
           />
         ) : (
           <div style={{ padding: 40, textAlign: 'center', color: '#556677', fontSize: 13 }}>
