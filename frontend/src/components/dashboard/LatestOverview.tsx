@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
+import { deviceIdToDisplay } from '../../utils/deviceNames';
 
 // Static AHU IDs per level (mirrors backend/models/schemas.py AHU_LEVEL_CONFIG)
 const LEVEL_AHU_IDS: Record<number, string[]> = {
@@ -165,7 +166,7 @@ function LevelHealthPanel() {
           Level Health
         </div>
         <div style={{ fontSize: 11, color: '#445566', marginTop: 2 }}>
-          Latest avg per floor · click to open
+          Latest Average Per Floor · Click To Open
         </div>
       </div>
 
@@ -355,7 +356,7 @@ function FleetDirectoryPanel() {
           Fleet Directory
         </div>
         <div style={{ fontSize: 11, color: '#445566', marginTop: 2 }}>
-          AHU count + device IDs per level
+          AHU Count + Device IDs Per Level
         </div>
       </div>
 
@@ -461,23 +462,32 @@ function FleetDirectoryPanel() {
                         gap: 5,
                       }}
                     >
-                      {ids.map((id) => (
-                        <span
-                          key={id}
-                          style={{
-                            fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: 10,
-                            color: '#8899aa',
-                            background: '#1a2638',
-                            border: '1px solid #243040',
-                            borderRadius: 5,
-                            padding: '3px 7px',
-                            letterSpacing: '0.03em',
-                          }}
-                        >
-                          {id}
-                        </span>
-                      ))}
+                      {ids.map((id) => {
+                        const display = deviceIdToDisplay(id);
+                        const shortName = display.split(' \u2014 ')[0];
+                        return (
+                          <span
+                            key={id}
+                            style={{
+                              fontFamily: "'JetBrains Mono', monospace",
+                              background: '#1a2638',
+                              border: '1px solid #243040',
+                              borderRadius: 5,
+                              padding: '4px 8px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 1,
+                            }}
+                          >
+                            <span style={{ fontSize: 10, color: '#C8D4E0', fontWeight: 600, letterSpacing: '0.02em' }}>
+                              {shortName}
+                            </span>
+                            <span style={{ fontSize: 9, color: '#445566', letterSpacing: '0.03em' }}>
+                              {id}
+                            </span>
+                          </span>
+                        );
+                      })}
                     </div>
                   </motion.div>
                 )}
@@ -561,7 +571,7 @@ function AlertStatusPanel() {
           Alert Status
         </div>
         <div style={{ fontSize: 11, color: '#445566', marginTop: 2 }}>
-          Maintenance Soon + Critical tier
+          Maintenance Soon + Critical Tier
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { deviceIdToDisplay } from '../../utils/deviceNames';
 
 export type AHUStatus = 'Good' | 'Warning' | 'Critical';
 
@@ -105,7 +106,20 @@ const AHURankingsTable: React.FC<AHURankingsTableProps> = ({ rows }) => {
               onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
-              <td style={{ padding: '10px 12px', fontSize: 12, color: '#C8D4E0' }}>{row.label}</td>
+              <td style={{ padding: '10px 12px' }}>
+                {(() => {
+                  const display = deviceIdToDisplay(row.id);
+                  const shortName = display.split(' \u2014 ')[0];
+                  return (
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <span style={{ fontSize: 12, color: '#C8D4E0', fontFamily: "'JetBrains Mono', monospace" }}>
+                        {shortName}
+                      </span>
+                      <span style={{ fontSize: 10, color: '#445566' }}>{row.id}</span>
+                    </span>
+                  );
+                })()}
+              </td>
               <td style={{ padding: '10px 12px', fontSize: 12, color: '#8899aa' }}>L{row.level}</td>
               <td style={{ padding: '10px 12px' }}>
                 <span
