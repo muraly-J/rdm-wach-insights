@@ -12,7 +12,6 @@ Strategy:
   5. Return historical + forecast arrays + summary
 """
 
-import os
 import logging
 import math
 import joblib
@@ -27,7 +26,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import logging
+from config import settings
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
@@ -49,10 +49,10 @@ def _validate_device_id(device_id: str) -> bool:
     return bool(_DEVICE_ID_PATTERN.match(device_id))
 
 
-_URL    = os.getenv("INFLUX_URL")
-_TOKEN  = os.getenv("INFLUX_TOKEN")
-_ORG    = os.getenv("INFLUX_ORG")
-_BUCKET = os.getenv("INFLUX_BUCKET")
+_URL    = settings.influx_url
+_TOKEN  = settings.influx_token
+_ORG    = settings.influx_org
+_BUCKET = settings.influx_bucket
 
 # Supported devices and their model paths
 # Models are located in paraquet_data/models/saved/ at project root

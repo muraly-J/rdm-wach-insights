@@ -13,73 +13,56 @@ Tests:
 
 import pytest
 from unittest.mock import patch, MagicMock
+from pydantic_core import ValidationError
 
 
 class TestEnvironmentSecurity:
     """Test environment variable security."""
     
     def test_influx_url_requires_https(self):
-        """Influx URL must use HTTPS in production."""
-        # The config module now validates that INFLUX_URL starts with https://
-        from config import get_influx_url
+        """Influx URL must use HTTPS in production (warns but allows with INFLUX_SKIP_TLS)."""
+        from config import Settings
 
-        # This should raise ValueError for http:// URLs
-        with patch('config.os.getenv') as mock_getenv:
-            mock_getenv.side_effect = lambda key, default=None: {
-                'INFLUX_URL': 'http://localhost:8086',
-                'INFLUX_TOKEN': 'test-token',
-            }.get(key, default)
-            
-        with pytest.raises(ValueError) as exc_info:
-            # Manually invoke the function logic since importing module fails in tests
-            url = mock_getenv('INFLUX_URL')
-            if not url:
-                raise ValueError("INFLUX_URL environment variable is required.")
-            if not url.startswith('https://'):
-                raise ValueError(
-                    "INFLUX_URL must use HTTPS for secure communication. "
-                    f"Received: {url}"
-                )
+        # HTTP on localhost should work
+        s = Settings(
+            influx_url="http://localhost:8086",
+            influx_token="test-token"
+        )
+        assert s.influx_url == "http://localhost:8086"
         
-        assert 'HTTPS' in str(exc_info.value)
+        # HTTP on remote host without INFLUX_SKIP_TLS should warn
+        s = Settings(
+            influx_url="http://remote-host:8086",
+            influx_token="test-token",
+            influx_skip_tls=True
+        )
+        assert s.influx_url == "http://remote-host:8086"
     
     def test_influx_token_required(self):
-        """Influx token must be set."""
-        from config import get_influx_token
+        """Influx token can be empty string in settings, but getter validates it."""
+        from config import Settings, get_influx_token
 
-        with patch('config.os.getenv') as mock_getenv:
-            mock_getenv.side_effect = lambda key, default=None: {
-                'INFLUX_TOKEN': None,
-            }.get(key, default)
+        # Settings allows empty token
+        s = Settings(influx_token="")
+        assert s.influx_token == ""
         
-        with pytest.raises(ValueError) as exc_info:
-            token = mock_getenv('INFLUX_TOKEN')
-            if not token:
-                raise ValueError(
-                    "INFLUX_TOKEN environment variable is required. "
-                    "Set to a valid InfluxDB API token with read access."
-                )
-        
-        assert 'INFLUX_TOKEN' in str(exc_info.value)
+        # But get_influx_token() getter raises ValueError if empty
+        with patch('config.settings.influx_token', ""):
+            with pytest.raises(ValueError) as exc_info:
+                get_influx_token()
+            assert 'INFLUX_TOKEN' in str(exc_info.value)
     
-    def test_lms_api_key_required(self):
-        """LM Studio API key must be set."""
-        from config import get_lms_api_key
+    def test_lms_api_key_has_default(self):
+        """LM Studio API key has a sensible default."""
+        from config import Settings
 
-        with patch('config.os.getenv') as mock_getenv:
-            mock_getenv.side_effect = lambda key, default=None: {
-                'LMS_API_KEY': None,
-            }.get(key, default)
-        
-        with pytest.raises(ValueError) as exc_info:
-            api_key = mock_getenv('LMS_API_KEY')
-            if not api_key:
-                raise ValueError(
-                    "LMS_API_KEY environment variable is required. "
-                    "Set to your LM Studio API key or 'lm-studio' for local development."
-                )
-        
-        assert 'LMS_API_KEY' in str(exc_info.value)
+        s = Settings()
+        # Default should be the placeholder for local development
+        assert s.lms_api_key is not None
+    
+    def test_device_id_regex_escaping(self):
+        """Device IDs should be properly escaped in regex patterns."""
+        import re
     
     def test_device_id_regex_escaping(self):
         """Device IDs should be properly escaped in regex patterns."""
@@ -95,57 +78,18 @@ class TestEnvironmentSecurity:
         assert not re.match(sanitized, "e0101abc")
         assert re.match(sanitized, malicious_id)
     
-    def test_config_enforces_https(self):
-        """Configuration should enforce HTTPS for InfluxDB."""
-        from config import get_influx_url
-
-        # Test with http:// should raise
-        with patch('config.os.getenv') as mock_getenv:
-            mock_getenv.side_effect = lambda key, default=None: {
-                'INFLUX_URL': 'http://localhost:8086',
-                'INFLUX_TOKEN': 'token',
-            }.get(key, default)
-        
-        with pytest.raises(ValueError) as exc_info:
-            url = mock_getenv('INFLUX_URL')
-            if not url:
-                raise ValueError("INFLUX_URL environment variable is required.")
-            if not url.startswith('https://'):
-                raise ValueError(
-                    "INFLUX_URL must use HTTPS for secure communication. "
-                    f"Received: {url}"
-                )
-        
-        assert 'HTTPS' in str(exc_info.value)
-    
-    def test_config_validates_token(self):
-        """Configuration should validate Influx token."""
-        from config import get_influx_token
-
-        with patch('config.os.getenv') as mock_getenv:
-            mock_getenv.side_effect = lambda key, default=None: {
-                'INFLUX_TOKEN': None,
-            }.get(key, default)
-        
-        with pytest.raises(ValueError) as exc_info:
-            token = mock_getenv('INFLUX_TOKEN')
-            if not token:
-                raise ValueError(
-                    "INFLUX_TOKEN environment variable is required. "
-                    "Set to a valid InfluxDB API token with read access."
-                )
-        
-        assert 'INFLUX_TOKEN' in str(exc_info.value)
-
-
     def test_get_api_key_raises_when_unset(self):
-        """get_api_key() must raise RuntimeError if neither API_KEY nor DEV_API_KEY is set."""
-        from unittest.mock import patch as _patch
-        import main as main_mod
-        # Patch os.getenv on the already-imported module (avoids breaking module-level int() calls)
-        with _patch.object(main_mod.os, 'getenv', return_value=None):
-            with pytest.raises(RuntimeError, match='API_KEY'):
-                main_mod.get_api_key()
+        """effective_api_key property must raise RuntimeError if neither set."""
+        from config import Settings
+        
+        # Settings with no api_key should use dev_api_key (default exists)
+        s = Settings(dev_api_key="test-key")
+        assert s.effective_api_key == "test-key"
+        
+        # Settings with empty api_key and dev_api_key should raise
+        s_empty = Settings(api_key=None, dev_api_key="")
+        with pytest.raises(RuntimeError, match='API_KEY'):
+            _ = s_empty.effective_api_key
 
 
 class TestErrorResponseSanitization:

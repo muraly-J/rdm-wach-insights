@@ -15,16 +15,16 @@ Production notes:
   - Queries will use rule-based parsing instead of AI translation when disabled
 """
 
-import os
 import json
 import re
 from typing import Optional, Union
 
+from config import settings
 from core.logger import get_logger
 
 # Disable LLM by default for local development
 # Set ENABLE_LLM=true to enable AI translation via Gemini
-LLM_ENABLED = os.getenv("ENABLE_LLM", "false").lower() == "true"
+LLM_ENABLED = settings.enable_llm
 
 logger = get_logger(__name__)
 

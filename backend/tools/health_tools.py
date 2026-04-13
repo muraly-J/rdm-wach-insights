@@ -11,6 +11,7 @@ from typing import Optional, Any
 
 import pandas as pd
 
+from config import settings
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -36,11 +37,10 @@ def _get_retriever():
     global _retriever_instance
     if _retriever_instance is None:
         try:
-            import os
             from rag.vector_store import VectorStore
             from rag.retriever import Retriever
-            chroma_dir = os.getenv("CHROMA_PERSIST_DIR", "data/chroma")
-            collection = os.getenv("RAG_COLLECTION", "wach_docs")
+            chroma_dir = str(settings.chroma_persist_dir)
+            collection = settings.rag_collection
             store = VectorStore(persist_dir=chroma_dir, collection_name=collection)
             if store.count == 0:
                 return None

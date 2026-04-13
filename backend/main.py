@@ -15,6 +15,7 @@ import sys
 import signal
 from contextlib import asynccontextmanager
 
+from config import settings
 from core.logger import get_logger
 logger = get_logger(__name__)
 
@@ -48,13 +49,7 @@ from core.alerter import record_response, check_and_alert
 # ── API Key Authentication Middleware ────────────────────────────────────────
 def get_api_key() -> str:
     """Get the API key from environment. Raises RuntimeError if unset."""
-    api_key = os.getenv("API_KEY") or os.getenv("DEV_API_KEY")
-    if not api_key:
-        raise RuntimeError(
-            "API_KEY environment variable is required. "
-            "Set it in your .env file before starting the server."
-        )
-    return api_key
+    return settings.effective_api_key
 
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):
@@ -146,7 +141,7 @@ class AlertingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next) -> Response:
         response = await call_next(request)
-        webhook_url = os.getenv("ALERT_WEBHOOK_URL", "")
+        webhook_url = settings.alert_webhook_url
         if webhook_url:
             record_response(response.status_code)
             await check_and_alert(webhook_url)
@@ -184,7 +179,7 @@ def _startup_checks() -> None:
     else:
         logger.warning("DuckDB not found — health scores will be empty on first boot", extra={"db": db_path})
 
-    chroma_dir = os.getenv("CHROMA_PERSIST_DIR", os.path.join(os.path.dirname(__file__), "data", "chroma"))
+    chroma_dir = str(settings.chroma_persist_dir)
     if os.path.isdir(chroma_dir):
         logger.info("ChromaDB directory present", extra={"dir": chroma_dir})
     else:
@@ -209,9 +204,7 @@ async def lifespan(app):
 
 def get_cors_origins():
     """Get CORS origins from env or use defaults."""
-    raw = os.getenv("CORS_ORIGINS", "http://localhost:3000")
-    origins = [o.strip() for o in raw.split(",") if o.strip()]
-    return origins
+    return settings.cors_origins_list
 
 
 def create_app():

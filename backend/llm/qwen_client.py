@@ -14,7 +14,7 @@ from typing import Optional
 
 from openai import OpenAI
 
-from config import get_lms_base_url, get_lms_model, get_lms_api_key
+from config import settings, get_lms_base_url, get_lms_model, get_lms_api_key
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -31,8 +31,7 @@ class QwenClient:
     """Async wrapper for LM Studio / Qwen via OpenAI-compatible API."""
 
     def __init__(self):
-        import os
-        timeout = float(os.getenv("LMS_TIMEOUT", "60.0"))
+        timeout = settings.lms_timeout
         self._client = OpenAI(
             base_url=get_lms_base_url(),
             api_key=get_lms_api_key(),

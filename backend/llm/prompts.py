@@ -489,14 +489,14 @@ def _resolve_devices(level: dict, prefix: str) -> List[str]:
 
 def load_ward_config() -> Optional[dict]:
     """Load ward_config.yml (or example fallback). Returns None if unavailable."""
-    import os
     from pathlib import Path
+    from config import settings
     try:
         import yaml
     except ImportError:
         return None
 
-    custom_path = os.getenv("WARD_CONFIG_PATH")
+    custom_path = settings.ward_config_path
     candidates = (
         [Path(custom_path)] if custom_path
         else [
