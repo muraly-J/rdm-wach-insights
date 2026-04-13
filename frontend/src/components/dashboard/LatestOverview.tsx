@@ -11,17 +11,111 @@ import { useAppStore } from '../../store/useAppStore';
 
 // Static AHU IDs per level (mirrors backend/models/schemas.py AHU_LEVEL_CONFIG)
 const LEVEL_AHU_IDS: Record<number, string[]> = {
-  1: ['e0101','e0102','e0103','e0104','e0105','e0106','e0107','e0108','e0109','e0110','e0111','e0112','e0113','e0114','e0115','e0116','e0117','e0118','e0120','e0121','e0212'],
-  2: ['e0201','e0202','e0203','e0204','e0205','e0206','e0207','e0208','e0209','e0213','e0214','e0215','e0216','e0217','e0218'],
-  3: ['e0210','e0211','e0301','e0303','e0304','e0306','e0307','e0308','e0311','e0312','e0313','e0314','e0315','e0401','e0402','e0423'],
-  4: ['e0403','e0404','e0406','e0407','e0408','e0409','e0411','e0412','e0413','e0414','e0415','e0416','e0419'],
-  5: ['e0501','e0502','e0503','e0504','e0505','e0506','e0507','e0508','e0509','e0510','e0511','e0622'],
-  6: ['e0602','e0603','e0604','e0605','e0606','e0607','e0611','e0625','e0626','e0627','e0628'],
-  7: ['e0701','e0702','e0703','e0704'],
-  8: ['e0801','e0802','e0803','e0804','e0805'],
-  9: ['e0901','e0902','e0903','e0904','e0905','e0906','e0907','e0908'],
-  10: ['e1001','e1002','e1003','e1004','e1005','e1006','e1007','e1008'],
-  11: ['e1101','e1102','e1103','e1104','e1105','e1106','e1107','e1108'],
+  1: [
+    'e0101',
+    'e0102',
+    'e0103',
+    'e0104',
+    'e0105',
+    'e0106',
+    'e0107',
+    'e0108',
+    'e0109',
+    'e0110',
+    'e0111',
+    'e0112',
+    'e0113',
+    'e0114',
+    'e0115',
+    'e0116',
+    'e0117',
+    'e0118',
+    'e0120',
+    'e0121',
+    'e0212',
+  ],
+  2: [
+    'e0201',
+    'e0202',
+    'e0203',
+    'e0204',
+    'e0205',
+    'e0206',
+    'e0207',
+    'e0208',
+    'e0209',
+    'e0213',
+    'e0214',
+    'e0215',
+    'e0216',
+    'e0217',
+    'e0218',
+  ],
+  3: [
+    'e0210',
+    'e0211',
+    'e0301',
+    'e0303',
+    'e0304',
+    'e0306',
+    'e0307',
+    'e0308',
+    'e0311',
+    'e0312',
+    'e0313',
+    'e0314',
+    'e0315',
+    'e0401',
+    'e0402',
+    'e0423',
+  ],
+  4: [
+    'e0403',
+    'e0404',
+    'e0406',
+    'e0407',
+    'e0408',
+    'e0409',
+    'e0411',
+    'e0412',
+    'e0413',
+    'e0414',
+    'e0415',
+    'e0416',
+    'e0419',
+  ],
+  5: [
+    'e0501',
+    'e0502',
+    'e0503',
+    'e0504',
+    'e0505',
+    'e0506',
+    'e0507',
+    'e0508',
+    'e0509',
+    'e0510',
+    'e0511',
+    'e0622',
+  ],
+  6: [
+    'e0602',
+    'e0603',
+    'e0604',
+    'e0605',
+    'e0606',
+    'e0607',
+    'e0611',
+    'e0625',
+    'e0626',
+    'e0627',
+    'e0628',
+  ],
+  7: ['e0701', 'e0702', 'e0703', 'e0704'],
+  8: ['e0801', 'e0802', 'e0803', 'e0804', 'e0805'],
+  9: ['e0901', 'e0902', 'e0903', 'e0904', 'e0905', 'e0906', 'e0907', 'e0908'],
+  10: ['e1001', 'e1002', 'e1003', 'e1004', 'e1005', 'e1006', 'e1007', 'e1008'],
+  11: ['e1101', 'e1102', 'e1103', 'e1104', 'e1105', 'e1106', 'e1107', 'e1108'],
 };
 
 function healthColor(score: number) {
@@ -49,10 +143,25 @@ function LevelHealthPanel() {
   const tiles = siteSummaryData?.levelTiles ?? [];
 
   return (
-    <div style={{ background: '#131c2b', border: '1px solid #1e2d42', borderRadius: 12, overflow: 'hidden' }}>
+    <div
+      style={{
+        background: '#131c2b',
+        border: '1px solid #1e2d42',
+        borderRadius: 12,
+        overflow: 'hidden',
+      }}
+    >
       {/* Header */}
       <div style={{ padding: '14px 18px 10px', borderBottom: '1px solid #1e2d42' }}>
-        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: '#00E5A0', textTransform: 'uppercase' }}>
+        <div
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            color: '#00E5A0',
+            textTransform: 'uppercase',
+          }}
+        >
           Level Health
         </div>
         <div style={{ fontSize: 11, color: '#445566', marginTop: 2 }}>
@@ -63,9 +172,7 @@ function LevelHealthPanel() {
       {/* Rows */}
       <div>
         {tiles.length === 0
-          ? Array.from({ length: 11 }, (_, i) => (
-              <SkeletonLevelRow key={i} />
-            ))
+          ? Array.from({ length: 11 }, (_, i) => <SkeletonLevelRow key={i} />)
           : tiles.map((tile, i) => {
               const color = healthColor(tile.avgHealth);
               const pct = Math.max(0, Math.min(100, tile.avgHealth));
@@ -91,12 +198,27 @@ function LevelHealthPanel() {
                   whileHover={{ background: healthBg(tile.avgHealth) }}
                 >
                   {/* Level label */}
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#556677', minWidth: 28 }}>
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11,
+                      color: '#556677',
+                      minWidth: 28,
+                    }}
+                  >
                     L{String(tile.level).padStart(2, '0')}
                   </span>
 
                   {/* Bar */}
-                  <div style={{ flex: 1, height: 5, background: '#1e2d42', borderRadius: 3, overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      flex: 1,
+                      height: 5,
+                      background: '#1e2d42',
+                      borderRadius: 3,
+                      overflow: 'hidden',
+                    }}
+                  >
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
@@ -106,23 +228,34 @@ function LevelHealthPanel() {
                   </div>
 
                   {/* Score */}
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: color, minWidth: 42, textAlign: 'right', fontWeight: 600 }}>
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 12,
+                      color: color,
+                      minWidth: 42,
+                      textAlign: 'right',
+                      fontWeight: 600,
+                    }}
+                  >
                     {tile.avgHealth.toFixed(1)}
                   </span>
 
                   {/* Status badge */}
-                  <span style={{
-                    fontSize: 8,
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    color: color,
-                    background: healthBg(tile.avgHealth),
-                    border: `1px solid ${color}30`,
-                    borderRadius: 4,
-                    padding: '2px 5px',
-                    minWidth: 30,
-                    textAlign: 'center',
-                  }}>
+                  <span
+                    style={{
+                      fontSize: 8,
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      color: color,
+                      background: healthBg(tile.avgHealth),
+                      border: `1px solid ${color}30`,
+                      borderRadius: 4,
+                      padding: '2px 5px',
+                      minWidth: 30,
+                      textAlign: 'center',
+                    }}
+                  >
                     {healthLabel(tile.avgHealth)}
                   </span>
                 </motion.button>
@@ -135,11 +268,51 @@ function LevelHealthPanel() {
 
 function SkeletonLevelRow() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px', borderBottom: '1px solid #1a2638' }}>
-      <div style={{ width: 28, height: 10, background: '#1e2d42', borderRadius: 3, animation: 'pulse 1.5s infinite' }} />
-      <div style={{ flex: 1, height: 5, background: '#1e2d42', borderRadius: 3, animation: 'pulse 1.5s infinite' }} />
-      <div style={{ width: 42, height: 10, background: '#1e2d42', borderRadius: 3, animation: 'pulse 1.5s infinite' }} />
-      <div style={{ width: 30, height: 14, background: '#1e2d42', borderRadius: 4, animation: 'pulse 1.5s infinite' }} />
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '10px 18px',
+        borderBottom: '1px solid #1a2638',
+      }}
+    >
+      <div
+        style={{
+          width: 28,
+          height: 10,
+          background: '#1e2d42',
+          borderRadius: 3,
+          animation: 'pulse 1.5s infinite',
+        }}
+      />
+      <div
+        style={{
+          flex: 1,
+          height: 5,
+          background: '#1e2d42',
+          borderRadius: 3,
+          animation: 'pulse 1.5s infinite',
+        }}
+      />
+      <div
+        style={{
+          width: 42,
+          height: 10,
+          background: '#1e2d42',
+          borderRadius: 3,
+          animation: 'pulse 1.5s infinite',
+        }}
+      />
+      <div
+        style={{
+          width: 30,
+          height: 14,
+          background: '#1e2d42',
+          borderRadius: 4,
+          animation: 'pulse 1.5s infinite',
+        }}
+      />
     </div>
   );
 }
@@ -154,14 +327,31 @@ function FleetDirectoryPanel() {
 
   // Build a count map from live data; fall back to static lengths
   const countMap: Record<number, number> = {};
-  tiles.forEach((t) => { countMap[t.level] = t.ahuCount; });
+  tiles.forEach((t) => {
+    countMap[t.level] = t.ahuCount;
+  });
 
   const levels = Array.from({ length: 11 }, (_, i) => i + 1);
 
   return (
-    <div style={{ background: '#131c2b', border: '1px solid #1e2d42', borderRadius: 12, overflow: 'hidden' }}>
+    <div
+      style={{
+        background: '#131c2b',
+        border: '1px solid #1e2d42',
+        borderRadius: 12,
+        overflow: 'hidden',
+      }}
+    >
       <div style={{ padding: '14px 18px 10px', borderBottom: '1px solid #1e2d42' }}>
-        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: '#00E5A0', textTransform: 'uppercase' }}>
+        <div
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            color: '#00E5A0',
+            textTransform: 'uppercase',
+          }}
+        >
           Fleet Directory
         </div>
         <div style={{ fontSize: 11, color: '#445566', marginTop: 2 }}>
@@ -198,13 +388,28 @@ function FleetDirectoryPanel() {
                   textAlign: 'left',
                 }}
               >
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#556677', minWidth: 28 }}>
+                <span
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 11,
+                    color: '#556677',
+                    minWidth: 28,
+                  }}
+                >
                   L{String(level).padStart(2, '0')}
                 </span>
 
                 <span style={{ flex: 1, fontSize: 11, color: '#8899aa' }}>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#E8ECF1', fontWeight: 600 }}>{count}</span>
-                  {' '}AHUs
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      color: '#E8ECF1',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {count}
+                  </span>{' '}
+                  AHUs
                 </span>
 
                 {/* Chevron */}
@@ -218,7 +423,10 @@ function FleetDirectoryPanel() {
 
                 {/* Navigate to level */}
                 <button
-                  onClick={(e) => { e.stopPropagation(); selectLevel(level); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    selectLevel(level);
+                  }}
                   style={{
                     fontSize: 9,
                     fontWeight: 600,
@@ -245,7 +453,14 @@ function FleetDirectoryPanel() {
                     transition={{ duration: 0.22, ease: 'easeInOut' }}
                     style={{ overflow: 'hidden' }}
                   >
-                    <div style={{ padding: '6px 18px 12px', display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    <div
+                      style={{
+                        padding: '6px 18px 12px',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 5,
+                      }}
+                    >
                       {ids.map((id) => (
                         <span
                           key={id}
@@ -282,9 +497,39 @@ function AlertStatusPanel() {
 
   if (!siteSummaryData) {
     return (
-      <div style={{ background: '#131c2b', border: '1px solid #1e2d42', borderRadius: 12, padding: '18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: '#00E5A0', textTransform: 'uppercase' }}>Alert Status</div>
-        {[1,2,3].map(i => <div key={i} style={{ height: 60, background: '#1e2d42', borderRadius: 8, animation: 'pulse 1.5s infinite' }} />)}
+      <div
+        style={{
+          background: '#131c2b',
+          border: '1px solid #1e2d42',
+          borderRadius: 12,
+          padding: '18px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            color: '#00E5A0',
+            textTransform: 'uppercase',
+          }}
+        >
+          Alert Status
+        </div>
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            style={{
+              height: 60,
+              background: '#1e2d42',
+              borderRadius: 8,
+              animation: 'pulse 1.5s infinite',
+            }}
+          />
+        ))}
       </div>
     );
   }
@@ -293,9 +538,26 @@ function AlertStatusPanel() {
   const alertColor = ahusInAlert === 0 ? '#00E5A0' : ahusInAlert < 5 ? '#f59e0b' : '#ef4444';
 
   return (
-    <div style={{ background: '#131c2b', border: '1px solid #1e2d42', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={{
+        background: '#131c2b',
+        border: '1px solid #1e2d42',
+        borderRadius: 12,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <div style={{ padding: '14px 18px 10px', borderBottom: '1px solid #1e2d42' }}>
-        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: '#00E5A0', textTransform: 'uppercase' }}>
+        <div
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            color: '#00E5A0',
+            textTransform: 'uppercase',
+          }}
+        >
           Alert Status
         </div>
         <div style={{ fontSize: 11, color: '#445566', marginTop: 2 }}>
@@ -304,7 +566,6 @@ function AlertStatusPanel() {
       </div>
 
       <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-
         {/* Alert count hero */}
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
@@ -320,7 +581,15 @@ function AlertStatusPanel() {
             gap: 14,
           }}
         >
-          <span style={{ fontSize: 36, fontWeight: 800, color: alertColor, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>
+          <span
+            style={{
+              fontSize: 36,
+              fontWeight: 800,
+              color: alertColor,
+              fontFamily: "'JetBrains Mono', monospace",
+              lineHeight: 1,
+            }}
+          >
             {ahusInAlert}
           </span>
           <div>
@@ -333,7 +602,12 @@ function AlertStatusPanel() {
 
         {/* Site-wide stat pills */}
         <div style={{ display: 'flex', gap: 8 }}>
-          <StatPill label="Site Health" value={`${avgSiteHealth.toFixed(1)}`} unit="pts" color={healthColor(avgSiteHealth)} />
+          <StatPill
+            label="Site Health"
+            value={`${avgSiteHealth.toFixed(1)}`}
+            unit="pts"
+            color={healthColor(avgSiteHealth)}
+          />
           <StatPill label="Total AHUs" value={`${totalAHUs}`} unit="" color="#8899aa" />
         </div>
 
@@ -367,24 +641,58 @@ function AlertStatusPanel() {
   );
 }
 
-function StatPill({ label, value, unit, color }: { label: string; value: string; unit: string; color: string }) {
+function StatPill({
+  label,
+  value,
+  unit,
+  color,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+  color: string;
+}) {
   return (
-    <div style={{
-      flex: 1,
-      background: '#1a2638',
-      border: '1px solid #243040',
-      borderRadius: 8,
-      padding: '8px 12px',
-    }}>
-      <div style={{ fontSize: 9, color: '#445566', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, color }}>
-        {value}<span style={{ fontSize: 10, color: '#445566', marginLeft: 2 }}>{unit}</span>
+    <div
+      style={{
+        flex: 1,
+        background: '#1a2638',
+        border: '1px solid #243040',
+        borderRadius: 8,
+        padding: '8px 12px',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 9,
+          color: '#445566',
+          fontWeight: 600,
+          letterSpacing: '0.07em',
+          textTransform: 'uppercase',
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, color }}
+      >
+        {value}
+        <span style={{ fontSize: 10, color: '#445566', marginLeft: 2 }}>{unit}</span>
       </div>
     </div>
   );
 }
 
-function SpotlightCard({ label, id, name, level, score, accent, onViewLevel }: {
+function SpotlightCard({
+  label,
+  id,
+  name,
+  level,
+  score,
+  accent,
+  onViewLevel,
+}: {
   label: string;
   id: string;
   name: string;
@@ -409,28 +717,55 @@ function SpotlightCard({ label, id, name, level, score, accent, onViewLevel }: {
       }}
     >
       {/* Score ring */}
-      <div style={{
-        width: 44,
-        height: 44,
-        borderRadius: '50%',
-        border: `2px solid ${accent}40`,
-        background: `${accent}10`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-      }}>
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: accent }}>
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: '50%',
+          border: `2px solid ${accent}40`,
+          background: `${accent}10`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 11,
+            fontWeight: 700,
+            color: accent,
+          }}
+        >
           {score.toFixed(0)}
         </span>
       </div>
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', color: accent, textTransform: 'uppercase', marginBottom: 2 }}>
+        <div
+          style={{
+            fontSize: 8,
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            color: accent,
+            textTransform: 'uppercase',
+            marginBottom: 2,
+          }}
+        >
           {label}
         </div>
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#E8ECF1', fontWeight: 600 }}>{id}</div>
+        <div
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 11,
+            color: '#E8ECF1',
+            fontWeight: 600,
+          }}
+        >
+          {id}
+        </div>
         <div style={{ fontSize: 10, color: '#556677', marginTop: 1 }}>
           {name} · L{String(level).padStart(2, '0')}
         </div>
@@ -470,19 +805,28 @@ export default function LatestOverview() {
     >
       {/* Section title */}
       <div style={{ marginBottom: 20, display: 'flex', alignItems: 'baseline', gap: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#E8ECF1', letterSpacing: '-0.01em' }}>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 15,
+            fontWeight: 700,
+            color: '#E8ECF1',
+            letterSpacing: '-0.01em',
+          }}
+        >
           Building Overview
         </h2>
         <span style={{ fontSize: 11, color: '#445566' }}>Select a level below to drill in</span>
       </div>
 
       {/* Three-column grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: 16,
-        alignItems: 'start',
-      }}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 16,
+          alignItems: 'start',
+        }}
         className="overview-grid"
       >
         <LevelHealthPanel />
