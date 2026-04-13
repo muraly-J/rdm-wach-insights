@@ -2,7 +2,7 @@
 // ========================
 // Fetch wrappers for all endpoints with error handling
 
-import { LevelsResponse, HealthIndexResponse, ScoresResponse, MeasurementsResponse, SiteSummaryData } from '../types';
+import { LevelsResponse, HealthIndexResponse, ScoresResponse, MeasurementsResponse, SiteSummaryData, OffPeriod } from '../types';
 
 // API base URL: use backend URL from env, fall back to /api (Vite proxy in dev)
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -159,4 +159,20 @@ export async function fetchSiteSummary(
   range: '24h' | '7d' | '30d' | 'all' = '7d'
 ): Promise<SiteSummaryData> {
   return apiFetch<SiteSummaryData>(`/site/summary?range=${range}`);
+}
+
+/**
+ * GET /api/on-off-periods/{deviceId}?range=...
+ * Returns contiguous intervals when the AHU was powered off.
+ * Returns [] on any error so charts degrade gracefully.
+ */
+export async function fetchOffPeriods(deviceId: string, range: '24h' | '7d' | '30d'): Promise<OffPeriod[]> {
+  try {
+    const data = await apiFetch<{ off_periods: OffPeriod[] }>(
+      `/on-off-periods/${deviceId}?range=${range}`
+    );
+    return data.off_periods ?? [];
+  } catch {
+    return [];
+  }
 }

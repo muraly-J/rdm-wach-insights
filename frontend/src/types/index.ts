@@ -220,6 +220,10 @@ export interface FinancialImpact {
   top_ahus: AHUCost[];
 }
 
+// ── AHU On/Off Period Types ───────────────────────────────────────────────
+
+export type OffPeriod = { start: string; end: string };
+
 // ── AHU Heatmap Types ─────────────────────────────────────────────────────
 
 export interface AHUHeatmapHour {
