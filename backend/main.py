@@ -35,6 +35,7 @@ from routes.measurements import router as measurements_router
 from routes.delta_forecast import router as delta_forecast_router
 from routes.financial_impact import router as financial_impact_router
 from routes.site_summary import router as site_summary_router
+from routes.on_off_periods import router as on_off_periods_router
 
 from dotenv import load_dotenv
 from middleware.query_logger import init_db, log_query
@@ -277,6 +278,7 @@ def create_app():
     app.include_router(delta_forecast_router, prefix="/api")
     app.include_router(financial_impact_router, prefix="/api")
     app.include_router(site_summary_router, prefix="/api")
+    app.include_router(on_off_periods_router, prefix="/api")
 
     @app.get('/health')
     async def health():
