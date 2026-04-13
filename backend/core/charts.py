@@ -148,9 +148,9 @@ def build_chart(df: pd.DataFrame, structured: dict[str, Any]) -> dict[str, Any]:
     """
     # handle both dict and object (pydantic)
     if hasattr(structured, 'query_type'):
-        qtype      = getattr(structured, 'query_type')
-        metric     = getattr(structured, 'metric')
-        time_range = getattr(structured, 'time_range')
+        qtype      = structured.query_type
+        metric     = structured.metric
+        time_range = structured.time_range
         top_n      = getattr(structured, 'top_n', 10)
     else:
         qtype      = structured.get('query_type')

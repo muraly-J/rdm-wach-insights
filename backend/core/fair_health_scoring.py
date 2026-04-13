@@ -365,20 +365,20 @@ def score_power_factor(
 ) -> tuple[float, float]:
     """
     Score 2 · PF Degradation  (weight 25%)
-    
+
     Is this AHU's power factor lower than its own established normal,
     and is it trending downward.
-    
+
     Level term (70%):
         z = (own_median_PF − current_PF) / own_rstd_PF
         Positive z = PF below own median = penalty.
-        
+
     Trend term (30%):
         Declining slope = PF getting worse over 7 days.
-        
+
     Load discount:
         If power < 60% of own median power, scale score × 0.35.
-        
+
     Returns (score ∈ [0,1], z_diagnostic)
     """
     if pf is None or np.isnan(pf):
@@ -417,17 +417,17 @@ def score_phase_imbalance(
 ) -> tuple[float, float]:
     """
     Score 3 · Phase Imbalance  (weight 25%)
-    
+
     Is this AHU's current unbalance higher than its own established normal,
     and is it trending upward.
-    
+
     Level term (70%):
         z = (current − own_median) / own_rstd
         Higher unbalance = worse.
-        
+
     Trend term (30%):
         Rising slope over 7 days = worsening.
-        
+
     Returns (score ∈ [0,1], z_diagnostic)
     """
     if unbal is None or np.isnan(unbal):
@@ -461,17 +461,17 @@ def score_thd_drift(
 ) -> tuple[float, float]:
     """
     Score 4 · THD Drift  (weight 15%)
-    
+
     Is this AHU's harmonic distortion elevated above its own normal trend,
     and is it drifting upward.
-    
+
     Input is the 24-hour rolling mean of composite THD (max of L1, L3).
     Using the rolling mean filters transient spikes from motor starts,
     lift operations, nearby equipment, etc.
-    
+
     Baseline is also computed on the 24h-mean series (not instantaneous).
     This is critical — both sides of comparison must be on same time-scale.
-    
+
     Returns (score ∈ [0,1], z_diagnostic)
     """
     if thd_24h is None or np.isnan(thd_24h):
@@ -581,7 +581,7 @@ def calculate_health_index(scores: dict[str, float]) -> float:
     """
     health_index = clip(100 − penalty × 100,  0, 100)
     penalty      = Σ weight_i × score_i   ∈ [0, 1]
-    
+
     All scores at 0 (exactly at own baseline) → penalty = 0 → index = 100
     All scores at 1 (maximum deviation on all metrics) → index = 0
     """
@@ -596,16 +596,16 @@ def calculate_health_index(scores: dict[str, float]) -> float:
 def build_baselines(df: pd.DataFrame) -> dict:
     """
     Compute per-AHU robust baseline statistics from the full history in df.
-    
+
     Returns:
-        { ahu_id: { 
+        { ahu_id: {
             "delta_kwh": {"median", "rstd", "p5", "p25", "p75", "p95", "n"},
             "power_factor_avg": {...},
             "current_unbalance": {...},
             "composite_thd_24h": {...},  # MUST use 24h rolling mean series
             "power_total": {...}
         } }
-    
+
     IMPORTANT: the THD baseline is computed on the 24h-rolling-mean series,
     not the instantaneous composite. This is mandatory for correctness.
     """
@@ -679,13 +679,13 @@ def build_baselines(df: pd.DataFrame) -> dict:
 def compute_safety_flags(baselines: dict) -> dict[str, list[str]]:
     """
     Evaluate each AHU's baseline against structural safety thresholds.
-    
+
     Returns { ahu_id: list_of_flag_strings }.
-    
+
     Flags represent chronic structural issues — they appear in the output
     as metadata and should trigger engineering review on their own schedule.
     They do NOT affect the hourly health index.
-    
+
     Thresholds:
       THD_CHRONIC_HIGH   median 24h-THD  > 5%
       IMBALANCE_SEVERE   median unbalance > 5%
@@ -730,7 +730,7 @@ def generate_fleet_risk_assessment_fair(
 ) -> dict[str, Any]:
     """
     Generate FAIR health assessment for entire fleet using per-AHU baselines.
-    
+
     Args:
         df_power: Power time series (columns = ahu_ids, index = timestamps)
         df_energy: Energy time series
@@ -738,7 +738,7 @@ def generate_fleet_risk_assessment_fair(
         df_unbalance: Unbalance time series
         df_thd_l1: L1 THD time series
         df_thd_l3: L3 THD time series
-    
+
     Returns:
         Dict with fleet summary and individual assessments
     """
@@ -843,7 +843,7 @@ def generate_fleet_risk_assessment_fair(
 
         # Get full history series for this AHU
         hist_power = df_power[ahu_id].dropna().values[-TREND_WINDOW:] if ahu_id in df_power.columns else np.array([])
-        hist_energy = df_energy[ahu_id].dropna().values[-TREND_WINDOW:] if ahu_id in df_energy.columns else np.array([])
+        df_energy[ahu_id].dropna().values[-TREND_WINDOW:] if ahu_id in df_energy.columns else np.array([])
         hist_pf = df_pf[ahu_id].dropna().values[-TREND_WINDOW:] if ahu_id in df_pf.columns else np.array([])
         hist_unbal = df_unbalance[ahu_id].dropna().values[-TREND_WINDOW:] if ahu_id in df_unbalance.columns else np.array([])
         hist_thd_24h = thd_24h_df[ahu_id].dropna().values[-TREND_WINDOW:] if ahu_id in thd_24h_df.columns else np.array([])

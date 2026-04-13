@@ -7,7 +7,7 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis
+  YAxis,
 } from 'recharts';
 import { fetchMeasurements } from '../../api/client';
 import { CHART_CONFIG } from '../../constants/chartConfig';
