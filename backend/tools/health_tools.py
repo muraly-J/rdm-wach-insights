@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 tools/health_tools.py
 ─────────────────────

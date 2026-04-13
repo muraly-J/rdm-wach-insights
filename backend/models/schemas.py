@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 models/schemas.py
 ─────────────────
@@ -13,7 +14,7 @@ Exposes:
 import json
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, field_validator
 
@@ -241,7 +242,7 @@ class StructuredQuery(BaseModel):
     device_ids:  list[str]              # one for time_series; empty means "all" for ranking
     metric:      str
     time_range:  Literal["last_24h", "last_7d", "last_30d", "all_time"]
-    top_n:       int | None = None   # only for ranking queries
+    top_n:       Optional[int] = None   # only for ranking queries
 
     @field_validator("metric")
     @classmethod
@@ -296,7 +297,7 @@ class PFRiskScore(RiskScore):
 class PhaseImbalanceRiskScore(RiskScore):
     """Phase imbalance risk score with root cause uncertainty flag."""
     confidence: str = "Moderate"
-    root_cause_uncertainty: str | None = None
+    root_cause_uncertainty: Optional[str] = None
 
 
 class THDRiskScore(RiskScore):
@@ -307,14 +308,14 @@ class THDRiskScore(RiskScore):
 class OverloadRiskScore(RiskScore):
     """Overload risk score with seasonal caveat."""
     confidence: str = "Moderate"
-    seasonal_caveat: str | None = None
+    seasonal_caveat: Optional[str] = None
 
 
 class EnergyAssessment(BaseModel):
     """Energy anomaly assessment."""
-    forecast_24h_kwh: float | None = None
-    normal_range_kwh: list[float] | None = None
-    deviation_probability_pct: float | None = None
+    forecast_24h_kwh: Optional[float] = None
+    normal_range_kwh: Optional[list[float]] = None
+    deviation_probability_pct: Optional[float] = None
     trend_7d: str = "stable"
 
 
@@ -434,7 +435,7 @@ class AIChatRequest(BaseModel):
     """Request body for POST /api/chat"""
     message: str
     history: list[ChatHistoryItem] = []
-    context: dict | None = None
+    context: Optional[dict] = None
 
 
 # ── Utility Functions ────────────────────────────────────────────────────────

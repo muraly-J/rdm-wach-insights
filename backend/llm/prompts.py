@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 System prompt for the WACH Insight LLM query translator.
 Hardened against prompt injection attempts.

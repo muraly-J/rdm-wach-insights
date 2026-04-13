@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 POST /api/query — main endpoint with security hardening:
 - Input length cap
@@ -21,6 +22,7 @@ from middleware.rate_limiter import make_rate_limiter
 from middleware.validator import validate_structured_query
 from models.schemas import ALLOWED_DEVICES, ALLOWED_METRICS, QueryType
 from pydantic import BaseModel, validator
+from typing import Optional
 from utils.error_handler import handle_query_error
 
 logger = get_logger(__name__)
@@ -136,7 +138,7 @@ def _validate_llm_output(structured) -> None:
 
 class QueryRequest(BaseModel):
     user_query: str
-    session_id: str | None = None
+    session_id: Optional[str] = None
 
     @validator('user_query')
     def validate_query(cls, v: str) -> str:
@@ -150,7 +152,7 @@ class QueryRequest(BaseModel):
         return v
 
     @validator('session_id')
-    def validate_session(cls, v: str | None) -> str | None:
+    def validate_session(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return str(uuid.uuid4())
         try:

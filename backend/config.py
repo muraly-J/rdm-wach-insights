@@ -14,6 +14,7 @@ haven't been migrated yet — they delegate to `settings`.
 """
 
 from pathlib import Path
+from typing import Optional
 
 from core.logger import get_logger
 from pydantic import model_validator
@@ -55,10 +56,10 @@ class Settings(BaseSettings):
     # ── RAG / Vector store ────────────────────────────────────────────────────
     chroma_persist_dir: str = "data/chroma"
     rag_collection: str = "wach_docs"
-    ward_config_path: str | None = None
+    ward_config_path: Optional[str] = None
 
     # ── Auth & Security ───────────────────────────────────────────────────────
-    api_key: str | None = None
+    api_key: Optional[str] = None
     dev_api_key: str = "dev-key-change-in-production"
     cors_origins: str = "http://localhost:3000,http://localhost:5173,https://demo-wach-insight.vercel.app,https://rdm-wach-insights.vercel.app"
 
