@@ -1,93 +1,153 @@
 """
-backend/config.py
-─────────────────
-Centralized configuration management for WACH Insight.
+config.py
+─────────
+Single source of truth for all environment-sourced configuration.
 
-This module handles:
-- Loading environment variables from .env files
-- Providing default values for optional settings
-- Validating required configuration
+All modules should import the `settings` singleton:
+
+    from config import settings
+    url = settings.influx_url
+
+No module other than this file may call os.getenv() directly.
+Backward-compatible getter functions are provided for callers that
+haven't been migrated yet — they delegate to `settings`.
 """
 
-import os
 from pathlib import Path
+from typing import Optional
+
+from pydantic import model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from core.logger import get_logger
+
 logger = get_logger(__name__)
 
-
-# ── Base paths ────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent
 
 
-# ── Helper to load .env files ───────────────────────────────────────────────
-def load_env_files():
-    """Load .env files in order of precedence (later overrides earlier)."""
-    from dotenv import load_dotenv
-
-    # Try multiple locations for .env files
-    env_locations = [
-        BASE_DIR / ".env",              # Root of backend
-        BASE_DIR.parent / ".env",       # Project root (for deployment)
-    ]
-
-    for env_path in env_locations:
-        if env_path.exists():
-            load_dotenv(env_path)
-            logger.info(f"Loaded environment from {env_path}")
-
-
-# ── InfluxDB Configuration ────────────────────────────────────────────────────
-def get_influx_skip_tls() -> bool:
-    """Return True if INFLUX_SKIP_TLS=true, meaning HTTP is allowed for non-localhost hosts.
-
-    Use this when InfluxDB is running without TLS (plain HTTP) on a remote server.
-    Only set this if the connection is on a trusted private network.
+class Settings(BaseSettings):
     """
-    return os.getenv("INFLUX_SKIP_TLS", "false").lower() == "true"
+    All WACH Insight configuration, sourced from environment variables
+    and .env files. Field names map to uppercased env var names
+    (e.g. `influx_url` → `INFLUX_URL`).
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+    )
+
+    # ── InfluxDB ──────────────────────────────────────────────────────────────
+    influx_url: str = "http://localhost:8086"
+    influx_token: str = ""
+    influx_org: str = "wach"
+    influx_bucket: str = "wach_bucket_3"
+    influx_skip_tls: bool = False
+
+    # ── LLM (LM Studio / Qwen) ───────────────────────────────────────────────
+    lms_base_url: str = "http://localhost:1234/v1"
+    lms_model: str = "qwen/qwen3-coder-next"
+    lms_api_key: str = "lm-studio-placeholder"
+    lms_timeout: float = 60.0
+    enable_llm: bool = False
+
+    # ── RAG / Vector store ────────────────────────────────────────────────────
+    chroma_persist_dir: str = "data/chroma"
+    rag_collection: str = "wach_docs"
+    ward_config_path: Optional[str] = None
+
+    # ── Auth & Security ───────────────────────────────────────────────────────
+    api_key: Optional[str] = None
+    dev_api_key: str = "dev-key-change-in-production"
+    cors_origins: str = "http://localhost:3000,http://localhost:5173,https://demo-wach-insight.vercel.app,https://rdm-wach-insights.vercel.app"
+
+    # ── Application ───────────────────────────────────────────────────────────
+    app_env: str = "development"
+    debug: bool = False
+    rate_limit_requests: int = 100
+    rate_limit_window: int = 60
+
+    # ── Observability ─────────────────────────────────────────────────────────
+    alert_webhook_url: str = ""
+
+    # ── Building identity ─────────────────────────────────────────────────────
+    wach_building_name: str = "Healthcare Facility"
+    wach_department: str = "Department"
+    hospital_id: str = "wach"
+
+    # ── Debug flags ───────────────────────────────────────────────────────────
+    csv_debug: bool = False
+
+    # ── Derived properties ────────────────────────────────────────────────────
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Return CORS origins as a list (splits the comma-separated string)."""
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def effective_api_key(self) -> str:
+        """Return the active API key, preferring API_KEY over DEV_API_KEY."""
+        key = self.api_key or self.dev_api_key
+        if not key:
+            raise RuntimeError(
+                "API_KEY environment variable is required. "
+                "Set it in your .env file before starting the server."
+            )
+        return key
+
+    @model_validator(mode="after")
+    def warn_on_insecure_influx(self) -> "Settings":
+        """Warn (not crash) if InfluxDB uses plain HTTP on a non-localhost host."""
+        url = self.influx_url
+        is_local = url.startswith("http://localhost") or url.startswith("http://127.0.0.1")
+        if not is_local and not self.influx_skip_tls and url.startswith("http://"):
+            logger.warning(
+                "INFLUX_URL uses plain HTTP on a non-localhost host. "
+                "Set INFLUX_SKIP_TLS=true to suppress this warning, "
+                "or switch to HTTPS for production.",
+                extra={"influx_url": url},
+            )
+        return self
+
+    # ── Data paths (derived from BASE_DIR) ───────────────────────────────────
+
+    @property
+    def data_dir(self) -> Path:
+        """Absolute path to the backend data directory."""
+        return BASE_DIR / "data"
+
+    @property
+    def exports_dir(self) -> Path:
+        """Absolute path to the backend exports directory."""
+        return BASE_DIR / "exports"
+
+
+# ── Module-level singleton ────────────────────────────────────────────────────
+# Import this in other modules: `from config import settings`
+settings = Settings()
+
+# Ensure runtime directories exist
+settings.data_dir.mkdir(parents=True, exist_ok=True)
+settings.exports_dir.mkdir(parents=True, exist_ok=True)
+
+
+# ── Backward-compatible getters ───────────────────────────────────────────────
+# These exist so callers written before this refactor still work.
+# New code should use `settings.field_name` directly.
 
 
 def get_influx_url() -> str:
-    """Get InfluxDB URL.
-
-    HTTP is allowed for localhost and when INFLUX_SKIP_TLS=true.
-    Otherwise HTTPS is required for non-localhost hosts.
-
-    Allowed formats:
-    - Local development: http://localhost:8086 or http://127.0.0.1:8086
-    - Remote (no TLS):   http://<your-influxdb-host>:8086  (requires INFLUX_SKIP_TLS=true)
-    - Remote (TLS):      https://<your-influxdb-host>:8086
-    """
-    url = os.getenv("INFLUX_URL")
-    if not url:
-        raise ValueError(
-            "INFLUX_URL environment variable is required. "
-            "Set to your InfluxDB URL (e.g., http://localhost:8086 or https://cloud.influxdata.com)."
-        )
-
-    # Always allow HTTP for localhost
-    if url.startswith("http://localhost") or url.startswith("http://127.0.0.1"):
-        return url
-
-    # Allow HTTP for remote hosts only when explicitly opted in
-    if url.startswith("http://") and get_influx_skip_tls():
-        return url
-
-    # For other hosts, require HTTPS
-    if not url.startswith("https://"):
-        raise ValueError(
-            "INFLUX_URL must use HTTPS for secure communication. "
-            f"Received: {url}\n\n"
-            "For local development, use: http://localhost:8086 or http://127.0.0.1:8086\n"
-            "If your InfluxDB server runs plain HTTP (no TLS), set INFLUX_SKIP_TLS=true in .env\n"
-            "For production with TLS, use: https://<your-influxdb-host>:8086"
-        )
-    return url
+    """Get InfluxDB URL."""
+    return settings.influx_url
 
 
 def get_influx_token() -> str:
     """Get InfluxDB API token."""
-    token = os.getenv("INFLUX_TOKEN")
+    token = settings.influx_token
     if not token:
         raise ValueError(
             "INFLUX_TOKEN environment variable is required. "
@@ -98,109 +158,79 @@ def get_influx_token() -> str:
 
 def get_influx_org() -> str:
     """Get InfluxDB organization name."""
-    return os.getenv("INFLUX_ORG", "wach")
+    return settings.influx_org
 
 
 def get_influx_bucket() -> str:
     """Get InfluxDB bucket name."""
-    return os.getenv("INFLUX_BUCKET", "wach_bucket_3")
+    return settings.influx_bucket
 
 
-# ── LM Studio (LLM) Configuration ─────────────────────────────────────────────
+def get_influx_skip_tls() -> bool:
+    """Get InfluxDB skip TLS setting."""
+    return settings.influx_skip_tls
+
+
 def get_lms_base_url() -> str:
     """Get LM Studio base URL."""
-    return os.getenv("LMS_BASE_URL", "http://localhost:1234/v1")
+    return settings.lms_base_url
 
 
 def get_lms_model() -> str:
     """Get LM Studio model name."""
-    return os.getenv("LMS_MODEL", "qwen/qwen3-coder-next")
+    return settings.lms_model
 
 
 def get_lms_api_key() -> str:
-    """Get LM Studio API key (placeholder for lm-studio)."""
-    api_key = os.getenv("LMS_API_KEY")
-    if not api_key:
-        # Return default placeholder for local development without LLM
-        return "lm-studio-placeholder"
-    # Allow lm-studio placeholder for local development without valid API
-    if api_key == "lm-studio":
-        return "lm-studio-placeholder"
-    return api_key
+    """Get LM Studio API key."""
+    return settings.lms_api_key
 
 
-# ── Building Identity ─────────────────────────────────────────────────────────
 def get_building_name() -> str:
     """Get building/facility name."""
-    return os.getenv("WACH_BUILDING_NAME", "Healthcare Facility")
+    return settings.wach_building_name
 
 
 def get_hospital_id() -> str:
-    """Get hospital/facility identifier used for multi-tenant routing."""
-    return os.getenv("HOSPITAL_ID", "wach")
+    """Get hospital/facility identifier."""
+    return settings.hospital_id
 
 
 def get_department() -> str:
     """Get department or wing within the building."""
-    return os.getenv("WACH_DEPARTMENT", "Department")
+    return settings.wach_department
 
 
-# ── Application Configuration ───────────────────────────────────────────────
 def get_app_env() -> str:
-    """Get application environment (development/production)."""
-    return os.getenv("APP_ENV", "development")
+    """Get application environment."""
+    return settings.app_env
 
 
 def get_cors_origins() -> list[str]:
     """Get allowed CORS origins as a list."""
-    raw = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173,https://demo-wach-insight.vercel.app,https://rdm-wach-insights.vercel.app")
-    return [o.strip() for o in raw.split(",") if o.strip()]
+    return settings.cors_origins_list
 
 
-# ── Security Configuration ───────────────────────────────────────────────────
 def get_debug_mode() -> bool:
     """Get debug mode setting."""
-    return os.getenv("DEBUG", "false").lower() == "true"
+    return settings.debug
 
 
 def get_rate_limit_requests() -> int:
     """Get maximum requests per window."""
-    return int(os.getenv("RATE_LIMIT_REQUESTS", "20"))
+    return settings.rate_limit_requests
 
 
 def get_rate_limit_window() -> int:
     """Get rate limit window in seconds."""
-    return int(os.getenv("RATE_LIMIT_WINDOW", "60"))
+    return settings.rate_limit_window
 
 
-# ── Data/Output paths ───────────────────────────────────────────────────────
 def get_data_dir() -> Path:
     """Get path to data directory."""
-    return BASE_DIR / "data"
+    return settings.data_dir
 
 
 def get_exports_dir() -> Path:
     """Get path to exports directory."""
-    return BASE_DIR / "exports"
-
-
-# ── Initialization ───────────────────────────────────────────────────────────
-def init_config():
-    """Initialize configuration and validate requirements."""
-    load_env_files()
-
-    # Validate required settings
-    try:
-        get_influx_token()
-    except ValueError as e:
-        if get_app_env() == "production":
-            raise
-        logger.warning(str(e))
-
-    # Ensure directories exist
-    get_data_dir().mkdir(parents=True, exist_ok=True)
-    get_exports_dir().mkdir(parents=True, exist_ok=True)
-
-
-# Call init on module import
-init_config()
+    return settings.exports_dir
