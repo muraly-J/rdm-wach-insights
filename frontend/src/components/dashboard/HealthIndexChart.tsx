@@ -12,11 +12,13 @@ import {
 import { motion } from 'framer-motion';
 import InfoTooltip from '../shared/InfoTooltip';
 import { formatDateMYT } from '../../utils/formatTick';
+import type { OffPeriod } from '../../types';
+import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
 
 interface HealthIndexChartProps {
-  data: Array<{ timestamp: string; [key: string]: number; originalTs?: string; is_on?: boolean }>;
+  data: Array<{ timestamp: string; [key: string]: number | string | boolean | undefined }>;
   devices: Array<{ id: string; name: string; label?: string; department?: string }>;
-  showColorSegments?: boolean;
+  offPeriods?: OffPeriod[];
 }
 
 /**
@@ -26,9 +28,9 @@ interface HealthIndexChartProps {
  * Y-axis: Health Index (0-100)
  * Series: One line per AHU in selected level
  * Fill: Gradient from accent at 30% → transparent
- * Off-time sections: Greyed out stroke and reduced opacity
+ * Off-time periods: translucent grey ReferenceArea bands rendered via renderOffPeriodAreas
  */
-const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, showColorSegments = false }) => {
+const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, offPeriods }) => {
   // Generate colors from chart palette (repeating)
   const getColor = (index: number) => {
     const colors = [
@@ -189,8 +191,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, show
 
           <Tooltip content={<CustomTooltip />} />
 
-          {/* Multi-device: simple lines, no color segments */}
-          {!showColorSegments && devices.map((device, index) => (
+          {devices.map((device, index) => (
             <Area
               key={device.id}
               type="monotone"
@@ -203,52 +204,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, show
             />
           ))}
 
-          {/* Single device: two lines for on/off segments */}
-          {showColorSegments && devices.map((device, index) => {
-            const baseColor = getColor(index);
-            const greyColor = '#888888';
-
-            // Create datasets with nulls for the opposite state
-            const onData = data.map((point: any) =>
-              point.is_on !== false
-                ? point
-                : { ...point, [device.name]: null }
-            );
-
-            const offData = data.map((point: any) =>
-              point.is_on === false
-                ? point
-                : { ...point, [device.name]: null }
-            );
-
-            return (
-              <React.Fragment key={device.id}>
-                {/* On-time line: normal color */}
-                <Area
-                  type="monotone"
-                  dataKey={device.name}
-                  data={onData}
-                  stroke={baseColor}
-                  strokeWidth={2}
-                  fill="none"
-                  connectNulls
-                  dot={false}
-                />
-
-                {/* Off-time line: grey color */}
-                <Area
-                  type="monotone"
-                  dataKey={device.name}
-                  data={offData}
-                  stroke={greyColor}
-                  strokeWidth={2}
-                  fill="none"
-                  connectNulls
-                  dot={false}
-                />
-              </React.Fragment>
-            );
-          })}
+          {renderOffPeriodAreas(offPeriods)}
         </AreaChart>
       </ResponsiveContainer>
       </div>
