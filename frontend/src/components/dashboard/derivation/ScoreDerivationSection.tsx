@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import ScoreCardWithSelector from './ScoreCardWithSelector';
 import { SCORE_METRIC_GROUPS } from '../../../constants/metricGroups';
 import { ScoreName } from '../../../types';
+import { fetchOffPeriods } from '../../../api/client';
+import type { OffPeriod } from '../../../types';
 
 interface ScoreDerivationSectionProps {
   deviceName: string;
@@ -33,6 +35,12 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
   rawData,
   timeRange,
 }) => {
+  const [offPeriods, setOffPeriods] = React.useState<OffPeriod[]>([]);
+
+  React.useEffect(() => {
+    if (!deviceId) return;
+    fetchOffPeriods(deviceId, timeRange).then(setOffPeriods);
+  }, [deviceId, timeRange]);
 
   return (
     <motion.div
@@ -115,6 +123,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                 chartColor={SCORE_COLORS[index]}
                 timeRange={timeRange}
                 availableMetrics={group?.availableMetrics ?? []}
+                offPeriods={offPeriods}
               />
             );
           })}

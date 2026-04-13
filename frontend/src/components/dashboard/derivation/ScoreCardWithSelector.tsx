@@ -4,7 +4,7 @@ import VariableSelector from '../../shared/VariableSelector';
 import MetricMiniChart from '../../shared/MetricMiniChart';
 import { fetchMeasurements } from '../../../api/client';
 import { METRIC_META, MINI_CHART_COLORS } from '../../../constants/metricGroups';
-import type { MetricOption, MeasurementPoint, DerivationSeries, DerivationReferenceLine } from '../../../types';
+import type { MetricOption, MeasurementPoint, DerivationSeries, DerivationReferenceLine, OffPeriod } from '../../../types';
 
 interface ScoreCardWithSelectorProps {
   deviceId: string;
@@ -16,12 +16,13 @@ interface ScoreCardWithSelectorProps {
   chartColor: string;
   timeRange: '24h' | '7d' | '30d';
   availableMetrics: MetricOption[];
+  offPeriods?: OffPeriod[];
 }
 
 export default function ScoreCardWithSelector({
   deviceId, scoreName, scoreKey,
   series, scoreData, referenceLines,
-  chartColor, timeRange, availableMetrics,
+  chartColor, timeRange, availableMetrics, offPeriods,
 }: ScoreCardWithSelectorProps) {
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
   const [measurements, setMeasurements] = useState<Record<string, MeasurementPoint[]>>({});
@@ -61,6 +62,7 @@ export default function ScoreCardWithSelector({
         referenceLines={referenceLines}
         chartColor={chartColor}
         timeRange={timeRange}
+        offPeriods={offPeriods}
         headerAction={
           <VariableSelector
             availableMetrics={availableMetrics}
@@ -79,6 +81,7 @@ export default function ScoreCardWithSelector({
           unit={METRIC_META[key]?.unit ?? ''}
           data={measurements[key] ?? []}
           color={MINI_CHART_COLORS[idx % MINI_CHART_COLORS.length]}
+          offPeriods={offPeriods}
           loading={loadingSet.has(key)}
         />
       ))}
