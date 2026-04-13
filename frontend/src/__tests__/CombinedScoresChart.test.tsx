@@ -18,6 +18,9 @@ jest.mock('recharts', () => ({
   Tooltip: () => null,
   Legend: () => null,
   ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
+  ReferenceArea: ({ x1, x2 }: any) => (
+    <div data-testid="reference-area" data-x1={x1} data-x2={x2} />
+  ),
 }));
 
 // Mock formatTick utility (not under test)
@@ -96,5 +99,36 @@ describe('CombinedScoresChart', () => {
     expect(() =>
       render(<CombinedScoresChart scoreData={scoreData} timeRange="7d" />)
     ).not.toThrow();
+  });
+
+  it('renders a ReferenceArea for each off period', () => {
+    const scoreData = {
+      energy_anomaly:  makeScoreEntry([0.1, 0.2]),
+      pf_degradation:  makeScoreEntry([0.2, 0.3]),
+      phase_imbalance: makeScoreEntry([0.1, 0.1]),
+      thd_drift:       makeScoreEntry([0.3, 0.3]),
+      overload:        makeScoreEntry([0.0, 0.1]),
+    };
+    const offPeriods = [
+      { start: '2026-01-01T22:00:00Z', end: '2026-01-02T06:00:00Z' },
+    ];
+    const { container } = render(
+      <CombinedScoresChart scoreData={scoreData} timeRange="7d" offPeriods={offPeriods} />
+    );
+    expect(container.querySelectorAll('[data-testid="reference-area"]')).toHaveLength(1);
+  });
+
+  it('renders no ReferenceArea when offPeriods is undefined', () => {
+    const scoreData = {
+      energy_anomaly:  makeScoreEntry([0.1]),
+      pf_degradation:  makeScoreEntry([0.2]),
+      phase_imbalance: makeScoreEntry([0.1]),
+      thd_drift:       makeScoreEntry([0.3]),
+      overload:        makeScoreEntry([0.0]),
+    };
+    const { container } = render(
+      <CombinedScoresChart scoreData={scoreData} timeRange="7d" />
+    );
+    expect(container.querySelectorAll('[data-testid="reference-area"]')).toHaveLength(0);
   });
 });

@@ -9,7 +9,10 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceArea,
 } from 'recharts';
+import type { OffPeriod } from '../../types';
+import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
 
 interface ScoreEntry {
   current: number;
@@ -20,6 +23,7 @@ interface ScoreEntry {
 interface CombinedScoresChartProps {
   scoreData: Record<string, ScoreEntry>;
   timeRange: TimeRange;
+  offPeriods?: OffPeriod[];
 }
 
 /**
@@ -36,7 +40,7 @@ const SCORE_NAMES = [
   { key: 'overload',        label: 'Overload',        color: '#EF4444' },
 ] as const;
 
-const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, timeRange }) => {
+const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, timeRange, offPeriods }) => {
   // Merge all score series into a single array indexed by position
   const mergedData = React.useMemo(() => {
     const firstScore = scoreData[SCORE_NAMES[0].key];
@@ -124,6 +128,7 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
               connectNulls
             />
           ))}
+          {renderOffPeriodAreas(offPeriods)}
         </LineChart>
       </ResponsiveContainer>
       </div>
