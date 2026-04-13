@@ -10,8 +10,10 @@ import {
   ReferenceLine,
   ResponsiveContainer,
   Legend,
+  ReferenceArea,
 } from 'recharts';
-import type { DerivationSeries, DerivationReferenceLine } from '../../../types';
+import type { DerivationSeries, DerivationReferenceLine, OffPeriod } from '../../../types';
+import { renderOffPeriodAreas } from '../../../utils/offPeriodAreas';
 
 interface RawScoreRelationChartProps {
   scoreName: string;
@@ -21,6 +23,7 @@ interface RawScoreRelationChartProps {
   chartColor: string;
   headerAction?: React.ReactNode;
   timeRange: TimeRange;
+  offPeriods?: OffPeriod[];
 }
 
 // Color palette for up to 7 left-axis series
@@ -51,6 +54,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
   chartColor,
   headerAction,
   timeRange,
+  offPeriods,
 }) => {
   // Merge all series into a single data array keyed by index
   // Each series maps to key `s0`, `s1`, etc.
@@ -209,6 +213,8 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
             dot={false}
             name="Score"
           />
+
+          {renderOffPeriodAreas(offPeriods)}
         </LineChart>
       </ResponsiveContainer>
 
