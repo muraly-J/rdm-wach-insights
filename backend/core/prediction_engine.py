@@ -16,12 +16,10 @@ Exports:
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone, timedelta
-from typing import Awaitable, Optional
+from datetime import datetime, timedelta, timezone
 
 import numpy as np
 import pandas as pd
-
 from core.fair_health_scoring import (
     build_baselines,
     calculate_health_index,
@@ -61,7 +59,7 @@ _DERIVED_METRICS = ["composite_thd"]
 # DATA FETCH
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _fetch_3week_hourly(device_id: str) -> Optional[pd.DataFrame]:
+def _fetch_3week_hourly(device_id: str) -> pd.DataFrame | None:
     """
     Fetch ~3 weeks of hourly data for one device across all required metrics.
 
@@ -105,7 +103,7 @@ def _fetch_3week_hourly(device_id: str) -> Optional[pd.DataFrame]:
 # CORE MATH HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _compute_1h_pred(series: pd.Series) -> Optional[float]:
+def _compute_1h_pred(series: pd.Series) -> float | None:
     """
     Linear OLS trend over the full series → predict one step ahead.
 
@@ -123,7 +121,7 @@ def _compute_1h_pred(series: pd.Series) -> Optional[float]:
     return last_val + slope
 
 
-def _compute_trend_pred(series: pd.Series, offset_hours: int) -> Optional[float]:
+def _compute_trend_pred(series: pd.Series, offset_hours: int) -> float | None:
     """
     Linear OLS trend over the last 4 points → predict offset_hours steps ahead.
 
@@ -145,7 +143,7 @@ def _compute_same_hour_pred(
     series: pd.Series,
     target_hour: int,
     n_slots: int = 3,
-) -> Optional[float]:
+) -> float | None:
     """
     Average the last n_slots occurrences of target_hour across the series.
 
@@ -165,7 +163,7 @@ def _compute_same_hour_pred(
     return float(slots.mean())
 
 
-def _compute_yesterday_pred(series: pd.Series, target_hour: int) -> Optional[float]:
+def _compute_yesterday_pred(series: pd.Series, target_hour: int) -> float | None:
     """Return the value at the same hour exactly 24h before the last timestamp."""
     s = series.dropna()
     if s.empty:
@@ -181,7 +179,7 @@ def _compute_yesterday_pred(series: pd.Series, target_hour: int) -> Optional[flo
     return float(matching.iloc[idx])
 
 
-def _compute_lastweek_pred(series: pd.Series, target_hour: int) -> Optional[float]:
+def _compute_lastweek_pred(series: pd.Series, target_hour: int) -> float | None:
     """Return the value at the same hour exactly 168h before the last timestamp."""
     s = series.dropna()
     if s.empty:
@@ -217,7 +215,7 @@ def _compute_delta_kwh(
 # METRIC PREDICTION
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _predict_metric(series: pd.Series, offset_hours: int) -> Optional[float]:
+def _predict_metric(series: pd.Series, offset_hours: int) -> float | None:
     """
     Predict the value of a metric `offset_hours` ahead of the last observation.
 

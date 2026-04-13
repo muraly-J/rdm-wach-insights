@@ -7,10 +7,8 @@ Each handler is called by dispatch_tool() in tool_registry.py.
 Handlers receive keyword arguments matching the tool's parameter schema.
 Each returns a plain Python dict serialisable to JSON.
 """
-from typing import Optional, Any
 
 import pandas as pd
-
 from config import settings
 from core.logger import get_logger
 
@@ -37,8 +35,8 @@ def _get_retriever():
     global _retriever_instance
     if _retriever_instance is None:
         try:
-            from rag.vector_store import VectorStore
             from rag.retriever import Retriever
+            from rag.vector_store import VectorStore
             chroma_dir = str(settings.chroma_persist_dir)
             collection = settings.rag_collection
             store = VectorStore(persist_dir=chroma_dir, collection_name=collection)
@@ -95,11 +93,11 @@ async def handle_query_building_summary() -> dict:
 
 
 async def handle_query_health_scores(
-    ahu_ids: Optional[list] = None,
-    level: Optional[int] = None,
-    start: Optional[str] = None,
-    end: Optional[str] = None,
-    metrics: Optional[list] = None,
+    ahu_ids: list | None = None,
+    level: int | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    metrics: list | None = None,
 ) -> dict:
     """
     Query FAIR health scores from DuckDB.
@@ -158,8 +156,8 @@ async def handle_query_health_scores(
 
 
 async def handle_query_live_readings(
-    ahu_ids: Optional[list] = None,
-    level: Optional[int] = None,
+    ahu_ids: list | None = None,
+    level: int | None = None,
 ) -> dict:
     """
     Fetch latest sensor readings from InfluxDB.

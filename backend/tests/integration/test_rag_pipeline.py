@@ -8,8 +8,9 @@ Uses a temporary VectorStore (no persistent ChromaDB) to test:
 Does NOT test the live Qwen embedder (that requires a running model).
 Uses synthetic embeddings (fixed vectors) to isolate storage and retrieval logic.
 """
-import pytest
 import tempfile
+
+import pytest
 
 
 class TestVectorStore:
@@ -66,9 +67,10 @@ class TestRetriever:
         Uses synthetic embeddings — retrieval quality depends on vector similarity,
         so we seed a document with the same embedding as the query embedding.
         """
-        from rag.vector_store import VectorStore
-        from rag.retriever import Retriever
         from unittest.mock import AsyncMock, patch
+
+        from rag.retriever import Retriever
+        from rag.vector_store import VectorStore
 
         with tempfile.TemporaryDirectory() as tmpdir:
             store = VectorStore(persist_dir=tmpdir, collection_name="test_retriever")
@@ -90,9 +92,10 @@ class TestRetriever:
 
     async def test_retriever_returns_list_on_empty_store(self):
         """retrieve() on an empty store returns [] without raising."""
-        from rag.vector_store import VectorStore
-        from rag.retriever import Retriever
         from unittest.mock import AsyncMock, patch
+
+        from rag.retriever import Retriever
+        from rag.vector_store import VectorStore
 
         with tempfile.TemporaryDirectory() as tmpdir:
             store = VectorStore(persist_dir=tmpdir, collection_name="test_ret_empty")

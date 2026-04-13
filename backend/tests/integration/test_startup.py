@@ -6,8 +6,9 @@ when DuckDB / ChromaDB are present or absent, and does NOT crash.
 """
 import os
 import sys
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 
 

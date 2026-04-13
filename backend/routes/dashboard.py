@@ -10,38 +10,27 @@ Endpoints:
 This module implements the rule-based Fleet Dashboard for monitoring AHU electrical health.
 """
 
+import asyncio
 import logging
-from fastapi import APIRouter, Query, HTTPException
-from typing import Optional
-import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from config import get_data_dir
+import pandas as pd
+from core.influx_client import get_available_devices
 from core.risk_engine import (
     generate_fleet_risk_assessment,
-    get_level_from_ahu_id,
 )
-from core.influx_client import get_available_devices
+from fastapi import APIRouter, HTTPException, Query
 from models.schemas import AHU_LEVEL_CONFIG
-import asyncio
 
 # Flag ID to label mapping
 FLAG_LABELS = {
     "THD_CHRONIC_HIGH": "THD Critical",
-    "IMBALANCE_SEVERE": "Severe Imbalance", 
+    "IMBALANCE_SEVERE": "Severe Imbalance",
     "PF_CHRONIC_LOW": "Low Power Factor",
     "OVERLOAD_CHRONIC": "Overload Risk",
 }
 
 # FAIR scoring imports
-from core.fair_health_scoring import (
-    score_energy_anomaly,
-    score_power_factor,
-    score_phase_imbalance,
-    score_thd_drift,
-    score_overload,
-    calculate_health_index,
-)
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
@@ -239,10 +228,10 @@ async def dashboard_trend(
             # Get component scores from the assessment's risk_scores
             # Note: energy_anomaly is a raw score, other scores have nested structure with "score" key
             risk_scores = assessment.get("risk_scores", {})
-            
+
             # Extract energy score (raw float)
             energy_anomaly = safe_float(risk_scores.get("energy_anomaly", 0.0))
-            
+
             # Extract other scores (nested structure: {"score": value, ...})
             pf_degradation = safe_float(risk_scores.get("power_factor", {}).get("score", 0.0))
             phase_imbalance = safe_float(risk_scores.get("phase_imbalance", {}).get("score", 0.0))
@@ -399,7 +388,7 @@ async def dashboard_trend_csv(
             # Get component scores
             # Note: energy_anomaly is a raw score, other scores have nested structure with "score" key
             risk_scores = assessment.get("risk_scores", {})
-            
+
             energy_anomaly = safe_float(risk_scores.get("energy_anomaly", 0.0))
             pf_degradation = safe_float(risk_scores.get("power_factor", {}).get("score", 0.0))
             phase_imbalance = safe_float(risk_scores.get("phase_imbalance", {}).get("score", 0.0))
@@ -497,8 +486,8 @@ async def dashboard_summary(
         time_range = range_map[range]
 
         # Import summarizer and config
+
         from core.summarizer import generate_summary
-        from pathlib import Path
 
         summaries = {}
 
@@ -730,7 +719,7 @@ async def dashboard_safety_flags(
         for assessment in assessments:
             ahu_id = assessment.get("device_id")
             safety_flags_str = assessment.get("safety_flags", "")
-            
+
             # Parse flags from comma-separated string
             if isinstance(safety_flags_str, str):
                 flags = [f.strip() for f in safety_flags_str.split(",") if f.strip()]

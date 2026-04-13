@@ -5,10 +5,9 @@ GET /api/predictions/{device_id}
 Returns math-predicted measurements, FAIR scores, and health index
 for the requested AHU at each horizon.
 """
-from fastapi import APIRouter, HTTPException, Query
-from typing import Optional
 
 from core.prediction_engine import compute_predictions_async
+from fastapi import APIRouter, HTTPException, Query
 from models.schemas import DEVICE_TO_LEVEL
 
 router = APIRouter()
@@ -17,7 +16,7 @@ router = APIRouter()
 @router.get("/predictions/{device_id}")
 async def get_predictions(
     device_id: str,
-    horizons: Optional[str] = Query(default="1h,12h,24h,168h"),
+    horizons: str | None = Query(default="1h,12h,24h,168h"),
 ):
     device_id = device_id.lower()
     if device_id not in DEVICE_TO_LEVEL:

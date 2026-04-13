@@ -17,10 +17,10 @@ Example usage in FastAPI routes:
 """
 
 import traceback
-from typing import Optional, Union
-from fastapi import HTTPException
 
 from core.logger import get_logger
+from fastapi import HTTPException
+
 logger = get_logger(__name__)
 
 
@@ -60,7 +60,7 @@ def create_error_response(
     status_code: int,
     user_message: str = "",
     log_context: str = "",
-    error: Optional[Exception] = None,
+    error: Exception | None = None,
 ) -> HTTPException:
     """
     Create an HTTPException with generic user message and detailed server logging.
@@ -77,11 +77,11 @@ def create_error_response(
     # Log the detailed error
     if error:
         log_context = f"{log_context}: {str(error)}"
-    
+
     # Create user-facing message
     if not user_message:
         user_message = "We encountered an unexpected error processing your request. Please try again in a moment."
-    
+
     # Log with traceback if we have an error object
     if error:
         logger.error(
@@ -90,11 +90,11 @@ def create_error_response(
         )
     else:
         logger.warning(f"HTTP {status_code} Error: {log_context}")
-    
+
     return HTTPException(status_code=status_code, detail={"error": user_message})
 
 
-def handle_query_error(error: Exception, session_id: Optional[str] = None) -> HTTPException:
+def handle_query_error(error: Exception, session_id: str | None = None) -> HTTPException:
     """
     Handle errors that occur during query processing.
     Returns a 502 error with generic user message.
@@ -106,10 +106,10 @@ def handle_query_error(error: Exception, session_id: Optional[str] = None) -> HT
     Returns:
         HTTPException for the response
     """
-    context = f"query processing"
+    context = "query processing"
     if session_id:
         context += f" (session: {session_id})"
-    
+
     return create_error_response(
         status_code=502,
         user_message="Could not retrieve data. Please try again in a moment.",
@@ -118,7 +118,7 @@ def handle_query_error(error: Exception, session_id: Optional[str] = None) -> HT
     )
 
 
-def handle_forecast_error(error: Exception, device_id: Optional[str] = None) -> HTTPException:
+def handle_forecast_error(error: Exception, device_id: str | None = None) -> HTTPException:
     """
     Handle errors that occur during forecast processing.
     Returns a 500 error with generic user message.
@@ -130,10 +130,10 @@ def handle_forecast_error(error: Exception, device_id: Optional[str] = None) -> 
     Returns:
         HTTPException for the response
     """
-    context = f"forecast generation"
+    context = "forecast generation"
     if device_id:
         context += f" (device: {device_id})"
-    
+
     return create_error_response(
         status_code=500,
         user_message="Could not generate forecast. Please try again later.",
@@ -157,7 +157,7 @@ def handle_llm_error(error: Exception) -> tuple[None, str]:
         f"LLM processing error: {str(error)}\n"
         f"Traceback:\n{traceback.format_exc()}"
     )
-    
+
     return None, "Could not reach the server. Please try again in a moment."
 
 

@@ -12,13 +12,13 @@ Responsibilities:
 """
 
 from dataclasses import dataclass, field
-from typing import Union
+
 from models.schemas import (
-    StructuredQuery,
+    ALLOWED_DEVICES,
     ALLOWED_METRICS,
     ALLOWED_TIME_RANGES,
-    ALLOWED_DEVICES,
     QueryType,
+    StructuredQuery,
 )
 
 
@@ -96,7 +96,7 @@ def validate_query(query: StructuredQuery) -> ValidationResult:
     )
 
 
-def validate_raw_dict(raw: dict) -> tuple[Union[StructuredQuery, None], ValidationResult]:
+def validate_raw_dict(raw: dict) -> tuple[StructuredQuery | None, ValidationResult]:
     """
     Convenience wrapper: parse a raw dict (LLM output) into a StructuredQuery,
     then validate it. Returns (query, result) — query is None if parsing failed.
@@ -113,7 +113,7 @@ def validate_raw_dict(raw: dict) -> tuple[Union[StructuredQuery, None], Validati
     result = validate_query(query)
     return query, result
 
-def validate_structured_query(query: StructuredQuery) -> Union[str, None]:
+def validate_structured_query(query: StructuredQuery) -> str | None:
     """
     FastAPI route helper: takes a StructuredQuery, returns error string or None.
     """

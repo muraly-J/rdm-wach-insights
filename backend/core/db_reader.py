@@ -18,10 +18,8 @@ from __future__ import annotations
 import os
 import threading
 from datetime import timedelta
-from typing import Optional
 
 import pandas as pd
-
 from core.healthdb import HealthDB
 
 # ---------------------------------------------------------------------------
@@ -105,7 +103,7 @@ def _resample_to_daily(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 # Override-able path for testing (monkeypatched in tests)
-_DB_PATH: Optional[str] = None  # None → HealthDB uses its default path
+_DB_PATH: str | None = None  # None → HealthDB uses its default path
 
 _RANGE_DELTA: dict[str, timedelta] = {
     "24h": timedelta(hours=24),
@@ -129,8 +127,8 @@ def _db() -> HealthDB:
 
 
 def _get_df(
-    level: Optional[int] = None,
-    ahu_ids: Optional[list] = None,
+    level: int | None = None,
+    ahu_ids: list | None = None,
     time_range: str = "7d",
 ) -> pd.DataFrame:
     """
@@ -218,7 +216,7 @@ def get_level_devices(level: int) -> list[dict]:
 
 def get_health_index_series(
     level: int,
-    device_id: Optional[str],
+    device_id: str | None,
     time_range: str,
 ) -> list[dict]:
     """Returns [{id, name, label, department, area, data: [{timestamp, value}]}]"""
@@ -421,7 +419,7 @@ def get_off_periods(ahu_id: str, time_range: str) -> list[dict]:
 
 
 def get_dataframe(
-    level: Optional[int] = None,
+    level: int | None = None,
     time_range: str = "7d",
 ) -> pd.DataFrame:
     """

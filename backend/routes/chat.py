@@ -17,18 +17,16 @@ Architecture:
 """
 
 import re
-from typing import Optional
 
+from core.logger import get_logger
+from core.query_classifier import classify_query_complexity
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, field_validator
-
 from llm.client_factory import get_chat_client
 from llm.persona_detector import detect_persona
 from llm.prompts import build_system_prompt
 from models.schemas import ChatHistoryItem
-from core.query_classifier import classify_query_complexity
+from pydantic import BaseModel, field_validator
 from tools.tool_registry import TOOLS, dispatch_tool
-from core.logger import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -63,9 +61,9 @@ def _sanitize_reply(text: str) -> str:
 
 class ChatRequest(BaseModel):
     message: str
-    history: Optional[list[ChatHistoryItem]] = None
-    context: Optional[dict] = None
-    persona: Optional[str] = None
+    history: list[ChatHistoryItem] | None = None
+    context: dict | None = None
+    persona: str | None = None
 
     @field_validator("message")
     @classmethod

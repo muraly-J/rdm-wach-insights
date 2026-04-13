@@ -1,7 +1,9 @@
 """Tests for backend/llm/translator.py — Gemini-backed query translation."""
 import os
+
 import pytest
 from dotenv import load_dotenv
+
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 
@@ -14,7 +16,9 @@ def test_translate_query_imports():
 async def test_rule_based_fallback_returns_structured_query(monkeypatch):
     """When ENABLE_LLM=false, rule-based parser must return a valid StructuredQuery."""
     monkeypatch.setenv("ENABLE_LLM", "false")
-    import importlib, llm.translator as t
+    import importlib
+
+    import llm.translator as t
     importlib.reload(t)
     query, error = await t.translate_query("show power for e0101 last week")
     assert error is None

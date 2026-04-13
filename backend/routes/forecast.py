@@ -14,15 +14,16 @@ Strategy:
 
 import logging
 import math
+import re
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
 import joblib
 import numpy as np
 import pandas as pd
-from datetime import datetime, timezone, timedelta
-from pathlib import Path
+from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Request
 from influxdb_client import InfluxDBClient
-import re
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -35,7 +36,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from utils.error_handler import handle_forecast_error
 
 router = APIRouter()
 
@@ -292,7 +292,7 @@ async def get_forecast(request: Request, device_id: str):
                 "suggestion": "Device IDs must match pattern 'eXXXX' (e.g., e0202, e0207)"
             }
         )
-    
+
     # 2. Check if device is in supported list
     if device_id not in FORECAST_DEVICES:
         raise HTTPException(

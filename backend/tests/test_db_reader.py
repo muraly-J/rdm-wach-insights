@@ -1,12 +1,13 @@
 import os
 import sys
+
 import pandas as pd
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core.healthdb import HealthDB
 from core import db_reader
+from core.healthdb import HealthDB
 
 SAMPLE_ROW = {
     "timestamp": pd.Timestamp("2026-04-01 10:00:00+00:00"),
@@ -87,8 +88,8 @@ def test_get_dataframe(seeded_db):
 
 def test_get_health_index_series_device_filter(tmp_path, monkeypatch):
     """Device ID filter returns only the matching AHU."""
-    from core.healthdb import HealthDB
     import core.db_reader as dr
+    from core.healthdb import HealthDB
 
     db_path = str(tmp_path / "test2.duckdb")
     db = HealthDB(db_path)
@@ -105,8 +106,8 @@ def test_get_health_index_series_device_filter(tmp_path, monkeypatch):
 
 def test_get_health_index_series_30d_resamples(tmp_path, monkeypatch):
     """30d path resamples two hourly rows on different days into two daily points."""
-    from core.healthdb import HealthDB
     import core.db_reader as dr
+    from core.healthdb import HealthDB
 
     db_path = str(tmp_path / "test3.duckdb")
     db = HealthDB(db_path)
@@ -224,7 +225,8 @@ def test_get_off_periods_works_for_30d(tmp_path, monkeypatch):
 
 def test_level_scores_returns_fair_score_names(monkeypatch):
     """GET /api/level/1/scores must return FAIR score names, not mock/fake names."""
-    import sys, os
+    import os
+    import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
     import main as main_mod
     monkeypatch.setattr(main_mod, "get_api_key", lambda: "test-key")

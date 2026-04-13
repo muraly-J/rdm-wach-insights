@@ -7,9 +7,10 @@ Tests:
 - request_id ContextVar is included in log records
 - get_logger returns the same Logger instance on repeated calls (no handler duplication)
 """
+import io
 import json
 import logging
-import io
+
 import pytest
 
 

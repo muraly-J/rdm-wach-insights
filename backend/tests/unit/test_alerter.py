@@ -8,8 +8,9 @@ Tests:
 - alert is not fired twice in a row (debounce)
 - alert resets when rate drops below threshold
 """
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 
 @pytest.fixture(autouse=True)
@@ -25,7 +26,7 @@ def reset_alerter():
 
 class TestRecordResponse:
     def test_records_are_accumulated(self):
-        from core.alerter import record_response, _request_log
+        from core.alerter import _request_log, record_response
         record_response(200)
         record_response(500)
         assert len(_request_log) == 2
@@ -33,7 +34,8 @@ class TestRecordResponse:
     def test_old_records_are_trimmed(self):
         """Entries older than _error_window_secs are removed on next record call."""
         import time
-        from core.alerter import record_response, _request_log, _error_window_secs
+
+        from core.alerter import _error_window_secs, _request_log, record_response
         # Manually insert a stale entry
         _request_log.append((time.time() - _error_window_secs - 1, False))
         record_response(200)
@@ -44,7 +46,7 @@ class TestRecordResponse:
 class TestCheckAndAlert:
     async def test_fires_when_5xx_rate_exceeds_threshold(self):
         """6 out of 10 requests are 5xx → 60% → fires alert."""
-        from core.alerter import record_response, check_and_alert
+        from core.alerter import check_and_alert, record_response
 
         for _ in range(4):
             record_response(200)
@@ -67,7 +69,7 @@ class TestCheckAndAlert:
 
     async def test_does_not_fire_when_rate_below_threshold(self):
         """1 out of 20 requests is 5xx → 5% → exactly at threshold → no fire."""
-        from core.alerter import record_response, check_and_alert
+        from core.alerter import check_and_alert, record_response
 
         for _ in range(19):
             record_response(200)
@@ -83,7 +85,7 @@ class TestCheckAndAlert:
 
     async def test_alert_not_fired_twice(self):
         """Second call while still over threshold must not fire again."""
-        from core.alerter import record_response, check_and_alert
+        from core.alerter import check_and_alert, record_response
 
         for _ in range(10):
             record_response(500)
@@ -104,7 +106,7 @@ class TestCheckAndAlert:
 
     async def test_skips_when_no_webhook_url(self):
         """check_and_alert with empty URL must not raise."""
-        from core.alerter import record_response, check_and_alert
+        from core.alerter import check_and_alert, record_response
 
         for _ in range(10):
             record_response(500)

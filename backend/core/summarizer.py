@@ -14,11 +14,9 @@ Public function:
   summarize() → tuple[str, dict]
 """
 
-import os
-import re
-import pandas as pd
-from typing import Dict, Any, Optional
+from typing import Any
 
+import pandas as pd
 
 # ── Metric labels ─────────────────────────────────────────────────────────────
 _METRIC_LABELS = {
@@ -142,7 +140,7 @@ _THRESHOLDS = {
 }
 
 
-def _get_threshold_context(metric: str, value: float) -> Optional[str]:
+def _get_threshold_context(metric: str, value: float) -> str | None:
     """
     Returns a plain-English threshold alert string if the value breaches
     the engineering threshold for this metric, or None if within limits.
@@ -170,7 +168,7 @@ def _get_threshold_context(metric: str, value: float) -> Optional[str]:
 # ── Main summary generator ────────────────────────────────────────────────────
 
 async def generate_summary(
-    chart_payload: Dict[str, Any],
+    chart_payload: dict[str, Any],
     query_type: str,
     device_ids: list,
     metric: str,
@@ -350,13 +348,13 @@ def _detect_anomalies(df: Any, structured: Any) -> dict:
     else:
         metric = structured.get('metric')
         device_ids = structured.get('device_ids', [])
-    
+
     if not metric or metric not in _THRESHOLDS:
         return {"metric": metric, "anomalies": []}
-    
+
     threshold, direction, standard, action = _THRESHOLDS[metric]
     anomalies = []
-    
+
     if hasattr(df, 'iterrows'):
         # Time series DataFrame
         for ts, row in df.iterrows():
@@ -400,7 +398,7 @@ def _detect_anomalies(df: Any, structured: Any) -> dict:
                         "severity": severity,
                         "metric": metric,
                     })
-    
+
     return {"metric": metric, "anomalies": anomalies}
 
 
@@ -451,8 +449,8 @@ async def summarize(df: Any, structured: Any) -> tuple[str, dict]:
         metric=metric,
         time_range=time_range,
     )
-    
+
     # Detect anomalies for chart callouts
     anomalies = _detect_anomalies(df, structured)
-    
+
     return summary, anomalies

@@ -12,11 +12,11 @@ Behaviour:
 """
 
 import uuid
+
+from core.logger import _request_id
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-
-from core.logger import _request_id
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):

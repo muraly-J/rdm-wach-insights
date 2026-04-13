@@ -1,8 +1,10 @@
 """Tests for RAG infrastructure: embedder, vector store, retriever."""
 import os
-import pytest
 import tempfile
+
+import pytest
 from dotenv import load_dotenv
+
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 
@@ -37,8 +39,8 @@ def test_vector_store_add_and_query():
 
 @pytest.mark.asyncio
 async def test_retriever_returns_snippets():
-    from rag.vector_store import VectorStore
     from rag.retriever import Retriever
+    from rag.vector_store import VectorStore
     with tempfile.TemporaryDirectory() as tmpdir:
         store = VectorStore(persist_dir=tmpdir, collection_name="test_retriever")
         store.add_documents(

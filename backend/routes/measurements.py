@@ -10,9 +10,10 @@ Query params:
 
 import asyncio
 import logging
-from fastapi import APIRouter, Query, HTTPException
-from models.schemas import ALLOWED_METRICS_WITH_UNITS, ALLOWED_DEVICES
+
 from core.influx_client import fetch_time_series
+from fastapi import APIRouter, HTTPException, Query
+from models.schemas import ALLOWED_DEVICES, ALLOWED_METRICS_WITH_UNITS
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

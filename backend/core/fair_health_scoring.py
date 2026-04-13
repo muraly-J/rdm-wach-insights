@@ -90,10 +90,11 @@ from the predicted hourly consumption. It is NOT cumulative energy.
 
 import math
 import warnings
+from datetime import datetime
+from typing import Any
+
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Optional, Any
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -166,7 +167,7 @@ SAFETY_FLAGS_DEF = {
 # MATH UTILITIES
 # ─────────────────────────────────────────────────────────────────────────────
 
-def load_prediction_deltas(ahu_ids: List[str]) -> Dict[str, float]:
+def load_prediction_deltas(ahu_ids: list[str]) -> dict[str, float]:
     """
     Load prediction-based energy_anomaly from DuckDB predictions table.
 
@@ -289,7 +290,7 @@ def score_energy_anomaly(
     ahu_rstd_delta: float,
     hist_delta_series: np.ndarray,
     min_history_hours: int = 24,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """
     Score 1 · Energy Anomaly  (weight 15%)
 
@@ -361,7 +362,7 @@ def score_power_factor(
     ahu_rstd_pf: float,
     hist_pf_series: np.ndarray,
     min_history_hours: int = 24,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """
     Score 2 · PF Degradation  (weight 25%)
     
@@ -382,29 +383,29 @@ def score_power_factor(
     """
     if pf is None or np.isnan(pf):
         return 0.0, np.nan
-    
+
     if ahu_median_pf is None or np.isnan(ahu_median_pf):
         return 0.0, np.nan
-    
+
     # Use robust std with minimum
     rstd = max(ahu_rstd_pf, MIN_RSTD.get("power_factor_avg", 0.008))
     if rstd <= 0:
         return 0.0, np.nan
-    
+
     # Level term: z-score (negative means below median)
     z = (ahu_median_pf - pf) / rstd  # positive = below normal = bad
     lv = sigmoid_score(z * SENSITIVITY["pf_degradation"])
-    
+
     # Trend term (negative slope = falling = bad)
     slope_n = float(np.clip(ols_slope(hist_pf_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, -slope_n) * SLOPE_SENS)
-    
+
     score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
-    
+
     # Load discount: if power < 60% of own median, scale score down
     # Note: Need to pass ahu_median_power separately for this calculation
     # For now, skip load discount or add it as separate parameter
-    
+
     return clamp01(score), round(z, 3)
 
 
@@ -413,7 +414,7 @@ def score_phase_imbalance(
     ahu_median_unbal: float,
     ahu_rstd_unbal: float,
     hist_unbal_series: np.ndarray,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """
     Score 3 · Phase Imbalance  (weight 25%)
     
@@ -431,23 +432,23 @@ def score_phase_imbalance(
     """
     if unbal is None or np.isnan(unbal):
         return 0.0, np.nan
-    
+
     if ahu_median_unbal is None or np.isnan(ahu_median_unbal):
         return 0.0, np.nan
-    
+
     # Use robust std with minimum
     rstd = max(ahu_rstd_unbal, MIN_RSTD.get("current_unbalance", 0.15))
     if rstd <= 0:
         return 0.0, np.nan
-    
+
     # Level term: z-score
     z = (unbal - ahu_median_unbal) / rstd
     lv = sigmoid_score(z * SENSITIVITY["phase_imbalance"])
-    
+
     # Trend term
     slope_n = float(np.clip(ols_slope(hist_unbal_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
-    
+
     score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
     return score, round(z, 3)
 
@@ -457,7 +458,7 @@ def score_thd_drift(
     ahu_median_thd: float,
     ahu_rstd_thd: float,
     hist_thd_24h_series: np.ndarray,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """
     Score 4 · THD Drift  (weight 15%)
     
@@ -475,23 +476,23 @@ def score_thd_drift(
     """
     if thd_24h is None or np.isnan(thd_24h):
         return 0.0, np.nan
-    
+
     if ahu_median_thd is None or np.isnan(ahu_median_thd):
         return 0.0, np.nan
-    
+
     # Use robust std with minimum
     rstd = max(ahu_rstd_thd, MIN_RSTD.get("composite_thd_24h", 0.15))
     if rstd <= 0:
         return 0.0, np.nan
-    
+
     # Level term: z-score
     z = (thd_24h - ahu_median_thd) / rstd
     lv = sigmoid_score(z * SENSITIVITY["thd_drift"])
-    
+
     # Trend term
     slope_n = float(np.clip(ols_slope(hist_thd_24h_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
-    
+
     score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
     return score, round(z, 3)
 
@@ -502,7 +503,7 @@ def score_overload(
     ahu_rstd_power: float,
     ahu_p95_power: float,
     hist_power_series: np.ndarray,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """
     Score 5 · Overload  (weight 20%)
 
@@ -576,7 +577,7 @@ def score_overload(
     return clamp01(score), round(z, 3)
 
 
-def calculate_health_index(scores: Dict[str, float]) -> float:
+def calculate_health_index(scores: dict[str, float]) -> float:
     """
     health_index = clip(100 − penalty × 100,  0, 100)
     penalty      = Σ weight_i × score_i   ∈ [0, 1]
@@ -592,7 +593,7 @@ def calculate_health_index(scores: Dict[str, float]) -> float:
 # BASELINE BUILDER (FAIR METHOD)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def build_baselines(df: pd.DataFrame) -> Dict:
+def build_baselines(df: pd.DataFrame) -> dict:
     """
     Compute per-AHU robust baseline statistics from the full history in df.
     
@@ -609,11 +610,11 @@ def build_baselines(df: pd.DataFrame) -> Dict:
     not the instantaneous composite. This is mandatory for correctness.
     """
     baselines = {}
-    
+
     for ahu_id, grp in df.groupby("device_id"):
         grp = grp.sort_values("timestamp")
         b   = {}
-        
+
         # ── Standard metrics ──────────────────────────────────────────────
         for col, min_r in [
             ("delta_kwh",         MIN_RSTD["delta_kwh"]),
@@ -643,7 +644,7 @@ def build_baselines(df: pd.DataFrame) -> Dict:
                 p95=float(np.percentile(vals, 95)),
                 n=len(vals),
             )
-        
+
         # ── THD baseline — MUST use 24h rolling mean, not instantaneous ──
         thd_24h_series = (
             grp["composite_thd"]
@@ -669,13 +670,13 @@ def build_baselines(df: pd.DataFrame) -> Dict:
                 p95=float(np.percentile(thd_24h_series, 95)),
                 n=len(thd_24h_series),
             )
-        
+
         baselines[ahu_id] = b
-    
+
     return baselines
 
 
-def compute_safety_flags(baselines: Dict) -> Dict[str, List[str]]:
+def compute_safety_flags(baselines: dict) -> dict[str, list[str]]:
     """
     Evaluate each AHU's baseline against structural safety thresholds.
     
@@ -694,13 +695,13 @@ def compute_safety_flags(baselines: Dict) -> Dict[str, List[str]]:
     flags = {}
     for ahu_id, b in baselines.items():
         f = []
-        
+
         thd_med = b.get("composite_thd_24h", {}).get("median", np.nan)
         imb_med = b.get("current_unbalance", {}).get("median", np.nan)
         pf_med  = b.get("power_factor_avg",  {}).get("median", np.nan)
         pwr_med = b.get("power_total",       {}).get("median", np.nan)
         pwr_p95 = b.get("power_total",       {}).get("p95",    np.nan)
-        
+
         if not np.isnan(thd_med) and thd_med > 5.0:
             f.append("THD_CHRONIC_HIGH")
         if not np.isnan(imb_med) and imb_med > 5.0:
@@ -710,7 +711,7 @@ def compute_safety_flags(baselines: Dict) -> Dict[str, List[str]]:
         if (not np.isnan(pwr_med) and not np.isnan(pwr_p95)
                 and pwr_p95 > 0 and pwr_med / pwr_p95 > 0.90):
             f.append("OVERLOAD_CHRONIC")
-        
+
         flags[ahu_id] = f
     return flags
 
@@ -726,7 +727,7 @@ def generate_fleet_risk_assessment_fair(
     df_unbalance: pd.DataFrame,
     df_thd_l1: pd.DataFrame,
     df_thd_l3: pd.DataFrame,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Generate FAIR health assessment for entire fleet using per-AHU baselines.
     
@@ -748,10 +749,10 @@ def generate_fleet_risk_assessment_fair(
             "total_ahus": 0,
             "assessments": [],
         }
-    
+
     # Get all AHUs from power data
     ahu_ids = sorted([c for c in df_power.columns if c != 'timestamp'])
-    
+
     # Build composite THD (max of L1 and L3)
     if not df_thd_l1.empty and not df_thd_l3.empty:
         # Find common columns
@@ -762,10 +763,10 @@ def generate_fleet_risk_assessment_fair(
     else:
         # Create empty composite THD
         df_thd = pd.DataFrame(index=df_power.index, columns=ahu_ids)
-    
+
     # Calculate 24h rolling mean of THD per AHU
     thd_24h_df = df_thd.rolling(THD_ROLLING_H, min_periods=1).mean()
-    
+
     # Combine all metrics into one DataFrame for per-AHU processing
     combined = pd.DataFrame()
     for ahu_id in ahu_ids:
@@ -780,17 +781,17 @@ def generate_fleet_risk_assessment_fair(
             "thd_24h": float(thd_24h_df[ahu_id].iloc[-1]) if ahu_id in thd_24h_df.columns else None,
         }
         combined = pd.concat([combined, pd.DataFrame([row])], ignore_index=True)
-    
+
     # Calculate delta_kwh from prediction ETL (preferred) or fallback to energy diff
     try:
         # First, try to load prediction-based deltas from CSV
         pred_deltas = load_prediction_deltas(ahu_ids)
-        
+
         # Update combined DataFrame with prediction deltas
         for ahu_id in ahu_ids:
             if ahu_id in pred_deltas:
                 combined.loc[combined['device_id'] == ahu_id, 'delta_kwh'] = pred_deltas[ahu_id]
-        
+
         # Also store the source indicator
         combined['delta_source'] = 'prediction'
     except Exception:
@@ -805,55 +806,55 @@ def generate_fleet_risk_assessment_fair(
 
     # Build per-AHU baselines
     baselines = build_baselines(combined)
-    
+
     # Compute safety flags
     safety_flags = compute_safety_flags(baselines)
-    
+
     # Generate assessments
     assessments = []
-    
+
     for ahu_id in ahu_ids:
         if ahu_id not in baselines:
             continue
-            
+
         baseline = baselines[ahu_id]
-        
+
         # Get latest values
         power_current = combined.loc[combined['device_id'] == ahu_id, 'power_total'].values
         power_current = float(power_current[0]) if len(power_current) > 0 else None
-        
+
         energy_current = combined.loc[combined['device_id'] == ahu_id, 'energy_import'].values
         energy_current = float(energy_current[0]) if len(energy_current) > 0 else None
-        
+
         pf_current = combined.loc[combined['device_id'] == ahu_id, 'power_factor_avg'].values
         pf_current = float(pf_current[0]) if len(pf_current) > 0 else None
-        
+
         unbal_current = combined.loc[combined['device_id'] == ahu_id, 'current_unbalance'].values
         unbal_current = float(unbal_current[0]) if len(unbal_current) > 0 else None
-        
+
         thd_24h = combined.loc[combined['device_id'] == ahu_id, 'thd_24h'].values
         thd_24h = float(thd_24h[0]) if len(thd_24h) > 0 else None
-        
+
         delta_kwh = combined.loc[combined['device_id'] == ahu_id, 'delta_kwh'].values
         delta_kwh = float(delta_kwh[0]) if len(delta_kwh) > 0 else None
-        
+
         # Build history series for each metric
         TREND_WINDOW = 168  # 7 days in hours
-        
+
         # Get full history series for this AHU
         hist_power = df_power[ahu_id].dropna().values[-TREND_WINDOW:] if ahu_id in df_power.columns else np.array([])
         hist_energy = df_energy[ahu_id].dropna().values[-TREND_WINDOW:] if ahu_id in df_energy.columns else np.array([])
         hist_pf = df_pf[ahu_id].dropna().values[-TREND_WINDOW:] if ahu_id in df_pf.columns else np.array([])
         hist_unbal = df_unbalance[ahu_id].dropna().values[-TREND_WINDOW:] if ahu_id in df_unbalance.columns else np.array([])
         hist_thd_24h = thd_24h_df[ahu_id].dropna().values[-TREND_WINDOW:] if ahu_id in thd_24h_df.columns else np.array([])
-        
+
         # Compute delta_kwh series from energy
         hist_delta = None
         if ahu_id in df_energy.columns and len(df_energy) >= 2:
             sorted_energy = df_energy[[ahu_id]].sort_index()
             delta_series = sorted_energy[ahu_id].diff()
             hist_delta = delta_series.dropna().values[-TREND_WINDOW:]
-        
+
         # Calculate five FAIR scores
         energy_score, z_energy = score_energy_anomaly(
             delta_kwh,
@@ -861,7 +862,7 @@ def generate_fleet_risk_assessment_fair(
             baseline["delta_kwh"]["rstd"],
             hist_delta if hist_delta is not None and len(hist_delta) >= 2 else np.array([])
         )
-        
+
         pf_score, z_pf = score_power_factor(
             pf_current,
             power_current,
@@ -869,21 +870,21 @@ def generate_fleet_risk_assessment_fair(
             baseline["power_factor_avg"]["rstd"],
             hist_pf if len(hist_pf) >= 2 else np.array([])
         )
-        
+
         unbal_score, z_imbalance = score_phase_imbalance(
             unbal_current,
             baseline["current_unbalance"]["median"],
             baseline["current_unbalance"]["rstd"],
             hist_unbal if len(hist_unbal) >= 2 else np.array([])
         )
-        
+
         thd_score, z_thd = score_thd_drift(
             thd_24h,
             baseline["composite_thd_24h"]["median"],
             baseline["composite_thd_24h"]["rstd"],
             hist_thd_24h if len(hist_thd_24h) >= 2 else np.array([])
         )
-        
+
         overload_score, z_overload = score_overload(
             power_current,
             baseline["power_total"]["median"],
@@ -891,7 +892,7 @@ def generate_fleet_risk_assessment_fair(
             baseline["power_total"]["p95"],
             hist_power if len(hist_power) >= 2 else np.array([])
         )
-        
+
         # Calculate health index
         risk_scores = {
             "energy_anomaly": round(energy_score, 4),
@@ -900,10 +901,10 @@ def generate_fleet_risk_assessment_fair(
             "thd_drift": round(thd_score, 4),
             "overload": round(overload_score, 4),
         }
-        
+
         health_index = calculate_health_index(risk_scores)
         tier = get_health_tier(health_index)
-        
+
         # Build assessment
         assessment = {
             "device_id": ahu_id,
@@ -972,12 +973,12 @@ def generate_fleet_risk_assessment_fair(
             "z_thd": round(z_thd, 3) if z_thd is not None else None,
             "z_overload": round(z_overload, 3) if z_overload is not None else None,
         }
-        
+
         assessments.append(assessment)
-    
+
     # Generate fleet summary
     summary = generate_fleet_summary(assessments)
-    
+
     return {
         "generated_at": datetime.now().isoformat(),
         "time_range": "last_30d",  # Would need to be passed in
@@ -994,7 +995,7 @@ def get_level_from_ahu_id(ahu_id: str) -> str:
         device_id = parts[-1]
     else:
         device_id = ahu_id
-    
+
     if device_id.startswith('e') and len(device_id) >= 3:
         level_code = device_id[1:3]
         try:
@@ -1017,67 +1018,67 @@ def get_severity(score: float, risk_type: str) -> str:
         return "Normal"
 
 
-def get_pf_signal(pf_data: Dict) -> str:
+def get_pf_signal(pf_data: dict) -> str:
     """Generate human-readable PF signal."""
     current = pf_data.get("current")
     slope = pf_data.get("slope_7d_normalized", 0)
-    
+
     if current is None:
         return "PF data unavailable"
-    
+
     if slope > 0.1:
         trend = "improving"
     elif slope < -0.1:
         trend = "declining"
     else:
         trend = "stable"
-    
+
     return f"PF {current:.3f} ({trend}, slope: {slope:.4f})"
 
 
-def get_unbalance_signal(unbalance_data: Dict) -> str:
+def get_unbalance_signal(unbalance_data: dict) -> str:
     """Generate human-readable unbalance signal."""
     current = unbalance_data.get("current")
     slope = unbalance_data.get("slope_7d_normalized", 0)
-    
+
     if current is None:
         return "Unbalance data unavailable"
-    
+
     if slope > 0.1:
         trend = "rising"
     elif slope < -0.1:
         trend = "falling"
     else:
         trend = "stable"
-    
+
     return f"Unbalance {current:.2f}% ({trend}, slope: {slope:.4f})"
 
 
-def get_thd_signal(thd_data: Dict) -> str:
+def get_thd_signal(thd_data: dict) -> str:
     """Generate human-readable THD signal."""
     composite_thd = thd_data.get("composite_24h_mean")
-    
+
     if composite_thd is None:
         return "THD data unavailable"
-    
+
     if composite_thd > 5.0:
         status = "exceeds IEEE 519 limit"
     elif composite_thd > 3.5:
         status = "elevated"
     else:
         status = "within acceptable range"
-    
+
     return f"THD {composite_thd:.2f}% ({status})"
 
 
-def get_overload_signal(power_data: Dict) -> str:
+def get_overload_signal(power_data: dict) -> str:
     """Generate human-readable overload signal."""
     current = power_data.get("current")
     p99 = power_data.get("historical_p99")
-    
+
     if current is None:
         return "Power data unavailable"
-    
+
     if p99 and p99 > 0:
         ratio = current / p99
         if ratio >= 0.95:
@@ -1088,26 +1089,26 @@ def get_overload_signal(power_data: Dict) -> str:
             status = "monitoring: above threshold"
         else:
             status = "normal load level"
-        
+
         return f"Power {current:.2f} kW ({status}, {ratio*100:.1f}% of p95)"
-    
+
     return f"Power {current:.2f} kW (no historical data)"
 
 
-def generate_fleet_summary(assessments: List[Dict]) -> Dict[str, Any]:
+def generate_fleet_summary(assessments: list[dict]) -> dict[str, Any]:
     """Generate fleet-level summary from individual assessments."""
     valid_assessments = [a for a in assessments if "error" not in a]
-    
+
     # Count by tier
     tier_counts = {"Healthy": 0, "Monitor": 0, "Maintenance Soon": 0, "Critical": 0}
     for a in valid_assessments:
         tier = a.get("health_tier", "Unknown")
         if tier in tier_counts:
             tier_counts[tier] += 1
-    
+
     # Sort by health index (lowest first)
     sorted_by_health = sorted(valid_assessments, key=lambda x: x.get("health_index", 100))
-    
+
     # Find rising risk (most negative health trend)
     rising_risk = sorted(
         valid_assessments,
@@ -1117,16 +1118,16 @@ def generate_fleet_summary(assessments: List[Dict]) -> Dict[str, Any]:
         ),
         reverse=True
     )[:5]
-    
+
     # Find improved units (highest health index)
     improved = sorted(valid_assessments, key=lambda x: x.get("health_index", 0), reverse=True)[:5]
-    
+
     # Data quality issues
     data_quality_issues = [
         a for a in valid_assessments
         if a.get("data_quality", {}).get("missing_data_pct", 0) > 5
     ]
-    
+
     return {
         "tier_distribution": tier_counts,
         "top_5_lowest_health_index": [

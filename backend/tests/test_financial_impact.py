@@ -1,9 +1,11 @@
 """Tests for financial impact calculations including kVA demand charge (GAP-001)."""
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from unittest.mock import patch
+
 import pandas as pd
 
 

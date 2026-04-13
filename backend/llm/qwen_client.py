@@ -10,12 +10,10 @@ Load any Qwen model in LM Studio and enable the local server.
 import asyncio
 import re
 from functools import partial
-from typing import Optional
 
-from openai import OpenAI
-
-from config import settings, get_lms_base_url, get_lms_model, get_lms_api_key
+from config import get_lms_api_key, get_lms_base_url, get_lms_model, settings
 from core.logger import get_logger
+from openai import OpenAI
 
 logger = get_logger(__name__)
 
@@ -43,7 +41,7 @@ class QwenClient:
     async def generate_text(
         self,
         prompt: str,
-        system_instruction: Optional[str] = None,
+        system_instruction: str | None = None,
         temperature: float = 0.0,
         max_output_tokens: int = 512,
     ) -> str:
@@ -73,7 +71,7 @@ class QwenClient:
     async def generate_chat_response(
         self,
         messages: list[dict],
-        system_instruction: Optional[str] = None,
+        system_instruction: str | None = None,
         temperature: float = 0.7,
         max_output_tokens: int = 1024,
     ) -> str:

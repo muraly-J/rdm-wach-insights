@@ -16,11 +16,10 @@ Usage:
 """
 
 import os
+from datetime import datetime, timezone
+
 import duckdb
 import pandas as pd
-from datetime import datetime, timezone
-from typing import Optional
-
 from config import settings
 
 # Use environment variable if set, else use settings.data_dir,
@@ -205,8 +204,8 @@ class HealthDB:
 
     def get_latest_snapshot(
         self,
-        ahu_ids: Optional[list] = None,
-        level: Optional[int] = None,
+        ahu_ids: list | None = None,
+        level: int | None = None,
     ) -> pd.DataFrame:
         """
         Return the most recent row per AHU.
@@ -232,12 +231,12 @@ class HealthDB:
 
     def get_time_range(
         self,
-        ahu_ids: Optional[list] = None,
-        level: Optional[int] = None,
-        start: Optional[str] = None,
-        end: Optional[str] = None,
-        metrics: Optional[list] = None,
-        limit: Optional[int] = 5000,
+        ahu_ids: list | None = None,
+        level: int | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        metrics: list | None = None,
+        limit: int | None = 5000,
     ) -> pd.DataFrame:
         """
         Return rows within a time window, optionally filtered by device/level.
@@ -276,7 +275,7 @@ class HealthDB:
 
     def get_ranking(
         self,
-        level: Optional[int],
+        level: int | None,
         metric: str,
         n: int = 5,
         order: str = "asc",
@@ -311,7 +310,7 @@ class HealthDB:
         with self._conn() as conn:
             return conn.execute(query, params).df()
 
-    def get_latest_timestamp(self) -> Optional[datetime]:
+    def get_latest_timestamp(self) -> datetime | None:
         """Return the most recent timestamp in the DB, or None if empty."""
         with self._conn() as conn:
             result = conn.execute(
@@ -343,7 +342,7 @@ class HealthDB:
 
     def get_all_predictions(
         self,
-        ahu_ids: Optional[list] = None,
+        ahu_ids: list | None = None,
     ) -> pd.DataFrame:
         """Return all prediction rows, optionally filtered by device."""
         conditions, params = [], []
@@ -359,7 +358,7 @@ class HealthDB:
 
     def get_latest_predictions(
         self,
-        ahu_ids: Optional[list] = None,
+        ahu_ids: list | None = None,
     ) -> pd.DataFrame:
         """Return the most recent prediction row per AHU."""
         conditions, params = [], []

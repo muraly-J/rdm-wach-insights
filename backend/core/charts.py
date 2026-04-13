@@ -11,11 +11,10 @@ Two public functions:
 Both return a ChartPayload dict that the FastAPI route sends directly to React.
 """
 
-import io
-import pandas as pd
-from typing import List, Dict, Any, Optional
-from models.schemas import QueryType
+from typing import Any
 
+import pandas as pd
+from models.schemas import QueryType
 
 # ── Recharts line chart (time series) ────────────────────────────────────────
 
@@ -23,7 +22,7 @@ def build_line_chart(
     df: pd.DataFrame,
     metric: str,
     time_range: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Input:  DataFrame indexed by time, one column per device_id.
     Output: {
@@ -38,14 +37,14 @@ def build_line_chart(
     if df.empty:
         return _empty_payload("line", metric, time_range)
 
-    device_ids: List[str] = list(df.columns)
+    device_ids: list[str] = list(df.columns)
 
     # Format timestamps based on time range — keeps x-axis labels readable
     label_format = _time_label_format(time_range)
 
     records = []
     for ts, row in df.iterrows():
-        entry: Dict[str, Any] = {"time": ts.strftime(label_format)}
+        entry: dict[str, Any] = {"time": ts.strftime(label_format)}
         for device in device_ids:
             val = row.get(device)
             if pd.notna(val):
@@ -72,8 +71,8 @@ def build_bar_chart(
     df: pd.DataFrame,
     metric: str,
     time_range: str,
-    top_n: Optional[int] = None,  # None means no limit (show all)
-) -> Dict[str, Any]:
+    top_n: int | None = None,  # None means no limit (show all)
+) -> dict[str, Any]:
     """
     Input:  DataFrame with columns ['device_id', 'value'], sorted descending.
     Output: {
@@ -94,7 +93,7 @@ def build_bar_chart(
         df = df.head(max_devices).copy()
     else:
         df = df.head(top_n).copy()
-    
+
     df["value"] = df["value"].round(3)
 
     records = df.to_dict(orient="records")
@@ -129,7 +128,7 @@ def _df_to_csv(df: pd.DataFrame) -> str:
     return export.to_csv()
 
 
-def _empty_payload(chart_type: str, metric: str, time_range: str) -> Dict[str, Any]:
+def _empty_payload(chart_type: str, metric: str, time_range: str) -> dict[str, Any]:
     return {
         "chart_type":  chart_type,
         "metric":      metric,
@@ -142,7 +141,7 @@ def _empty_payload(chart_type: str, metric: str, time_range: str) -> Dict[str, A
 
 # ── Unified entry point ───────────────────────────────────────────────────────
 
-def build_chart(df: pd.DataFrame, structured: Dict[str, Any]) -> Dict[str, Any]:
+def build_chart(df: pd.DataFrame, structured: dict[str, Any]) -> dict[str, Any]:
     """
     Dispatcher: takes a DataFrame and the StructuredQuery dict/object,
     calls the appropriate builder, and returns the Recharts-ready payload.

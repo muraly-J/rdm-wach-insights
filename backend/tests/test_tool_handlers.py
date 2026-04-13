@@ -1,8 +1,9 @@
 import os
 import sys
-import pytest
-import pandas as pd
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pandas as pd
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 

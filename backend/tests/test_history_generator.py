@@ -1,13 +1,14 @@
 """Tests for history_generator scoring formulas."""
-import pytest
-import sys
-import os
 import math
+import os
+import sys
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'scripts', 'etl'))
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from history_generator import compute_ahu_health_score, sigmoid_score
 
 

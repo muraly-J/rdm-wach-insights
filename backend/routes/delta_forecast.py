@@ -8,9 +8,9 @@ where delta(X) = energy_import(X) - energy_import(X-1h)
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Optional
-from fastapi import APIRouter, HTTPException
+
 from core.influx_client import fetch_exact_slots
+from fastapi import APIRouter, HTTPException
 from models.schemas import ALLOWED_DEVICES
 
 log = logging.getLogger(__name__)

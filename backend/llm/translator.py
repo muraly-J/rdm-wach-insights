@@ -17,7 +17,6 @@ Production notes:
 
 import json
 import re
-from typing import Optional, Union
 
 from config import settings
 from core.logger import get_logger
@@ -30,10 +29,10 @@ logger = get_logger(__name__)
 
 from llm.prompts import SYSTEM_PROMPT
 from middleware.validator import validate_raw_dict
-from models.schemas import StructuredQuery, QueryType, AHU_LEVEL_CONFIG, ALLOWED_DEVICES
+from models.schemas import AHU_LEVEL_CONFIG, QueryType, StructuredQuery
 
 
-def _extract_json(text: str) -> Optional[dict]:
+def _extract_json(text: str) -> dict | None:
     """
     Robustly extract a JSON object from LLM output.
     Handles: raw JSON, ```json fences, stray text before/after.
@@ -66,7 +65,7 @@ def _extract_json(text: str) -> Optional[dict]:
     return None
 
 
-async def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None], Union[str, None]]:
+async def translate_query(user_query: str) -> tuple[StructuredQuery | None, str | None]:
     """
     Main entry point. Converts a natural language string to a validated StructuredQuery.
 
@@ -118,7 +117,7 @@ async def translate_query(user_query: str) -> tuple[Union[StructuredQuery, None]
     return query, None
 
 
-def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], Union[str, None]]:
+def _parse_query_rules(user_query: str) -> tuple[StructuredQuery | None, str | None]:
     """
     Rule-based query parser for production (when LLM is disabled).
 
@@ -128,7 +127,6 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
     This is a fallback when the LLM server is not available in production.
     """
     import re
-    from models.schemas import QueryType
 
     query_lower = user_query.lower().strip()
 
@@ -373,8 +371,8 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
             time_range=default_time_range,
             top_n=top_n
         )
-        
+
         return structured_query, None
-        
+
     except Exception as e:
         return None, f"Could not parse query: {user_query}. Error: {e}"

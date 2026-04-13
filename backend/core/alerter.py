@@ -19,13 +19,10 @@ Behaviour:
   - Silently skips if ALERT_WEBHOOK_URL is unset or if httpx fails.
 """
 
-import os
 import time
 from collections import deque
-from typing import Deque
 
 import httpx
-
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -33,7 +30,7 @@ logger = get_logger(__name__)
 _error_window_secs: int = 60
 _THRESHOLD: float = 0.05  # 5% 5xx rate triggers alert
 
-_request_log: Deque[tuple[float, bool]] = deque()  # (timestamp, is_5xx)
+_request_log: deque[tuple[float, bool]] = deque()  # (timestamp, is_5xx)
 _alerted: bool = False
 
 

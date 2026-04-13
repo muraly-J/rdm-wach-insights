@@ -11,39 +11,36 @@ For local development:
 Backend and frontend communicate via /api endpoints.
 """
 import os
-import sys
 import signal
+import sys
+from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import Callable
 
 from config import settings
 from core.logger import get_logger
+
 logger = get_logger(__name__)
 
-from fastapi import FastAPI, HTTPException, Request
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request as StarletteRequest
-from starlette.responses import Response, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from core.alerter import check_and_alert, record_response
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from middleware.query_logger import init_db
+from middleware.rate_limiter import RateLimitMiddleware
+from middleware.request_id import RequestIDMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
-from routes.forecast import router as forecast_router
 from routes.dashboard import router as dashboard_router
-from routes.health_scores import router as health_scores_router
-from routes.predictions import router as predictions_router
-from routes.measurements import router as measurements_router
 from routes.delta_forecast import router as delta_forecast_router
 from routes.financial_impact import router as financial_impact_router
-from routes.site_summary import router as site_summary_router
+from routes.forecast import router as forecast_router
+from routes.health_scores import router as health_scores_router
+from routes.measurements import router as measurements_router
 from routes.on_off_periods import router as on_off_periods_router
-
-from dotenv import load_dotenv
-from middleware.query_logger import init_db, log_query
-from middleware.request_id import RequestIDMiddleware
-from middleware.rate_limiter import RateLimitMiddleware
+from routes.predictions import router as predictions_router
 from routes.query import router as query_router
-from core.alerter import record_response, check_and_alert
+from routes.site_summary import router as site_summary_router
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse, Response
 
 
 # ── API Key Authentication Middleware ────────────────────────────────────────
@@ -300,8 +297,8 @@ def _run_etl_backfill():
     Run health ETL in the background if the DuckDB is empty.
     Called once at startup — safe to skip if InfluxDB is unreachable.
     """
-    import threading
     import subprocess
+    import threading
 
     def _backfill():
         try:

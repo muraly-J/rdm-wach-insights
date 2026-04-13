@@ -7,6 +7,7 @@ Sets minimum required env vars so FastAPI app startup does not raise RuntimeErro
 """
 import os
 import sys
+
 import pytest
 
 # Add backend/ to path — all tests use bare imports like `from llm.X import Y`

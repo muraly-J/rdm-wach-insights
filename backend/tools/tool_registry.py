@@ -215,10 +215,10 @@ async def dispatch_tool(name: str, args: dict) -> dict[str, Any]:
 
     from tools.health_tools import (
         handle_query_building_summary,
+        handle_query_financial_impact,
         handle_query_health_scores,
         handle_query_live_readings,
         handle_query_ranking,
-        handle_query_financial_impact,
         handle_search_docs,
     )
 

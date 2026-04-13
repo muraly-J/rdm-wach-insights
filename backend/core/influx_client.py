@@ -10,19 +10,16 @@ Two public functions:
 Both return clean pandas DataFrames ready for the visualization layer.
 """
 
-import os
-import re
 import math
+import re
 import warnings
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 
 import pandas as pd
-from influxdb_client import InfluxDBClient
-
-from models.schemas import ALLOWED_TIME_RANGES, ALLOWED_DEVICES
-from config import get_influx_url, get_influx_token, get_influx_org, get_influx_bucket
+from config import get_influx_bucket, get_influx_org, get_influx_token, get_influx_url
 from core.logger import get_logger
+from influxdb_client import InfluxDBClient
+from models.schemas import ALLOWED_DEVICES, ALLOWED_TIME_RANGES
 
 warnings.filterwarnings("ignore")
 
@@ -88,10 +85,10 @@ def fetch_time_series(
     # Security validation: validate device IDs and metric before building query
     _validate_device_ids(device_ids)
     _validate_metric(metric)
-    
+
     influx_start  = ALLOWED_TIME_RANGES[time_range]
     resample_freq = _RESAMPLE_MAP[time_range]
-    
+
     # Sanitize: escape special regex characters in device IDs
     sanitized_ids = [re.escape(did) for did in device_ids]
     devices_regex = "|".join(sanitized_ids)
@@ -129,7 +126,7 @@ def fetch_ranking(
     if device_ids:
         _validate_device_ids(device_ids)
     _validate_metric(metric)
-    
+
     influx_start = ALLOWED_TIME_RANGES[time_range]
 
     # If no device filter → match all WACH devices with a broad regex
@@ -349,7 +346,7 @@ def get_available_devices(time_range: str = "last_30d") -> list[str]:
         List of device IDs that have power_total data
     """
     influx_start = ALLOWED_TIME_RANGES[time_range]
-    
+
     # Query for any device with power_total data
     flux_query = f'''
     from(bucket: "{_BUCKET}")
@@ -358,11 +355,11 @@ def get_available_devices(time_range: str = "last_30d") -> list[str]:
       |> distinct(column: "_measurement")
       |> keep(columns: ["_value"])
     '''
-    
+
     client = _get_client()
     try:
         tables = client.query_api().query(flux_query)
-        
+
         devices = set()
         for table in tables:
             for record in table.records:
@@ -372,9 +369,9 @@ def get_available_devices(time_range: str = "last_30d") -> list[str]:
                     parts = measurement.split("_")
                     if len(parts) >= 2:
                         devices.add(parts[1])  # Already contains 'e0101'
-        
+
         return sorted(list(devices))
-    
+
     except Exception as e:
         print(f"[influx_client] get_available_devices failed: {e}")
         return []
@@ -389,7 +386,7 @@ def fetch_exact_slots(
     metric: str,
     reference_time: datetime,
     slots_hours_ago: list[int]
-) -> Dict[str, Dict[int, Optional[float]]]:
+) -> dict[str, dict[int, float | None]]:
     """
     Fetch exact historical values at specific time slots (t-24h, t-168h, etc).
 
@@ -481,7 +478,7 @@ def fetch_exact_slots(
 def fetch_prediction_data(
     device_ids: list[str],
     reference_time: datetime = None,
-) -> Dict[str, Dict[str, Optional[float]]]:
+) -> dict[str, dict[str, float | None]]:
     """
     Fetch energy values at t, t-1h, t-24h, t-25h, t-168h, t-169h, t-336h, t-337h
     for prediction ETL.
@@ -615,17 +612,17 @@ def fetch_latest_hourly_data(
     try:
         # Batch by level for better performance (avoids N+1 queries)
         levels_to_fetch = [level_filter] if level_filter else sorted(AHU_LEVEL_CONFIG.keys())
-        
+
         for level_num in levels_to_fetch:
             # Skip if filtering by a specific level and this doesn't match
             if level_filter is not None and level_num != level_filter:
                 continue
-            
+
             level_devices = AHU_LEVEL_CONFIG[level_num]["device_ids"]
-            
+
             # Build measurement regex for this level's devices
             devices_regex = "|".join([d.replace("e", "e") for d in level_devices])
-            
+
             # Query each metric for this level
             for metric in metrics_to_fetch:
                 if since is not None:

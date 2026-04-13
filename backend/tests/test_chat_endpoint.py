@@ -1,8 +1,9 @@
 """Tests for the AI-powered POST /api/chat endpoint."""
 import os
+
 import pytest
-from fastapi.testclient import TestClient
 from dotenv import load_dotenv
+from fastapi.testclient import TestClient
 
 # Load env files in priority order (backend-local first, then repo root)
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))

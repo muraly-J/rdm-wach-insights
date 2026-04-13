@@ -15,16 +15,17 @@ import asyncio
 import logging
 import re
 from datetime import datetime
-from typing import Optional
-from fastapi import APIRouter, Query, HTTPException
 
-from models.schemas import AHU_LEVEL_CONFIG
 from core.db_reader import (
+    get_health_index_series,
     get_level_devices,
     get_score_breakdown,
-    get_health_index_series,
+)
+from core.db_reader import (
     get_raw_score_relationship as db_raw_score,
 )
+from fastapi import APIRouter, HTTPException, Query
+from models.schemas import AHU_LEVEL_CONFIG
 
 router = APIRouter()
 

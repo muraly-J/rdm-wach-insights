@@ -7,6 +7,7 @@ Returns a SiteSummaryData payload used by the frontend dashboard.
 Computes all metrics from CSV data (fast, no InfluxDB per-device calls).
 """
 import logging
+
 from fastapi import APIRouter, HTTPException, Query
 
 log = logging.getLogger(__name__)

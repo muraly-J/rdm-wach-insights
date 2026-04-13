@@ -5,6 +5,7 @@ Stateless persona detection from message + history.
 Returns: "general" | "technical" | "technician" | "financial"
 """
 from __future__ import annotations
+
 import re
 from typing import Literal
 

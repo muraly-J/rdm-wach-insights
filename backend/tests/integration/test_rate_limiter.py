@@ -8,12 +8,12 @@ Two tiers of testing:
 The HTTP test also mocks translate_query to avoid hitting the LLM for requests
 1 and 2 (which must succeed to confirm the limiter only fires on request 3).
 """
-import pytest
 from collections import defaultdict
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-
 
 AUTH = {"Authorization": "Bearer test-key"}
 
@@ -62,7 +62,7 @@ class TestRateLimitHTTP:
         return TestClient(app)
 
     def _make_structured_query(self):
-        from models.schemas import StructuredQuery, QueryType
+        from models.schemas import QueryType, StructuredQuery
         return StructuredQuery(
             query_type=QueryType.health_index,
             metric="power_total",

@@ -18,10 +18,8 @@ The PRD commentary explicitly calls out logging rejected queries for iterative
 improvement — this table makes that easy to query later.
 """
 
-import sqlite3
 import json
-import os
-from typing import Optional
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -32,7 +30,7 @@ _DB_DIR = Path(__file__).parent.parent / "data"
 _DB_PATH = _DB_DIR / "query_logs.db"
 
 
-def _get_conn() -> Optional[sqlite3.Connection]:
+def _get_conn() -> sqlite3.Connection | None:
     """Get database connection, returns None if not writable."""
     try:
         _DB_DIR.mkdir(parents=True, exist_ok=True)
@@ -78,10 +76,10 @@ def log_query(
     *,
     session_id:       str,
     user_query:       str,
-    structured_query: Optional[dict],
+    structured_query: dict | None,
     execution_status: str,
-    error_detail:     Optional[str] = None,
-) -> Optional[int]:
+    error_detail:     str | None = None,
+) -> int | None:
     """
     Insert one log row. Returns the new row id.
 

@@ -8,25 +8,22 @@ POST /api/query — main endpoint with security hardening:
 """
 import re
 import uuid
-from typing import Optional
 
 import pandas as pd
-
-from fastapi import APIRouter, Request, HTTPException
-from pydantic import BaseModel, validator
-
 from core.logger import get_logger
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel, validator
 
 logger = get_logger(__name__)
 
+from core.charts import build_chart
+from core.influx_client import fetch_ranking, fetch_time_series
+from core.summarizer import summarize
 from llm.translator import translate_query
-from middleware.validator import validate_structured_query
 from middleware.query_logger import log_query
 from middleware.rate_limiter import make_rate_limiter
-from core.influx_client import fetch_time_series, fetch_ranking
-from core.charts import build_chart
-from core.summarizer import summarize
-from models.schemas import ALLOWED_METRICS, ALLOWED_DEVICES, QueryType
+from middleware.validator import validate_structured_query
+from models.schemas import ALLOWED_DEVICES, ALLOWED_METRICS, QueryType
 
 router = APIRouter()
 
@@ -139,7 +136,7 @@ def _validate_llm_output(structured) -> None:
 
 class QueryRequest(BaseModel):
     user_query: str
-    session_id: Optional[str] = None
+    session_id: str | None = None
 
     @validator('user_query')
     def validate_query(cls, v: str) -> str:
@@ -153,7 +150,7 @@ class QueryRequest(BaseModel):
         return v
 
     @validator('session_id')
-    def validate_session(cls, v: Optional[str]) -> Optional[str]:
+    def validate_session(cls, v: str | None) -> str | None:
         if v is None:
             return str(uuid.uuid4())
         try:
@@ -191,7 +188,7 @@ async def handle_query(request: Request, body: QueryRequest) -> dict:
             error_detail=str(e)
         )
         logger.error(f"Translation error for session {session_id}: {e}")
-    
+
     if structured is None:
         log_query(
             session_id=session_id,

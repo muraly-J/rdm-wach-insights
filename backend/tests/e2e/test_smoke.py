@@ -10,9 +10,9 @@ These are boot-level canaries, not comprehensive coverage.
 """
 import os
 import tempfile
+
 import pytest
 from fastapi.testclient import TestClient
-
 
 AUTH = {"Authorization": "Bearer test-key"}
 

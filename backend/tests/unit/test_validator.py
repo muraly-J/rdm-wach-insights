@@ -10,14 +10,14 @@ This test suite focuses on:
   2. validate_raw_dict() — parsing + validation of untrusted input (LLM output)
 """
 import pytest
+from middleware.validator import validate_query, validate_raw_dict
 from models.schemas import (
-    StructuredQuery,
-    QueryType,
+    ALLOWED_DEVICES,
     ALLOWED_METRICS,
     ALLOWED_TIME_RANGES,
-    ALLOWED_DEVICES,
+    QueryType,
+    StructuredQuery,
 )
-from middleware.validator import validate_query, validate_raw_dict
 
 
 def _valid_query(**overrides) -> StructuredQuery:

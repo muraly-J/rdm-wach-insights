@@ -7,9 +7,9 @@ Returns contiguous time intervals when the AHU was powered off,
 derived from the is_on flag in the health database.
 """
 
+from core import db_reader
 from fastapi import APIRouter, HTTPException, Query
 from models.schemas import ALLOWED_DEVICES
-from core import db_reader
 
 router = APIRouter()
 

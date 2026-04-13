@@ -7,6 +7,7 @@ Tests:
 - If client sends no X-Request-ID, a UUID is generated
 """
 import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 

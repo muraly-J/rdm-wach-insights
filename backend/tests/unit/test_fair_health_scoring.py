@@ -6,12 +6,13 @@ against documented expected values in the module docstring.
 No external I/O — pure math.
 """
 import math
+
 import pytest
 from core.fair_health_scoring import (
-    sigmoid_score,
-    get_health_tier,
-    calculate_health_index,
     HEALTH_INDEX_WEIGHTS,
+    calculate_health_index,
+    get_health_tier,
+    sigmoid_score,
 )
 
 

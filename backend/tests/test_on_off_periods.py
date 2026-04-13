@@ -1,13 +1,15 @@
 import os
 import sys
-import pytest
+
 import pandas as pd
+import pytest
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core.healthdb import HealthDB
 from core import db_reader
+from core.healthdb import HealthDB
+
 
 # Patch DB before app import so the route uses the test DB
 @pytest.fixture()

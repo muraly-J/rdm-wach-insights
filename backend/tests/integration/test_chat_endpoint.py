@@ -8,10 +8,10 @@ is needed.
 Response shape for all query types:
   {query_type, metric, device_ids, time_range, top_n, chart, summary, csv_available}
 """
-import pytest
 from unittest.mock import AsyncMock, patch
-from fastapi.testclient import TestClient
 
+import pytest
+from fastapi.testclient import TestClient
 
 AUTH = {"Authorization": "Bearer test-key"}
 
@@ -24,7 +24,7 @@ def client():
 
 def _make_structured_query():
     """Return a valid StructuredQuery that short-circuits InfluxDB (health_index type)."""
-    from models.schemas import StructuredQuery, QueryType
+    from models.schemas import QueryType, StructuredQuery
     return StructuredQuery(
         query_type=QueryType.health_index,
         metric="power_total",

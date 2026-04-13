@@ -10,10 +10,10 @@ Exposes:
   ChatHistoryItem — a single turn in the conversation history
 """
 
-from pydantic import BaseModel, field_validator
-from typing import Literal, Optional, Dict, Any, List
 from enum import Enum
+from typing import Any, Literal
 
+from pydantic import BaseModel, field_validator
 
 # ── Metric Units Reference ─────────────────────────────────────────────────────
 # Energy: kWh (Kilowatt-hours), kVARh, kVAh
@@ -43,14 +43,14 @@ ALLOWED_METRICS_WITH_UNITS = {
     "reactive_power_l2": ("kVAR", "Reactive power Phase L2"),
     "reactive_power_l3": ("kVAR", "Reactive power Phase L3"),
     "reactive_power_demand": ("kVAR", "Reactive power demand"),
-    
+
     # ENERGY (kWh, kVARh, kVAh)
     "energy_import": ("kWh", "Energy consumed from grid"),
     "energy_export": ("kWh", "Energy sent to grid"),
     "reactive_energy_import": ("kVARh", "Reactive energy consumed"),
     "reactive_energy_export": ("kVARh", "Reactive energy sent to grid"),
     "apparent_energy": ("kVAh", "Total apparent energy"),
-    
+
     # CURRENT (A)
     "current_avg": ("A", "Average current across phases"),
     "current_l1": ("A", "Current Phase L1"),
@@ -59,7 +59,7 @@ ALLOWED_METRICS_WITH_UNITS = {
     # CURRENT THD (%)
     "current_l1_thd": ("%", "Current THD Phase L1"),
     "current_l3_thd": ("%", "Current THD Phase L3"),
-    
+
     # VOLTAGE (V)
     "volts_l_n_avg": ("V", "Phase-to-neutral voltage average"),
     "volts_l_l_avg": ("V", "Phase-to-phase voltage average"),
@@ -69,25 +69,25 @@ ALLOWED_METRICS_WITH_UNITS = {
     "volts_l1_l2": ("V", "Phase L1 to L2 voltage"),
     "volts_l2_l3": ("V", "Phase L2 to L3 voltage"),
     "volts_l3_l1": ("V", "Phase L3 to L1 voltage"),
-    
+
     # THD (%)
     "volts_l1_thd": ("%", "Voltage THD Phase L1"),
     "volts_l2_thd": ("%", "Voltage THD Phase L2"),
     "volts_l3_thd": ("%", "Voltage THD Phase L3"),
-    
+
     # POWER FACTOR (unitless, -1 to 1)
     "power_factor_avg": ("", "Power factor average (unitless ratio -1 to 1)"),
     "power_factor_l1": ("", "Power factor Phase L1 (unitless ratio -1 to 1)"),
     "power_factor_l2": ("", "Power factor Phase L2 (unitless ratio -1 to 1)"),
     "power_factor_l3": ("", "Power factor Phase L3 (unitless ratio -1 to 1)"),
-    
+
     # FREQUENCY (Hz)
     "freq": ("Hz", "System frequency"),
-    
+
     # UNBALANCE (%)
     "current_unbalance": ("%", "Current unbalance percentage"),
     "volts_unbalance": ("%", "Voltage unbalance percentage"),
-    
+
     # OTHER
     "digital_input_1_and_2": ("", "Binary status inputs"),
 }
@@ -242,7 +242,7 @@ class StructuredQuery(BaseModel):
     device_ids:  list[str]              # one for time_series; empty means "all" for ranking
     metric:      str
     time_range:  Literal["last_24h", "last_7d", "last_30d", "all_time"]
-    top_n:       Optional[int] = None   # only for ranking queries
+    top_n:       int | None = None   # only for ranking queries
 
     @field_validator("metric")
     @classmethod
@@ -297,7 +297,7 @@ class PFRiskScore(RiskScore):
 class PhaseImbalanceRiskScore(RiskScore):
     """Phase imbalance risk score with root cause uncertainty flag."""
     confidence: str = "Moderate"
-    root_cause_uncertainty: Optional[str] = None
+    root_cause_uncertainty: str | None = None
 
 
 class THDRiskScore(RiskScore):
@@ -308,14 +308,14 @@ class THDRiskScore(RiskScore):
 class OverloadRiskScore(RiskScore):
     """Overload risk score with seasonal caveat."""
     confidence: str = "Moderate"
-    seasonal_caveat: Optional[str] = None
+    seasonal_caveat: str | None = None
 
 
 class EnergyAssessment(BaseModel):
     """Energy anomaly assessment."""
-    forecast_24h_kwh: Optional[float] = None
-    normal_range_kwh: Optional[List[float]] = None
-    deviation_probability_pct: Optional[float] = None
+    forecast_24h_kwh: float | None = None
+    normal_range_kwh: list[float] | None = None
+    deviation_probability_pct: float | None = None
     trend_7d: str = "stable"
 
 
@@ -354,9 +354,9 @@ class SingleAHURiskAssessment(BaseModel):
     timestamp: str
     health_index: float
     health_tier: str
-    
+
     energy: EnergyAssessment
-    risk_scores: Dict[str, Any]
+    risk_scores: dict[str, Any]
     data_quality: DataQuality
 
 
@@ -374,8 +374,8 @@ class FleetRiskAssessment(BaseModel):
     generated_at: str
     time_range: str
     total_ahus: int
-    fleet_summary: Dict[str, Any]
-    assessments: List[SingleAHURiskAssessment]
+    fleet_summary: dict[str, Any]
+    assessments: list[SingleAHURiskAssessment]
 
 
 # ── Fleet Summary (Aggregated) ───────────────────────────────────────────────
@@ -412,9 +412,9 @@ class FleetSummary(BaseModel):
         - Data quality issues count
     """
     tier_distribution: FleetTierDistribution
-    top_5_lowest_health_index: List[TopUnitsItem]
-    top_5_rising_risk: List[TopUnitsByRisk]
-    top_5_improved: List[TopUnitsItem]
+    top_5_lowest_health_index: list[TopUnitsItem]
+    top_5_rising_risk: list[TopUnitsByRisk]
+    top_5_improved: list[TopUnitsItem]
     data_quality_issues_count: int
 
 
@@ -435,7 +435,7 @@ class AIChatRequest(BaseModel):
     """Request body for POST /api/chat"""
     message: str
     history: list[ChatHistoryItem] = []
-    context: Optional[dict] = None
+    context: dict | None = None
 
 
 # ── Utility Functions ────────────────────────────────────────────────────────
@@ -485,10 +485,10 @@ def is_valid_ahu_id(device_id: str) -> bool:
 
     try:
         level = int(device_id[1:3])
-        
+
         if level not in AHU_LEVEL_CONFIG:
             return False
-        
+
         # Check if device_id is in the actual device IDs list
         config = AHU_LEVEL_CONFIG[level]
         return device_id in config["device_ids"]
@@ -496,7 +496,7 @@ def is_valid_ahu_id(device_id: str) -> bool:
         return False
 
 
-def get_level_from_ahu_id(device_id: str) -> Optional[int]:
+def get_level_from_ahu_id(device_id: str) -> int | None:
     """
     Extract building level from AHU ID.
     
@@ -508,7 +508,7 @@ def get_level_from_ahu_id(device_id: str) -> Optional[int]:
     """
     if not is_valid_ahu_id(device_id):
         return None
-    
+
     try:
         return int(device_id[1:3])
     except (ValueError, IndexError):
@@ -565,7 +565,7 @@ def get_level_ahu_info(level: int) -> dict:
     return result
 
 
-def get_device_level_info(device_id: str) -> Optional[dict]:
+def get_device_level_info(device_id: str) -> dict | None:
     """
     Get department and area info for a device.
 

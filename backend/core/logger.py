@@ -17,6 +17,7 @@ Usage:
 
 import logging
 from contextvars import ContextVar
+
 from pythonjsonlogger import jsonlogger
 
 # ── ContextVar for request-scoped tracing ────────────────────────────────────

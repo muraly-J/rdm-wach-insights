@@ -1,12 +1,12 @@
-import numpy as np
-import pytest
-import pandas as pd
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
+import numpy as np
+import pandas as pd
+import pytest
 from core.prediction_engine import (
     _compute_1h_pred,
-    _compute_same_hour_pred,
     _compute_delta_kwh,
+    _compute_same_hour_pred,
     compute_predictions,
 )
 

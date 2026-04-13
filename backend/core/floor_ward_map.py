@@ -12,7 +12,7 @@ import re
 
 # Floor to device ID mapping
 FLOOR_MAP = {
-    'L01': ['e0101', 'e0102', 'e0103', 'e0104', 'e0105', 'e0106', 'e0107', 'e0108', 
+    'L01': ['e0101', 'e0102', 'e0103', 'e0104', 'e0105', 'e0106', 'e0107', 'e0108',
             'e0109', 'e0110', 'e0111', 'e0112', 'e0113', 'e0114', 'e0115', 'e0116',
             'e0117', 'e0118', 'e0120', 'e0121'],
     'L02': ['e0201', 'e0202', 'e0203', 'e0204', 'e0205', 'e0206', 'e0207', 'e0208',
@@ -113,7 +113,7 @@ def resolve_floor_ids(level_name: str) -> list[str]:
     """
     # Normalize input
     normalized = level_name.strip().lower()
-    
+
     # Try "Level X" format
     if normalized.startswith('level '):
         try:
@@ -122,11 +122,11 @@ def resolve_floor_ids(level_name: str) -> list[str]:
             return FLOOR_MAP.get(level_code, [])
         except ValueError:
             pass
-    
+
     # Try direct level code like 'L03'
     if normalized.startswith('l') and len(normalized) == 3:
         return FLOOR_MAP.get(normalized.upper(), [])
-    
+
     # Try floor number only
     try:
         level_num = int(normalized)
@@ -134,7 +134,7 @@ def resolve_floor_ids(level_name: str) -> list[str]:
         return FLOOR_MAP.get(level_code, [])
     except ValueError:
         pass
-    
+
     return []
 
 
@@ -144,16 +144,16 @@ def resolve_ward_ids(ward_name: str) -> list[str]:
     Returns empty list if not recognized.
     """
     normalized = ward_name.strip()
-    
+
     # Direct match
     if normalized in WARD_MAP:
         return WARD_MAP[normalized]
-    
+
     # Case-insensitive match
     for ward in WARD_MAP:
         if ward.lower() == normalized.lower():
             return WARD_MAP[ward]
-    
+
     return []
 
 
@@ -229,7 +229,7 @@ def extract_floor_from_text(query: str) -> list[str]:
     Returns list of level codes (e.g., ['L01', 'L03']).
     """
     floors_found = []
-    
+
     # Pattern 1: "Level X" (with word boundary to avoid matching "wheeleD")
     level_matches = re.findall(r'\blevel\s+(\d+)\b', query, re.IGNORECASE)
     for match in level_matches:
@@ -238,7 +238,7 @@ def extract_floor_from_text(query: str) -> list[str]:
             code = f'L{level_num:02d}'
             if code not in floors_found:
                 floors_found.append(code)
-    
+
     # Pattern 2: "Floor X" or "the floor X"
     floor_matches = re.findall(r'\b(?:floor|level\s+)\s*(\d+)\b', query, re.IGNORECASE)
     for match in floor_matches:
@@ -247,13 +247,13 @@ def extract_floor_from_text(query: str) -> list[str]:
             code = f'L{level_num:02d}'
             if code not in floors_found:
                 floors_found.append(code)
-    
+
     # Pattern 3: Direct "L01" style mentions
     direct_matches = re.findall(r'\b(L\d{2})\b', query)
     for match in direct_matches:
         if match not in floors_found:
             floors_found.append(match)
-    
+
     return sorted(floors_found)
 
 
@@ -269,10 +269,10 @@ def extract_ward_from_text(query: str) -> list[str]:
     """
     wards_found = []
     query_lower = query.lower()
-    
+
     for ward_name in WARD_MAP:
         if ward_name.lower() in query_lower:
             if ward_name not in wards_found:
                 wards_found.append(ward_name)
-    
+
     return wards_found
