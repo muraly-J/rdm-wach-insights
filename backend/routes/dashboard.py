@@ -222,7 +222,7 @@ async def dashboard_trend(
             # Parse timestamp
             try:
                 datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
-            except:
+            except Exception:
                 datetime.now()
 
             # Get component scores from the assessment's risk_scores
@@ -382,7 +382,7 @@ async def dashboard_trend_csv(
             # Parse timestamp
             try:
                 datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
-            except:
+            except Exception:
                 datetime.now()
 
             # Get component scores

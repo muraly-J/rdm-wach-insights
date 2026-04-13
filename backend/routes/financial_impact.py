@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 financial_impact.py
 ───────────────────
@@ -14,7 +15,6 @@ import os
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
-from typing import Optional
 from pydantic import BaseModel, Field
 
 log = logging.getLogger(__name__)
@@ -75,7 +75,7 @@ def post_financial_config(config: FinancialConfig):
 async def get_financial_impact(
     level: int = Query(..., ge=1, le=20),
     time_range: str = Query(default="30d"),
-    device_id: Optional[str] = Query(default=None),
+    device_id: str | None = Query(default=None),
 ):
     try:
         result = _compute_impact(level, time_range, device_id)
@@ -87,7 +87,7 @@ async def get_financial_impact(
 
 # ── Calculation helpers ────────────────────────────────────────────────────────
 
-def _compute_impact(level: int, time_range: str, device_id: Optional[str] = None) -> dict:
+def _compute_impact(level: int, time_range: str, device_id: str | None = None) -> dict:
     from core.db_reader import get_dataframe
 
     cfg = _load_config()

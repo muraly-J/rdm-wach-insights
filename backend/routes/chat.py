@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 routes/chat.py
 ──────────────
@@ -27,7 +28,6 @@ from llm.persona_detector import detect_persona
 from llm.prompts import build_system_prompt
 from models.schemas import ChatHistoryItem
 from pydantic import BaseModel, field_validator
-from typing import Optional
 from tools.tool_registry import TOOLS, dispatch_tool
 
 logger = get_logger(__name__)
@@ -63,9 +63,9 @@ def _sanitize_reply(text: str) -> str:
 
 class ChatRequest(BaseModel):
     message: str
-    history: Optional[list[ChatHistoryItem]] = None
-    context: Optional[dict] = None
-    persona: Optional[str] = None
+    history: list[ChatHistoryItem] | None = None
+    context: dict | None = None
+    persona: str | None = None
 
     @field_validator("message")
     @classmethod

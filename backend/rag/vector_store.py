@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 rag/vector_store.py
 ───────────────────

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 influx_client.py
 ────────────────
@@ -266,7 +267,7 @@ def _execute_and_clean(
         client.close()
 
 
-def get_earliest_data_timestamp() -> "datetime | None":
+def get_earliest_data_timestamp() -> datetime | None:
     """
     Return the earliest _time available in the InfluxDB bucket across all WACH
     devices.  Returns a UTC-aware datetime, or None if the query fails.
@@ -306,8 +307,8 @@ def get_earliest_data_timestamp() -> "datetime | None":
 def fetch_time_series_window(
     device_ids: list[str],
     metric: str,
-    start_dt: "datetime",
-    stop_dt: "datetime",
+    start_dt: datetime,
+    stop_dt: datetime,
 ) -> pd.DataFrame:
     """
     Like fetch_time_series but accepts explicit UTC start/stop datetimes

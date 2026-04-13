@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 llm/qwen_client.py
 ──────────────────
