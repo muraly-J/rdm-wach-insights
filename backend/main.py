@@ -19,7 +19,6 @@ from config import settings
 from core.logger import get_logger
 logger = get_logger(__name__)
 
-sys.path.insert(0, os.path.dirname(__file__))
 from fastapi import FastAPI, HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
