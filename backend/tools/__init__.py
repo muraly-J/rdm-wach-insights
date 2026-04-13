@@ -1,1 +1,2 @@
-# tools/__init__.py
+"""Agentic tool definitions and registry for the WACH Insight chat pipeline."""
+

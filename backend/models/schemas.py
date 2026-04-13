@@ -1,3 +1,15 @@
+"""
+models/schemas.py
+─────────────────
+Pydantic models and allowlist constants for the WACH Insight API.
+
+Exposes:
+  StructuredQuery — the parsed representation of a user's NL query
+  ALLOWED_METRICS, ALLOWED_DEVICES, ALLOWED_TIME_RANGES — InfluxDB allowlists
+  QueryType — enum of supported query categories
+  ChatHistoryItem — a single turn in the conversation history
+"""
+
 from pydantic import BaseModel, field_validator
 from typing import Literal, Optional, Dict, Any, List
 from enum import Enum
