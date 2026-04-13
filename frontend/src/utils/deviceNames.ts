@@ -142,7 +142,11 @@ const DEVICE_RE = /\be(\d{2})(\d{2})\b/g;
  * Convert a raw device ID like "e0101" to "AHU-L1-ES-01 — Engineering Services".
  * Falls back to "AHU-L{level}-{nn}" for unmapped devices.
  */
-export function deviceIdToDisplay(deviceId: string): string {
+export function deviceIdToDisplay(deviceId?: string | null): string {
+  if (!deviceId || typeof deviceId !== 'string') {
+    return 'Unknown AHU';
+  }
+
   const entry = DEVICE_MAP[deviceId];
   const match = deviceId.match(/^e(\d{2})(\d{2})$/);
   if (!match) return deviceId;
@@ -157,6 +161,10 @@ export function deviceIdToDisplay(deviceId: string): string {
  * Replace all raw device IDs in a text string with human-readable display names.
  * Used for rendering bot message content.
  */
-export function replaceDeviceIds(text: string): string {
+export function replaceDeviceIds(text?: string | null): string {
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
+
   return text.replace(DEVICE_RE, (match) => deviceIdToDisplay(match));
 }

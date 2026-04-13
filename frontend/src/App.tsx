@@ -1,19 +1,19 @@
-import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { formatTickByRange } from './utils/formatTick';
+import React from 'react';
 import { buildLabelMap } from './utils/deviceLabel';
+import { formatTickByRange } from './utils/formatTick';
 
 // Nav
 import FilterBar from './components/nav/FilterBar';
 
 // Dashboard
-import KPIStrip from './components/dashboard/KPIStrip';
-import ModeToggle from './components/dashboard/ModeToggle';
 import AHURankingsTable, { AHURankRow, AHUStatus } from './components/dashboard/AHURankingsTable';
+import CombinedScoresChart from './components/dashboard/CombinedScoresChart';
 import DeviceDetailCard from './components/dashboard/DeviceDetailCard';
 import HealthIndexChart from './components/dashboard/HealthIndexChart';
+import KPIStrip from './components/dashboard/KPIStrip';
+import ModeToggle from './components/dashboard/ModeToggle';
 import ScoreCardsGrid from './components/dashboard/ScoreCardsGrid';
-import CombinedScoresChart from './components/dashboard/CombinedScoresChart';
 
 // Deep Dive (lazy)
 const DeepDiveView = React.lazy(() => import('./components/deepdive/DeepDiveView'));
@@ -35,16 +35,16 @@ import { useAppStore } from './store/useAppStore';
 
 // API
 import {
+  fetchDashboardRanking,
   fetchHealthIndex,
   fetchLevelDevices,
+  fetchOffPeriods,
   fetchRawScoreRelationship,
   fetchScoreBreakdown,
   fetchSiteSummary,
-  fetchDashboardRanking,
-  fetchOffPeriods,
 } from './api/client';
 import { fetchFinancialImpact } from './api/financial';
-import type { HealthIndexResponse, RawScoreResponse, ScoresResponse, OffPeriod } from './types';
+import type { HealthIndexResponse, OffPeriod, RawScoreResponse, ScoresResponse } from './types';
 import type { TimeRange } from './utils/formatTick';
 
 interface ScoreEntry {
@@ -144,7 +144,7 @@ function App() {
     const range = toApiRange(timeRange);
     fetchSiteSummary(range as '24h' | '7d' | '30d' | 'all')
       .then((data) => setSiteSummaryData(data))
-      .catch(() => {});
+      .catch(() => { });
   }, [timeRange, setSiteSummaryData]);
 
   React.useEffect(() => {
@@ -156,7 +156,7 @@ function App() {
       selectedDevice !== 'all' ? selectedDevice : null
     )
       .then((data) => setFinancialImpact(data))
-      .catch(() => {});
+      .catch(() => { });
   }, [selectedLevel, selectedDevice, timeRange, setFinancialImpact]);
 
   React.useEffect(() => {
@@ -177,6 +177,7 @@ function App() {
         const seen = new Set<string>();
         const rows: AHURankRow[] = allDevices
           .filter((d: any) => {
+            if (!d?.ahu_id || typeof d.ahu_id !== 'string') return false;
             if (seen.has(d.ahu_id)) return false;
             seen.add(d.ahu_id);
             return true;
@@ -342,9 +343,9 @@ function App() {
                       offPeriods={
                         isSingleDevice
                           ? offPeriods.map((p) => ({
-                              start: formatTickByRange(p.start, chartRange),
-                              end: formatTickByRange(p.end, chartRange),
-                            }))
+                            start: formatTickByRange(p.start, chartRange),
+                            end: formatTickByRange(p.end, chartRange),
+                          }))
                           : undefined
                       }
                     />
