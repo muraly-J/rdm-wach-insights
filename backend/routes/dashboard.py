@@ -221,9 +221,9 @@ async def dashboard_trend(
 
             # Parse timestamp
             try:
-                ts = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
             except:
-                ts = datetime.now()
+                datetime.now()
 
             # Get component scores from the assessment's risk_scores
             # Note: energy_anomaly is a raw score, other scores have nested structure with "score" key
@@ -381,9 +381,9 @@ async def dashboard_trend_csv(
 
             # Parse timestamp
             try:
-                ts = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
             except:
-                ts = datetime.now()
+                datetime.now()
 
             # Get component scores
             # Note: energy_anomaly is a raw score, other scores have nested structure with "score" key

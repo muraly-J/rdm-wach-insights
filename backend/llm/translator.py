@@ -131,7 +131,6 @@ def _parse_query_rules(user_query: str) -> tuple[StructuredQuery | None, str | N
     query_lower = user_query.lower().strip()
 
     # Default device and metric from common patterns
-    default_device = None
     default_metric = "power_total"
     default_time_range = "last_7d"
 

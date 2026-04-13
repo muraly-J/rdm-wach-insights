@@ -332,18 +332,18 @@ def _detect_anomalies(df: Any, structured: Any) -> dict:
     """
     Scan chart data for threshold breaches and return anomaly records
     suitable for visual callouts on the chart.
-    
+
     Returns: {
         "metric": str,
         "anomalies": [
-            {"device_id": "e0101", "time": "...", "value": 123.4, 
+            {"device_id": "e0101", "time": "...", "value": 123.4,
              "threshold": 5.0, "direction": "above", "alert": "..."},
             ...
         ]
     }
     """
     if hasattr(structured, 'query_type'):
-        metric = getattr(structured, 'metric')
+        metric = structured.metric
         device_ids = getattr(structured, 'device_ids', [])
     else:
         metric = structured.get('metric')
@@ -408,7 +408,7 @@ async def summarize(df: Any, structured: Any) -> tuple[str, dict]:
     """
     Dispatcher: takes a DataFrame and StructuredQuery,
     extracts fields, calls generate_summary, and returns anomaly data.
-    
+
     Returns: (summary_text, anomalies_dict)
       anomalies_dict: {
         "metric": str,
@@ -418,9 +418,9 @@ async def summarize(df: Any, structured: Any) -> tuple[str, dict]:
       }
     """
     if hasattr(structured, 'query_type'):
-        qtype      = getattr(structured, 'query_type')
-        metric     = getattr(structured, 'metric')
-        time_range = getattr(structured, 'time_range')
+        qtype      = structured.query_type
+        metric     = structured.metric
+        time_range = structured.time_range
         device_ids = getattr(structured, 'device_ids', [])
     else:
         qtype      = structured.get('query_type')

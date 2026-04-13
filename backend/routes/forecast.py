@@ -138,7 +138,7 @@ def _fetch_latest_electrical(device_id: str) -> dict:
 
     client = _get_client()
     try:
-        for metric, default in metrics.items():
+        for metric, _default in metrics.items():
             flux = f'''
             from(bucket: "{_BUCKET}")
               |> range(start: -2h)
@@ -170,7 +170,7 @@ def _build_forecast(
     Returns a list of {"time": ISO string, "value": float} dicts.
     """
     # Work with a mutable list of (timestamp, value) for lag/rolling calculations
-    hist_times = list(power_history.index)
+    list(power_history.index)
     hist_values = list(power_history.values)
 
     if len(hist_values) < 97:

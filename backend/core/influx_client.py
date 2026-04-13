@@ -335,13 +335,13 @@ def fetch_time_series_window(
 def get_available_devices(time_range: str = "last_30d") -> list[str]:
     """
     Get list of devices that have data in the specified time range.
-    
+
     This is used by electrical-risk to avoid querying devices that don't exist
     or don't have data, which would cause timeouts.
-    
+
     Args:
         time_range: Data period to check (last_24h, last_7d, last_30d, all_time)
-        
+
     Returns:
         List of device IDs that have power_total data
     """
@@ -520,16 +520,6 @@ def fetch_prediction_data(
     # Slots to fetch: current, t-1h, t-24h, t-25h, t-168h, t-169h, t-336h, t-337h
     # These are needed to compute hourly deltas for actual and historical points
     slots_hours_ago = [0, 1, 24, 25, 168, 169, 336, 337]
-    slot_labels = {
-        0: 'energy_current',
-        1: 'energy_t_minus_1h',
-        24: 'yesterday_kwh',
-        25: 'yesterday_minus_1h',
-        168: 'last_week_kwh',
-        169: 'last_week_minus_1h',
-        336: 'two_weeks_kwh',
-        337: 'two_weeks_minus_1h'
-    }
 
     # Fetch using existing fetch_exact_slots
     raw_data = fetch_exact_slots(device_ids, "energy_import", reference_time, slots_hours_ago)

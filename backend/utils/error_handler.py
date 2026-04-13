@@ -9,7 +9,7 @@ All API endpoints should use these utilities to:
 
 Example usage in FastAPI routes:
     from backend.utils.error_handler import handle_error
-    
+
     try:
         result = some_operation()
     except Exception as e:
@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 def log_error(error: Exception, context: str = "") -> None:
     """
     Log a detailed error message server-side only.
-    
+
     Args:
         error: The exception that occurred
         context: Description of what operation was being performed
@@ -41,10 +41,10 @@ def log_error(error: Exception, context: str = "") -> None:
 def create_generic_error_message(detail: str = "") -> dict:
     """
     Create a generic error message safe for user consumption.
-    
+
     Args:
         detail: Optional specific detail to include (still sanitized)
-        
+
     Returns:
         Dictionary with error message suitable for user
     """
@@ -64,13 +64,13 @@ def create_error_response(
 ) -> HTTPException:
     """
     Create an HTTPException with generic user message and detailed server logging.
-    
+
     Args:
         status_code: HTTP status code for the response
         user_message: Custom message for user (if empty, generic message used)
         log_context: Description of what operation was being performed (for logging)
         error: The exception that occurred (if available)
-        
+
     Returns:
         HTTPException with generic message and logged details
     """
@@ -98,11 +98,11 @@ def handle_query_error(error: Exception, session_id: str | None = None) -> HTTPE
     """
     Handle errors that occur during query processing.
     Returns a 502 error with generic user message.
-    
+
     Args:
         error: The exception that occurred
         session_id: Optional session ID for logging
-        
+
     Returns:
         HTTPException for the response
     """
@@ -122,11 +122,11 @@ def handle_forecast_error(error: Exception, device_id: str | None = None) -> HTT
     """
     Handle errors that occur during forecast processing.
     Returns a 500 error with generic user message.
-    
+
     Args:
         error: The exception that occurred
         device_id: Optional device ID for logging
-        
+
     Returns:
         HTTPException for the response
     """
@@ -146,10 +146,10 @@ def handle_llm_error(error: Exception) -> tuple[None, str]:
     """
     Handle errors that occur during LLM processing.
     Returns (None, user_message) tuple for translator compatibility.
-    
+
     Args:
         error: The exception that occurred
-        
+
     Returns:
         Tuple of (None, user_message)
     """
@@ -165,10 +165,10 @@ def handle_validation_error(error: Exception) -> HTTPException:
     """
     Handle validation errors.
     Returns a 422 error with generic user message.
-    
+
     Args:
         error: The exception that occurred
-        
+
     Returns:
         HTTPException for the response
     """

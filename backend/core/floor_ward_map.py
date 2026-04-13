@@ -219,13 +219,13 @@ def get_floor_label(level_code: str) -> str:
 def extract_floor_from_text(query: str) -> list[str]:
     """
     Extract floor level mentions from a natural language query.
-    
+
     Examples:
         "Level 1 power" -> ['L01']
         "show me floor 3 devices" -> ['L03']
         "Level 10 and Level 11" -> ['L10', 'L11']
         "show devices on floor 5" -> ['L05']
-    
+
     Returns list of level codes (e.g., ['L01', 'L03']).
     """
     floors_found = []
@@ -260,11 +260,11 @@ def extract_floor_from_text(query: str) -> list[str]:
 def extract_ward_from_text(query: str) -> list[str]:
     """
     Extract ward/department names from a natural language query.
-    
+
     Examples:
         "O&G Specialist Clinic" -> ['O&G Specialist Clinic']
         "show me devices in the Emergency Department" -> ['Emergency Department']
-    
+
     Returns list of ward names that match exactly.
     """
     wards_found = []

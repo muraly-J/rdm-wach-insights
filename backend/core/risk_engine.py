@@ -3,7 +3,7 @@ risk_engine.py
 ──────────────
 Rule-based electrical risk scoring system for AHU fleet.
 
-This module implements the "Electrical Risk Check" - a deterministic, 
+This module implements the "Electrical Risk Check" - a deterministic,
 interpretable risk assessment system that requires no training data.
 
 Output Schema (per AHU):
@@ -135,10 +135,10 @@ TREND_WINDOW_H = 168   # 7 days
 def robust_params(values):
     """
     Compute robust location (median) and scale (1.4826 × MAD).
-    
+
     1.4826 × MAD equals std for a normal distribution.
     For heavy-tailed or bimodal distributions it is far more stable.
-    
+
     Returns (median, rstd) where rstd >= MIN_RSTD.
     """
     import numpy as np
@@ -167,7 +167,7 @@ def sigmoid_score(raw: float) -> float:
     """
     Convert raw penalty score to [0, 1] where raw=0 gives score=0.
     Uses sigmoid(raw) * 2 - 1 transformation.
-    
+
     This ensures no penalty when all metrics are at baseline (raw=0).
     """
     raw = max(-500.0, min(500.0, float(raw)))
@@ -186,19 +186,19 @@ def normalize_to_01(value: float, min_val: float, max_val: float) -> float:
 def detect_bimodality(values: np.ndarray, threshold: float = 2.0) -> tuple[bool, float]:
     """
     Detect bimodal distribution using the Dip Test approximation.
-    
+
     For a bimodal distribution, the distance between modes is large compared
     to the spread within each mode. This creates a "dip" in the CDF.
-    
+
     Simplified bimodality indicator:
         - Compute gaps between consecutive points after sorting
         - Large gaps suggest mode separation
         - Ratio of largest gap to median gap indicates bimodality
-    
+
     Args:
         values: Input array of numeric values
         threshold: Bimodality score above which distribution is considered bimodal
-    
+
     Returns:
         (is_bimodal: bool, bimodality_score: float)
         - is_bimodal: True if distribution appears bimodal
@@ -255,7 +255,7 @@ def calculate_7d_slope(df: pd.DataFrame, column: str) -> float:
     """
     Calculate 7-day slope using linear regression.
     Returns normalized slope (change per day).
-    
+
     Minimum History Requirement:
         - At least 7 daily data points required for slope calculation
         - If history < 168h (7 days), return 0.0 (no trend)
@@ -277,7 +277,7 @@ def calculate_7d_slope(df: pd.DataFrame, column: str) -> float:
     x_mean = sum(x) / len(x)
     y_mean = sum(y) / len(y)
 
-    numerator = sum((xi - x_mean) * (yi - y_mean) for xi, yi in zip(x, y))
+    numerator = sum((xi - x_mean) * (yi - y_mean) for xi, yi in zip(x, y, strict=False))
     denominator = sum((xi - x_mean) ** 2 for xi in x)
 
     if denominator == 0:
@@ -319,10 +319,10 @@ def get_level_from_ahu_id(ahu_id: str) -> str:
 def sigmoid_score(raw: float) -> float:
     """
     Map raw penalty to [0, 1] where raw=0 gives score=0.
-    
+
     Standard sigmoid gives 0.5 at raw=0. We shift and rescale:
         score = clip(sigmoid(raw) * 2 - 1, 0, 1)
-    
+
     Behaviour:
         raw = 0  → 0.00   (exactly at own baseline, no concern)
         raw = 1  → 0.46   (1 std above/below)
@@ -338,7 +338,7 @@ def ols_slope(values):
     """
     OLS slope β through equally-spaced points (0, y_0), (1, y_1), …, (n-1, y_{n-1}).
     Returns slope in metric-units per hour.
-    
+
     Closed-form (O(n), no matrix ops):
         β = [n·Σ(i·y) − Σ(i)·Σ(y)] / [n·Σ(i²) − (Σ(i))²]
     """
@@ -367,17 +367,17 @@ def new_energy_anomaly_score(
 ) -> float:
     """
     Score 1 · Energy Anomaly  (weight 15%)
-    
+
     Is this AHU consuming an unusual amount of energy this hour compared
     to what IT normally consumes.
-    
+
     Level term (70%):
         z = (delta_kwh − own_median) / own_rstd
         raw = 0.6 × |z| + 0.4 × max(0, z)
-    
+
     Trend term (30%):
         Rising energy over 7 days = worsening.
-        
+
     Returns score ∈ [0,1]
     """
     import numpy as np
@@ -413,21 +413,21 @@ def new_power_factor_risk_score(
 ) -> float:
     """
     Score 2 · PF Degradation  (weight 25%)
-    
+
     Is this AHU's power factor lower than its own established normal,
     and is it trending downward.
-    
+
     Level term (70%):
         z = (own_median_PF − current_PF) / own_rstd_PF
         Positive z = PF below own median = penalty.
-    
+
     Trend term (30%):
         Declining slope = PF getting worse over 7 days.
-    
+
     Load discount:
         If power < 60% of own median power, scale score × 0.35.
         Motors naturally have poor PF at light load — this is not degradation.
-        
+
     Returns score ∈ [0,1]
     """
     import numpy as np
@@ -467,17 +467,17 @@ def new_phase_imbalance_score(
 ) -> float:
     """
     Score 3 · Phase Imbalance  (weight 25%)
-    
+
     Is this AHU's current unbalance higher than its own established normal,
     and is it trending upward.
-    
+
     Level term (70%):
         z = (current − own_median) / own_rstd
         Higher unbalance = worse.
-    
+
     Trend term (30%):
         Rising slope over 7 days = worsening.
-        
+
     Returns score ∈ [0,1]
     """
     import numpy as np
@@ -509,17 +509,17 @@ def new_thd_drift_score(
 ) -> float:
     """
     Score 4 · THD Drift  (weight 15%)
-    
+
     Is this AHU's harmonic distortion elevated above its own normal trend,
     and is it drifting upward.
-    
+
     Input is the 24-hour rolling mean of composite THD (max of L1, L3).
     Using the rolling mean filters transient spikes from motor starts,
     lift operations, nearby equipment, etc.
-    
+
     Baseline is also computed on the 24h-mean series (not instantaneous).
     This is critical — both sides of comparison must be on same time-scale.
-    
+
     Returns (0.0, nan) if no THD data available for this AHU.
     Returns score ∈ [0,1]
     """
@@ -553,30 +553,30 @@ def new_overload_score(
 ) -> float:
     """
     Score 5 · Overload  (weight 20%)
-    
+
     Is this AHU approaching or exceeding its own historical power ceiling,
     and is load trending upward.
-    
+
     Three sub-components, all relative to this AHU's own history:
-    
+
     A. Ceiling term (50%):
         power_ratio = current_power / own_p95_power
         demand = max(0, power_ratio − 0.85)
         score_A = sigmoid_score(demand × 8)
-    
+
     B. Z-score term (30%):
         z = (current − own_median) / own_rstd
         score_B = sigmoid_score(z × 1.5)
-    
+
     C. Trend term (20%):
         Rising load over 7 days = worsening.
-    
+
     Final = 0.50 × score_A + 0.30 × score_B + 0.20 × score_C
-    
+
     Size-neutral: e0105 (35 kW) and e0101 (0.67 kW) each judged
     against their own ceilings. Running at 95% of own p95 is concerning
     for both, regardless of absolute wattage.
-    
+
     Returns score ∈ [0,1]
     """
     import numpy as np
@@ -996,18 +996,18 @@ def calculate_ahu_health_index(risk_scores: dict[str, float]) -> tuple[float, st
 def calculate_ahu_health_index_fair(risk_scores: dict[str, float]) -> tuple[float, str]:
     """
     Calculate unified AHU Health Index from individual risk scores (FAIR method).
-    
+
     Same formula as calculate_ahu_health_index but explicit about weights.
     health_index = 100 - penalty × 100
     where penalty = Σ weight_i × score_i
-    
+
     All scores at 0 (exactly at own baseline) → index = 100
     All scores at 1 (maximum deviation on all metrics) → index = 0
-    
+
     Args:
         risk_scores: Dict with keys: energy_anomaly, power_factor,
                      phase_imbalance, thd_drift, overload
-    
+
     Returns:
         Tuple of (health_index: float, health_tier: str)
     """
@@ -1033,14 +1033,14 @@ def calculate_ahu_health_index_fair(risk_scores: dict[str, float]) -> tuple[floa
 def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> dict[str, Any]:
     """
     Fetch all required metrics for a single AHU.
-    
+
     Required metrics:
     - power_total, energy_import
     - power_factor_avg, power_factor_l1, power_factor_l2, power_factor_l3
     - current_unbalance, volts_unbalance
     - current_l1_thd, current_l3_thd, volts_l1_thd, volts_l3_thd
     - max_power_demand (or derived from power_total)
-    
+
     Returns:
         Dict with metric values and historical data
     """
@@ -1063,7 +1063,7 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> dict[str, An
     latest = df.iloc[-1] if len(df) > 0 else None
 
     # Calculate basic metrics
-    power_total = float(latest[ahu_id]) if latest is not None and ahu_id in latest.index else None
+    float(latest[ahu_id]) if latest is not None and ahu_id in latest.index else None
 
     # Get energy (from same df if available)
     energy_df = fetch_time_series(
@@ -1077,9 +1077,9 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> dict[str, An
     # Load prediction-based delta_kwh from CSV (for energy anomaly comparison)
     try:
         pred_deltas = load_prediction_deltas([ahu_id])
-        pred_delta_kwh = pred_deltas.get(ahu_id)
+        pred_deltas.get(ahu_id)
     except Exception:
-        pred_delta_kwh = None
+        pass
 
     # Compute historical baseline from InfluxDB energy data (hour-over-hour changes)
     delta_kwh_series = None
@@ -1148,7 +1148,7 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> dict[str, An
 
     # Energy-based metrics
     if energy_df is not None and not energy_df.empty:
-        hourly_energy = df[ahu_id].mean() * 1  # approximate hourly kWh from power
+        df[ahu_id].mean() * 1  # approximate hourly kWh from power
         energy_values = energy_df[ahu_id].dropna()
 
         # Compute historical baseline from InfluxDB energy data (hour-over-hour changes)
@@ -1174,7 +1174,7 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> dict[str, An
     current_power = float(df.iloc[-1][ahu_id]) if not df.empty else None
 
     # Power ratio (current / P99)
-    max_demand_ratio = current_power / historical_power_max if (current_power and historical_power_max and historical_power_max > 0) else 0
+    current_power / historical_power_max if (current_power and historical_power_max and historical_power_max > 0) else 0
 
     # Power slope
     power_slope = calculate_7d_slope(df, ahu_id) if len(df) > 0 else 0
@@ -1234,7 +1234,7 @@ def fetch_ahu_metrics(ahu_id: str, time_range: str = "last_30d") -> dict[str, An
 def fetch_fleet_metrics(time_range: str = "last_30d") -> pd.DataFrame:
     """
     Fetch metrics for all AHUs in the fleet.
-    
+
     Returns DataFrame with columns:
     - ahu_id, power_current, energy_current, pf_current, unbalance_current,
       thd_composite, pf_slope, unbalance_slope, power_slope
@@ -1272,12 +1272,12 @@ def generate_fleet_risk_assessment(
 ) -> dict[str, Any]:
     """
     Generate risk assessment for entire fleet.
-    
+
     Args:
         time_range: Data period to analyze
         cluster_by_level: Group AHUs by building level for peer comparison
         devices_filter: Optional list of device IDs to process (None = all devices)
-    
+
     Returns:
         Dict with fleet summary and individual assessments
     """
@@ -1437,7 +1437,7 @@ def generate_fleet_risk_assessment(
 def generate_fleet_summary(assessments: list[dict]) -> dict[str, Any]:
     """
     Generate fleet-level summary from individual assessments.
-    
+
     Returns:
         Dict with fleet statistics and top lists
     """
@@ -1596,7 +1596,7 @@ def compute_safety_flags(metrics: dict) -> list[str]:
     Evaluate AHU metrics against structural safety thresholds.
 
     Returns list of flag strings for this AHU.
-    
+
     Thresholds (from fair_health_scoring.py SAFETY_FLAGS_DEF):
       THD_CHRONIC_HIGH   composite_thd_24h > 5.0%
       IMBALANCE_SEVERE   current_unbalance  > 5.0%
@@ -1640,7 +1640,7 @@ async def get_electrical_risk_check(
 ) -> dict[str, Any]:
     """
     Main entry point for Electrical Risk Check API endpoint.
-    
+
     Usage:
         GET /api/electrical-risk?time_range=last_30d
     """
@@ -1654,7 +1654,7 @@ async def get_electrical_risk_check(
 async def get_ahu_risk_details(ahu_id: str, time_range: str = "last_30d") -> dict[str, Any]:
     """
     Get detailed risk assessment for a single AHU.
-    
+
     Usage:
         GET /api/electrical-risk/{ahu_id}
     """

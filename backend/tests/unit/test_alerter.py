@@ -75,7 +75,6 @@ class TestCheckAndAlert:
             record_response(200)
         record_response(500)  # 1/20 = 5% exactly, not exceeds
 
-        posted = []
         with patch("httpx.AsyncClient") as MockClient:
             instance = MockClient.return_value.__aenter__.return_value
             instance.post = AsyncMock()

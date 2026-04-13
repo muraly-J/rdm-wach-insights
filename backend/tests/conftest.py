@@ -34,7 +34,7 @@ def cleanup_duckdb():
     try:
         from core import db_reader
         # Close any existing DB instances
-        for db_instance in db_reader._DB_INSTANCES.values():
+        for _db_instance in db_reader._DB_INSTANCES.values():
             try:
                 # HealthDB doesn't have a close method, but DuckDB connections do
                 # We just clear references to let them be garbage collected
