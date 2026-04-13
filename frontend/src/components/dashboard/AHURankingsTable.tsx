@@ -112,7 +112,13 @@ const AHURankingsTable: React.FC<AHURankingsTableProps> = ({ rows }) => {
                   const shortName = display.split(' \u2014 ')[0];
                   return (
                     <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <span style={{ fontSize: 12, color: '#C8D4E0', fontFamily: "'JetBrains Mono', monospace" }}>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: '#C8D4E0',
+                          fontFamily: "'JetBrains Mono', monospace",
+                        }}
+                      >
                         {shortName}
                       </span>
                       <span style={{ fontSize: 10, color: '#445566' }}>{row.id}</span>

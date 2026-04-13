@@ -1,10 +1,10 @@
-import React from 'react';
 import { motion } from 'framer-motion';
+import React from 'react';
 
-import ScoreCardWithSelector from './ScoreCardWithSelector';
 import { SCORE_METRIC_GROUPS } from '../../../constants/metricGroups';
-import { ScoreName } from '../../../types';
 import type { OffPeriod } from '../../../types';
+import { ScoreName } from '../../../types';
+import ScoreCardWithSelector from './ScoreCardWithSelector';
 
 interface ScoreDerivationSectionProps {
   deviceName: string;
@@ -77,7 +77,15 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
             const hasAnyData = SCORE_NAMES.some((s) => rawData[s]);
             if (!hasAnyData) {
               return (
-                <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px 32px' }}>
+                <div
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '64px 32px',
+                  }}
+                >
                   <div style={{ textAlign: 'center', maxWidth: 360 }}>
                     <div
                       style={{
@@ -92,16 +100,28 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                         margin: '0 auto 16px',
                       }}
                     >
-                      <svg width="24" height="24" fill="none" stroke="#00E5A0" strokeWidth="1.5" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5l5-5 4 4 5-5 4 4" />
+                      <svg
+                        width="24"
+                        height="24"
+                        fill="none"
+                        stroke="#00E5A0"
+                        strokeWidth="1.5"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M3 13.5l5-5 4 4 5-5 4 4"
+                        />
                       </svg>
                     </div>
                     <p style={{ fontSize: 14, fontWeight: 600, color: '#C8D4E0', marginBottom: 8 }}>
                       No Score Derivation Data
                     </p>
                     <p style={{ fontSize: 12, color: '#556677', lineHeight: 1.6 }}>
-                      Raw sensor columns (energy, power factor, phase, THD, current) not yet recorded for this device.
-                      Data will appear once the ingestion pipeline populates these fields.
+                      Raw sensor columns (energy, power factor, phase, THD, current) not yet
+                      recorded for this device. Data will appear once the ingestion pipeline
+                      populates these fields.
                     </p>
                   </div>
                 </div>
@@ -116,13 +136,23 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                   <div
                     key={score}
                     className="min-w-[800px] w-[800px] md:min-w-[1000px] md:w-[1000px] card p-6 flex items-center justify-center"
-                    style={{ background: 'rgba(0,229,160,0.02)', border: '1px solid rgba(0,229,160,0.08)' }}
+                    style={{
+                      background: 'rgba(0,229,160,0.02)',
+                      border: '1px solid rgba(0,229,160,0.08)',
+                    }}
                   >
                     <div style={{ textAlign: 'center', maxWidth: 280 }}>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: '#445566', marginBottom: 4 }}>
-                        {score.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                      <p
+                        style={{ fontSize: 13, fontWeight: 600, color: '#445566', marginBottom: 4 }}
+                      >
+                        {score
+                          .split('_')
+                          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                          .join(' ')}
                       </p>
-                      <p style={{ fontSize: 11, color: '#334455' }}>No data recorded for this score</p>
+                      <p style={{ fontSize: 11, color: '#334455' }}>
+                        No data recorded for this score
+                      </p>
                     </div>
                   </div>
                 );
@@ -151,7 +181,9 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                           d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
                         />
                       </svg>
-                      <p className="text-yellow-500 font-semibold mb-1 text-sm">No Data Available</p>
+                      <p className="text-yellow-500 font-semibold mb-1 text-sm">
+                        No Data Available
+                      </p>
                       <p className="text-[#6d6e71] text-xs leading-tight">
                         {score}: No valid data points
                       </p>

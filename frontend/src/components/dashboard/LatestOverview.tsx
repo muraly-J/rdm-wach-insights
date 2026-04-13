@@ -479,10 +479,19 @@ function FleetDirectoryPanel() {
                               gap: 1,
                             }}
                           >
-                            <span style={{ fontSize: 10, color: '#C8D4E0', fontWeight: 600, letterSpacing: '0.02em' }}>
+                            <span
+                              style={{
+                                fontSize: 10,
+                                color: '#C8D4E0',
+                                fontWeight: 600,
+                                letterSpacing: '0.02em',
+                              }}
+                            >
                               {shortName}
                             </span>
-                            <span style={{ fontSize: 9, color: '#445566', letterSpacing: '0.03em' }}>
+                            <span
+                              style={{ fontSize: 9, color: '#445566', letterSpacing: '0.03em' }}
+                            >
                               {id}
                             </span>
                           </span>
