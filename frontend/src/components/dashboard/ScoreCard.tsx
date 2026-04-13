@@ -24,9 +24,9 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
 }) => {
   // Risk direction: low value = green (good), high value = red (bad)
   const getRiskColor = (val: number) => {
-    if (val <= 20) return 'text-[#4fbd95]';  // low risk
-    if (val <= 50) return 'text-[#f9a020]';  // moderate risk
-    return 'text-[#e96852]';                 // high risk
+    if (val <= 20) return 'text-[#4fbd95]'; // low risk
+    if (val <= 50) return 'text-[#f9a020]'; // moderate risk
+    return 'text-[#e96852]'; // high risk
   };
 
   const numberColor = getRiskColor(value);

@@ -9,7 +9,7 @@ interface DeviceSelectorProps {
 
 /**
  * DeviceSelector - Horizontal scrollable chip row for device selection (Section 5.4)
- * 
+ *
  * Trigger: Within level view, below level selector
  * Default: "All AHUs" (aggregate / multi-line view)
  */
@@ -43,9 +43,10 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
           className={`
             px-4 py-3 min-h-[44px] sm:py-2 sm:min-h-0 text-xs font-medium rounded-full transition-all duration-0.25s flex items-center justify-center
             border relative
-            ${selectedDevice === null || selectedDevice === 'all'
-              ? 'bg-[#4fbd95] text-[#1c2431] border-0'
-              : 'bg-transparent text-[#6d6e71] border-[#2e3f55] hover:border-[#4fbd95]'
+            ${
+              selectedDevice === null || selectedDevice === 'all'
+                ? 'bg-[#4fbd95] text-[#1c2431] border-0'
+                : 'bg-transparent text-[#6d6e71] border-[#2e3f55] hover:border-[#4fbd95]'
             }
           `}
         >
@@ -63,9 +64,10 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
             className={`
               px-4 py-3 min-h-[44px] sm:py-2 sm:min-h-0 text-xs font-medium rounded-full transition-all duration-0.25s flex items-center justify-center
               border relative
-              ${selectedDevice === device.id
-                ? 'bg-[#4fbd95] text-[#1c2431] border-0'
-                : 'bg-transparent text-[#6d6e71] border-[#2e3f55] hover:border-[#4fbd95]'
+              ${
+                selectedDevice === device.id
+                  ? 'bg-[#4fbd95] text-[#1c2431] border-0'
+                  : 'bg-transparent text-[#6d6e71] border-[#2e3f55] hover:border-[#4fbd95]'
               }
             `}
           >

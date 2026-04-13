@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import RawScoreRelationChart from './RawScoreRelationChart';
-import VariableSelector from '../../shared/VariableSelector';
-import MetricMiniChart from '../../shared/MetricMiniChart';
+import { useEffect, useState } from 'react';
 import { fetchMeasurements } from '../../../api/client';
 import { METRIC_META, MINI_CHART_COLORS } from '../../../constants/metricGroups';
-import type { MetricOption, MeasurementPoint, DerivationSeries, DerivationReferenceLine, OffPeriod } from '../../../types';
+import type {
+  DerivationReferenceLine,
+  DerivationSeries,
+  MeasurementPoint,
+  MetricOption,
+  OffPeriod,
+} from '../../../types';
+import MetricMiniChart from '../../shared/MetricMiniChart';
+import VariableSelector from '../../shared/VariableSelector';
+import RawScoreRelationChart from './RawScoreRelationChart';
 
 interface ScoreCardWithSelectorProps {
   deviceId: string;
@@ -20,16 +26,25 @@ interface ScoreCardWithSelectorProps {
 }
 
 export default function ScoreCardWithSelector({
-  deviceId, scoreName, scoreKey,
-  series, scoreData, referenceLines,
-  chartColor, timeRange, availableMetrics, offPeriods,
+  deviceId,
+  scoreName,
+  scoreKey,
+  series,
+  scoreData,
+  referenceLines,
+  chartColor,
+  timeRange,
+  availableMetrics,
+  offPeriods,
 }: ScoreCardWithSelectorProps) {
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
   const [measurements, setMeasurements] = useState<Record<string, MeasurementPoint[]>>({});
   const [loadingSet, setLoadingSet] = useState<Set<string>>(new Set());
 
   // Clear cache when timeRange or device changes
-  useEffect(() => { setMeasurements({}); }, [timeRange, deviceId]);
+  useEffect(() => {
+    setMeasurements({});
+  }, [timeRange, deviceId]);
 
   // Delta-fetch: only fetch metrics not yet cached
   useEffect(() => {
@@ -42,7 +57,7 @@ export default function ScoreCardWithSelector({
       .then((res) => {
         setMeasurements((prev) => ({ ...prev, ...res.measurements }));
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => {
         setLoadingSet((prev) => {
           const next = new Set(prev);
@@ -50,7 +65,7 @@ export default function ScoreCardWithSelector({
           return next;
         });
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMetrics]);
 
   return (

@@ -5,7 +5,8 @@ import { AppState, ChatMessage, DashboardData, FinancialImpact, SiteSummaryData 
 const INITIAL_BOT_MESSAGE: ChatMessage = {
   id: 'init-1',
   role: 'bot',
-  content: "Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
+  content:
+    "Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
   timestamp: new Date(),
 };
 
@@ -118,9 +119,10 @@ export const useAppStore = create<AppStore>((set) => ({
 
   // Chat messages
   /** Add a new message to the chat history */
-  addMessage: (message) => set((state) => ({
-    chatMessages: [...state.chatMessages, message],
-  })),
+  addMessage: (message) =>
+    set((state) => ({
+      chatMessages: [...state.chatMessages, message],
+    })),
   /** Replace all chat messages at once */
   setMessages: (messages) => set({ chatMessages: messages }),
 

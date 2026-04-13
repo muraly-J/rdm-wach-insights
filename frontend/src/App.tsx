@@ -34,8 +34,13 @@ import { useAppStore } from './store/useAppStore';
 
 // API
 import {
-  fetchHealthIndex, fetchLevelDevices, fetchRawScoreRelationship,
-  fetchScoreBreakdown, fetchSiteSummary, fetchDashboardRanking, fetchOffPeriods,
+  fetchHealthIndex,
+  fetchLevelDevices,
+  fetchRawScoreRelationship,
+  fetchScoreBreakdown,
+  fetchSiteSummary,
+  fetchDashboardRanking,
+  fetchOffPeriods,
 } from './api/client';
 import { fetchFinancialImpact } from './api/financial';
 import type { HealthIndexResponse, RawScoreResponse, ScoresResponse, OffPeriod } from './types';
@@ -63,8 +68,11 @@ function toApiRange(timeRange: string): '24h' | '7d' | '30d' | 'all' {
 
 function App() {
   const {
-    selectedLevel, selectedDevice, timeRange,
-    setSiteSummaryData, siteSummaryData,
+    selectedLevel,
+    selectedDevice,
+    timeRange,
+    setSiteSummaryData,
+    siteSummaryData,
     dashboardMode,
     setFinancialImpact,
   } = useAppStore();
@@ -82,7 +90,10 @@ function App() {
   >([]);
 
   React.useEffect(() => {
-    if (!selectedLevel) { setLevelDevices([]); return; }
+    if (!selectedLevel) {
+      setLevelDevices([]);
+      return;
+    }
     fetchLevelDevices(selectedLevel)
       .then((r) => setLevelDevices(r.devices))
       .catch(() => setLevelDevices([]));
@@ -108,7 +119,10 @@ function App() {
   }, [selectedLevel, selectedDevice, timeRange]);
 
   React.useEffect(() => {
-    if (!selectedDevice || selectedDevice === 'all') { setRawData(null); return; }
+    if (!selectedDevice || selectedDevice === 'all') {
+      setRawData(null);
+      return;
+    }
     const range = toApiRange(timeRange);
     fetchRawScoreRelationship(selectedDevice, range as '24h' | '7d' | '30d' | 'all')
       .then((data) => setRawData(data as RawScoreResponse))
@@ -135,15 +149,25 @@ function App() {
   React.useEffect(() => {
     if (!selectedLevel) return;
     const range = toApiRange(timeRange);
-    fetchFinancialImpact(selectedLevel, range as '24h' | '7d' | '30d' | 'all', selectedDevice !== 'all' ? selectedDevice : null)
+    fetchFinancialImpact(
+      selectedLevel,
+      range as '24h' | '7d' | '30d' | 'all',
+      selectedDevice !== 'all' ? selectedDevice : null
+    )
       .then((data) => setFinancialImpact(data))
       .catch(() => {});
   }, [selectedLevel, selectedDevice, timeRange, setFinancialImpact]);
 
   React.useEffect(() => {
-    if (!selectedLevel) { setRankingRows([]); return; }
+    if (!selectedLevel) {
+      setRankingRows([]);
+      return;
+    }
     const rangeMap: Record<string, 'last_24h' | 'last_7d' | 'last_30d'> = {
-      '24h': 'last_24h', '7d': 'last_7d', '30d': 'last_30d', 'all': 'last_30d',
+      '24h': 'last_24h',
+      '7d': 'last_7d',
+      '30d': 'last_30d',
+      all: 'last_30d',
     };
     const apiRange = rangeMap[timeRange] ?? 'last_7d';
     fetchDashboardRanking(selectedLevel, apiRange)
@@ -151,7 +175,11 @@ function App() {
         const allDevices = [...(data.best ?? []), ...(data.worst ?? [])];
         const seen = new Set<string>();
         const rows: AHURankRow[] = allDevices
-          .filter((d: any) => { if (seen.has(d.ahu_id)) return false; seen.add(d.ahu_id); return true; })
+          .filter((d: any) => {
+            if (seen.has(d.ahu_id)) return false;
+            seen.add(d.ahu_id);
+            return true;
+          })
           .map((d: any) => ({
             id: d.ahu_id,
             label: labelMap[d.ahu_id] ?? d.ahu_id,
@@ -169,18 +197,21 @@ function App() {
 
   const healthChartData = React.useMemo(() => {
     if (!healthData?.devices?.length) return [];
-    const series = selectedDevice && selectedDevice !== 'all'
-      ? healthData.devices.filter((d) => d.id === selectedDevice)
-      : healthData.devices;
+    const series =
+      selectedDevice && selectedDevice !== 'all'
+        ? healthData.devices.filter((d) => d.id === selectedDevice)
+        : healthData.devices;
 
     // For single device: preserve all data points with is_on field
     if (selectedDevice && selectedDevice !== 'all') {
       const deviceName = labelMap[series[0]?.id] ?? series[0]?.id;
-      return series[0]?.data?.map((point: any) => ({
-        timestamp: formatTickByRange(point.timestamp, chartRange),
-        [deviceName]: point.value,
-        is_on: point.is_on,
-      })) || [];
+      return (
+        series[0]?.data?.map((point: any) => ({
+          timestamp: formatTickByRange(point.timestamp, chartRange),
+          [deviceName]: point.value,
+          is_on: point.is_on,
+        })) || []
+      );
     }
 
     // For all devices: merge by index (simple approach), no on/off logic
@@ -201,20 +232,36 @@ function App() {
     if (selectedDevice && selectedDevice !== 'all') {
       return levelDevices
         .filter((d) => d.id === selectedDevice)
-        .map((d) => ({ id: d.id, name: labelMap[d.id] ?? d.id, label: d.label, department: d.department, level: selectedLevel! }));
+        .map((d) => ({
+          id: d.id,
+          name: labelMap[d.id] ?? d.id,
+          label: d.label,
+          department: d.department,
+          level: selectedLevel!,
+        }));
     }
     return levelDevices.map((d) => ({
-      id: d.id, name: labelMap[d.id] ?? d.id,
-      label: d.label, department: d.department, level: selectedLevel!,
+      id: d.id,
+      name: labelMap[d.id] ?? d.id,
+      label: d.label,
+      department: d.department,
+      level: selectedLevel!,
     }));
   }, [levelDevices, selectedDevice, labelMap, selectedLevel]);
 
   const scoreCardData = React.useMemo<Record<string, ScoreEntry>>(() => {
     if (!scoresData?.devices?.length) return {};
-    const scoreNames = ['energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload'] as const;
-    const relevantDevices = selectedDevice && selectedDevice !== 'all'
-      ? scoresData.devices.filter((d) => d.id === selectedDevice)
-      : scoresData.devices;
+    const scoreNames = [
+      'energy_anomaly',
+      'pf_degradation',
+      'phase_imbalance',
+      'thd_drift',
+      'overload',
+    ] as const;
+    const relevantDevices =
+      selectedDevice && selectedDevice !== 'all'
+        ? scoresData.devices.filter((d) => d.id === selectedDevice)
+        : scoresData.devices;
     if (relevantDevices.length === 0) return {};
     const result: Record<string, ScoreEntry> = {};
     scoreNames.forEach((name) => {
@@ -325,7 +372,13 @@ function App() {
                   )}
 
                   {showDerivation && rawData && (
-                    <React.Suspense fallback={<div className="card p-6 h-40 flex items-center justify-center"><span className="text-[#556677]">Loading derivation…</span></div>}>
+                    <React.Suspense
+                      fallback={
+                        <div className="card p-6 h-40 flex items-center justify-center">
+                          <span className="text-[#556677]">Loading derivation…</span>
+                        </div>
+                      }
+                    >
                       <ScoreDerivationSection
                         deviceName={deviceLabel ?? selectedDevice ?? ''}
                         deviceId={selectedDevice ?? ''}
@@ -337,7 +390,9 @@ function App() {
 
                   {selectedDevice && selectedDevice !== 'all' && (
                     <div className="mt-8">
-                      <React.Suspense fallback={<div className="h-48 animate-pulse bg-[#2e3f55] rounded-xl" />}>
+                      <React.Suspense
+                        fallback={<div className="h-48 animate-pulse bg-[#2e3f55] rounded-xl" />}
+                      >
                         <PredictionView deviceId={selectedDevice} />
                       </React.Suspense>
                     </div>
@@ -357,8 +412,15 @@ function App() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.3 }}
             >
-              <React.Suspense fallback={<div className="h-64 animate-pulse bg-[#1a2234] rounded-xl" />}>
-                <DeepDiveView levelDevices={levelDevices} labelMap={labelMap} timeRange={timeRange} isSelectedDeviceOn={isSelectedDeviceOn} />
+              <React.Suspense
+                fallback={<div className="h-64 animate-pulse bg-[#1a2234] rounded-xl" />}
+              >
+                <DeepDiveView
+                  levelDevices={levelDevices}
+                  labelMap={labelMap}
+                  timeRange={timeRange}
+                  isSelectedDeviceOn={isSelectedDeviceOn}
+                />
               </React.Suspense>
             </motion.div>
           )}

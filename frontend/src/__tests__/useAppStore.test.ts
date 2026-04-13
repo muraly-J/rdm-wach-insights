@@ -13,7 +13,7 @@ beforeEach(() => {
       hamburgerOpen: false,
       siteSummaryData: null,
     },
-    true,
+    true
   );
 });
 

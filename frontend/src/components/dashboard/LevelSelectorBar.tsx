@@ -15,9 +15,7 @@ const LevelSelectorBar: React.FC = () => {
   const { selectedLevel, selectLevel } = useAppStore();
 
   return (
-    <motion.div
-      className="sticky top-0 z-30 backdrop-blur-xl bg-[rgba(11,15,20,0.85)] border-b border-[#2e3f55]"
-    >
+    <motion.div className="sticky top-0 z-30 backdrop-blur-xl bg-[rgba(11,15,20,0.85)] border-b border-[#2e3f55]">
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-3 sm:py-4">
         {/* Header */}
         <div className="mb-4 flex items-center gap-3">

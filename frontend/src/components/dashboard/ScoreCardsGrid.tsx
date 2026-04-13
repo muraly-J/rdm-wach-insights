@@ -12,20 +12,30 @@ const SCORE_NAMES = [
     label: 'Energy Anomaly',
     info: (
       <div className="space-y-2.5">
-        <p className="text-[#E8ECF1] font-semibold text-[11px]">Energy Anomaly Score (weight 15%)</p>
-        <p>Detects over-consumption vs a seasonal-naive baseline derived from the same hour on D−1, D−7, and D−14.</p>
+        <p className="text-[#E8ECF1] font-semibold text-[11px]">
+          Energy Anomaly Score (weight 15%)
+        </p>
+        <p>
+          Detects over-consumption vs a seasonal-naive baseline derived from the same hour on D−1,
+          D−7, and D−14.
+        </p>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Formula</p>
           <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
-            excess = kWh_actual − mean(kWh_D-1, D-7, D-14)<br/>
+            excess = kWh_actual − mean(kWh_D-1, D-7, D-14)
+            <br />
             score = clip(excess / σ_baseline, 0, 1) × 100
           </p>
         </div>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Standard</p>
-          <p>ISO 50001:2018 §6.4 (energy baseline &amp; EnPIs) · ASHRAE 90.1-2022 (energy monitoring)</p>
+          <p>
+            ISO 50001:2018 §6.4 (energy baseline &amp; EnPIs) · ASHRAE 90.1-2022 (energy monitoring)
+          </p>
         </div>
-        <p className="text-[#4A5568] text-[10px]">0 = consuming as expected · 100 = far above seasonal baseline</p>
+        <p className="text-[#4A5568] text-[10px]">
+          0 = consuming as expected · 100 = far above seasonal baseline
+        </p>
       </div>
     ),
   },
@@ -34,20 +44,31 @@ const SCORE_NAMES = [
     label: 'PF Degradation',
     info: (
       <div className="space-y-2.5">
-        <p className="text-[#E8ECF1] font-semibold text-[11px]">Power Factor Degradation Score (weight 25%)</p>
-        <p>Measures drop in power factor from the AHU's own historical average. Low PF means reactive power waste and TNB surcharges.</p>
+        <p className="text-[#E8ECF1] font-semibold text-[11px]">
+          Power Factor Degradation Score (weight 25%)
+        </p>
+        <p>
+          Measures drop in power factor from the AHU's own historical average. Low PF means reactive
+          power waste and TNB surcharges.
+        </p>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Formula</p>
           <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
-            PF = P / S = P / √(P² + Q²)<br/>
+            PF = P / S = P / √(P² + Q²)
+            <br />
             score = clip((PF_baseline − PF_now) / PF_baseline, 0, 1) × 100
           </p>
         </div>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Standards &amp; Targets</p>
-          <p>IEEE 1459-2010 (PF definition) · TNB tariff: PF &lt; 0.85 triggers 1.5%/0.01 surcharge · ASHRAE 180-2012 HVAC target: PF &gt; 0.90</p>
+          <p>
+            IEEE 1459-2010 (PF definition) · TNB tariff: PF &lt; 0.85 triggers 1.5%/0.01 surcharge ·
+            ASHRAE 180-2012 HVAC target: PF &gt; 0.90
+          </p>
         </div>
-        <p className="text-[#4A5568] text-[10px]">0 = PF at or above baseline · 100 = severely degraded</p>
+        <p className="text-[#4A5568] text-[10px]">
+          0 = PF at or above baseline · 100 = severely degraded
+        </p>
       </div>
     ),
   },
@@ -56,18 +77,28 @@ const SCORE_NAMES = [
     label: 'Phase Imbalance',
     info: (
       <div className="space-y-2.5">
-        <p className="text-[#E8ECF1] font-semibold text-[11px]">Phase Imbalance Score (weight 25%)</p>
-        <p>Unbalanced current across L1/L2/L3 causes torque ripple, heat, and premature motor failure. Scored relative to this AHU's normal operating band.</p>
+        <p className="text-[#E8ECF1] font-semibold text-[11px]">
+          Phase Imbalance Score (weight 25%)
+        </p>
+        <p>
+          Unbalanced current across L1/L2/L3 causes torque ripple, heat, and premature motor
+          failure. Scored relative to this AHU's normal operating band.
+        </p>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Formula (NEMA definition)</p>
           <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
-            imbalance = max|Iₙ − Iₐᵥg| / Iₐᵥg × 100%<br/>
+            imbalance = max|Iₙ − Iₐᵥg| / Iₐᵥg × 100%
+            <br />
             score = clip((imbalance − μ) / σ_baseline, 0, 1) × 100
           </p>
         </div>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Standards</p>
-          <p>NEMA MG-1 Part 14: derate motor if voltage unbalance &gt; 1%; current unbalance typically 6–10× higher · IEC 60034-26: unbalance &gt; 2% causes measurable efficiency loss</p>
+          <p>
+            NEMA MG-1 Part 14: derate motor if voltage unbalance &gt; 1%; current unbalance
+            typically 6–10× higher · IEC 60034-26: unbalance &gt; 2% causes measurable efficiency
+            loss
+          </p>
         </div>
         <p className="text-[#4A5568] text-[10px]">0 = balanced · 100 = severely imbalanced</p>
       </div>
@@ -79,19 +110,29 @@ const SCORE_NAMES = [
     info: (
       <div className="space-y-2.5">
         <p className="text-[#E8ECF1] font-semibold text-[11px]">THD Drift Score (weight 15%)</p>
-        <p>Waveform distortion from VFDs and non-linear loads. High THD stresses winding insulation and causes additional heat. Scored when current THD drifts above this AHU's historical baseline.</p>
+        <p>
+          Waveform distortion from VFDs and non-linear loads. High THD stresses winding insulation
+          and causes additional heat. Scored when current THD drifts above this AHU's historical
+          baseline.
+        </p>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Formula</p>
           <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
-            THD = √(I₂² + I₃² + … + Iₙ²) / I₁ × 100%<br/>
+            THD = √(I₂² + I₃² + … + Iₙ²) / I₁ × 100%
+            <br />
             score = clip((THD_now − μ_baseline) / σ_baseline, 0, 1) × 100
           </p>
         </div>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Standards</p>
-          <p>IEEE 519-2022: voltage THD &lt; 5% at PCC; current THD limits depend on I_sc/I_L ratio · IEC 61000-3-2: harmonic current limits for equipment</p>
+          <p>
+            IEEE 519-2022: voltage THD &lt; 5% at PCC; current THD limits depend on I_sc/I_L ratio ·
+            IEC 61000-3-2: harmonic current limits for equipment
+          </p>
         </div>
-        <p className="text-[#4A5568] text-[10px]">0 = clean waveform · 100 = heavily distorted above baseline</p>
+        <p className="text-[#4A5568] text-[10px]">
+          0 = clean waveform · 100 = heavily distorted above baseline
+        </p>
       </div>
     ),
   },
@@ -101,19 +142,29 @@ const SCORE_NAMES = [
     info: (
       <div className="space-y-2.5">
         <p className="text-[#E8ECF1] font-semibold text-[11px]">Overload Score (weight 20%)</p>
-        <p>Compares current power draw to this AHU's historical 99th-percentile peak. Sustained operation near capacity risks motor burnout and tripped breakers.</p>
+        <p>
+          Compares current power draw to this AHU's historical 99th-percentile peak. Sustained
+          operation near capacity risks motor burnout and tripped breakers.
+        </p>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Formula</p>
           <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
-            ratio = P_now / P_99th_percentile<br/>
+            ratio = P_now / P_99th_percentile
+            <br />
             score = clip((ratio − 0.8) / 0.2, 0, 1) × 100
           </p>
         </div>
         <div>
           <p className="text-[#E8ECF1] font-medium mb-1">Standards</p>
-          <p>IEC 60947-4-1: motor protection relay classes · NEMA MG-1: motors rated at 100% FLA continuous; service factor &lt; 1.15 above nameplate · IEC 60364-4-43: overcurrent protection coordination</p>
+          <p>
+            IEC 60947-4-1: motor protection relay classes · NEMA MG-1: motors rated at 100% FLA
+            continuous; service factor &lt; 1.15 above nameplate · IEC 60364-4-43: overcurrent
+            protection coordination
+          </p>
         </div>
-        <p className="text-[#4A5568] text-[10px]">0 = well within capacity · 100 = at or above historical peak</p>
+        <p className="text-[#4A5568] text-[10px]">
+          0 = well within capacity · 100 = at or above historical peak
+        </p>
       </div>
     ),
   },
@@ -169,9 +220,7 @@ const ScoreCardsGrid: React.FC<ScoreCardsGridProps> = ({ scoreData }) => {
       {/* === MOBILE / TABLET: simple 1-col → 2-col grid === */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden">
         {SCORE_NAMES.map((score, index) => (
-          <div key={score.key}>
-            {renderCard(score, index)}
-          </div>
+          <div key={score.key}>{renderCard(score, index)}</div>
         ))}
         {topScore && scoreData[topScore.score.key] && (
           <div className="sm:col-span-2">

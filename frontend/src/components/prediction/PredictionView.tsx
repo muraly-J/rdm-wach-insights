@@ -23,9 +23,7 @@ export default function PredictionView({ deviceId }: PredictionViewProps) {
   }, [deviceId]);
 
   if (loading) {
-    return (
-      <div className="card p-6 h-48 animate-pulse bg-[#2a3649] rounded-xl" />
-    );
+    return <div className="card p-6 h-48 animate-pulse bg-[#2a3649] rounded-xl" />;
   }
 
   if (error || !data) {

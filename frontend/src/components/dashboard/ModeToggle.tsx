@@ -7,14 +7,16 @@ const ModeToggle: React.FC = () => {
   const { dashboardMode, setDashboardMode } = useAppStore();
 
   return (
-    <div style={{
-      display: 'inline-flex',
-      background: '#1a2234',
-      border: '1px solid #2a3649',
-      borderRadius: 10,
-      padding: 3,
-      marginBottom: 20,
-    }}>
+    <div
+      style={{
+        display: 'inline-flex',
+        background: '#1a2234',
+        border: '1px solid #2a3649',
+        borderRadius: 10,
+        padding: 3,
+        marginBottom: 20,
+      }}
+    >
       {MODES.map((mode) => {
         const isActive = dashboardMode === mode;
         const label = mode === 'simple' ? 'Simple Mode' : 'Deep Dive Mode';

@@ -7,7 +7,7 @@ interface UserMessageProps {
 
 /**
  * UserMessage - Chat message bubble (Section 6.3)
- * 
+ *
  * bg: var(--accent), color: var(--bg-primary)
  * border-radius: 16px 16px 4px 16px
  * right-aligned, max-width 85%

@@ -51,13 +51,13 @@ export interface DashboardData {
 
 // State Interface (from spec Section 8.1)
 export interface AppState {
-  selectedLevel: number | null;         // null = no level selected yet
-  selectedDevice: string | null;        // null = "All AHUs"
+  selectedLevel: number | null; // null = no level selected yet
+  selectedDevice: string | null; // null = "All AHUs"
   chatOpen: boolean;
   chatMessages: ChatMessage[];
   dashboardData: DashboardData | null;
   isLoading: boolean;
-  heroVisible: boolean;                 // Hero overlay visibility (not persisted)
+  heroVisible: boolean; // Hero overlay visibility (not persisted)
 }
 
 // Chat types (from spec Section 6)
@@ -240,8 +240,8 @@ export interface AHUHeatmapResponse {
 // ── Site Summary Types ─────────────────────────────────────────────────────
 
 export interface LevelHealthTile {
-  level: number;        // 1–11
-  avgHealth: number;    // 0–100
+  level: number; // 1–11
+  avgHealth: number; // 0–100
   ahuCount: number;
 }
 
@@ -255,9 +255,9 @@ export interface SpotlightAHU {
 }
 
 export interface TrendDelta {
-  label: string;              // e.g. "Energy"
-  value: number;              // signed
-  unit: string;               // "%" | "pts" | "MYR" | ""
+  label: string; // e.g. "Energy"
+  value: number; // signed
+  unit: string; // "%" | "pts" | "MYR" | ""
   direction: 'up' | 'down';
 }
 
@@ -268,6 +268,6 @@ export interface SiteSummaryData {
   estMonthlyCostMYR: number;
   starAHU: SpotlightAHU;
   criticalAHU: SpotlightAHU;
-  levelTiles: LevelHealthTile[];  // 11 entries
+  levelTiles: LevelHealthTile[]; // 11 entries
   trendDeltas: TrendDelta[];
 }

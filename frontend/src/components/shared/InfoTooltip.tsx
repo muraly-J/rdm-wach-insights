@@ -41,21 +41,22 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ content }) => {
         i
       </span>
 
-      {visible && createPortal(
-        <div
-          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 99999 }}
-          className="
+      {visible &&
+        createPortal(
+          <div
+            style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 99999 }}
+            className="
             w-80 p-4 rounded-xl
             bg-[#2a3649] border border-[#2e3f55] shadow-2xl
             text-xs text-[#6d6e71] leading-relaxed
           "
-          onMouseEnter={() => setVisible(true)}
-          onMouseLeave={() => setVisible(false)}
-        >
-          {content}
-        </div>,
-        document.body,
-      )}
+            onMouseEnter={() => setVisible(true)}
+            onMouseLeave={() => setVisible(false)}
+          >
+            {content}
+          </div>,
+          document.body
+        )}
     </span>
   );
 };

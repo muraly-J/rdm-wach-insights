@@ -138,7 +138,7 @@ export function generateHealthIndex(level: number, points: number = 48): HealthI
  */
 export function generateDashboardData(level: number, points: number = 48): DashboardData {
   const devices = LEVEL_DEVICES[level] || [];
-  
+
   return {
     healthIndex: devices.map((device) => generateHealthIndexData(device, points)),
     scores: {
@@ -158,7 +158,7 @@ export function generateDashboardData(level: number, points: number = 48): Dashb
  */
 export function generateScoreBreakdowns(level: number, points: number = 48) {
   const devices = LEVEL_DEVICES[level] || [];
-  
+
   return devices.map((device) => ({
     id: device.id,
     name: device.name,
@@ -220,7 +220,8 @@ export function generateInitialChatMessages(): ChatMessage[] {
     {
       id: 'init-1',
       role: 'bot',
-      content: "Hey! I'm WACH AI. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
+      content:
+        "Hey! I'm WACH AI. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
       timestamp: new Date(),
     },
   ];
@@ -236,32 +237,32 @@ export async function simulateBotResponse(userMessage: string): Promise<string> 
 
       if (lower.includes('health') || lower.includes('score')) {
         resolve(
-          "The current health index for this device is **78/100** (Healthy tier). " +
-          "The main contributors are stable power factor at 0.87 and good phase imbalance at 1.2%. " +
-          "I notice a slight energy anomaly spike around day 3 - would you like to investigate?"
+          'The current health index for this device is **78/100** (Healthy tier). ' +
+            'The main contributors are stable power factor at 0.87 and good phase imbalance at 1.2%. ' +
+            'I notice a slight energy anomaly spike around day 3 - would you like to investigate?'
         );
       } else if (lower.includes('energy')) {
         resolve(
-          "Energy anomaly for this device shows a temporary spike of **15% above baseline** on day 3. " +
-          "This coincides with normal building occupancy patterns - likely not a concern. " +
-          "The 7-day average is within acceptable parameters."
+          'Energy anomaly for this device shows a temporary spike of **15% above baseline** on day 3. ' +
+            'This coincides with normal building occupancy patterns - likely not a concern. ' +
+            'The 7-day average is within acceptable parameters.'
         );
       } else if (lower.includes('vibration')) {
         resolve(
-          "Vibration scores are currently **62/100** (Monitor tier). " +
-          "The score has been gradually declining over the past 3 days. " +
-          "Would you like to check the raw current unbalance data?"
+          'Vibration scores are currently **62/100** (Monitor tier). ' +
+            'The score has been gradually declining over the past 3 days. ' +
+            'Would you like to check the raw current unbalance data?'
         );
       } else if (lower.includes('compare') || lower.includes('levels')) {
         resolve(
-          "Level 1 has 21 AHUs with an average health index of **76/100**. " +
-          "Level 2 averages **72/100**, and Level 3 is at **68/100**. " +
-          "Would you like to see the ranking for a specific level?"
+          'Level 1 has 21 AHUs with an average health index of **76/100**. ' +
+            'Level 2 averages **72/100**, and Level 3 is at **68/100**. ' +
+            'Would you like to see the ranking for a specific level?'
         );
       } else {
         resolve(
-          "I can help you explore health scores, investigate anomalies, or compare devices. " +
-          "Try asking about 'energy', 'vibration', 'health index', or ask me to 'rank devices'."
+          'I can help you explore health scores, investigate anomalies, or compare devices. ' +
+            "Try asking about 'energy', 'vibration', 'health index', or ask me to 'rank devices'."
         );
       }
     }, 800); // Simulate network delay
@@ -294,29 +295,26 @@ export function generateSiteSummaryData(): SiteSummaryData {
       safetyFlags: 4,
     },
     levelTiles: [
-      { level: 1,  avgHealth: 82, ahuCount: 14 },
-      { level: 2,  avgHealth: 74, ahuCount: 10 },
-      { level: 3,  avgHealth: 88, ahuCount: 11 },
-      { level: 4,  avgHealth: 51, ahuCount: 9  },
-      { level: 5,  avgHealth: 67, ahuCount: 8  },
-      { level: 6,  avgHealth: 91, ahuCount: 7  },
-      { level: 7,  avgHealth: 45, ahuCount: 5  },
-      { level: 8,  avgHealth: 78, ahuCount: 4  },
-      { level: 9,  avgHealth: 62, ahuCount: 3  },
-      { level: 10, avgHealth: 55, ahuCount: 3  },
-      { level: 11, avgHealth: 83, ahuCount: 3  },
+      { level: 1, avgHealth: 82, ahuCount: 14 },
+      { level: 2, avgHealth: 74, ahuCount: 10 },
+      { level: 3, avgHealth: 88, ahuCount: 11 },
+      { level: 4, avgHealth: 51, ahuCount: 9 },
+      { level: 5, avgHealth: 67, ahuCount: 8 },
+      { level: 6, avgHealth: 91, ahuCount: 7 },
+      { level: 7, avgHealth: 45, ahuCount: 5 },
+      { level: 8, avgHealth: 78, ahuCount: 4 },
+      { level: 9, avgHealth: 62, ahuCount: 3 },
+      { level: 10, avgHealth: 55, ahuCount: 3 },
+      { level: 11, avgHealth: 83, ahuCount: 3 },
     ],
     trendDeltas: [
-      { label: 'Energy', value: -4.2, unit: '%',   direction: 'down' },
-      { label: 'Health', value: 2.1,  unit: 'pts', direction: 'up'   },
-      { label: 'Cost',   value: -310, unit: 'MYR', direction: 'down' },
-      { label: 'Alerts', value: -2,   unit: '',    direction: 'down' },
+      { label: 'Energy', value: -4.2, unit: '%', direction: 'down' },
+      { label: 'Health', value: 2.1, unit: 'pts', direction: 'up' },
+      { label: 'Cost', value: -310, unit: 'MYR', direction: 'down' },
+      { label: 'Alerts', value: -2, unit: '', direction: 'down' },
     ],
   };
 }
 
 // Exports for type safety
-export {
-  LEVEL_DEVICES,
-  ALL_DEVICES,
-};
+export { LEVEL_DEVICES, ALL_DEVICES };

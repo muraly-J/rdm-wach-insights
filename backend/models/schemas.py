@@ -199,7 +199,7 @@ ALLOWED_DEVICES: set[str] = _build_device_set()
 def _build_device_to_level_map() -> dict[str, str]:
     """
     Build reverse mapping from device ID to level string.
-    
+
     Returns:
         Dict mapping device_id -> "Level N"
     """
@@ -216,10 +216,10 @@ DEVICE_TO_LEVEL: dict[str, str] = _build_device_to_level_map()
 def get_level_for_device(ahu_id: str) -> str:
     """
     Get the level string for a given device ID.
-    
+
     Args:
         ahu_id: Device ID (e.g., 'e0101')
-        
+
     Returns:
         Level string (e.g., 'Level 1'), or 'Unknown' if device not found
     """
@@ -338,7 +338,7 @@ class HealthTierResponse(BaseModel):
 class SingleAHURiskAssessment(BaseModel):
     """
     Risk assessment for a single AHU.
-    
+
     Example output:
     {
       "device_id": "wach_e0101",
@@ -363,7 +363,7 @@ class SingleAHURiskAssessment(BaseModel):
 class FleetRiskAssessment(BaseModel):
     """
     Fleet-wide risk assessment.
-    
+
     Includes:
     - generated_at timestamp
     - time_range analyzed
@@ -403,7 +403,7 @@ class TopUnitsByRisk(BaseModel):
 class FleetSummary(BaseModel):
     """
     Aggregated fleet summary for the Electrical Risk Check.
-    
+
     Returns:
         - Tier distribution (counts by tier)
         - Top 5 units by lowest health index
@@ -443,10 +443,10 @@ class AIChatRequest(BaseModel):
 def get_metric_unit(metric: str) -> str:
     """
     Get the unit for a given metric.
-    
+
     Args:
         metric: Metric name (e.g., "power_total", "energy_import")
-        
+
     Returns:
         Unit string (e.g., "kW", "kWh", "A")
     """
@@ -458,10 +458,10 @@ def get_metric_unit(metric: str) -> str:
 def get_metric_description(metric: str) -> str:
     """
     Get the description for a given metric.
-    
+
     Args:
         metric: Metric name
-        
+
     Returns:
         Description string
     """
@@ -499,10 +499,10 @@ def is_valid_ahu_id(device_id: str) -> bool:
 def get_level_from_ahu_id(device_id: str) -> int | None:
     """
     Extract building level from AHU ID.
-    
+
     Args:
         device_id: Device ID (e.g., "e0101", "e0508")
-        
+
     Returns:
         Level number (1-8) or None if invalid
     """

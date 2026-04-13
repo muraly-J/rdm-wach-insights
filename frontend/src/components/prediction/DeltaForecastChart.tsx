@@ -55,13 +55,7 @@ const DeltaForecastChart: React.FC<Props> = ({ forecast }) => {
             axisLine={false}
             interval={2}
           />
-          <YAxis
-            stroke="#6d6e71"
-            fontSize={11}
-            tickLine={false}
-            axisLine={false}
-            unit=" kWh"
-          />
+          <YAxis stroke="#6d6e71" fontSize={11} tickLine={false} axisLine={false} unit=" kWh" />
           <Tooltip content={<CustomTooltip />} />
           <ReferenceLine y={0} stroke="#3B4B5A" strokeDasharray="3 3" />
           <Bar dataKey="value" radius={[3, 3, 0, 0]}>

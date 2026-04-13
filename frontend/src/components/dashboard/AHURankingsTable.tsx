@@ -41,9 +41,10 @@ const AHURankingsTable: React.FC<AHURankingsTableProps> = ({ rows }) => {
     return [...rows].sort((a, b) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
-      const cmp = typeof aVal === 'string'
-        ? aVal.localeCompare(bVal as string)
-        : (aVal as number) - (bVal as number);
+      const cmp =
+        typeof aVal === 'string'
+          ? aVal.localeCompare(bVal as string)
+          : (aVal as number) - (bVal as number);
       return sortDir === 'asc' ? cmp : -cmp;
     });
   }, [rows, sortKey, sortDir]);
@@ -51,9 +52,18 @@ const AHURankingsTable: React.FC<AHURankingsTableProps> = ({ rows }) => {
   const SortHeader: React.FC<{ label: string; sortK: SortKey }> = ({ label, sortK }) => (
     <th
       onClick={() => handleSort(sortK)}
-      style={{ cursor: 'pointer', userSelect: 'none', padding: '8px 12px', textAlign: 'left',
-        fontSize: 10, fontWeight: 600, color: sortKey === sortK ? '#00E5A0' : '#556677',
-        letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}
+      style={{
+        cursor: 'pointer',
+        userSelect: 'none',
+        padding: '8px 12px',
+        textAlign: 'left',
+        fontSize: 10,
+        fontWeight: 600,
+        color: sortKey === sortK ? '#00E5A0' : '#556677',
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        whiteSpace: 'nowrap',
+      }}
     >
       {label} {sortKey === sortK ? (sortDir === 'asc' ? '↑' : '↓') : ''}
     </th>
@@ -68,7 +78,15 @@ const AHURankingsTable: React.FC<AHURankingsTableProps> = ({ rows }) => {
   }
 
   return (
-    <div style={{ background: '#1a2234', border: '1px solid #2a3649', borderRadius: 12, overflow: 'hidden', marginBottom: 24 }}>
+    <div
+      style={{
+        background: '#1a2234',
+        border: '1px solid #2a3649',
+        borderRadius: 12,
+        overflow: 'hidden',
+        marginBottom: 24,
+      }}
+    >
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid #2a3649' }}>
@@ -90,26 +108,42 @@ const AHURankingsTable: React.FC<AHURankingsTableProps> = ({ rows }) => {
               <td style={{ padding: '10px 12px', fontSize: 12, color: '#C8D4E0' }}>{row.label}</td>
               <td style={{ padding: '10px 12px', fontSize: 12, color: '#8899aa' }}>L{row.level}</td>
               <td style={{ padding: '10px 12px' }}>
-                <span style={{
-                  fontSize: 14, fontWeight: 700,
-                  color: row.healthScore >= 80 ? '#00E5A0' : row.healthScore >= 60 ? '#f59e0b' : '#ff6b6b',
-                }}>
+                <span
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color:
+                      row.healthScore >= 80
+                        ? '#00E5A0'
+                        : row.healthScore >= 60
+                          ? '#f59e0b'
+                          : '#ff6b6b',
+                  }}
+                >
                   {Math.round(row.healthScore)}
                 </span>
               </td>
-              <td style={{ padding: '10px 12px', fontSize: 12, color: row.trend >= 0 ? '#00E5A0' : '#ff6b6b' }}>
+              <td
+                style={{
+                  padding: '10px 12px',
+                  fontSize: 12,
+                  color: row.trend >= 0 ? '#00E5A0' : '#ff6b6b',
+                }}
+              >
                 {row.trend >= 0 ? '↑' : '↓'} {Math.abs(row.trend).toFixed(1)}%
               </td>
               <td style={{ padding: '10px 12px' }}>
-                <span style={{
-                  background: `${STATUS_COLOR[row.status]}22`,
-                  color: STATUS_COLOR[row.status],
-                  border: `1px solid ${STATUS_COLOR[row.status]}55`,
-                  borderRadius: 20,
-                  padding: '2px 8px',
-                  fontSize: 10,
-                  fontWeight: 600,
-                }}>
+                <span
+                  style={{
+                    background: `${STATUS_COLOR[row.status]}22`,
+                    color: STATUS_COLOR[row.status],
+                    border: `1px solid ${STATUS_COLOR[row.status]}55`,
+                    borderRadius: 20,
+                    padding: '2px 8px',
+                    fontSize: 10,
+                    fontWeight: 600,
+                  }}
+                >
                   {row.status}
                 </span>
               </td>

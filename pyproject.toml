@@ -27,3 +27,14 @@ ignore = ["E501", "B008", "UP007"]
 
 [tool.ruff.lint.per-file-ignores]
 "backend/tests/**" = ["F401", "F811"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+explicit_package_bases = true
+exclude = [
+    "backend/venv/",
+    "backend/tests/",
+    "backend/scripts/",
+]

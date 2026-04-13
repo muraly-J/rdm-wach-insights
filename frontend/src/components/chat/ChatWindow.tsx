@@ -27,7 +27,8 @@ interface ChatWindowProps {
 const INITIAL_MESSAGE: Message = {
   id: 'init-1',
   role: 'bot',
-  content: "Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
+  content:
+    "Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
 };
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -40,7 +41,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onMinimize,
 }) => {
   const [isTyping, setIsTyping] = useState(false);
-  const [selectedPersona, setSelectedPersona] = useState<'general' | 'technical' | 'technician' | 'financial' | null>(null);
+  const [selectedPersona, setSelectedPersona] = useState<
+    'general' | 'technical' | 'technician' | 'financial' | null
+  >(null);
 
   const selectedLevel = useAppStore((s) => s.selectedLevel);
   const selectedDevice = useAppStore((s) => s.selectedDevice);
@@ -61,7 +64,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     setMessages([INITIAL_MESSAGE]);
   };
 
-  const handlePersonaChange = (persona: 'general' | 'technical' | 'technician' | 'financial' | null) => {
+  const handlePersonaChange = (
+    persona: 'general' | 'technical' | 'technician' | 'financial' | null
+  ) => {
     setSelectedPersona(persona);
     if (persona) {
       const labels: Record<string, string> = {
@@ -87,12 +92,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     setIsTyping(true);
 
     // Build history for the API (exclude the initial bot greeting)
-    const history = messages
-      .slice(1)
-      .map((m) => ({
-        role: m.role === 'bot' ? ('model' as const) : ('user' as const),
-        content: m.content,
-      }));
+    const history = messages.slice(1).map((m) => ({
+      role: m.role === 'bot' ? ('model' as const) : ('user' as const),
+      content: m.content,
+    }));
 
     try {
       const { reply, navigate } = await sendChatMessage(text, {

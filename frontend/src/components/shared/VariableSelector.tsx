@@ -49,8 +49,7 @@ export default function VariableSelector({
         }`}
       >
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M12 4v16m8-8H4" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
         {label}
         {count > 0 && (
@@ -74,9 +73,7 @@ export default function VariableSelector({
                 <label
                   key={m.key}
                   className={`flex items-start gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
-                    isDisabled
-                      ? 'opacity-40 cursor-not-allowed'
-                      : 'hover:bg-[#1c2431]'
+                    isDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-[#1c2431]'
                   }`}
                 >
                   <input

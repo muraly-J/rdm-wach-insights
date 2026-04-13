@@ -33,16 +33,12 @@ const data = [
 
 describe('HealthIndexChart', () => {
   it('renders without offPeriods and shows no ReferenceArea', () => {
-    const { container } = render(
-      <HealthIndexChart data={data} devices={[device]} />
-    );
+    const { container } = render(<HealthIndexChart data={data} devices={[device]} />);
     expect(container.querySelectorAll('[data-testid="reference-area"]')).toHaveLength(0);
   });
 
   it('renders a ReferenceArea for each off period when offPeriods provided', () => {
-    const offPeriods = [
-      { start: '2026-04-01T22:00:00Z', end: '2026-04-02T06:00:00Z' },
-    ];
+    const offPeriods = [{ start: '2026-04-01T22:00:00Z', end: '2026-04-02T06:00:00Z' }];
     const { container } = render(
       <HealthIndexChart data={data} devices={[device]} offPeriods={offPeriods} />
     );
@@ -51,8 +47,6 @@ describe('HealthIndexChart', () => {
 
   it('does not accept showColorSegments prop (it is removed)', () => {
     // Just verify it renders without crash when the old prop is absent
-    expect(() =>
-      render(<HealthIndexChart data={data} devices={[device]} />)
-    ).not.toThrow();
+    expect(() => render(<HealthIndexChart data={data} devices={[device]} />)).not.toThrow();
   });
 });

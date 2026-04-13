@@ -24,7 +24,12 @@ jest.mock('../components/chat/ChatHeader', () => {
 
 jest.mock('../components/chat/MessageList', () => {
   return function DummyMessageList() {
-    return <div data-testid="message-list">Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?</div>;
+    return (
+      <div data-testid="message-list">
+        Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or
+        explain what's driving a specific score. What would you like to know?
+      </div>
+    );
   };
 });
 
@@ -51,23 +56,13 @@ jest.mock('framer-motion', () => {
 
 describe('ChatWindow', () => {
   it('renders the initial bot greeting when opened', () => {
-    render(
-      <ChatWindow
-        mode="panel"
-        onClose={jest.fn()}
-        onToggleMode={jest.fn()}
-      />
-    );
+    render(<ChatWindow mode="panel" onClose={jest.fn()} onToggleMode={jest.fn()} />);
     expect(screen.getByText(/RDM-Atlas/i)).toBeInTheDocument();
   });
 
   it('renders message list container without crashing', () => {
     const { container } = render(
-      <ChatWindow
-        mode="panel"
-        onClose={jest.fn()}
-        onToggleMode={jest.fn()}
-      />
+      <ChatWindow mode="panel" onClose={jest.fn()} onToggleMode={jest.fn()} />
     );
     expect(container).toBeTruthy();
   });

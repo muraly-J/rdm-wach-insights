@@ -69,11 +69,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, offP
         <div className="bg-[#2a3649] p-4 rounded-xl border border-[#2e3f55]">
           <p className="text-[#6d6e71] text-xs mb-2 font-mono">{label}</p>
           {payload.map((entry: any, index: number) => (
-            <p
-              key={index}
-              className="text-sm"
-              style={{ color: entry.color }}
-            >
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
               {entry.name}: {entry.value.toFixed(1)}
             </p>
           ))}
@@ -92,10 +88,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, offP
           const tooltip = [dev?.label, dev?.department].filter(Boolean).join(' — ') || entry.value;
           return (
             <div key={index} className="flex items-center gap-2" title={tooltip}>
-              <span
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: entry.color }}
-              />
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
               <span className="text-xs text-[#6d6e71]">{entry.value}</span>
             </div>
           );
@@ -114,7 +107,10 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, offP
 
   if (!data || data.length === 0) {
     return (
-      <div className="card p-4 sm:p-6 h-[200px] sm:h-[320px] flex items-center justify-center" style={glassStyle}>
+      <div
+        className="card p-4 sm:p-6 h-[200px] sm:h-[320px] flex items-center justify-center"
+        style={glassStyle}
+      >
         <span className="text-[#6d6e71]">No health index data available</span>
       </div>
     );
@@ -132,85 +128,101 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, offP
       <div className="mb-6">
         <h3 className="font-display text-[20px] sm:text-[24px] font-bold tracking-[-0.01em] flex items-center">
           Health Index
-          <InfoTooltip content={
-            <div className="space-y-2.5">
-              <p className="text-[#E8ECF1] font-semibold text-[11px]">Composite AHU Health Index</p>
-              <p>Weighted sum of five FAIR sub-scores, each normalised 0–100. Higher is healthier.</p>
-              <div>
-                <p className="text-[#E8ECF1] font-medium mb-1">Formula</p>
-                <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
-                  HI = 0.25·PF + 0.25·PI + 0.20·OL + 0.15·EA + 0.15·THD
+          <InfoTooltip
+            content={
+              <div className="space-y-2.5">
+                <p className="text-[#E8ECF1] font-semibold text-[11px]">
+                  Composite AHU Health Index
+                </p>
+                <p>
+                  Weighted sum of five FAIR sub-scores, each normalised 0–100. Higher is healthier.
+                </p>
+                <div>
+                  <p className="text-[#E8ECF1] font-medium mb-1">Formula</p>
+                  <p className="font-mono bg-[#1c2431] rounded px-2 py-1 text-[10px]">
+                    HI = 0.25·PF + 0.25·PI + 0.20·OL + 0.15·EA + 0.15·THD
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[#E8ECF1] font-medium mb-1">Tiers</p>
+                  <div className="space-y-0.5">
+                    <p>
+                      <span className="text-[#4fbd95]">■</span> 80–100 Healthy — normal operation
+                    </p>
+                    <p>
+                      <span className="text-yellow-400">■</span> 60–79 Monitor — watch for drift
+                    </p>
+                    <p>
+                      <span className="text-orange-400">■</span> 40–59 Maintenance Soon — schedule
+                      service
+                    </p>
+                    <p>
+                      <span className="text-red-400">■</span> 0–39 Critical — urgent intervention
+                    </p>
+                  </div>
+                </div>
+                <p className="text-[#4A5568] text-[10px]">
+                  Weights follow ASHRAE 180-2012 risk priority for HVAC fault detection.
                 </p>
               </div>
-              <div>
-                <p className="text-[#E8ECF1] font-medium mb-1">Tiers</p>
-                <div className="space-y-0.5">
-                  <p><span className="text-[#4fbd95]">■</span> 80–100 Healthy — normal operation</p>
-                  <p><span className="text-yellow-400">■</span> 60–79 Monitor — watch for drift</p>
-                  <p><span className="text-orange-400">■</span> 40–59 Maintenance Soon — schedule service</p>
-                  <p><span className="text-red-400">■</span> 0–39 Critical — urgent intervention</p>
-                </div>
-              </div>
-              <p className="text-[#4A5568] text-[10px]">Weights follow ASHRAE 180-2012 risk priority for HVAC fault detection.</p>
-            </div>
-          } />
+            }
+          />
         </h3>
-        
+
         <p className="mt-2 text-sm text-[#6d6e71]">
-          {devices.length} AHUs monitored • Last updated {formatDateMYT(new Date(), { month: 'short', day: 'numeric', year: 'numeric' })}
+          {devices.length} AHUs monitored • Last updated{' '}
+          {formatDateMYT(new Date(), { month: 'short', day: 'numeric', year: 'numeric' })}
         </p>
       </div>
 
       {/* Chart container — legend rendered outside so it never eats into chart height */}
       <div className="h-[200px] sm:h-[280px] lg:h-[320px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-          <CartesianGrid
-            stroke="#2e3f55"
-            strokeDasharray="3 3"
-            vertical={false}
-          />
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <CartesianGrid stroke="#2e3f55" strokeDasharray="3 3" vertical={false} />
 
-          <XAxis
-            dataKey="timestamp"
-            stroke="#6d6e71"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-            interval={Math.max(0, Math.floor(data.length / 8) - 1)}
-          />
-
-          <YAxis
-            domain={[0, 100]}
-            stroke="#6d6e71"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-            interval={Math.max(0, Math.floor(data.length / 8) - 1)}
-          />
-
-          <Tooltip content={<CustomTooltip />} />
-
-          {devices.map((device, index) => (
-            <Area
-              key={device.id}
-              type="monotone"
-              dataKey={device.name}
-              stroke={getColor(index)}
-              strokeWidth={2}
-              fill="none"
-              connectNulls
-              dot={false}
+            <XAxis
+              dataKey="timestamp"
+              stroke="#6d6e71"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              interval={Math.max(0, Math.floor(data.length / 8) - 1)}
             />
-          ))}
 
-          {renderOffPeriodAreas(offPeriods)}
-        </AreaChart>
-      </ResponsiveContainer>
+            <YAxis
+              domain={[0, 100]}
+              stroke="#6d6e71"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              interval={Math.max(0, Math.floor(data.length / 8) - 1)}
+            />
+
+            <Tooltip content={<CustomTooltip />} />
+
+            {devices.map((device, index) => (
+              <Area
+                key={device.id}
+                type="monotone"
+                dataKey={device.name}
+                stroke={getColor(index)}
+                strokeWidth={2}
+                fill="none"
+                connectNulls
+                dot={false}
+              />
+            ))}
+
+            {renderOffPeriodAreas(offPeriods)}
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
 
       {/* Legend outside the fixed-height div so it never squishes the chart */}
-      <CustomLegend payload={devices.map((device, index) => ({ value: device.name, color: getColor(index) }))} />
+      <CustomLegend
+        payload={devices.map((device, index) => ({ value: device.name, color: getColor(index) }))}
+      />
     </motion.div>
   );
 };

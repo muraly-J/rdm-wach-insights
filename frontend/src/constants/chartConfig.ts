@@ -1,5 +1,14 @@
 export const CHART_CONFIG = {
-  CHART_COLORS: ['#00E5A0', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#EF4444'],
+  CHART_COLORS: [
+    '#00E5A0',
+    '#F59E0B',
+    '#8B5CF6',
+    '#EC4899',
+    '#06B6D4',
+    '#84CC16',
+    '#F97316',
+    '#EF4444',
+  ],
 
   HEIGHTS: {
     SINGLE_DEVICE: 400,

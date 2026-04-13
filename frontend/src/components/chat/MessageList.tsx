@@ -23,7 +23,12 @@ interface MessageListProps {
 /**
  * MessageList - Scrollable message container (Section 6.3)
  */
-const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onNavigate, onClearChat }) => {
+const MessageList: React.FC<MessageListProps> = ({
+  messages,
+  isTyping,
+  onNavigate,
+  onClearChat,
+}) => {
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -31,17 +36,12 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, onNavigat
   }, [messages, isTyping]);
 
   // Index of the last bot message — only that one shows the clear button
-  const lastBotIndex = messages.reduce(
-    (last, msg, idx) => (msg.role === 'bot' ? idx : last),
-    -1
-  );
+  const lastBotIndex = messages.reduce((last, msg, idx) => (msg.role === 'bot' ? idx : last), -1);
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-2">
       {messages.length === 0 && (
-        <div className="text-center text-[#6d6e71] py-8">
-          Start a conversation with WACH AI
-        </div>
+        <div className="text-center text-[#6d6e71] py-8">Start a conversation with WACH AI</div>
       )}
 
       <AnimatePresence initial={false}>

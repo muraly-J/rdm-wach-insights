@@ -11,14 +11,10 @@ interface SkeletonProps {
 
 /**
  * Skeleton - Loading state placeholder component
- * 
+ *
  * Uses shimmer animation with gradient from border-subtle to bg-tertiary
  */
-const Skeleton: React.FC<SkeletonProps> = ({
-  shape = 'rect',
-  size = 'md',
-  className = '',
-}) => {
+const Skeleton: React.FC<SkeletonProps> = ({ shape = 'rect', size = 'md', className = '' }) => {
   // Base shimmer animation
   const baseStyles = 'shimmer bg-[#2e3f55] animate-shimmer';
 
@@ -66,7 +62,12 @@ export const SkeletonCard: React.FC<{ header?: boolean; contentLines?: number }>
       )}
       <div className="space-y-3">
         {Array.from({ length: contentLines }).map((_, i) => (
-          <Skeleton key={i} shape="rect" size="md" className={`w-full h-4 ${i === contentLines - 1 ? 'w-2/3' : ''}`} />
+          <Skeleton
+            key={i}
+            shape="rect"
+            size="md"
+            className={`w-full h-4 ${i === contentLines - 1 ? 'w-2/3' : ''}`}
+          />
         ))}
       </div>
     </div>

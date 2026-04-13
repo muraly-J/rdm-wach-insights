@@ -1,21 +1,18 @@
 // frontend/src/components/chat/ChatChartModal.tsx
-import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Cell,
-} from 'recharts'
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export interface ChartEntry {
-  label: string
-  value: number
+  label: string;
+  value: number;
 }
 
 interface ChatChartModalProps {
-  title: string
-  entries: ChartEntry[]
-  unit: string
-  onClose: () => void
+  title: string;
+  entries: ChartEntry[];
+  unit: string;
+  onClose: () => void;
 }
 
 const ChatChartModal: React.FC<ChatChartModalProps> = ({ title, entries, unit, onClose }) => (
@@ -27,10 +24,7 @@ const ChatChartModal: React.FC<ChatChartModalProps> = ({ title, entries, unit, o
       exit={{ opacity: 0 }}
     >
       {/* Backdrop */}
-      <motion.div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <motion.div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal panel */}
       <motion.div
@@ -56,10 +50,7 @@ const ChatChartModal: React.FC<ChatChartModalProps> = ({ title, entries, unit, o
         {/* Chart */}
         <div className="flex-1 px-4 py-4 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={entries}
-              margin={{ top: 8, right: 16, left: 8, bottom: 56 }}
-            >
+            <BarChart data={entries} margin={{ top: 8, right: 16, left: 8, bottom: 56 }}>
               <XAxis
                 dataKey="label"
                 tick={{ fill: '#6d6e71', fontSize: 10, fontFamily: 'Oswald, monospace' }}
@@ -95,6 +86,6 @@ const ChatChartModal: React.FC<ChatChartModalProps> = ({ title, entries, unit, o
       </motion.div>
     </motion.div>
   </AnimatePresence>
-)
+);
 
-export default ChatChartModal
+export default ChatChartModal;

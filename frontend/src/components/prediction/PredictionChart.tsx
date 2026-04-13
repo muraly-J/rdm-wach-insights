@@ -79,13 +79,27 @@ export default function PredictionChart({ data, metric }: PredictionChartProps) 
           type="number"
           domain={[-48, Math.max(168, ...horizonOffsets)]}
           ticks={[-48, -24, 0, 1, 12, 24, 168]}
-          tickFormatter={(v) => v === 0 ? 'Now' : v > 0 ? `+${v}h` : `${v}h`}
+          tickFormatter={(v) => (v === 0 ? 'Now' : v > 0 ? `+${v}h` : `${v}h`)}
           stroke="#4A5568"
           tick={{ fill: '#6d6e71', fontSize: 11 }}
         />
-        <YAxis stroke="#4A5568" tick={{ fill: '#6d6e71', fontSize: 11 }} label={{ value: METRIC_LABELS[metric], angle: -90, position: 'insideLeft', fill: '#6d6e71', fontSize: 10 }} />
+        <YAxis
+          stroke="#4A5568"
+          tick={{ fill: '#6d6e71', fontSize: 11 }}
+          label={{
+            value: METRIC_LABELS[metric],
+            angle: -90,
+            position: 'insideLeft',
+            fill: '#6d6e71',
+            fontSize: 10,
+          }}
+        />
         <Tooltip
-          contentStyle={{ backgroundColor: '#131A23', border: '1px solid #2e3f55', borderRadius: 8 }}
+          contentStyle={{
+            backgroundColor: '#131A23',
+            border: '1px solid #2e3f55',
+            borderRadius: 8,
+          }}
           labelFormatter={(v) => `Offset: ${v}h`}
         />
         <Legend wrapperStyle={{ fontSize: 12, color: '#6d6e71' }} />
@@ -101,11 +115,39 @@ export default function PredictionChart({ data, metric }: PredictionChartProps) 
         ))}
         <ReferenceLine x={0} stroke="#4A5568" strokeWidth={1} />
 
-        <Line dataKey="two_weeks_ago" name="2 Weeks Ago" stroke="#555" strokeDasharray="4 4" dot={false} connectNulls={false} />
+        <Line
+          dataKey="two_weeks_ago"
+          name="2 Weeks Ago"
+          stroke="#555"
+          strokeDasharray="4 4"
+          dot={false}
+          connectNulls={false}
+        />
         <Line dataKey="last_week" name="Last Week" stroke="#888" dot={false} connectNulls={false} />
-        <Line dataKey="yesterday" name="Yesterday" stroke="#60a5fa" dot={false} connectNulls={false} />
-        <Line dataKey="actual" name="Today (actual)" stroke="#4fbd95" strokeWidth={2} dot={false} connectNulls={false} />
-        <Line dataKey="prediction" name="Prediction" stroke="#4fbd95" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 5, fill: '#4fbd95' }} connectNulls={true} />
+        <Line
+          dataKey="yesterday"
+          name="Yesterday"
+          stroke="#60a5fa"
+          dot={false}
+          connectNulls={false}
+        />
+        <Line
+          dataKey="actual"
+          name="Today (actual)"
+          stroke="#4fbd95"
+          strokeWidth={2}
+          dot={false}
+          connectNulls={false}
+        />
+        <Line
+          dataKey="prediction"
+          name="Prediction"
+          stroke="#4fbd95"
+          strokeWidth={2}
+          strokeDasharray="6 3"
+          dot={{ r: 5, fill: '#4fbd95' }}
+          connectNulls={true}
+        />
       </ComposedChart>
     </ResponsiveContainer>
   );

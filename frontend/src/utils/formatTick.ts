@@ -16,7 +16,7 @@ const MYT_TIMEZONE = 'Asia/Kuala_Lumpur';
 export function formatDateMYT(date: Date, options?: Intl.DateTimeFormatOptions): string {
   return date.toLocaleDateString('en-US', {
     ...options,
-    timeZone: MYT_TIMEZONE
+    timeZone: MYT_TIMEZONE,
   });
 }
 
@@ -24,7 +24,7 @@ export function formatDateMYT(date: Date, options?: Intl.DateTimeFormatOptions):
 export function formatTimeMYT(date: Date, options?: Intl.DateTimeFormatOptions): string {
   return date.toLocaleTimeString('en-US', {
     ...options,
-    timeZone: MYT_TIMEZONE
+    timeZone: MYT_TIMEZONE,
   });
 }
 
@@ -32,7 +32,7 @@ export function formatTimeMYT(date: Date, options?: Intl.DateTimeFormatOptions):
 export function formatDateTimeMYT(date: Date, options?: Intl.DateTimeFormatOptions): string {
   return date.toLocaleString('en-US', {
     ...options,
-    timeZone: MYT_TIMEZONE
+    timeZone: MYT_TIMEZONE,
   });
 }
 
@@ -44,25 +44,25 @@ export function formatTickByRange(timestamp: string, range: TimeRange): string {
     return formatTimeMYT(d, {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: false,
     });
   }
   if (range === '7d') {
     const date = formatDateMYT(d, {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
     const time = formatTimeMYT(d, {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: false,
     });
     return `${date} ${time}`;
   }
   // 30d
   return formatDateMYT(d, {
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
   });
 }
 
@@ -77,7 +77,7 @@ export function formatTickByRange(timestamp: string, range: TimeRange): string {
  *   30d  → every 4 days   (interval=3  → shows ~8 ticks across 30 days)
  */
 export function tickIntervalByRange(range: TimeRange): number {
-  if (range === '24h') return 2;   // every 3rd point of 24 = 8 ticks
-  if (range === '7d') return 23;   // every 24th point of 168 = 7 ticks
-  return 3;                         // every 4th point of 30 = ~8 ticks
+  if (range === '24h') return 2; // every 3rd point of 24 = 8 ticks
+  if (range === '7d') return 23; // every 24th point of 168 = 7 ticks
+  return 3; // every 4th point of 30 = ~8 ticks
 }

@@ -10,7 +10,7 @@ interface PillButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
 
 /**
  * PillButton - A circular/rounded pill-shaped button component
- * 
+ *
  * Idle state: transparent bg, text-secondary text, 1px border
  * Active state: accent bg, primary text, glow shadow
  * Hover state: border transitions to accent

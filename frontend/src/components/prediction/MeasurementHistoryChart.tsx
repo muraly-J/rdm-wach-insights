@@ -1,7 +1,14 @@
 import React from 'react';
 import {
-  LineChart, Line, YAxis, XAxis, CartesianGrid, Tooltip,
-  ReferenceLine, ReferenceArea, ResponsiveContainer,
+  LineChart,
+  Line,
+  YAxis,
+  XAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+  ReferenceArea,
+  ResponsiveContainer,
 } from 'recharts';
 import type { MeasurementPoint, OffPeriod } from '../../types';
 import { formatDateMYT, formatDateTimeMYT } from '../../utils/formatTick';
@@ -19,10 +26,19 @@ interface MeasurementHistoryChartProps {
 }
 
 export default function MeasurementHistoryChart({
-  label, unit, data, color, loading, isCoreMetric, tNow, offPeriods,
+  label,
+  unit,
+  data,
+  color,
+  loading,
+  isCoreMetric,
+  tNow,
+  offPeriods,
 }: MeasurementHistoryChartProps) {
   if (loading) {
-    return <div className="h-[220px] bg-[#131A23] rounded-xl border border-[#2e3f55] animate-pulse" />;
+    return (
+      <div className="h-[220px] bg-[#131A23] rounded-xl border border-[#2e3f55] animate-pulse" />
+    );
   }
 
   return (
@@ -74,13 +90,15 @@ export default function MeasurementHistoryChart({
               borderRadius: 8,
               fontSize: 11,
             }}
-            labelFormatter={(l: string) => formatDateTimeMYT(new Date(l), {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: false
-            })}
+            labelFormatter={(l: string) =>
+              formatDateTimeMYT(new Date(l), {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+              })
+            }
             formatter={(v: number) => [`${v.toFixed(2)} ${unit}`, label]}
           />
           {tNow && (

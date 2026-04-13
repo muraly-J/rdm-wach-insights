@@ -1,5 +1,10 @@
 import React from 'react';
-import { formatTickByRange, tickIntervalByRange, formatDateMYT, type TimeRange } from '../../../utils/formatTick';
+import {
+  formatTickByRange,
+  tickIntervalByRange,
+  formatDateMYT,
+  type TimeRange,
+} from '../../../utils/formatTick';
 import {
   LineChart,
   Line,
@@ -103,7 +108,9 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
         })}
         {payload.find((p: any) => p.dataKey === 'scoreValue') && (
           <div className="mt-2 pt-2 border-t border-[#2e3f55]">
-            <span className="text-xs" style={{ color: chartColor }}>Score:</span>{' '}
+            <span className="text-xs" style={{ color: chartColor }}>
+              Score:
+            </span>{' '}
             <span className="text-xs font-medium" style={{ color: chartColor }}>
               {payload.find((p: any) => p.dataKey === 'scoreValue').value?.toFixed(1)} / 100
             </span>
@@ -185,7 +192,8 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
             const key = `s${si}`;
             const color = SERIES_PALETTE[si % SERIES_PALETTE.length];
             const strokeWidth = s.style === 'bold' ? 3 : 2;
-            const strokeDasharray = s.style === 'dashed' ? '4 4' : s.style === 'ref' ? '3 3' : undefined;
+            const strokeDasharray =
+              s.style === 'dashed' ? '4 4' : s.style === 'ref' ? '3 3' : undefined;
             const opacity = s.style === 'ref' ? 0.5 : 0.8;
             return (
               <Line
@@ -227,7 +235,8 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
               style={{ backgroundColor: SERIES_PALETTE[si % SERIES_PALETTE.length] }}
             />
             <span className="text-[#6d6e71]">
-              {s.label}{s.unit ? ` (${s.unit})` : ''}
+              {s.label}
+              {s.unit ? ` (${s.unit})` : ''}
             </span>
           </div>
         ))}

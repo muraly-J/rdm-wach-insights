@@ -3,9 +3,30 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import AHURankingsTable from '../components/dashboard/AHURankingsTable';
 
 const rows = [
-  { id: 'e0101', label: 'AHU-L1-ES-01 — Engineering Services', level: 1, healthScore: 92, trend: 3.2, status: 'Good' as const },
-  { id: 'e0707', label: 'AHU-L7-MS-01 — Medical Services', level: 7, healthScore: 43, trend: -8.1, status: 'Critical' as const },
-  { id: 'e0303', label: 'AHU-L3-01', level: 3, healthScore: 71, trend: 1.0, status: 'Warning' as const },
+  {
+    id: 'e0101',
+    label: 'AHU-L1-ES-01 — Engineering Services',
+    level: 1,
+    healthScore: 92,
+    trend: 3.2,
+    status: 'Good' as const,
+  },
+  {
+    id: 'e0707',
+    label: 'AHU-L7-MS-01 — Medical Services',
+    level: 7,
+    healthScore: 43,
+    trend: -8.1,
+    status: 'Critical' as const,
+  },
+  {
+    id: 'e0303',
+    label: 'AHU-L3-01',
+    level: 3,
+    healthScore: 71,
+    trend: 1.0,
+    status: 'Warning' as const,
+  },
 ];
 
 describe('AHURankingsTable', () => {

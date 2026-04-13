@@ -1,10 +1,16 @@
 import React from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
 import { fetchMeasurements } from '../../api/client';
-import { METRIC_META } from '../../constants/metricGroups';
 import { CHART_CONFIG } from '../../constants/chartConfig';
+import { METRIC_META } from '../../constants/metricGroups';
 
 interface DeviceColumnProps {
   deviceId: string;
@@ -19,7 +25,13 @@ function toApiRange(timeRange: string): '24h' | '7d' | '30d' {
   return '30d';
 }
 
-const DeviceColumn: React.FC<DeviceColumnProps> = ({ deviceId, deviceLabel, selectedMetrics, timeRange, colorMap }) => {
+const DeviceColumn: React.FC<DeviceColumnProps> = ({
+  deviceId,
+  deviceLabel,
+  selectedMetrics,
+  timeRange,
+  colorMap,
+}) => {
   const [chartData, setChartData] = React.useState<Record<string, number | string | null>[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -49,22 +61,61 @@ const DeviceColumn: React.FC<DeviceColumnProps> = ({ deviceId, deviceLabel, sele
 
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{
-        background: '#1a2234', border: '1px solid #2a3649', borderRadius: 10,
-        padding: '10px 14px', marginBottom: 8,
-      }}>
+      <div
+        style={{
+          background: '#1a2234',
+          border: '1px solid #2a3649',
+          borderRadius: 10,
+          padding: '10px 14px',
+          marginBottom: 8,
+        }}
+      >
         <div style={{ fontSize: 10, color: '#556677', marginBottom: 2 }}>Device</div>
-        <div style={{ fontSize: 12, color: '#00E5A0', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div
+          style={{
+            fontSize: 12,
+            color: '#00E5A0',
+            fontWeight: 600,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
           {deviceLabel}
         </div>
       </div>
-      <div style={{ background: '#1a2234', border: '1px solid #2a3649', borderRadius: 10, padding: 12 }}>
+      <div
+        style={{
+          background: '#1a2234',
+          border: '1px solid #2a3649',
+          borderRadius: 10,
+          padding: 12,
+        }}
+      >
         {isLoading ? (
-          <div style={{ height: CHART_CONFIG.HEIGHTS.DEVICE_COLUMN, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#556677', fontSize: 12 }}>
+          <div
+            style={{
+              height: CHART_CONFIG.HEIGHTS.DEVICE_COLUMN,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#556677',
+              fontSize: 12,
+            }}
+          >
             Loading…
           </div>
         ) : chartData.length === 0 ? (
-          <div style={{ height: CHART_CONFIG.HEIGHTS.DEVICE_COLUMN, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#556677', fontSize: 12 }}>
+          <div
+            style={{
+              height: CHART_CONFIG.HEIGHTS.DEVICE_COLUMN,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#556677',
+              fontSize: 12,
+            }}
+          >
             No data.
           </div>
         ) : (
@@ -74,7 +125,12 @@ const DeviceColumn: React.FC<DeviceColumnProps> = ({ deviceId, deviceLabel, sele
               <XAxis dataKey="timestamp" tick={{ fontSize: 9, fill: '#556677' }} />
               <YAxis tick={{ fontSize: 9, fill: '#556677' }} width={36} />
               <Tooltip
-                contentStyle={{ background: '#141D28', border: '1px solid #2a3649', borderRadius: 6, fontSize: 10 }}
+                contentStyle={{
+                  background: '#141D28',
+                  border: '1px solid #2a3649',
+                  borderRadius: 6,
+                  fontSize: 10,
+                }}
               />
               {selectedMetrics.map((metricKey) => (
                 <Line

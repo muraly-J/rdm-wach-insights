@@ -44,11 +44,11 @@ export async function fetchPredictions(
   deviceId: string,
   horizons: string[] = ['1h', '12h', '24h', '168h']
 ): Promise<PredictionResponse> {
-  return apiFetch<PredictionResponse>(
-    `/predictions/${deviceId}?horizons=${horizons.join(',')}`
-  );
+  return apiFetch<PredictionResponse>(`/predictions/${deviceId}?horizons=${horizons.join(',')}`);
 }
 
-export async function fetchDeltaForecast(deviceId: string): Promise<import('../types').DeltaForecastResponse> {
+export async function fetchDeltaForecast(
+  deviceId: string
+): Promise<import('../types').DeltaForecastResponse> {
   return apiFetch<import('../types').DeltaForecastResponse>(`/device/${deviceId}/delta-forecast`);
 }

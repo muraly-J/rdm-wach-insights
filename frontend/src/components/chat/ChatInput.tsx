@@ -57,9 +57,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
               onClick={() => handlePersonaSelect(value)}
               className={`
                 text-xs px-3 py-1 rounded-full border transition-colors
-                ${selectedPersona === value
-                  ? 'bg-[#4fbd95] text-[#1c2431] border-[#4fbd95]'
-                  : 'bg-transparent text-[#6d6e71] border-[#2e3f55] hover:border-[#4fbd95] hover:text-[#4fbd95]'}
+                ${
+                  selectedPersona === value
+                    ? 'bg-[#4fbd95] text-[#1c2431] border-[#4fbd95]'
+                    : 'bg-transparent text-[#6d6e71] border-[#2e3f55] hover:border-[#4fbd95] hover:text-[#4fbd95]'
+                }
               `}
             >
               {label}
@@ -73,12 +75,21 @@ const ChatInput: React.FC<ChatInputProps> = ({
           title="Set your role"
           className={`
             w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center transition-colors
-            ${selectedPersona
-              ? 'bg-[#4fbd95] text-[#1c2431]'
-              : 'text-[#6d6e71] hover:text-[#4fbd95]'}
+            ${
+              selectedPersona
+                ? 'bg-[#4fbd95] text-[#1c2431]'
+                : 'text-[#6d6e71] hover:text-[#4fbd95]'
+            }
           `}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <circle cx="12" cy="8" r="4" />
             <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
           </svg>
@@ -110,7 +121,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
             disabled:opacity-30 disabled:cursor-not-allowed
           "
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <line x1="22" y1="2" x2="11" y2="13" />
             <polygon points="22 2 15 22 11 13 2 9 22 2" />
           </svg>

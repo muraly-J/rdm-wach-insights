@@ -1,41 +1,41 @@
-import React, { useState } from 'react'
-import { motion } from 'framer-motion'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { NavigateTarget } from '../../api/client'
-import ChatChartModal, { ChartEntry } from './ChatChartModal'
-import { replaceDeviceIds } from '../../utils/deviceNames'
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { NavigateTarget } from '../../api/client';
+import ChatChartModal, { ChartEntry } from './ChatChartModal';
+import { replaceDeviceIds } from '../../utils/deviceNames';
 
 interface BotMessageProps {
-  content: string
-  navigate?: NavigateTarget | null
-  onNavigate?: (target: NavigateTarget) => void
-  isLast?: boolean
-  onClearChat?: () => void
+  content: string;
+  navigate?: NavigateTarget | null;
+  onNavigate?: (target: NavigateTarget) => void;
+  isLast?: boolean;
+  onClearChat?: () => void;
 }
 
 // Matches "e0301: 0.9%" (list format) or "| e0303 | 4.0 |" (markdown table format)
-const DEVICE_VALUE_RE = /\b(e\d{4})\b[^:\n|]{0,20}[:|]\s*([\d.]+)\s*(%|kW|kWh|A|V|Hz)?/gi
+const DEVICE_VALUE_RE = /\b(e\d{4})\b[^:\n|]{0,20}[:|]\s*([\d.]+)\s*(%|kW|kWh|A|V|Hz)?/gi;
 
 function extractChartData(
-  text: string,
+  text: string
 ): { entries: ChartEntry[]; unit: string; title: string } | null {
-  const matches = [...text.matchAll(DEVICE_VALUE_RE)]
-  if (matches.length < 3) return null
+  const matches = [...text.matchAll(DEVICE_VALUE_RE)];
+  if (matches.length < 3) return null;
 
-  const seen = new Set<string>()
-  const entries: ChartEntry[] = []
-  let unit = ''
+  const seen = new Set<string>();
+  const entries: ChartEntry[] = [];
+  let unit = '';
 
   for (const m of matches) {
-    const label = m[1]
-    if (seen.has(label)) continue
-    seen.add(label)
-    entries.push({ label, value: parseFloat(m[2]) })
-    if (m[3] && !unit) unit = m[3]
+    const label = m[1];
+    if (seen.has(label)) continue;
+    seen.add(label);
+    entries.push({ label, value: parseFloat(m[2]) });
+    if (m[3] && !unit) unit = m[3];
   }
 
-  if (entries.length < 3) return null
+  if (entries.length < 3) return null;
 
   const titleMap: Record<string, string> = {
     '%': 'Percentage Values by Device',
@@ -44,10 +44,10 @@ function extractChartData(
     A: 'Current (A) by Device',
     V: 'Voltage (V) by Device',
     Hz: 'Frequency (Hz) by Device',
-  }
-  const title = titleMap[unit] ?? 'Values by Device'
+  };
+  const title = titleMap[unit] ?? 'Values by Device';
 
-  return { entries, unit, title }
+  return { entries, unit, title };
 }
 
 const BotMessage: React.FC<BotMessageProps> = ({
@@ -57,7 +57,7 @@ const BotMessage: React.FC<BotMessageProps> = ({
   isLast,
   onClearChat,
 }) => {
-  const [showModal, setShowModal] = useState(false)
+  const [showModal, setShowModal] = useState(false);
 
   const navigateLabel = navigate
     ? navigate.view === 'prediction' && navigate.device
@@ -65,10 +65,10 @@ const BotMessage: React.FC<BotMessageProps> = ({
       : navigate.device
         ? `Navigate to ${navigate.device} — Level ${navigate.level}`
         : `Navigate to Level ${navigate.level}`
-    : null
+    : null;
 
-  const chartData = extractChartData(content)
-  const showActions = isLast && (navigateLabel || onClearChat || chartData)
+  const chartData = extractChartData(content);
+  const showActions = isLast && (navigateLabel || onClearChat || chartData);
 
   return (
     <>
@@ -163,7 +163,7 @@ const BotMessage: React.FC<BotMessageProps> = ({
         />
       )}
     </>
-  )
-}
+  );
+};
 
-export default BotMessage
+export default BotMessage;

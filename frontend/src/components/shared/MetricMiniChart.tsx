@@ -1,7 +1,13 @@
 import React from 'react';
 import {
-  LineChart, Line, YAxis, XAxis, CartesianGrid, Tooltip,
-  ReferenceArea, ResponsiveContainer,
+  LineChart,
+  Line,
+  YAxis,
+  XAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceArea,
+  ResponsiveContainer,
 } from 'recharts';
 import type { MeasurementPoint, OffPeriod } from '../../types';
 import { formatDateTimeMYT } from '../../utils/formatTick';
@@ -17,7 +23,12 @@ interface MetricMiniChartProps {
 }
 
 export default function MetricMiniChart({
-  label, unit, data, color, loading, offPeriods,
+  label,
+  unit,
+  data,
+  color,
+  loading,
+  offPeriods,
 }: MetricMiniChartProps) {
   if (loading) {
     return <div className="mt-3 h-[104px] bg-[#2a3649] rounded-lg animate-pulse" />;
@@ -28,12 +39,8 @@ export default function MetricMiniChart({
       <div className="flex items-center gap-1.5 mb-1">
         <span className="inline-block w-4 h-px" style={{ backgroundColor: color }} />
         <span className="text-[11px] text-[#6d6e71] font-mono">{label}</span>
-        {unit && (
-          <span className="text-[10px] text-[#4A5568]">{unit}</span>
-        )}
-        {data.length === 0 && (
-          <span className="text-[10px] text-[#4A5568] ml-auto">No data</span>
-        )}
+        {unit && <span className="text-[10px] text-[#4A5568]">{unit}</span>}
+        {data.length === 0 && <span className="text-[10px] text-[#4A5568] ml-auto">No data</span>}
       </div>
       <ResponsiveContainer width="100%" height={80}>
         <LineChart data={data} margin={{ top: 2, right: 36, left: 0, bottom: 0 }}>
@@ -55,13 +62,15 @@ export default function MetricMiniChart({
               borderRadius: 6,
               fontSize: 11,
             }}
-            labelFormatter={(l: string) => formatDateTimeMYT(new Date(l), {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: false
-            })}
+            labelFormatter={(l: string) =>
+              formatDateTimeMYT(new Date(l), {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+              })
+            }
             formatter={(v: number) => [`${v.toFixed(2)} ${unit}`, label]}
           />
           <Line

@@ -21,7 +21,13 @@ interface ScoreDerivationSectionProps {
  * Lazy-loaded component
  * Netflix-style horizontal shelf layout for larger, more prominent charts
  */
-const SCORE_NAMES: ScoreName[] = ['energy_anomaly', 'pf_degradation', 'phase_imbalance', 'thd_drift', 'overload'];
+const SCORE_NAMES: ScoreName[] = [
+  'energy_anomaly',
+  'pf_degradation',
+  'phase_imbalance',
+  'thd_drift',
+  'overload',
+];
 
 const SCORE_COLORS = ['#3B82F6', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444'];
 
@@ -85,7 +91,10 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
 
             if (isEmpty) {
               return (
-                <div key={score} className="min-w-[800px] w-[800px] md:min-w-[1000px] md:w-[1000px] card p-6 flex items-center justify-center bg-yellow-900/10 border border-yellow-700/30">
+                <div
+                  key={score}
+                  className="min-w-[800px] w-[800px] md:min-w-[1000px] md:w-[1000px] card p-6 flex items-center justify-center bg-yellow-900/10 border border-yellow-700/30"
+                >
                   <div className="text-center max-w-[280px]">
                     <svg
                       className="w-10 h-10 mx-auto mb-2 text-yellow-500"
@@ -100,9 +109,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                         d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
                       />
                     </svg>
-                    <p className="text-yellow-500 font-semibold mb-1 text-sm">
-                      No Data Available
-                    </p>
+                    <p className="text-yellow-500 font-semibold mb-1 text-sm">No Data Available</p>
                     <p className="text-[#6d6e71] text-xs leading-tight">
                       {score}: No valid data points
                     </p>
@@ -115,11 +122,18 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
               <ScoreCardWithSelector
                 key={score}
                 deviceId={deviceId}
-                scoreName={score.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                scoreName={score
+                  .split('_')
+                  .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                  .join(' ')}
                 scoreKey={score}
                 series={scoreData.series}
                 scoreData={scoreData.scoreData}
-                referenceLines={scoreData.referenceLines?.length ? scoreData.referenceLines : (REFERENCE_LINES[score] ?? [])}
+                referenceLines={
+                  scoreData.referenceLines?.length
+                    ? scoreData.referenceLines
+                    : (REFERENCE_LINES[score] ?? [])
+                }
                 chartColor={SCORE_COLORS[index]}
                 timeRange={timeRange}
                 availableMetrics={group?.availableMetrics ?? []}

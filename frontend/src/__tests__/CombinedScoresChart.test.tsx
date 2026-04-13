@@ -9,7 +9,9 @@ import { render, screen } from '@testing-library/react';
 // Mock Recharts to avoid jsdom canvas errors
 jest.mock('recharts', () => ({
   LineChart: ({ data, children }: any) => (
-    <div data-testid="line-chart" data-points={data?.length ?? 0}>{children}</div>
+    <div data-testid="line-chart" data-points={data?.length ?? 0}>
+      {children}
+    </div>
   ),
   Line: () => null,
   XAxis: () => null,
@@ -41,19 +43,17 @@ const makeScoreEntry = (values: number[]) => ({
 
 describe('CombinedScoresChart', () => {
   it('renders without crashing when scoreData is empty', () => {
-    const { container } = render(
-      <CombinedScoresChart scoreData={{}} timeRange="7d" />
-    );
+    const { container } = render(<CombinedScoresChart scoreData={{}} timeRange="7d" />);
     expect(container.firstChild).toBeTruthy();
   });
 
   it('renders the chart with valid scoreData', () => {
     const scoreData = {
-      energy_anomaly:  makeScoreEntry([0.1, 0.2, 0.3]),
-      pf_degradation:  makeScoreEntry([0.2, 0.3, 0.4]),
+      energy_anomaly: makeScoreEntry([0.1, 0.2, 0.3]),
+      pf_degradation: makeScoreEntry([0.2, 0.3, 0.4]),
       phase_imbalance: makeScoreEntry([0.1, 0.1, 0.2]),
-      thd_drift:       makeScoreEntry([0.3, 0.3, 0.3]),
-      overload:        makeScoreEntry([0.0, 0.1, 0.1]),
+      thd_drift: makeScoreEntry([0.3, 0.3, 0.3]),
+      overload: makeScoreEntry([0.0, 0.1, 0.1]),
     };
     render(<CombinedScoresChart scoreData={scoreData} timeRange="7d" />);
     const chart = screen.getByTestId('line-chart');
@@ -63,11 +63,11 @@ describe('CombinedScoresChart', () => {
 
   it('merges scores by index — each point has all five score keys', () => {
     const scoreData = {
-      energy_anomaly:  makeScoreEntry([0.1, 0.5]),
-      pf_degradation:  makeScoreEntry([0.2, 0.6]),
+      energy_anomaly: makeScoreEntry([0.1, 0.5]),
+      pf_degradation: makeScoreEntry([0.2, 0.6]),
       phase_imbalance: makeScoreEntry([0.3, 0.7]),
-      thd_drift:       makeScoreEntry([0.4, 0.8]),
-      overload:        makeScoreEntry([0.0, 0.2]),
+      thd_drift: makeScoreEntry([0.4, 0.8]),
+      overload: makeScoreEntry([0.0, 0.2]),
     };
 
     // Capture the data prop passed to LineChart
@@ -103,15 +103,13 @@ describe('CombinedScoresChart', () => {
 
   it('renders a ReferenceArea for each off period', () => {
     const scoreData = {
-      energy_anomaly:  makeScoreEntry([0.1, 0.2]),
-      pf_degradation:  makeScoreEntry([0.2, 0.3]),
+      energy_anomaly: makeScoreEntry([0.1, 0.2]),
+      pf_degradation: makeScoreEntry([0.2, 0.3]),
       phase_imbalance: makeScoreEntry([0.1, 0.1]),
-      thd_drift:       makeScoreEntry([0.3, 0.3]),
-      overload:        makeScoreEntry([0.0, 0.1]),
+      thd_drift: makeScoreEntry([0.3, 0.3]),
+      overload: makeScoreEntry([0.0, 0.1]),
     };
-    const offPeriods = [
-      { start: '2026-01-01T22:00:00Z', end: '2026-01-02T06:00:00Z' },
-    ];
+    const offPeriods = [{ start: '2026-01-01T22:00:00Z', end: '2026-01-02T06:00:00Z' }];
     const { container } = render(
       <CombinedScoresChart scoreData={scoreData} timeRange="7d" offPeriods={offPeriods} />
     );
@@ -120,15 +118,13 @@ describe('CombinedScoresChart', () => {
 
   it('renders no ReferenceArea when offPeriods is undefined', () => {
     const scoreData = {
-      energy_anomaly:  makeScoreEntry([0.1]),
-      pf_degradation:  makeScoreEntry([0.2]),
+      energy_anomaly: makeScoreEntry([0.1]),
+      pf_degradation: makeScoreEntry([0.2]),
       phase_imbalance: makeScoreEntry([0.1]),
-      thd_drift:       makeScoreEntry([0.3]),
-      overload:        makeScoreEntry([0.0]),
+      thd_drift: makeScoreEntry([0.3]),
+      overload: makeScoreEntry([0.0]),
     };
-    const { container } = render(
-      <CombinedScoresChart scoreData={scoreData} timeRange="7d" />
-    );
+    const { container } = render(<CombinedScoresChart scoreData={scoreData} timeRange="7d" />);
     expect(container.querySelectorAll('[data-testid="reference-area"]')).toHaveLength(0);
   });
 });

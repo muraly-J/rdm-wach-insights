@@ -2,7 +2,14 @@
 // ========================
 // Fetch wrappers for all endpoints with error handling
 
-import { LevelsResponse, HealthIndexResponse, ScoresResponse, MeasurementsResponse, SiteSummaryData, OffPeriod } from '../types';
+import {
+  HealthIndexResponse,
+  LevelsResponse,
+  MeasurementsResponse,
+  OffPeriod,
+  ScoresResponse,
+  SiteSummaryData,
+} from '../types';
 
 // API base URL: use backend URL from env, fall back to /api (Vite proxy in dev)
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -16,9 +23,9 @@ const API_KEY = import.meta.env.VITE_API_KEY || 'dev-key-local-development';
 export async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   try {
     const response = await fetch(`${API_BASE}${url}`, {
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`,
+        Authorization: `Bearer ${API_KEY}`,
       },
       ...options,
     });
@@ -165,7 +172,10 @@ export async function fetchSiteSummary(
  * Returns contiguous intervals when the AHU was powered off.
  * Returns [] on any error so charts degrade gracefully.
  */
-export async function fetchOffPeriods(deviceId: string, range: '24h' | '7d' | '30d'): Promise<OffPeriod[]> {
+export async function fetchOffPeriods(
+  deviceId: string,
+  range: '24h' | '7d' | '30d'
+): Promise<OffPeriod[]> {
   try {
     const data = await apiFetch<{ off_periods: OffPeriod[] }>(
       `/on-off-periods/${deviceId}?range=${range}`

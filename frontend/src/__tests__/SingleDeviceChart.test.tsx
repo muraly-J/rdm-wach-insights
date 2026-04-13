@@ -44,11 +44,19 @@ jest.mock('../constants/metricGroups', () => ({
 }));
 
 jest.mock('../constants/chartConfig', () => ({
-  CHART_CONFIG: { HEIGHTS: { LOADING_STATE: 180, SINGLE_DEVICE: 300 }, MARGINS: { SINGLE: {} }, CHART_COLORS: ['#4fbd95'] },
+  CHART_CONFIG: {
+    HEIGHTS: { LOADING_STATE: 180, SINGLE_DEVICE: 300 },
+    MARGINS: { SINGLE: {} },
+    CHART_COLORS: ['#4fbd95'],
+  },
 }));
 
 jest.mock('../hooks/useMetricSelection', () => ({
-  useMetricSelection: () => ({ selectedMetrics: ['active_power'], setSelectedMetrics: jest.fn(), toggleMetric: jest.fn() }),
+  useMetricSelection: () => ({
+    selectedMetrics: ['active_power'],
+    setSelectedMetrics: jest.fn(),
+    toggleMetric: jest.fn(),
+  }),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -68,11 +76,16 @@ describe('SingleDeviceChart', () => {
   it('renders ReferenceArea for each off period', async () => {
     const offPeriods = [{ start: '2026-04-01T22:00:00Z', end: '2026-04-02T06:00:00Z' }];
     const { container } = render(
-      <SingleDeviceChart deviceId="e0101" deviceLabel="AHU-01" timeRange="7d" offPeriods={offPeriods} />
+      <SingleDeviceChart
+        deviceId="e0101"
+        deviceLabel="AHU-01"
+        timeRange="7d"
+        offPeriods={offPeriods}
+      />
     );
     // Verify component renders without crashing when offPeriods is provided
     expect(container.firstChild).toBeInTheDocument();
-    
+
     // Wait for chart to load with data
     await waitFor(
       () => {
