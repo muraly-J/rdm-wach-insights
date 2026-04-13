@@ -338,7 +338,6 @@ function App() {
                     <HealthIndexChart
                       data={healthChartData as any}
                       devices={chartDevices}
-                      showColorSegments={isSingleDevice}
                       offPeriods={
                         isSingleDevice
                           ? offPeriods.map((p) => ({
@@ -384,6 +383,7 @@ function App() {
                         deviceId={selectedDevice ?? ''}
                         rawData={rawData}
                         timeRange={chartRange}
+                        offPeriods={offPeriods}
                       />
                     </React.Suspense>
                   )}
