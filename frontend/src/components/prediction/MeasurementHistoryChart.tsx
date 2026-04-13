@@ -1,10 +1,11 @@
 import React from 'react';
 import {
   LineChart, Line, YAxis, XAxis, CartesianGrid, Tooltip,
-  ReferenceLine, ResponsiveContainer,
+  ReferenceLine, ReferenceArea, ResponsiveContainer,
 } from 'recharts';
-import type { MeasurementPoint } from '../../types';
+import type { MeasurementPoint, OffPeriod } from '../../types';
 import { formatDateMYT, formatDateTimeMYT } from '../../utils/formatTick';
+import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
 
 interface MeasurementHistoryChartProps {
   label: string;
@@ -14,10 +15,11 @@ interface MeasurementHistoryChartProps {
   loading?: boolean;
   isCoreMetric: boolean;
   tNow?: string;
+  offPeriods?: OffPeriod[];
 }
 
 export default function MeasurementHistoryChart({
-  label, unit, data, color, loading, isCoreMetric, tNow,
+  label, unit, data, color, loading, isCoreMetric, tNow, offPeriods,
 }: MeasurementHistoryChartProps) {
   if (loading) {
     return <div className="h-[220px] bg-[#131A23] rounded-xl border border-[#2e3f55] animate-pulse" />;
@@ -97,6 +99,7 @@ export default function MeasurementHistoryChart({
             dot={false}
             connectNulls
           />
+          {renderOffPeriodAreas(offPeriods)}
         </LineChart>
       </ResponsiveContainer>
     </div>

@@ -1,10 +1,11 @@
 import React from 'react';
 import {
   LineChart, Line, YAxis, XAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer,
+  ReferenceArea, ResponsiveContainer,
 } from 'recharts';
-import type { MeasurementPoint } from '../../types';
+import type { MeasurementPoint, OffPeriod } from '../../types';
 import { formatDateTimeMYT } from '../../utils/formatTick';
+import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
 
 interface MetricMiniChartProps {
   label: string;
@@ -12,10 +13,11 @@ interface MetricMiniChartProps {
   data: MeasurementPoint[];
   color: string;
   loading?: boolean;
+  offPeriods?: OffPeriod[];
 }
 
 export default function MetricMiniChart({
-  label, unit, data, color, loading,
+  label, unit, data, color, loading, offPeriods,
 }: MetricMiniChartProps) {
   if (loading) {
     return <div className="mt-3 h-[104px] bg-[#2a3649] rounded-lg animate-pulse" />;
@@ -70,6 +72,7 @@ export default function MetricMiniChart({
             dot={false}
             connectNulls
           />
+          {renderOffPeriodAreas(offPeriods)}
         </LineChart>
       </ResponsiveContainer>
     </div>
