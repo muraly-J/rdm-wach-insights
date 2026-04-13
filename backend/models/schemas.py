@@ -10,7 +10,9 @@ Exposes:
   ChatHistoryItem — a single turn in the conversation history
 """
 
+import json
 from enum import Enum
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, field_validator
@@ -109,9 +111,6 @@ ALLOWED_TIME_RANGES = {
 # WACH Ward E-Series Energy Meters (Levels 01-11)
 # Each level has different number of devices due to varying building floor sizes
 # Source: AHU Relational Database - Relationships.tsv
-
-import json
-from pathlib import Path
 
 
 def _load_ahu_metadata() -> dict:

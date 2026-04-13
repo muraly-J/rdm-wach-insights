@@ -175,4 +175,4 @@ async def get_site_summary(range: str = Query(default="7d", alias="range")):
         raise
     except Exception as exc:
         log.exception("Unexpected error in /api/site/summary: %s", exc)
-        raise HTTPException(status_code=500, detail="Site summary computation failed")
+        raise HTTPException(status_code=500, detail="Site summary computation failed") from exc

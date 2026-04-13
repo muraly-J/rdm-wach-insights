@@ -10,21 +10,20 @@ import re
 import uuid
 
 import pandas as pd
-from core.logger import get_logger
-from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, validator
-from utils.error_handler import handle_query_error
-
-logger = get_logger(__name__)
-
 from core.charts import build_chart
 from core.influx_client import fetch_ranking, fetch_time_series
+from core.logger import get_logger
 from core.summarizer import summarize
+from fastapi import APIRouter, HTTPException, Request
 from llm.translator import translate_query
 from middleware.query_logger import log_query
 from middleware.rate_limiter import make_rate_limiter
 from middleware.validator import validate_structured_query
 from models.schemas import ALLOWED_DEVICES, ALLOWED_METRICS, QueryType
+from pydantic import BaseModel, validator
+from utils.error_handler import handle_query_error
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -259,7 +258,7 @@ async def handle_query(request: Request, body: QueryRequest) -> dict:
         raise HTTPException(
             status_code=502,
             detail={"error": "Could not retrieve data. Please try again in a moment."}
-        )
+        ) from None
 
     # 8. Build chart + summary
     try:
@@ -273,7 +272,7 @@ async def handle_query(request: Request, body: QueryRequest) -> dict:
             execution_status='processing_error',
             error_detail=str(e)
         )
-        raise handle_query_error(e, session_id)
+        raise handle_query_error(e, session_id) from None
 
     log_query(
         session_id=session_id,

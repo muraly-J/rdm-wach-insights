@@ -17,8 +17,8 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 
 from config import settings
-from core.logger import get_logger
 from core.alerter import check_and_alert, record_response
+from core.logger import get_logger
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
