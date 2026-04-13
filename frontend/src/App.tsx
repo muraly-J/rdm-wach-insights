@@ -35,10 +35,10 @@ import { useAppStore } from './store/useAppStore';
 // API
 import {
   fetchHealthIndex, fetchLevelDevices, fetchRawScoreRelationship,
-  fetchScoreBreakdown, fetchSiteSummary, fetchDashboardRanking,
+  fetchScoreBreakdown, fetchSiteSummary, fetchDashboardRanking, fetchOffPeriods,
 } from './api/client';
 import { fetchFinancialImpact } from './api/financial';
-import type { HealthIndexResponse, RawScoreResponse, ScoresResponse } from './types';
+import type { HealthIndexResponse, RawScoreResponse, ScoresResponse, OffPeriod } from './types';
 import type { TimeRange } from './utils/formatTick';
 
 interface ScoreEntry {
@@ -75,6 +75,7 @@ function App() {
   const [rankingRows, setRankingRows] = React.useState<AHURankRow[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [offPeriods, setOffPeriods] = React.useState<OffPeriod[]>([]);
 
   const [levelDevices, setLevelDevices] = React.useState<
     Array<{ id: string; label: string; department: string; area: string }>
@@ -112,6 +113,16 @@ function App() {
     fetchRawScoreRelationship(selectedDevice, range as '24h' | '7d' | '30d' | 'all')
       .then((data) => setRawData(data as RawScoreResponse))
       .catch(() => setRawData(null));
+  }, [selectedDevice, timeRange]);
+
+  // Fetch off-periods when a single device is selected
+  React.useEffect(() => {
+    if (!selectedDevice || selectedDevice === 'all') {
+      setOffPeriods([]);
+      return;
+    }
+    const range = toApiRange(timeRange);
+    fetchOffPeriods(selectedDevice, range as '24h' | '7d' | '30d').then(setOffPeriods);
   }, [selectedDevice, timeRange]);
 
   React.useEffect(() => {
@@ -277,12 +288,28 @@ function App() {
               {selectedLevel ? (
                 <>
                   <div className="mb-8">
-                    <HealthIndexChart data={healthChartData as any} devices={chartDevices} showColorSegments={isSingleDevice} />
+                    <HealthIndexChart
+                      data={healthChartData as any}
+                      devices={chartDevices}
+                      showColorSegments={isSingleDevice}
+                      offPeriods={
+                        isSingleDevice
+                          ? offPeriods.map((p) => ({
+                              start: formatTickByRange(p.start, chartRange),
+                              end: formatTickByRange(p.end, chartRange),
+                            }))
+                          : undefined
+                      }
+                    />
                   </div>
 
                   <ScoreCardsGrid scoreData={scoreCardData} />
 
-                  <CombinedScoresChart scoreData={scoreCardData} timeRange={chartRange} />
+                  <CombinedScoresChart
+                    scoreData={scoreCardData}
+                    timeRange={chartRange}
+                    offPeriods={isSingleDevice ? offPeriods : undefined}
+                  />
 
                   {selectedDevice && selectedDevice !== 'all' && selectedDeviceRow ? (
                     <DeviceDetailCard
