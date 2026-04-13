@@ -1,17 +1,20 @@
 import React from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea,
 } from 'recharts';
 import { fetchMeasurements } from '../../api/client';
 import { SCORE_METRIC_GROUPS, METRIC_META } from '../../constants/metricGroups';
 import { useMetricSelection } from '../../hooks/useMetricSelection';
 import { CHART_CONFIG } from '../../constants/chartConfig';
+import type { OffPeriod } from '../../types';
+import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
 
 interface SingleDeviceChartProps {
   deviceId: string;
   deviceLabel: string;
   timeRange: string;
   isOn?: boolean;
+  offPeriods?: OffPeriod[];
 }
 
 function toApiRange(timeRange: string): '24h' | '7d' | '30d' {
@@ -19,7 +22,7 @@ function toApiRange(timeRange: string): '24h' | '7d' | '30d' {
   return '30d';
 }
 
-const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({ deviceId, deviceLabel, timeRange, isOn = true }) => {
+const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({ deviceId, deviceLabel, timeRange, isOn = true, offPeriods }) => {
   const { selectedMetrics, setSelectedMetrics, toggleMetric } = useMetricSelection();
   const [chartData, setChartData] = React.useState<Record<string, number | string | null>[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -51,7 +54,7 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({ deviceId, deviceL
   }, [deviceId, selectedMetrics, timeRange]);
 
   return (
-    <div style={{ opacity: isOn ? 1 : 0.45, filter: isOn ? 'none' : 'grayscale(80%)', transition: 'opacity 0.2s, filter 0.2s' }}>
+    <div>
       <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 12, color: '#8899aa' }}>Metrics for</span>
         <span style={{ fontSize: 13, color: isOn ? '#00E5A0' : '#8899aa', fontWeight: 600 }}>{deviceLabel}</span>
@@ -138,6 +141,7 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({ deviceId, deviceL
                   strokeWidth={1.5}
                 />
               ))}
+              {renderOffPeriodAreas(offPeriods)}
             </LineChart>
           </ResponsiveContainer>
         )}
