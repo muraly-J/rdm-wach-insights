@@ -30,7 +30,6 @@ export async function apiFetch<T>(url: string, options?: RequestInit): Promise<T
 
     return await response.json();
   } catch (error) {
-    console.error(`[API] Error fetching ${url}:`, error);
     throw error;
   }
 }

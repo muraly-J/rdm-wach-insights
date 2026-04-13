@@ -42,7 +42,7 @@ export default function ScoreCardWithSelector({
       .then((res) => {
         setMeasurements((prev) => ({ ...prev, ...res.measurements }));
       })
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => {
         setLoadingSet((prev) => {
           const next = new Set(prev);

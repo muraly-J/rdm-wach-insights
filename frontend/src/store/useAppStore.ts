@@ -93,61 +93,88 @@ export const useAppStore = create<AppStore>((set) => ({
   ...initialState,
 
   // Time range (default 7 days)
+  /** Get the current time range filter for dashboard data */
   timeRange: '7d',
+  /** Set the time range filter for dashboard data */
   setTimeRange: (range) => set({ timeRange: range }),
 
   // Level selection
+  /** Select a building level and reset device selection */
   selectLevel: (level) => set({ selectedLevel: level, selectedDevice: null }),
+  /** Clear the selected level and device */
   clearLevel: () => set({ selectedLevel: null, selectedDevice: null }),
 
   // Device selection
+  /** Select a specific AHU device */
   selectDevice: (deviceId) => set({ selectedDevice: deviceId }),
 
   // Chat toggle
+  /** Toggle chat panel open/closed state */
   toggleChat: () => set((state) => ({ chatOpen: !state.chatOpen })),
+  /** Open the chat panel */
   openChat: () => set({ chatOpen: true }),
+  /** Close the chat panel */
   closeChat: () => set({ chatOpen: false }),
 
   // Chat messages
+  /** Add a new message to the chat history */
   addMessage: (message) => set((state) => ({
     chatMessages: [...state.chatMessages, message],
   })),
+  /** Replace all chat messages at once */
   setMessages: (messages) => set({ chatMessages: messages }),
 
   // Dashboard data
+  /** Set the current dashboard data */
   setDashboardData: (data) => set({ dashboardData: data }),
 
   // Loading state
+  /** Set the loading state for data fetches */
   setLoading: (loading) => set({ isLoading: loading }),
 
   // Financial impact
+  /** Get the latest financial impact data */
   financialImpact: null,
+  /** Set the financial impact data */
   setFinancialImpact: (data) => set({ financialImpact: data }),
 
   // Hamburger menu
+  /** Get the hamburger menu open state */
   hamburgerOpen: false,
+  /** Toggle hamburger menu open/closed state */
   toggleHamburger: () => set((state) => ({ hamburgerOpen: !state.hamburgerOpen })),
 
   // Site summary
+  /** Get the site-wide summary data */
   siteSummaryData: null,
+  /** Set the site-wide summary data */
   setSiteSummaryData: (d) => set({ siteSummaryData: d }),
 
   // Hero visibility
+  /** Set hero section visibility on dashboard */
   setHeroVisible: (visible) => set({ heroVisible: visible }),
 
   // Dashboard mode
+  /** Get the current dashboard mode (simple or deepdive) */
   dashboardMode: 'simple',
+  /** Set the dashboard mode (simple or deepdive) */
   setDashboardMode: (mode) => set({ dashboardMode: mode }),
 
   // Deep dive sub-mode
+  /** Get the deep dive view sub-mode (single or compare) */
   deepDiveSubMode: 'single',
+  /** Set the deep dive view sub-mode (single device or compare multiple) */
   setDeepDiveSubMode: (mode) => set({ deepDiveSubMode: mode }),
 
   // Compare devices
+  /** Get list of devices selected for comparison (max 3) */
   compareDevices: [],
+  /** Set devices for comparison view, limited to 3 devices */
   setCompareDevices: (devices) => set({ compareDevices: devices.slice(0, 3) }),
 
   // Chat mode
+  /** Get the current chat display mode (panel or fullscreen) */
   chatMode: 'panel',
+  /** Set the chat display mode (panel or fullscreen) */
   setChatMode: (mode) => set({ chatMode: mode }),
 }));

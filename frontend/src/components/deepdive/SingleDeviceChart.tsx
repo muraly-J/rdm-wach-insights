@@ -46,8 +46,7 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({ deviceId, deviceL
         });
         setChartData(data);
       })
-      .catch((err) => {
-        console.error('Failed to fetch measurements for device', deviceId, ':', err);
+      .catch(() => {
         setChartData([]);
       })
       .finally(() => setIsLoading(false));
