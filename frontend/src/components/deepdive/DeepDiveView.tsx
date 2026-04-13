@@ -1,10 +1,10 @@
 import React from 'react';
-import { useAppStore, DeepDiveSubMode } from '../../store/useAppStore';
+import { DeepDiveSubMode, useAppStore } from '../../store/useAppStore';
 import { DeviceInfo } from '../../utils/deviceLabel';
-import { fetchOffPeriods } from '../../api/client';
+// import { fetchOffPeriods } from '../../api/client';
 import type { OffPeriod } from '../../types';
-import SingleDeviceChart from './SingleDeviceChart';
 import CompareMode from './CompareMode';
+import SingleDeviceChart from './SingleDeviceChart';
 
 interface DeepDiveViewProps {
   levelDevices: DeviceInfo[];
@@ -27,7 +27,9 @@ const DeepDiveView: React.FC<DeepDiveViewProps> = ({
       setOffPeriods([]);
       return;
     }
-    fetchOffPeriods(selectedDevice, timeRange as '24h' | '7d' | '30d').then(setOffPeriods);
+    // Temporarily disabled until backend is redeployed with on-off-periods endpoint
+    // fetchOffPeriods(selectedDevice, timeRange as '24h' | '7d' | '30d').then(setOffPeriods);
+    setOffPeriods([]);
   }, [selectedDevice, timeRange]);
 
   const hasDevice = Boolean(selectedDevice && selectedDevice !== 'all');
