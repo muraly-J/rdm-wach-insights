@@ -39,7 +39,7 @@ def cleanup_duckdb():
                 # HealthDB doesn't have a close method, but DuckDB connections do
                 # We just clear references to let them be garbage collected
                 pass
-            except:
+            except Exception:
                 pass
         db_reader._DB_INSTANCES.clear()
         # Force garbage collection to free DuckDB resources

@@ -18,9 +18,6 @@ from contextlib import asynccontextmanager
 
 from config import settings
 from core.logger import get_logger
-
-logger = get_logger(__name__)
-
 from core.alerter import check_and_alert, record_response
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,6 +38,8 @@ from routes.query import router as query_router
 from routes.site_summary import router as site_summary_router
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, Response
+
+logger = get_logger(__name__)
 
 
 # ── API Key Authentication Middleware ────────────────────────────────────────

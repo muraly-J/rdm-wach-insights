@@ -13,6 +13,7 @@ import pandas as pd
 from core.logger import get_logger
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, validator
+from utils.error_handler import handle_query_error
 
 logger = get_logger(__name__)
 

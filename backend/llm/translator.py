@@ -20,16 +20,15 @@ import re
 
 from config import settings
 from core.logger import get_logger
+from llm.prompts import SYSTEM_PROMPT
+from middleware.validator import validate_raw_dict
+from models.schemas import AHU_LEVEL_CONFIG, QueryType, StructuredQuery
 
 # Disable LLM by default for local development
 # Set ENABLE_LLM=true to enable AI translation via Gemini
 LLM_ENABLED = settings.enable_llm
 
 logger = get_logger(__name__)
-
-from llm.prompts import SYSTEM_PROMPT
-from middleware.validator import validate_raw_dict
-from models.schemas import AHU_LEVEL_CONFIG, QueryType, StructuredQuery
 
 
 def _extract_json(text: str) -> dict | None:

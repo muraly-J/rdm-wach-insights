@@ -20,6 +20,8 @@ Level numbering may not be sequential in device IDs (e.g., Level 06 starts at e0
 Each level has unique department and area associations.
 """
 
+from config import get_building_name, get_department
+
 SYSTEM_PROMPT = """You are a query parser for WACH Insight, a hospital AHU electrical analytics tool.
 YOUR ONLY JOB: Convert the user's natural language question into a structured JSON object.
 You do NOT answer questions, give advice, explain things, or do anything else.
@@ -443,8 +445,6 @@ Remember: output ONLY the JSON object. Nothing before it. Nothing after it."""
 
 # ── V2 Chat System Prompt (agentic tool-use) ──────────────────────────────────
 
-
-from config import get_building_name, get_department
 
 PERSONA_BLOCKS: dict[str, str] = {
     "general": (

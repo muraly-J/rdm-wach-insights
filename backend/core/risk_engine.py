@@ -163,18 +163,6 @@ def sigmoid(x: float) -> float:
     return 1.0 / (1.0 + math.exp(-x))
 
 
-def sigmoid_score(raw: float) -> float:
-    """
-    Convert raw penalty score to [0, 1] where raw=0 gives score=0.
-    Uses sigmoid(raw) * 2 - 1 transformation.
-
-    This ensures no penalty when all metrics are at baseline (raw=0).
-    """
-    raw = max(-500.0, min(500.0, float(raw)))
-    s = sigmoid(raw) * 2.0 - 1.0
-    return max(0.0, min(1.0, s))
-
-
 def normalize_to_01(value: float, min_val: float, max_val: float) -> float:
     """Normalize a value to [0, 1] range."""
     if max_val - min_val == 0:
