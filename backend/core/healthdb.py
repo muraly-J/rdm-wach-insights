@@ -334,7 +334,7 @@ class HealthDB:
         cols = [c for c in _PREDICTION_COLS if c in df.columns]
         col_list = ", ".join(cols)
         with self._conn(write=True) as conn:
-            df[cols]
+            conn.register("sub", df[cols])
             conn.execute(
                 f"INSERT OR REPLACE INTO predictions ({col_list}) SELECT * FROM sub"
             )
