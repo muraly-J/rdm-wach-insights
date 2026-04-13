@@ -28,6 +28,7 @@ const PredictionView = React.lazy(() => import('./components/prediction/Predicti
 
 // Chat
 import ChatWidget from './components/chat/ChatWidget';
+import LatestOverview from './components/dashboard/LatestOverview';
 
 // State
 import { useAppStore } from './store/useAppStore';
@@ -399,9 +400,7 @@ function App() {
                   )}
                 </>
               ) : (
-                <div className="flex items-center justify-center h-48 text-[#556677]">
-                  Select a level to view dashboard data.
-                </div>
+                <LatestOverview />
               )}
             </motion.div>
           ) : (
