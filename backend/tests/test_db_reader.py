@@ -53,6 +53,7 @@ def seeded_db(tmp_path, monkeypatch):
     df = pd.DataFrame([SAMPLE_ROW])
     db.upsert(df)
     monkeypatch.setattr(db_reader, "_DB_PATH", db_path)
+    db_reader._DB_INSTANCES.clear()
     return db
 
 
@@ -119,6 +120,104 @@ def test_get_health_index_series_30d_resamples(tmp_path, monkeypatch):
     result = dr.get_health_index_series(level=1, device_id=None, time_range="30d")
     assert len(result) == 1  # one AHU
     assert len(result[0]["data"]) == 2  # two daily points
+
+
+# ── API endpoint smoke test ────────────────────────────────────────────────────
+
+def test_get_off_periods_returns_empty_when_no_data(seeded_db):
+    # Device with no data → empty list
+    result = db_reader.get_off_periods("e9999", "7d")
+    assert result == []
+
+
+def test_get_off_periods_returns_empty_when_always_on(seeded_db):
+    # SAMPLE_ROW has current L1=5.5A (>2A) → is_on=True → no off periods
+    result = db_reader.get_off_periods("e0101", "7d")
+    assert result == []
+
+
+def test_get_off_periods_returns_interval_for_off_rows(tmp_path, monkeypatch):
+    """Two off-rows sandwiched between on-rows produce one interval."""
+    db_path = str(tmp_path / "offtest.duckdb")
+    db = HealthDB(db_path)
+
+    base = {
+        "ahu_id": "e0101", "level": 1, "health_index": 60.0, "tier": "Monitor",
+        "energy_anomaly": 0.1, "pf_degradation": 0.1, "phase_imbalance": 0.1,
+        "thd_drift": 0.05, "overload": 0.2,
+        "raw_power_total": 0.5, "raw_energy_import": 5000.0,
+        "raw_hourly_delta": 1.0, "raw_predicted_delta": 1.0,
+        "raw_energy_anomaly_raw": 0.3, "raw_power_factor_avg": 0.85,
+        "raw_current_unbalance": 1.0, "raw_composite_thd": 2.0,
+        "raw_apparent_power_total": 2.0,
+        "raw_current_l1": 5.0, "raw_current_l2": 5.0, "raw_current_l3": 5.0,
+        "raw_volts_l1_n": 230.0, "raw_volts_l2_n": 230.0, "raw_volts_l3_n": 230.0,
+        "raw_current_l1_thd": 2.0, "raw_current_l3_thd": 1.5,
+        "raw_volts_l1_thd": 2.0, "raw_volts_l2_thd": 2.0, "raw_volts_l3_thd": 2.0,
+        "raw_nema_voltage_imbalance": 0.5, "raw_p95_current": 5.5, "safety_flags": "",
+    }
+
+    rows = [
+        {**base, "timestamp": pd.Timestamp("2026-04-01 08:00:00+00:00"),
+         "raw_current_l1": 5.0, "raw_current_l2": 5.0, "raw_current_l3": 5.0},  # on
+        {**base, "timestamp": pd.Timestamp("2026-04-01 22:00:00+00:00"),
+         "raw_current_l1": 0.0, "raw_current_l2": 0.0, "raw_current_l3": 0.0},  # off
+        {**base, "timestamp": pd.Timestamp("2026-04-01 23:00:00+00:00"),
+         "raw_current_l1": 0.0, "raw_current_l2": 0.0, "raw_current_l3": 0.0},  # off
+        {**base, "timestamp": pd.Timestamp("2026-04-02 07:00:00+00:00"),
+         "raw_current_l1": 5.0, "raw_current_l2": 5.0, "raw_current_l3": 5.0},  # on
+    ]
+    db.upsert(pd.DataFrame(rows))
+    monkeypatch.setattr(db_reader, "_DB_PATH", db_path)
+    db_reader._DB_INSTANCES.clear()
+
+    result = db_reader.get_off_periods("e0101", "7d")
+
+    assert len(result) == 1
+    assert "start" in result[0] and "end" in result[0]
+    # Off period starts at first off row, ends at first on row after it
+    assert "2026-04-01T22:00:00" in result[0]["start"]
+    assert "2026-04-02T07:00:00" in result[0]["end"]
+
+
+def test_get_off_periods_works_for_30d(tmp_path, monkeypatch):
+    """Verify 30d range doesn't silence off-periods due to resampling."""
+    db_path = str(tmp_path / "test30d.duckdb")
+    db = HealthDB(db_path)
+
+    base = {
+        "ahu_id": "e0101", "level": 1, "health_index": 60.0, "tier": "Monitor",
+        "energy_anomaly": 0.1, "pf_degradation": 0.1, "phase_imbalance": 0.1,
+        "thd_drift": 0.05, "overload": 0.2,
+        "raw_power_total": 0.5, "raw_energy_import": 5000.0,
+        "raw_hourly_delta": 1.0, "raw_predicted_delta": 1.0,
+        "raw_energy_anomaly_raw": 0.3, "raw_power_factor_avg": 0.85,
+        "raw_current_unbalance": 1.0, "raw_composite_thd": 2.0,
+        "raw_apparent_power_total": 2.0,
+        "raw_current_l1": 5.0, "raw_current_l2": 5.0, "raw_current_l3": 5.0,
+        "raw_volts_l1_n": 230.0, "raw_volts_l2_n": 230.0, "raw_volts_l3_n": 230.0,
+        "raw_current_l1_thd": 2.0, "raw_current_l3_thd": 1.5,
+        "raw_volts_l1_thd": 2.0, "raw_volts_l2_thd": 2.0, "raw_volts_l3_thd": 2.0,
+        "raw_nema_voltage_imbalance": 0.5, "raw_p95_current": 5.5, "safety_flags": "",
+    }
+
+    rows = [
+        {**base, "timestamp": pd.Timestamp("2026-03-15 08:00:00+00:00"),
+         "raw_current_l1": 5.0, "raw_current_l2": 5.0, "raw_current_l3": 5.0},
+        {**base, "timestamp": pd.Timestamp("2026-03-15 22:00:00+00:00"),
+         "raw_current_l1": 0.0, "raw_current_l2": 0.0, "raw_current_l3": 0.0},
+        {**base, "timestamp": pd.Timestamp("2026-03-16 07:00:00+00:00"),
+         "raw_current_l1": 5.0, "raw_current_l2": 5.0, "raw_current_l3": 5.0},
+    ]
+    db.upsert(pd.DataFrame(rows))
+    monkeypatch.setattr(db_reader, "_DB_PATH", db_path)
+    db_reader._DB_INSTANCES.clear()
+
+    result = db_reader.get_off_periods("e0101", "30d")
+
+    assert len(result) == 1
+    assert "2026-03-15T22:00:00" in result[0]["start"]
+    assert "2026-03-16T07:00:00" in result[0]["end"]
 
 
 # ── API endpoint smoke test ────────────────────────────────────────────────────

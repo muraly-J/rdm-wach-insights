@@ -351,6 +351,75 @@ def get_raw_score_relationship(device_id: str, time_range: str) -> dict:
     return result
 
 
+def _get_raw_rows(ahu_id: str, time_range: str) -> pd.DataFrame:
+    """
+    Fetch raw (non-resampled) rows for a single AHU, bypassing the 30d daily
+    aggregation in _get_df so that per-row is_on transitions are preserved.
+    """
+    db = _db()
+    latest_ts = db.get_latest_timestamp()
+    if latest_ts is None:
+        return pd.DataFrame()
+
+    delta = _RANGE_DELTA.get(time_range, _RANGE_DELTA["7d"])
+    start = (latest_ts - delta).isoformat()
+
+    df = db.get_time_range(level=None, ahu_ids=[ahu_id], start=start, limit=None)
+    if df.empty:
+        return df
+
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+
+    current_cols = ["raw_current_l1", "raw_current_l2", "raw_current_l3"]
+    if all(c in df.columns for c in current_cols):
+        df["is_on"] = (
+            (df["raw_current_l1"].fillna(0) >= 2)
+            | (df["raw_current_l2"].fillna(0) >= 2)
+            | (df["raw_current_l3"].fillna(0) >= 2)
+        )
+
+    return df.sort_values("timestamp").reset_index(drop=True)
+
+
+def get_off_periods(ahu_id: str, time_range: str) -> list[dict]:
+    """
+    Returns contiguous off-period intervals for a single AHU.
+    Each dict has {"start": <iso str>, "end": <iso str>}.
+    """
+    from models.schemas import ALLOWED_DEVICES
+    if ahu_id not in ALLOWED_DEVICES:
+        return []
+
+    rows = _get_raw_rows(ahu_id, time_range)
+    if rows.empty or "is_on" not in rows.columns:
+        return []
+
+    # rows is already filtered to ahu_id and sorted by _get_raw_rows
+    periods: list[dict] = []
+    in_off = False
+    start_ts = None
+
+    for _, row in rows.iterrows():
+        if not row["is_on"] and not in_off:
+            in_off = True
+            start_ts = row["timestamp"]
+        elif row["is_on"] and in_off:
+            in_off = False
+            periods.append({
+                "start": start_ts.isoformat(),
+                "end": row["timestamp"].isoformat(),
+            })
+
+    # Close an open off-period at the last data point
+    if in_off and start_ts is not None:
+        periods.append({
+            "start": start_ts.isoformat(),
+            "end": rows["timestamp"].iloc[-1].isoformat(),
+        })
+
+    return periods
+
+
 def get_dataframe(
     level: Optional[int] = None,
     time_range: str = "7d",
