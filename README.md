@@ -30,6 +30,17 @@ For production deployment, run the backend on a server and update `CORS_ORIGIN` 
 - **Electrical Risk Check**: Rule-based risk assessment for entire fleet
 - **Preset Prompts**: Quick queries without LLM (rule-based fallback)
 
+## Documentation
+
+| Audience | Document |
+|----------|----------|
+| Hospital staff, ward managers | [User Guide](docs/user-guide.md) |
+| Engineers contributing or extending | [Developer Guide](docs/developer-guide.md) |
+| API integrators | [API Reference](docs/api-reference.md) |
+| Architecture overview | [System Overview](docs/architecture/system-overview.md) · [Chat Pipeline](docs/architecture/chat-pipeline.md) |
+| Project history | [Changelog](CHANGELOG.md) |
+| Production readiness spec | [docs/superpowers/specs/](docs/superpowers/specs/) |
+
 ## Development
 
 ### Prerequisites

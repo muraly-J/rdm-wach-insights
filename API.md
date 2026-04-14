@@ -1,5 +1,9 @@
 # WACH Insight — Chatbot API Reference
 
+> **⚠️ Deprecated:** This file is superseded by [`docs/api-reference.md`](docs/api-reference.md), which covers all endpoints including those missing from this file. Please update any links or bookmarks. This file will be removed in a future cleanup.
+
+---
+
 > **Interactive docs**: once deployed, visit `http://localhost:8081/docs` for live Swagger UI.
 
 ## Quick Start
