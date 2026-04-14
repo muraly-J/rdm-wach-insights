@@ -285,4 +285,5 @@ export interface SiteSummaryData {
   criticalAHU: SpotlightAHU;
   levelTiles: LevelHealthTile[]; // 11 entries
   trendDeltas: TrendDelta[];
+  alertAHUs: AlertAHU[]; // AHUs in Maintenance Soon or Critical tier
 }

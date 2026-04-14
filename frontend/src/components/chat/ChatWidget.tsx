@@ -19,92 +19,58 @@ const INITIAL_MESSAGE: Message = {
     "Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
 };
 
+const PANEL_WIDTH = 380;
+
 const ChatWidget: React.FC = () => {
   const { chatOpen, openChat, closeChat, chatMode, setChatMode } = useAppStore();
 
-  // Lifted state — persists across panel ↔ fullscreen ↔ minimized transitions
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [isMinimized, setIsMinimized] = useState(false);
 
-  const toggleFullscreen = () => {
-    setChatMode(chatMode === 'fullscreen' ? 'panel' : 'fullscreen');
-    // Un-minimize when switching to fullscreen
-    if (chatMode !== 'fullscreen') setIsMinimized(false);
+  // "fullscreen" in this widget means: expand to fill full height on the right side
+  const isExpanded = chatMode === 'fullscreen';
+
+  const toggleExpanded = () => {
+    setChatMode(isExpanded ? 'panel' : 'fullscreen');
+    if (!isExpanded) setIsMinimized(false);
   };
 
   const handleClose = () => {
     closeChat();
     setIsMinimized(false);
+    setChatMode('panel');
   };
 
-  const panelHeight = isMinimized ? 52 : '50dvh';
+  // Height: minimized = header bar only, normal = 520px, expanded = fills up to top
+  const panelHeight = isMinimized ? 52 : isExpanded ? 'calc(100vh - 32px)' : 520;
 
   return (
     <>
-      {/* Fullscreen overlay */}
+      {/* Right-side corner panel */}
       <AnimatePresence>
-        {chatOpen && chatMode === 'fullscreen' && (
-          <motion.div
-            key="chat-fullscreen"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 80,
-              background: '#0B0F14',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <ChatWindow
-              mode="fullscreen"
-              onClose={handleClose}
-              onToggleMode={toggleFullscreen}
-              messages={messages}
-              setMessages={setMessages}
-              isMinimized={false}
-              onMinimize={() => {
-                // Switching from fullscreen to panel when user clicks minimize
-                setChatMode('panel');
-                setIsMinimized(true);
-              }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Bottom panel */}
-      <AnimatePresence>
-        {chatOpen && chatMode === 'panel' && (
+        {chatOpen && (
           <motion.div
             key="chat-panel"
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.96 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             style={{
               position: 'fixed',
-              bottom: 0,
-              left: 0,
-              right: 0,
+              bottom: 16,
+              right: 24,
+              width: PANEL_WIDTH,
               height: panelHeight,
               zIndex: 70,
-              background: '#0f1923',
-              borderTop: '1px solid rgba(0,229,160,0.2)',
-              boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
               display: 'flex',
               flexDirection: 'column',
-              overflow: 'hidden',
-              transition: 'height 0.25s ease',
+              transition: 'height 0.3s cubic-bezier(0.22,1,0.36,1)',
             }}
           >
             <ChatWindow
-              mode="panel"
+              mode={isExpanded ? 'fullscreen' : 'panel'}
               onClose={handleClose}
-              onToggleMode={toggleFullscreen}
+              onToggleMode={toggleExpanded}
               messages={messages}
               setMessages={setMessages}
               isMinimized={isMinimized}

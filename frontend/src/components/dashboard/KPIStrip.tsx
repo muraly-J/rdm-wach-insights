@@ -88,7 +88,7 @@ const KPIStrip: React.FC<KPIStripProps> = ({
   deviceLabel,
   deviceHealth,
 }) => {
-  const { selectLevel, selectDevice, timeRange } = useAppStore();
+  const { selectLevel, selectDevice } = useAppStore();
   const [alertsOpen, setAlertsOpen] = useState(false);
   if (!summary) {
     return (
@@ -130,7 +130,7 @@ const KPIStrip: React.FC<KPIStripProps> = ({
       <AlertsModal
         isOpen={alertsOpen}
         onClose={() => setAlertsOpen(false)}
-        timeRange={timeRange as '24h' | '7d' | '30d' | 'all'}
+        ahus={summary.alertAHUs ?? []}
       />
       <div className="flex gap-3 mb-6 flex-wrap">
         <KPICard

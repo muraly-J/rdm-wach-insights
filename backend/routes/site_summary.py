@@ -36,6 +36,7 @@ def _empty_response() -> dict:
         "criticalAHU": {"id": "", "name": "", "level": 0, "healthScore": 0.0, "monthlyCostMYR": 0.0, "safetyFlags": 0},
         "levelTiles": [],
         "trendDeltas": [],
+        "alertAHUs": [],
     }
 
 
@@ -114,6 +115,24 @@ async def get_site_summary(range: str = Query(default="7d", alias="range")):
         avg_site_health = round(float(latest["health_index"].mean()), 1)
         alert_tiers = {"Maintenance Soon", "Critical"}
         ahus_in_alert = int(latest["tier"].isin(alert_tiers).sum())
+
+        # ── Alert AHU list (sorted worst-first) ──────────────────────────────
+        alert_rows = latest[latest["tier"].isin(alert_tiers)].copy()
+        alert_rows = alert_rows.sort_values("health_index", ascending=True)
+        alert_ahus = []
+        for _, row in alert_rows.iterrows():
+            ahu_id = str(row["ahu_id"])
+            try:
+                level_num = int(row["level"])
+            except (ValueError, AttributeError):
+                level_num = 0
+            alert_ahus.append({
+                "id": ahu_id,
+                "name": device_id_to_name(ahu_id),
+                "level": level_num,
+                "healthScore": round(float(row["health_index"]), 1),
+                "tier": str(row["tier"]),
+            })
 
         # ── Per-level tiles ───────────────────────────────────────────────────
         level_tiles = []
@@ -212,6 +231,7 @@ async def get_site_summary(range: str = Query(default="7d", alias="range")):
             "criticalAHU": critical_ahu,
             "levelTiles": level_tiles,
             "trendDeltas": trend_deltas,
+            "alertAHUs": alert_ahus,
         }
 
     except HTTPException:
