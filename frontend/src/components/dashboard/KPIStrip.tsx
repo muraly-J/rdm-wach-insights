@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { SiteSummaryData } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
+import AlertsModal from './AlertsModal';
 
 interface KPIStripProps {
   summary: SiteSummaryData | null;
@@ -87,7 +88,8 @@ const KPIStrip: React.FC<KPIStripProps> = ({
   deviceLabel,
   deviceHealth,
 }) => {
-  const { selectLevel, selectDevice } = useAppStore();
+  const { selectLevel, selectDevice, timeRange } = useAppStore();
+  const [alertsOpen, setAlertsOpen] = useState(false);
   if (!summary) {
     return (
       <div className="flex gap-3 mb-6">
@@ -124,43 +126,61 @@ const KPIStrip: React.FC<KPIStripProps> = ({
   const alertColor = summary.ahusInAlert > 0 ? '#ff6b6b' : '#00E5A0';
 
   return (
-    <div className="flex gap-3 mb-6 flex-wrap">
-      <KPICard
-        label={selectedDevice ? 'AHU Health' : selectedLevel ? 'Level Health' : 'Site Health'}
-        value={healthValue}
-        valueColor={healthColor}
+    <>
+      <AlertsModal
+        isOpen={alertsOpen}
+        onClose={() => setAlertsOpen(false)}
+        timeRange={timeRange as '24h' | '7d' | '30d' | 'all'}
       />
-      <KPICard label="Total AHUs" value={summary.totalAHUs} />
-      <KPICard label="In Alert" value={summary.ahusInAlert} valueColor={alertColor} />
-      {selectedDevice ? (
-        <KPICard label="Device" value={deviceLabel ?? selectedDevice} small valueColor="#8899aa" />
-      ) : (
+      <div className="flex gap-3 mb-6 flex-wrap">
         <KPICard
-          label="Best AHU"
-          value={summary.starAHU.name}
-          subtitle={summary.starAHU.id}
-          small
-          valueColor="#00E5A0"
-          onClick={() => {
-            selectLevel(summary.starAHU.level);
-            selectDevice(summary.starAHU.id);
-          }}
+          label={selectedDevice ? 'AHU Health' : selectedLevel ? 'Level Health' : 'Site Health'}
+          value={healthValue}
+          valueColor={healthColor}
         />
-      )}
-      {!selectedDevice && (
+        <KPICard label="Total AHUs" value={summary.totalAHUs} />
         <KPICard
-          label="Worst AHU"
-          value={summary.criticalAHU.name}
-          subtitle={summary.criticalAHU.id}
-          small
-          valueColor="#ff6b6b"
-          onClick={() => {
-            selectLevel(summary.criticalAHU.level);
-            selectDevice(summary.criticalAHU.id);
-          }}
+          label="In Alert"
+          value={summary.ahusInAlert}
+          valueColor={alertColor}
+          subtitle={summary.ahusInAlert > 0 ? 'Click to inspect' : undefined}
+          onClick={summary.ahusInAlert > 0 ? () => setAlertsOpen(true) : undefined}
         />
-      )}
-    </div>
+        {selectedDevice ? (
+          <KPICard
+            label="Device"
+            value={deviceLabel ?? selectedDevice}
+            small
+            valueColor="#8899aa"
+          />
+        ) : (
+          <KPICard
+            label="Best AHU"
+            value={summary.starAHU.name}
+            subtitle={summary.starAHU.id}
+            small
+            valueColor="#00E5A0"
+            onClick={() => {
+              selectLevel(summary.starAHU.level);
+              selectDevice(summary.starAHU.id);
+            }}
+          />
+        )}
+        {!selectedDevice && (
+          <KPICard
+            label="Worst AHU"
+            value={summary.criticalAHU.name}
+            subtitle={summary.criticalAHU.id}
+            small
+            valueColor="#ff6b6b"
+            onClick={() => {
+              selectLevel(summary.criticalAHU.level);
+              selectDevice(summary.criticalAHU.id);
+            }}
+          />
+        )}
+      </div>
+    </>
   );
 };
 

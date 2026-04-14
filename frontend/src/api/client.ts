@@ -8,6 +8,7 @@ import {
   MeasurementsResponse,
   OffPeriod,
   ScoresResponse,
+  SiteAlertsResponse,
   SiteSummaryData,
 } from '../types';
 
@@ -156,6 +157,15 @@ export async function fetchMeasurements(
 ): Promise<MeasurementsResponse> {
   const params = new URLSearchParams({ metrics: metrics.join(','), range });
   return apiFetch<MeasurementsResponse>(`/device/${deviceId}/measurements?${params}`);
+}
+
+/**
+ * GET /api/site/alerts — List of AHUs currently in alert state (Critical or Maintenance Soon)
+ */
+export async function fetchSiteAlerts(
+  range: '24h' | '7d' | '30d' | 'all' = '7d'
+): Promise<SiteAlertsResponse> {
+  return apiFetch<SiteAlertsResponse>(`/site/alerts?range=${range}`);
 }
 
 /**

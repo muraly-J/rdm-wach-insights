@@ -39,6 +39,49 @@ def _empty_response() -> dict:
     }
 
 
+@router.get("/site/alerts")
+async def get_site_alerts(range: str = Query(default="7d", alias="range")):
+    """
+    Return list of AHUs currently in alert state (Maintenance Soon or Critical tier).
+    Sorted by health score ascending (worst first).
+    """
+    time_range_param = range
+    try:
+        from core.db_reader import get_dataframe
+
+        df = get_dataframe(time_range=time_range_param)
+        if df.empty:
+            return {"ahus": [], "total": 0}
+
+        df = df.sort_values("timestamp")
+        latest = df.groupby("ahu_id").last().reset_index()
+
+        alert_tiers = {"Maintenance Soon", "Critical"}
+        alert_rows = latest[latest["tier"].isin(alert_tiers)].copy()
+        alert_rows = alert_rows.sort_values("health_index", ascending=True)
+
+        ahus = []
+        for _, row in alert_rows.iterrows():
+            ahu_id = str(row["ahu_id"])
+            try:
+                level_num = int(row["level"])
+            except (ValueError, AttributeError):
+                level_num = 0
+            ahus.append({
+                "id": ahu_id,
+                "name": device_id_to_name(ahu_id),
+                "level": level_num,
+                "healthScore": round(float(row["health_index"]), 1),
+                "tier": str(row["tier"]),
+            })
+
+        return {"ahus": ahus, "total": len(ahus)}
+
+    except Exception as exc:
+        log.exception("Unexpected error in /api/site/alerts: %s", exc)
+        raise HTTPException(status_code=500, detail="Site alerts computation failed") from exc
+
+
 @router.get("/site/summary")
 async def get_site_summary(range: str = Query(default="7d", alias="range")):
     """

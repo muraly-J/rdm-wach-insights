@@ -261,6 +261,21 @@ export interface TrendDelta {
   direction: 'up' | 'down';
 }
 
+// ── Site Alerts Types ─────────────────────────────────────────────────────
+
+export interface AlertAHU {
+  id: string;
+  name: string;
+  level: number;
+  healthScore: number;
+  tier: 'Critical' | 'Maintenance Soon';
+}
+
+export interface SiteAlertsResponse {
+  ahus: AlertAHU[];
+  total: number;
+}
+
 export interface SiteSummaryData {
   totalAHUs: number;
   avgSiteHealth: number;
