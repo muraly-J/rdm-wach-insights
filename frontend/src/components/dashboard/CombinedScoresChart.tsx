@@ -7,7 +7,7 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis
+  YAxis,
 } from 'recharts';
 import { formatTickByRange, tickIntervalByRange, type TimeRange } from '../../utils/formatTick';
 import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
@@ -37,10 +37,7 @@ const SCORE_NAMES = [
   { key: 'overload', label: 'Overload', color: '#EF4444' },
 ] as const;
 
-const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({
-  scoreData,
-  timeRange,
-}) => {
+const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, timeRange }) => {
   // Merge all score series into a single array indexed by position
   const mergedData = React.useMemo(() => {
     const firstScore = scoreData[SCORE_NAMES[0].key];

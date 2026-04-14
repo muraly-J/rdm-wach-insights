@@ -7,14 +7,14 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis
+  YAxis,
 } from 'recharts';
 import { formatDateMYT } from '../../utils/formatTick';
 import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
 import InfoTooltip from '../shared/InfoTooltip';
 
 interface HealthIndexChartProps {
-  data: Array<{ timestamp: string;[key: string]: number | string | boolean | undefined }>;
+  data: Array<{ timestamp: string; [key: string]: number | string | boolean | undefined }>;
   devices: Array<{ id: string; name: string; label?: string; department?: string }>;
 }
 

@@ -10,7 +10,7 @@ interface ScoreDerivationSectionProps {
   deviceId: string;
   rawData: Record<string, any>;
   timeRange: '24h' | '7d' | '30d';
-  healthChartData?: Array<{ timestamp?: string; is_on?: boolean;[key: string]: any }>;
+  healthChartData?: Array<{ timestamp?: string; is_on?: boolean; [key: string]: any }>;
 }
 
 /**

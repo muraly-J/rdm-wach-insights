@@ -7,7 +7,7 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis
+  YAxis,
 } from 'recharts';
 import type { DerivationReferenceLine, DerivationSeries } from '../../../types';
 import {

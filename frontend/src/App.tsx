@@ -133,7 +133,7 @@ function App() {
     const range = toApiRange(timeRange);
     fetchSiteSummary(range as '24h' | '7d' | '30d' | 'all')
       .then((data) => setSiteSummaryData(data))
-      .catch(() => { });
+      .catch(() => {});
   }, [timeRange, setSiteSummaryData]);
 
   React.useEffect(() => {
@@ -145,7 +145,7 @@ function App() {
       selectedDevice !== 'all' ? selectedDevice : null
     )
       .then((data) => setFinancialImpact(data))
-      .catch(() => { });
+      .catch(() => {});
   }, [selectedLevel, selectedDevice, timeRange, setFinancialImpact]);
 
   React.useEffect(() => {
@@ -345,18 +345,12 @@ function App() {
               {selectedLevel ? (
                 <>
                   <div className="mb-8">
-                    <HealthIndexChart
-                      data={healthChartData as any}
-                      devices={chartDevices}
-                    />
+                    <HealthIndexChart data={healthChartData as any} devices={chartDevices} />
                   </div>
 
                   <ScoreCardsGrid scoreData={scoreCardData} />
 
-                  <CombinedScoresChart
-                    scoreData={scoreCardDataWithIsOn}
-                    timeRange={chartRange}
-                  />
+                  <CombinedScoresChart scoreData={scoreCardDataWithIsOn} timeRange={chartRange} />
 
                   {selectedDevice && selectedDevice !== 'all' && selectedDeviceRow ? (
                     <DeviceDetailCard

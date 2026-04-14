@@ -14,9 +14,7 @@ import type { OffPeriod } from '../types';
  * @param data - Either OffPeriod[] OR data array with is_on flags
  * @returns Array of ReferenceArea components to render in AreaChart
  */
-export function renderOffPeriodAreas(
-  data: any[] | OffPeriod[] | undefined
-): React.ReactNode {
+export function renderOffPeriodAreas(data: any[] | OffPeriod[] | undefined): React.ReactNode {
   if (!data?.length) return null;
 
   // Check if this is an OffPeriod array (has start/end properties)

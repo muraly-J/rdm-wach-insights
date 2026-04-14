@@ -5,7 +5,7 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis
+  YAxis,
 } from 'recharts';
 import type { MeasurementPoint } from '../../types';
 import { formatDateTimeMYT } from '../../utils/formatTick';

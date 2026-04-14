@@ -11,7 +11,7 @@ interface DeepDiveViewProps {
   labelMap: Record<string, string>;
   timeRange: string;
   isSelectedDeviceOn?: boolean;
-  healthChartData?: Array<{ timestamp?: string; is_on?: boolean;[key: string]: any }>;
+  healthChartData?: Array<{ timestamp?: string; is_on?: boolean; [key: string]: any }>;
 }
 
 const DeepDiveView: React.FC<DeepDiveViewProps> = ({

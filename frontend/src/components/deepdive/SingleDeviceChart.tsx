@@ -20,7 +20,7 @@ interface SingleDeviceChartProps {
   deviceLabel: string;
   timeRange: string;
   isOn?: boolean;
-  healthChartData?: Array<{ timestamp?: string; is_on?: boolean;[key: string]: any }>;
+  healthChartData?: Array<{ timestamp?: string; is_on?: boolean; [key: string]: any }>;
 }
 
 function toApiRange(timeRange: string): '24h' | '7d' | '30d' {
