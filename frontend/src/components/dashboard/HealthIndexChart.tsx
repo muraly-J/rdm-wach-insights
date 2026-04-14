@@ -1,24 +1,21 @@
+import { motion } from 'framer-motion';
 import React from 'react';
 import {
-  AreaChart,
   Area,
-  XAxis,
-  YAxis,
+  AreaChart,
   CartesianGrid,
-  Tooltip,
-  Legend,
   ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts';
-import { motion } from 'framer-motion';
-import InfoTooltip from '../shared/InfoTooltip';
 import { formatDateMYT } from '../../utils/formatTick';
-import type { OffPeriod } from '../../types';
 import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
+import InfoTooltip from '../shared/InfoTooltip';
 
 interface HealthIndexChartProps {
-  data: Array<{ timestamp: string; [key: string]: number | string | boolean | undefined }>;
+  data: Array<{ timestamp: string;[key: string]: number | string | boolean | undefined }>;
   devices: Array<{ id: string; name: string; label?: string; department?: string }>;
-  offPeriods?: OffPeriod[];
 }
 
 /**
@@ -214,7 +211,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, offP
               />
             ))}
 
-            {renderOffPeriodAreas(offPeriods)}
+            {renderOffPeriodAreas(data)}
           </AreaChart>
         </ResponsiveContainer>
       </div>

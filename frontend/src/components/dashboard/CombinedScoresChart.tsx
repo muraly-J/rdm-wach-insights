@@ -1,17 +1,15 @@
 import React from 'react';
-import { formatTickByRange, tickIntervalByRange, type TimeRange } from '../../utils/formatTick';
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
   CartesianGrid,
-  Tooltip,
   Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
-  ReferenceArea,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts';
-import type { OffPeriod } from '../../types';
+import { formatTickByRange, tickIntervalByRange, type TimeRange } from '../../utils/formatTick';
 import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
 
 interface ScoreEntry {
@@ -23,7 +21,6 @@ interface ScoreEntry {
 interface CombinedScoresChartProps {
   scoreData: Record<string, ScoreEntry>;
   timeRange: TimeRange;
-  offPeriods?: OffPeriod[];
 }
 
 /**
@@ -43,7 +40,6 @@ const SCORE_NAMES = [
 const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({
   scoreData,
   timeRange,
-  offPeriods,
 }) => {
   // Merge all score series into a single array indexed by position
   const mergedData = React.useMemo(() => {
@@ -137,7 +133,7 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({
                 connectNulls
               />
             ))}
-            {renderOffPeriodAreas(offPeriods)}
+            {renderOffPeriodAreas(mergedData)}
           </LineChart>
         </ResponsiveContainer>
       </div>

@@ -44,7 +44,7 @@ import {
   fetchSiteSummary,
 } from './api/client';
 import { fetchFinancialImpact } from './api/financial';
-import type { HealthIndexResponse, OffPeriod, RawScoreResponse, ScoresResponse } from './types';
+import type { HealthIndexResponse, RawScoreResponse, ScoresResponse } from './types';
 import type { TimeRange } from './utils/formatTick';
 
 interface ScoreEntry {
@@ -84,7 +84,6 @@ function App() {
   const [rankingRows, setRankingRows] = React.useState<AHURankRow[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [offPeriods, setOffPeriods] = React.useState<OffPeriod[]>([]);
 
   const [levelDevices, setLevelDevices] = React.useState<
     Array<{ id: string; label: string; department: string; area: string }>
@@ -130,23 +129,11 @@ function App() {
       .catch(() => setRawData(null));
   }, [selectedDevice, timeRange]);
 
-  // Fetch off-periods when a single device is selected
-  React.useEffect(() => {
-    if (!selectedDevice || selectedDevice === 'all') {
-      setOffPeriods([]);
-      return;
-    }
-    const range = toApiRange(timeRange);
-    // Temporarily disabled until backend is redeployed with on-off-periods endpoint
-    // fetchOffPeriods(selectedDevice, range as '24h' | '7d' | '30d').then(setOffPeriods);
-    setOffPeriods([]);
-  }, [selectedDevice, timeRange]);
-
   React.useEffect(() => {
     const range = toApiRange(timeRange);
     fetchSiteSummary(range as '24h' | '7d' | '30d' | 'all')
       .then((data) => setSiteSummaryData(data))
-      .catch(() => {});
+      .catch(() => { });
   }, [timeRange, setSiteSummaryData]);
 
   React.useEffect(() => {
@@ -158,7 +145,7 @@ function App() {
       selectedDevice !== 'all' ? selectedDevice : null
     )
       .then((data) => setFinancialImpact(data))
-      .catch(() => {});
+      .catch(() => { });
   }, [selectedLevel, selectedDevice, timeRange, setFinancialImpact]);
 
   React.useEffect(() => {
@@ -284,6 +271,25 @@ function App() {
     return result;
   }, [scoresData, selectedDevice]);
 
+  // Merge is_on flags from health data into score data for chart greying
+  const scoreCardDataWithIsOn = React.useMemo(() => {
+    if (!scoreCardData || Object.keys(scoreCardData).length === 0 || !healthChartData?.length) {
+      return scoreCardData;
+    }
+
+    const enrichedData: Record<string, ScoreEntry> = {};
+    Object.entries(scoreCardData).forEach(([key, entry]) => {
+      enrichedData[key] = {
+        ...entry,
+        data: entry.data.map((point, i) => ({
+          ...point,
+          is_on: healthChartData[i]?.is_on ?? true,
+        })),
+      };
+    });
+    return enrichedData;
+  }, [scoreCardData, healthChartData]);
+
   const deviceHealth = React.useMemo(() => {
     if (!selectedDevice || selectedDevice === 'all' || !healthData) return null;
     const dev = healthData.devices.find((d) => d.id === selectedDevice);
@@ -342,23 +348,14 @@ function App() {
                     <HealthIndexChart
                       data={healthChartData as any}
                       devices={chartDevices}
-                      offPeriods={
-                        isSingleDevice
-                          ? offPeriods.map((p) => ({
-                              start: formatTickByRange(p.start, chartRange),
-                              end: formatTickByRange(p.end, chartRange),
-                            }))
-                          : undefined
-                      }
                     />
                   </div>
 
                   <ScoreCardsGrid scoreData={scoreCardData} />
 
                   <CombinedScoresChart
-                    scoreData={scoreCardData}
+                    scoreData={scoreCardDataWithIsOn}
                     timeRange={chartRange}
-                    offPeriods={isSingleDevice ? offPeriods : undefined}
                   />
 
                   {selectedDevice && selectedDevice !== 'all' && selectedDeviceRow ? (
@@ -387,7 +384,7 @@ function App() {
                         deviceId={selectedDevice ?? ''}
                         rawData={rawData}
                         timeRange={chartRange}
-                        offPeriods={offPeriods}
+                        healthChartData={healthChartData}
                       />
                     </React.Suspense>
                   )}
@@ -422,6 +419,7 @@ function App() {
                   labelMap={labelMap}
                   timeRange={timeRange}
                   isSelectedDeviceOn={isSelectedDeviceOn}
+                  healthChartData={healthChartData}
                 />
               </React.Suspense>
             </motion.div>

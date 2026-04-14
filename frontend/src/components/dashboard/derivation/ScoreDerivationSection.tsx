@@ -2,7 +2,6 @@ import { motion } from 'framer-motion';
 import React from 'react';
 
 import { SCORE_METRIC_GROUPS } from '../../../constants/metricGroups';
-import type { OffPeriod } from '../../../types';
 import { ScoreName } from '../../../types';
 import ScoreCardWithSelector from './ScoreCardWithSelector';
 
@@ -11,7 +10,7 @@ interface ScoreDerivationSectionProps {
   deviceId: string;
   rawData: Record<string, any>;
   timeRange: '24h' | '7d' | '30d';
-  offPeriods?: OffPeriod[];
+  healthChartData?: Array<{ timestamp?: string; is_on?: boolean;[key: string]: any }>;
 }
 
 /**
@@ -40,8 +39,29 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
   deviceId,
   rawData,
   timeRange,
-  offPeriods = [],
+  healthChartData,
 }) => {
+  // Enrich all scoreData with is_on flags from healthChartData
+  const enrichedRawData = React.useMemo(() => {
+    if (!healthChartData?.length || !rawData) return rawData;
+
+    const enriched: Record<string, any> = {};
+    Object.entries(rawData).forEach(([key, value]) => {
+      if (value && typeof value === 'object' && 'scoreData' in value) {
+        enriched[key] = {
+          ...value,
+          scoreData: (value as any).scoreData.map((point: any, i: number) => ({
+            ...point,
+            is_on: healthChartData[i]?.is_on ?? true,
+          })),
+        };
+      } else {
+        enriched[key] = value;
+      }
+    });
+    return enriched;
+  }, [rawData, healthChartData]);
+
   return (
     <motion.div
       className="mb-12"
@@ -74,7 +94,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
           "
         >
           {(() => {
-            const hasAnyData = SCORE_NAMES.some((s) => rawData[s]);
+            const hasAnyData = SCORE_NAMES.some((s) => enrichedRawData[s]);
             if (!hasAnyData) {
               return (
                 <div
@@ -129,7 +149,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
             }
 
             return SCORE_NAMES.map((score, index) => {
-              const scoreData = rawData[score];
+              const scoreData = enrichedRawData[score];
 
               if (!scoreData) {
                 return (
@@ -211,7 +231,6 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                   chartColor={SCORE_COLORS[index]}
                   timeRange={timeRange}
                   availableMetrics={group?.availableMetrics ?? []}
-                  offPeriods={offPeriods}
                 />
               );
             });

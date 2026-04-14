@@ -1,34 +1,31 @@
 import React from 'react';
 import {
-  formatTickByRange,
-  tickIntervalByRange,
-  formatDateMYT,
-  type TimeRange,
-} from '../../../utils/formatTick';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
   CartesianGrid,
-  Tooltip,
+  Line,
+  LineChart,
   ReferenceLine,
   ResponsiveContainer,
-  Legend,
-  ReferenceArea,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts';
-import type { DerivationSeries, DerivationReferenceLine, OffPeriod } from '../../../types';
+import type { DerivationReferenceLine, DerivationSeries } from '../../../types';
+import {
+  formatDateMYT,
+  formatTickByRange,
+  tickIntervalByRange,
+  type TimeRange,
+} from '../../../utils/formatTick';
 import { renderOffPeriodAreas } from '../../../utils/offPeriodAreas';
 
 interface RawScoreRelationChartProps {
   scoreName: string;
   series: DerivationSeries[];
-  scoreData: Array<{ timestamp: string; value: number }>;
+  scoreData: Array<{ timestamp: string; value: number; is_on?: boolean }>;
   referenceLines?: DerivationReferenceLine[];
   chartColor: string;
   headerAction?: React.ReactNode;
   timeRange: TimeRange;
-  offPeriods?: OffPeriod[];
 }
 
 // Color palette for up to 7 left-axis series
@@ -59,7 +56,6 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
   chartColor,
   headerAction,
   timeRange,
-  offPeriods,
 }) => {
   // Merge all series into a single data array keyed by index
   // Each series maps to key `s0`, `s1`, etc.
@@ -75,10 +71,11 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
     });
   });
 
-  // Merge score data
+  // Merge score data and is_on flags
   scoreData.forEach((pt, idx) => {
     if (mergedData[idx]) {
       mergedData[idx].scoreValue = pt.value;
+      mergedData[idx].is_on = pt.is_on;
     }
   });
 
@@ -222,7 +219,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
             name="Score"
           />
 
-          {renderOffPeriodAreas(offPeriods)}
+          {renderOffPeriodAreas(mergedData)}
         </LineChart>
       </ResponsiveContainer>
 

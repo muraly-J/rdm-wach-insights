@@ -13,7 +13,6 @@ import { fetchMeasurements } from '../../api/client';
 import { CHART_CONFIG } from '../../constants/chartConfig';
 import { METRIC_META, SCORE_METRIC_GROUPS } from '../../constants/metricGroups';
 import { useMetricSelection } from '../../hooks/useMetricSelection';
-import type { OffPeriod } from '../../types';
 import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
 
 interface SingleDeviceChartProps {
@@ -21,7 +20,7 @@ interface SingleDeviceChartProps {
   deviceLabel: string;
   timeRange: string;
   isOn?: boolean;
-  offPeriods?: OffPeriod[];
+  healthChartData?: Array<{ timestamp?: string; is_on?: boolean;[key: string]: any }>;
 }
 
 function toApiRange(timeRange: string): '24h' | '7d' | '30d' {
@@ -34,7 +33,7 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
   deviceLabel,
   timeRange,
   isOn = true,
-  offPeriods,
+  healthChartData,
 }) => {
   const { selectedMetrics, setSelectedMetrics, toggleMetric } = useMetricSelection();
   const [chartData, setChartData] = React.useState<Record<string, number | string | null>[]>([]);
@@ -64,6 +63,15 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
       })
       .finally(() => setIsLoading(false));
   }, [deviceId, selectedMetrics, timeRange]);
+
+  // Merge is_on flags from healthChartData
+  const chartDataWithIsOn = React.useMemo(() => {
+    if (!chartData?.length || !healthChartData?.length) return chartData;
+    return chartData.map((point, i) => ({
+      ...point,
+      is_on: healthChartData[i]?.is_on ?? true,
+    }));
+  }, [chartData, healthChartData]);
 
   return (
     <div>
@@ -203,7 +211,7 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHTS.SINGLE_DEVICE}>
-            <LineChart data={chartData} margin={CHART_CONFIG.MARGINS.SINGLE}>
+            <LineChart data={chartDataWithIsOn} margin={CHART_CONFIG.MARGINS.SINGLE}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a3649" />
               <XAxis dataKey="timestamp" tick={{ fontSize: 10, fill: '#556677' }} />
               <YAxis tick={{ fontSize: 10, fill: '#556677' }} />
@@ -228,7 +236,7 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
                   strokeWidth={1.5}
                 />
               ))}
-              {renderOffPeriodAreas(offPeriods)}
+              {renderOffPeriodAreas(chartDataWithIsOn)}
             </LineChart>
           </ResponsiveContainer>
         )}
