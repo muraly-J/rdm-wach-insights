@@ -1,5 +1,6 @@
 import React from 'react';
 import type { SiteSummaryData } from '../../types';
+import { useAppStore } from '../../store/useAppStore';
 
 interface KPIStripProps {
   summary: SiteSummaryData | null;
@@ -14,6 +15,8 @@ interface KPICardProps {
   value: string | number;
   valueColor?: string;
   small?: boolean;
+  subtitle?: string;
+  onClick?: () => void;
 }
 
 const KPICard: React.FC<KPICardProps> = ({
@@ -21,8 +24,11 @@ const KPICard: React.FC<KPICardProps> = ({
   value,
   valueColor = '#E8ECF1',
   small = false,
+  subtitle,
+  onClick,
 }) => (
   <div
+    onClick={onClick}
     style={{
       background: '#1a2234',
       border: '1px solid #2a3649',
@@ -30,6 +36,7 @@ const KPICard: React.FC<KPICardProps> = ({
       padding: '10px 14px',
       flex: 1,
       minWidth: 0,
+      cursor: onClick ? 'pointer' : 'default',
     }}
   >
     <div
@@ -51,11 +58,25 @@ const KPICard: React.FC<KPICardProps> = ({
         fontWeight: 700,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
+        whiteSpace: small ? 'normal' : 'nowrap',
+        lineHeight: 1.3,
       }}
     >
       {value}
     </div>
+    {subtitle && (
+      <div
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 9,
+          color: '#445566',
+          marginTop: 3,
+          letterSpacing: '0.04em',
+        }}
+      >
+        {subtitle}
+      </div>
+    )}
   </div>
 );
 
@@ -66,6 +87,7 @@ const KPIStrip: React.FC<KPIStripProps> = ({
   deviceLabel,
   deviceHealth,
 }) => {
+  const { selectLevel, selectDevice } = useAppStore();
   if (!summary) {
     return (
       <div className="flex gap-3 mb-6">
@@ -113,10 +135,30 @@ const KPIStrip: React.FC<KPIStripProps> = ({
       {selectedDevice ? (
         <KPICard label="Device" value={deviceLabel ?? selectedDevice} small valueColor="#8899aa" />
       ) : (
-        <KPICard label="Best AHU" value={summary.starAHU.name} small valueColor="#00E5A0" />
+        <KPICard
+          label="Best AHU"
+          value={summary.starAHU.name}
+          subtitle={summary.starAHU.id}
+          small
+          valueColor="#00E5A0"
+          onClick={() => {
+            selectLevel(summary.starAHU.level);
+            selectDevice(summary.starAHU.id);
+          }}
+        />
       )}
       {!selectedDevice && (
-        <KPICard label="Worst AHU" value={summary.criticalAHU.name} small valueColor="#ff6b6b" />
+        <KPICard
+          label="Worst AHU"
+          value={summary.criticalAHU.name}
+          subtitle={summary.criticalAHU.id}
+          small
+          valueColor="#ff6b6b"
+          onClick={() => {
+            selectLevel(summary.criticalAHU.level);
+            selectDevice(summary.criticalAHU.id);
+          }}
+        />
       )}
     </div>
   );

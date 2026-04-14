@@ -321,7 +321,7 @@ function SkeletonLevelRow() {
 // ── Panel 2: Fleet Directory ───────────────────────────────────────────────
 
 function FleetDirectoryPanel() {
-  const { siteSummaryData, selectLevel } = useAppStore();
+  const { siteSummaryData, selectLevel, selectDevice } = useAppStore();
   const [expanded, setExpanded] = useState<number | null>(null);
 
   const tiles = siteSummaryData?.levelTiles ?? [];
@@ -466,8 +466,16 @@ function FleetDirectoryPanel() {
                         const display = deviceIdToDisplay(id);
                         const shortName = display.split(' \u2014 ')[0];
                         return (
-                          <span
+                          <motion.button
                             key={id}
+                            onClick={() => {
+                              selectLevel(level);
+                              selectDevice(id);
+                            }}
+                            whileHover={{
+                              borderColor: 'rgba(0,229,160,0.5)',
+                              background: '#1e3048',
+                            }}
                             style={{
                               fontFamily: "'JetBrains Mono', monospace",
                               background: '#1a2638',
@@ -477,6 +485,8 @@ function FleetDirectoryPanel() {
                               display: 'flex',
                               flexDirection: 'column',
                               gap: 1,
+                              cursor: 'pointer',
+                              textAlign: 'left',
                             }}
                           >
                             <span
@@ -494,7 +504,7 @@ function FleetDirectoryPanel() {
                             >
                               {id}
                             </span>
-                          </span>
+                          </motion.button>
                         );
                       })}
                     </div>
@@ -512,7 +522,7 @@ function FleetDirectoryPanel() {
 // ── Panel 3: Alert Status ──────────────────────────────────────────────────
 
 function AlertStatusPanel() {
-  const { siteSummaryData, selectLevel } = useAppStore();
+  const { siteSummaryData, selectLevel, selectDevice } = useAppStore();
 
   if (!siteSummaryData) {
     return (
@@ -639,7 +649,10 @@ function AlertStatusPanel() {
             level={criticalAHU.level}
             score={criticalAHU.healthScore}
             accent="#ef4444"
-            onViewLevel={() => selectLevel(criticalAHU.level)}
+            onViewDevice={() => {
+              selectLevel(criticalAHU.level);
+              selectDevice(criticalAHU.id);
+            }}
           />
         )}
 
@@ -652,7 +665,10 @@ function AlertStatusPanel() {
             level={starAHU.level}
             score={starAHU.healthScore}
             accent="#00E5A0"
-            onViewLevel={() => selectLevel(starAHU.level)}
+            onViewDevice={() => {
+              selectLevel(starAHU.level);
+              selectDevice(starAHU.id);
+            }}
           />
         )}
       </div>
@@ -710,7 +726,7 @@ function SpotlightCard({
   level,
   score,
   accent,
-  onViewLevel,
+  onViewDevice,
 }: {
   label: string;
   id: string;
@@ -718,7 +734,7 @@ function SpotlightCard({
   level: number;
   score: number;
   accent: string;
-  onViewLevel: () => void;
+  onViewDevice: () => void;
 }) {
   return (
     <motion.div
@@ -790,9 +806,9 @@ function SpotlightCard({
         </div>
       </div>
 
-      {/* View level button */}
+      {/* View device button */}
       <button
-        onClick={onViewLevel}
+        onClick={onViewDevice}
         style={{
           fontSize: 8,
           fontWeight: 700,
@@ -806,7 +822,7 @@ function SpotlightCard({
           flexShrink: 0,
         }}
       >
-        L{level} →
+        VIEW →
       </button>
     </motion.div>
   );
