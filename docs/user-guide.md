@@ -23,12 +23,13 @@ Each AHU receives a **FAIR Health Score** — a number from 0 to 100 that summar
 | 40 – 59 | **Maintenance** | Degraded performance. Schedule a maintenance visit. |
 | 0 – 39 | **Critical** | Significant fault detected. Escalate to facilities. |
 
-FAIR stands for the four electrical dimensions the score measures:
+The score measures five electrical dimensions:
 
-- **F — Frequency anomaly:** unusual variations in supply frequency
-- **A — Amplitude anomaly:** energy consumption deviating from expected patterns
-- **I — Imbalance:** voltage or current imbalance across the three phases
-- **R — Resilience:** power factor and overload indicators
+- **Energy anomaly:** whether the unit is consuming significantly more or less power than expected
+- **Power factor degradation:** how efficiently the unit converts electrical power to useful work
+- **Phase imbalance:** whether the current across the three supply phases is uneven
+- **Harmonic distortion (THD):** electrical noise on the supply caused by non-linear loads
+- **Overload:** whether the unit is operating above its rated current limits
 
 ---
 
@@ -53,29 +54,29 @@ Click the chat icon (bottom right) to open the assistant. You can type questions
 ### General questions
 Ask about the dashboard, what scores mean, or what is happening overall.
 
-> *"Which AHUs on level 3 need attention this week?"*  
-> *"What does a health score of 45 mean for unit e0512?"*  
+> *"Which AHUs on level 3 need attention this week?"*
+> *"What does a health score of 45 mean for unit e0512?"*
 > *"Show me the health trend for the past month on level 7."*
 
 ### Technical questions
 For engineers who want raw data and diagnostic detail.
 
-> *"What is the THD reading for e0202 over the last 48 hours?"*  
-> *"Show the power factor trend for all level 5 units in the last 30 days."*  
+> *"What is the THD reading for e0202 over the last 48 hours?"*
+> *"Show the power factor trend for all level 5 units in the last 30 days."*
 > *"Which units had energy anomalies above 0.05 this week?"*
 
 ### Maintenance questions
 For technicians planning or following up on site visits.
 
-> *"Which units on level 2 have had safety flags active for more than a week?"*  
-> *"Give me a maintenance summary for e0311 — what issues have been recurring?"*  
+> *"Which units on level 2 have had safety flags active for more than a week?"*
+> *"Give me a maintenance summary for e0311 — what issues have been recurring?"*
 > *"Are there any overload warnings on level 9 right now?"*
 
 ### Financial questions
 For ward managers concerned with energy costs.
 
-> *"What is the estimated excess energy cost from units in the Critical tier this month?"*  
-> *"Which level has the highest power factor penalty charges?"*  
+> *"What is the estimated excess energy cost from units in the Critical tier this month?"*
+> *"Which level has the highest power factor penalty charges?"*
 > *"Show the financial impact summary for the whole site."*
 
 ---

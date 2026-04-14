@@ -83,3 +83,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Dashboard: health index trend charts and AHU ranking per level
 - Basic chatbot with preset prompts
 - Docker Compose deployment with Gunicorn + Nginx
+
+[Unreleased]: https://github.com/muraly-J/rdm-wach-insights/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/muraly-J/rdm-wach-insights/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/muraly-J/rdm-wach-insights/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/muraly-J/rdm-wach-insights/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/muraly-J/rdm-wach-insights/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/muraly-J/rdm-wach-insights/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/muraly-J/rdm-wach-insights/releases/tag/v1.0.0

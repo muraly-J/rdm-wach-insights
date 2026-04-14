@@ -9,7 +9,7 @@ Conversational AHU energy analytics for the WACH ward.
 - **Rate Limiting**: Default 20 requests per minute (configurable)
 - **Input Validation**: Device IDs and metrics are strictly validated
 - **Flux Query Sanitization**: Regex injection prevented via escaping
-- **CORS Hardening**: Restricted origins, methods, and headers 
+- **CORS Hardening**: Restricted origins, methods, and headers
 
 See `docs/security/SECURITY_AUDIT_2026.md` for complete security audit details.
 
@@ -51,7 +51,6 @@ For production deployment, run the backend on a server and update `CORS_ORIGIN` 
 
 ```bash
 # Install backend dependencies
-cd /Users/rdmasia/wach-insight
 source venv/bin/activate
 pip install -r backend/requirements.txt
 
@@ -64,7 +63,6 @@ npm install
 
 ```bash
 # Terminal 1: Start backend
-cd /Users/rdmasia/wach-insight
 ./start.sh
 
 # Terminal 2: Start frontend

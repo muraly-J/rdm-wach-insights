@@ -1,6 +1,6 @@
 # WACH Insight — API Reference
 
-**Base URL:** `https://<your-host>/api`  
+**Base URL:** `https://<your-host>/api`
 **Local development:** `http://localhost:8081/api`
 
 This document covers all endpoints. For a machine-readable spec, visit `/docs` (Swagger UI) or `/openapi.json`.
@@ -199,7 +199,7 @@ curl https://<host>/api/level/3/devices -H "Authorization: Bearer $API_KEY"
 
 FAIR score breakdown per AHU on a level, aggregated over the requested time range.
 
-**Path params:** `level_id` (int, 1–11)  
+**Path params:** `level_id` (int, 1–11)
 **Query params:** `time_range` (string, default `7d`) — `24h | 7d | 30d | all`
 
 **Response:**
@@ -233,7 +233,7 @@ curl "https://<host>/api/level/3/scores?time_range=30d" -H "Authorization: Beare
 
 Health index time-series for all AHUs on a level (or a single device if filtered).
 
-**Path params:** `level_id` (int, 1–11)  
+**Path params:** `level_id` (int, 1–11)
 **Query params:**
 - `time_range` (string, default `7d`) — `24h | 7d | 30d | all`
 - `device_id` (string, optional) — filter to a single AHU
@@ -477,7 +477,7 @@ curl "https://<host>/api/dashboard/ahu-heatmap?ahu_id=e0101&range=30d" \
 
 Raw sensor measurements mapped against the computed FAIR score for a single device. Used to understand which sensor readings are driving health score changes.
 
-**Path params:** `device_id` — must match pattern `e\d{4}` and be in the allowed device list  
+**Path params:** `device_id` — must match pattern `e\d{4}` and be in the allowed device list
 **Query params:** `range` (string, default `"7d"`) — `24h | 7d | 30d | all`
 
 **Response:** time-series of `{timestamp, raw_value, score}` pairs per FAIR dimension.
@@ -496,12 +496,40 @@ curl "https://<host>/api/device/e0101/raw-score-relationship?range=7d" \
 
 Arbitrary metric time-series from InfluxDB for a device. Use this when you need the raw sensor data rather than derived FAIR scores.
 
-**Path params:** `device_id` — `e\d{4}` format  
-**Query params:** `metric` (string), `time_range` (string, default `7d`)
+**Path params:** `device_id` — `e\d{4}` format
+**Query params:** `metrics` (string, required, comma-separated, max 50), `range` (string, default `7d`) — `24h | 7d | 30d | all`
 
 **Example:**
 ```bash
-curl "https://<host>/api/device/e0101/measurements?metric=power_total&time_range=24h" \
+curl "https://<host>/api/device/e0101/measurements?metrics=power_total&range=24h" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+---
+
+### GET `/api/on-off-periods/{ahu_id}`
+
+On/off period intervals for a device derived from the `is_on` flag in the health database.
+
+**Path params:** `ahu_id` — must be a valid device ID in `ALLOWED_DEVICES`
+**Query params:** `range` (string, default `7d`) — `24h | 7d | 30d`
+
+**Response:**
+```json
+{
+  "ahu_id": "e0101",
+  "range": "7d",
+  "off_periods": [
+    { "start": "2026-04-07T02:00:00Z", "end": "2026-04-07T06:30:00Z" }
+  ]
+}
+```
+
+**Errors:** `404` if device not in `ALLOWED_DEVICES`; `400` if `range` is not one of the three valid values.
+
+**Example:**
+```bash
+curl "https://<host>/api/on-off-periods/e0101?range=7d" \
   -H "Authorization: Bearer $API_KEY"
 ```
 

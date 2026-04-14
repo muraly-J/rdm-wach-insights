@@ -13,8 +13,8 @@ cp .env.example .env        # fill in InfluxDB URL, API key, LLM URL
 docker-compose up --build
 ```
 
-Frontend: `http://localhost:3000`  
-Backend API: `http://localhost:8081`  
+Frontend: `http://localhost:3000`
+Backend API: `http://localhost:8081`
 Swagger UI: `http://localhost:8081/docs`
 
 ### Manual path
@@ -68,7 +68,7 @@ wach-insight/
 ├── docker-compose.yml
 ├── Dockerfile
 ├── .env.example
-└── CONTRIBUTING.md
+└── CHANGELOG.md
 ```
 
 ---
@@ -154,7 +154,7 @@ Tests are structured as:
 
 ## Branch and PR Workflow
 
-See `CONTRIBUTING.md` for the full checklist. In short:
+In short:
 
 - Branch naming: `feature/short-description`, `fix/short-description`, `docs/short-description`
 - All PRs target `main`
@@ -170,10 +170,10 @@ All configuration is in `.env.example`. Key variables:
 | Variable | Purpose |
 |----------|---------|
 | `API_KEY` | Bearer token for all authenticated endpoints |
-| `INFLUXDB_URL` | InfluxDB v2 base URL |
-| `INFLUXDB_TOKEN` | InfluxDB read token |
-| `INFLUXDB_ORG` | InfluxDB organisation |
-| `INFLUXDB_BUCKET` | InfluxDB bucket name |
+| `INFLUX_URL` | InfluxDB v2 base URL |
+| `INFLUX_TOKEN` | InfluxDB read token |
+| `INFLUX_ORG` | InfluxDB organisation |
+| `INFLUX_BUCKET` | InfluxDB bucket name |
 | `LLM_BASE_URL` | Qwen inference server base URL |
 | `LLM_API_KEY` | Qwen API key (if required by your host) |
 | `CHROMA_PERSIST_DIR` | ChromaDB persistence directory |
