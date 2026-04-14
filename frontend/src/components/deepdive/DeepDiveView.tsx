@@ -83,14 +83,14 @@ const DeepDiveView: React.FC<DeepDiveViewProps> = ({
           />
         ) : (
           <div style={{ padding: 40, textAlign: 'center', color: '#556677', fontSize: 13 }}>
-            Select a device to begin deep dive analysis.
+            Select a Device to Begin Deep Dive Analysis.
           </div>
         )
       ) : hasCompareDevices ? (
         <CompareMode deviceIds={compareDevices} labelMap={labelMap} timeRange={timeRange} />
       ) : (
         <div style={{ padding: 40, textAlign: 'center', color: '#556677', fontSize: 13 }}>
-          Select 2–3 devices using the Device filter above to compare them.
+          Select 2–3 Devices Using the Device Filter Above to Compare Them.
         </div>
       )}
     </div>

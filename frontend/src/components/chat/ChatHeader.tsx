@@ -38,7 +38,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         {onMinimize && (
           <button
             onClick={onMinimize}
-            title={isMinimized ? 'Restore chat' : 'Minimize chat'}
+            title={isMinimized ? 'Restore Chat' : 'Minimize Chat'}
             className="
               w-11 h-11 rounded-full hover:bg-[#2e3f55]
               flex items-center justify-center
@@ -75,7 +75,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         {/* Toggle fullscreen/panel button */}
         <button
           onClick={onToggleMode}
-          title={mode === 'panel' ? 'Expand to fullscreen' : 'Collapse to panel'}
+          title={mode === 'panel' ? 'Expand to Fullscreen' : 'Collapse to Panel'}
           className="
             w-11 h-11 rounded-full hover:bg-[#2e3f55]
             flex items-center justify-center
@@ -115,7 +115,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         {/* Close button */}
         <button
           onClick={onClose}
-          title="Close chat"
+          title="Close Chat"
           className="
             w-11 h-11 rounded-full hover:bg-[#2e3f55]
             flex items-center justify-center

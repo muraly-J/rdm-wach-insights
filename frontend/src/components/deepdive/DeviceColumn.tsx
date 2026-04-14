@@ -116,7 +116,7 @@ const DeviceColumn: React.FC<DeviceColumnProps> = ({
               fontSize: 12,
             }}
           >
-            No data.
+            No Data.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHTS.DEVICE_COLUMN}>

@@ -327,7 +327,7 @@ function App() {
 
         {isLoading && (
           <div className="flex justify-center py-4">
-            <span className="text-[#556677] text-sm animate-pulse">Loading data…</span>
+            <span className="text-[#556677] text-sm animate-pulse">Loading Data…</span>
           </div>
         )}
         {error && !isLoading && (

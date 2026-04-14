@@ -80,7 +80,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
           Score Derivation — {deviceName}
         </h3>
         <p className="text-[#6d6e71] mt-2">
-          Visualising how raw sensor data maps to computed scores over time.
+          Visualising How Raw Sensor Data Maps to Computed Scores Over Time.
         </p>
       </div>
 
@@ -171,7 +171,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                           .join(' ')}
                       </p>
                       <p style={{ fontSize: 11, color: '#334455' }}>
-                        No data recorded for this score
+                        No Data Recorded for This Score
                       </p>
                     </div>
                   </div>
@@ -240,7 +240,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
 
       {/* Scroll Hint */}
       <p className="text-center text-[#6d6e71] text-xs mt-6 opacity-70">
-        Scroll horizontally to explore all score derivation charts
+        Scroll Horizontally to Explore All Score Derivation Charts
       </p>
     </motion.div>
   );

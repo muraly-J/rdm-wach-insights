@@ -624,7 +624,7 @@ function AlertStatusPanel() {
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#E8ECF1' }}>AHUs in Alert</div>
             <div style={{ fontSize: 10, color: '#556677', marginTop: 2 }}>
-              out of {totalAHUs} total monitored units
+              Out of {totalAHUs} Total Monitored Units
             </div>
           </div>
         </motion.div>
@@ -851,7 +851,7 @@ export default function LatestOverview() {
         >
           Building Overview
         </h2>
-        <span style={{ fontSize: 11, color: '#445566' }}>Select a level below to drill in</span>
+        <span style={{ fontSize: 11, color: '#445566' }}>Select a Level Below to Drill In</span>
       </div>
 
       {/* Three-column grid */}

@@ -61,7 +61,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ levelDevices }) => {
   const deviceLabel = isCompareMode
     ? compareDevices.length > 0
       ? `${compareDevices.length} device${compareDevices.length > 1 ? 's' : ''}`
-      : 'Select devices'
+      : 'Select Devices'
     : selectedDevice && selectedDevice !== 'all'
       ? resolveDeviceLabel(selectedDevice, levelDevices)
       : 'All AHUs';
@@ -261,7 +261,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ levelDevices }) => {
                       )}
                       {isCompareMode && (
                         <p style={{ fontSize: 10, color: '#556', padding: '4px 10px' }}>
-                          Select up to 3 devices
+                          Select Up to 3 Devices
                         </p>
                       )}
                       {filteredDevices.map((d) => {

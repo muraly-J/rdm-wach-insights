@@ -195,7 +195,7 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
               color: '#556677',
             }}
           >
-            Loading data…
+            Loading Data…
           </div>
         ) : chartData.length === 0 ? (
           <div
@@ -207,7 +207,7 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
               color: '#556677',
             }}
           >
-            No data for selected metrics.
+            No Data for Selected Metrics.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHTS.SINGLE_DEVICE}>

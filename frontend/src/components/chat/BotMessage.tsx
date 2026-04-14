@@ -146,7 +146,7 @@ const BotMessage: React.FC<BotMessageProps> = ({
                   "
                 >
                   <span>✕</span>
-                  <span>Clear conversation</span>
+                  <span>Clear Conversation</span>
                 </button>
               )}
             </div>

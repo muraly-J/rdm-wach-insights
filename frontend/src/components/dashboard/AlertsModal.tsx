@@ -346,7 +346,7 @@ export default function AlertsModal({ isOpen, onClose, ahus, alertCount }: Alert
                     )}
                   </div>
                   <div style={{ fontSize: 10, color: '#445566', marginTop: 3 }}>
-                    Requires attention · Click any unit to inspect
+                    Requires Attention · Click Any Unit to Inspect
                   </div>
                 </div>
 
@@ -441,7 +441,7 @@ export default function AlertsModal({ isOpen, onClose, ahus, alertCount }: Alert
                         animation: 'pulse 1.5s infinite',
                       }}
                     >
-                      Loading alert data…
+                      Loading Alert Data…
                     </div>
                   </div>
                 ) : displayAhus.length === 0 ? (
@@ -477,7 +477,7 @@ export default function AlertsModal({ isOpen, onClose, ahus, alertCount }: Alert
                         All Clear
                       </div>
                       <div style={{ fontSize: 11, color: '#445566', marginTop: 4 }}>
-                        No AHUs are currently in alert state
+                        No AHUs Are Currently in Alert State
                       </div>
                     </div>
                   </motion.div>

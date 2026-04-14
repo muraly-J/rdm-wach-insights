@@ -73,7 +73,7 @@ const AHURankingsTable: React.FC<AHURankingsTableProps> = ({ rows }) => {
   if (rows.length === 0) {
     return (
       <div style={{ padding: 24, color: '#556677', textAlign: 'center', fontSize: 13 }}>
-        No AHU data available for this selection.
+        No AHU Data Available for This Selection.
       </div>
     );
   }

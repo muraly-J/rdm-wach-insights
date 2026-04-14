@@ -108,7 +108,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, offP
         className="card p-4 sm:p-6 h-[200px] sm:h-[320px] flex items-center justify-center"
         style={glassStyle}
       >
-        <span className="text-[#6d6e71]">No health index data available</span>
+        <span className="text-[#6d6e71]">No Health Index Data Available</span>
       </div>
     );
   }

@@ -79,7 +79,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
         <span className={`font-medium ${trendColor}`}>
           {trendIcon} {Math.abs(trendValue).toFixed(1)}%
         </span>
-        <span className="text-[#6d6e71]">vs previous period</span>
+        <span className="text-[#6d6e71]">vs Previous Period</span>
       </div>
     </div>
   );

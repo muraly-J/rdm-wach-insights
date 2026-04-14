@@ -72,7 +72,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       <div className="flex items-center gap-2 px-4 py-3">
         <button
           onClick={() => setShowRoles((v) => !v)}
-          title="Set your role"
+          title="Set Your Role"
           className={`
             w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center transition-colors
             ${

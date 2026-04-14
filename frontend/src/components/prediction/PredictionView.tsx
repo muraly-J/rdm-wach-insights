@@ -29,7 +29,7 @@ export default function PredictionView({ deviceId }: PredictionViewProps) {
   if (error || !data) {
     return (
       <div className="card p-6 h-48 flex items-center justify-center">
-        <span className="text-[#6d6e71] text-sm">Forecast unavailable</span>
+        <span className="text-[#6d6e71] text-sm">Forecast Unavailable</span>
       </div>
     );
   }

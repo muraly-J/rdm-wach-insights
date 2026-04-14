@@ -144,7 +144,7 @@ const KPIStrip: React.FC<KPIStripProps> = ({
           label="In Alert"
           value={summary.ahusInAlert}
           valueColor={alertColor}
-          subtitle={summary.ahusInAlert > 0 ? 'Click to inspect' : undefined}
+          subtitle={summary.ahusInAlert > 0 ? 'Click to Inspect' : undefined}
           onClick={summary.ahusInAlert > 0 ? () => setAlertsOpen(true) : undefined}
         />
         {selectedDevice ? (

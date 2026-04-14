@@ -84,7 +84,7 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
         className="card p-4 sm:p-6 mb-6 sm:mb-8 h-[200px] sm:h-[320px] flex items-center justify-center"
         style={glassStyle}
       >
-        <span className="text-[#6d6e71]">No score data available</span>
+        <span className="text-[#6d6e71]">No Score Data Available</span>
       </div>
     );
   }
