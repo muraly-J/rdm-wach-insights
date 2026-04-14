@@ -125,7 +125,10 @@ function App() {
     }
     const range = toApiRange(timeRange);
     fetchRawScoreRelationship(selectedDevice, range as '24h' | '7d' | '30d' | 'all')
-      .then((data) => setRawData(data as RawScoreResponse))
+      .then((data) => {
+        const scores = (data as any).scores ?? data;
+        setRawData(scores as RawScoreResponse);
+      })
       .catch(() => setRawData(null));
   }, [selectedDevice, timeRange]);
 
