@@ -1,11 +1,13 @@
 /**
  * AlertsModal
  * Centered overlay listing all AHUs in alert state.
- * Receives the list as a prop from the already-loaded siteSummaryData.
+ * Primary: uses alertAHUs list from siteSummaryData prop.
+ * Fallback: fetches /api/site/alerts if prop is empty (backend pre-restart).
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
+import { fetchSiteAlerts } from '../../api/client';
 import { deviceIdToDisplay } from '../../utils/deviceNames';
 import type { AlertAHU } from '../../types';
 
@@ -13,6 +15,8 @@ interface AlertsModalProps {
   isOpen: boolean;
   onClose: () => void;
   ahus: AlertAHU[];
+  /** Total alert count from KPI strip — used to trigger fallback fetch when ahus prop is empty */
+  alertCount?: number;
 }
 
 function tierColor(tier: string) {
@@ -168,16 +172,39 @@ function AHURow({
   );
 }
 
-export default function AlertsModal({ isOpen, onClose, ahus }: AlertsModalProps) {
-  const { selectLevel, selectDevice } = useAppStore();
+export default function AlertsModal({ isOpen, onClose, ahus, alertCount }: AlertsModalProps) {
+  const { selectLevel, selectDevice, timeRange } = useAppStore();
   const [sortBy, setSortBy] = useState<'score' | 'level'>('score');
+  const [fetchedAhus, setFetchedAhus] = useState<AlertAHU[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const sorted = [...ahus].sort((a, b) =>
+  // Fallback: if summary didn't include alertAHUs (backend pre-restart),
+  // fetch directly from /api/site/alerts
+  useEffect(() => {
+    if (!isOpen) return;
+    if (ahus.length > 0) {
+      setFetchedAhus([]);
+      return;
+    }
+    // Only bother fetching if we know there are alerts to show
+    if (!alertCount || alertCount === 0) return;
+
+    setLoading(true);
+    fetchSiteAlerts(timeRange as '24h' | '7d' | '30d' | 'all')
+      .then((data) => setFetchedAhus(data.ahus))
+      .catch(() => setFetchedAhus([]))
+      .finally(() => setLoading(false));
+  }, [isOpen, ahus.length, alertCount, timeRange]);
+
+  // Use prop list if available, otherwise use fetched fallback
+  const displayAhus = ahus.length > 0 ? ahus : fetchedAhus;
+
+  const sorted = [...displayAhus].sort((a, b) =>
     sortBy === 'score' ? a.healthScore - b.healthScore : a.level - b.level
   );
 
-  const criticalCount = ahus.filter((a) => a.tier === 'Critical').length;
-  const maintCount = ahus.filter((a) => a.tier === 'Maintenance Soon').length;
+  const criticalCount = displayAhus.filter((a) => a.tier === 'Critical').length;
+  const maintCount = displayAhus.filter((a) => a.tier === 'Maintenance Soon').length;
 
   function handleInspect(ahu: AlertAHU) {
     selectLevel(ahu.level);
@@ -281,7 +308,7 @@ export default function AlertsModal({ isOpen, onClose, ahus }: AlertsModalProps)
                     >
                       AHUs in Alert
                     </span>
-                    {ahus.length > 0 && (
+                    {displayAhus.length > 0 && (
                       <div style={{ display: 'flex', gap: 5 }}>
                         {criticalCount > 0 && (
                           <span
@@ -345,7 +372,7 @@ export default function AlertsModal({ isOpen, onClose, ahus }: AlertsModalProps)
               </div>
 
               {/* Sort controls */}
-              {ahus.length > 0 && (
+              {displayAhus.length > 0 && (
                 <div
                   style={{
                     padding: '8px 20px',
@@ -397,14 +424,27 @@ export default function AlertsModal({ isOpen, onClose, ahus }: AlertsModalProps)
                       fontFamily: "'JetBrains Mono', monospace",
                     }}
                   >
-                    {ahus.length} unit{ahus.length !== 1 ? 's' : ''}
+                    {displayAhus.length} unit{displayAhus.length !== 1 ? 's' : ''}
                   </span>
                 </div>
               )}
 
               {/* List */}
               <div style={{ overflowY: 'auto', flex: 1 }}>
-                {ahus.length === 0 ? (
+                {loading ? (
+                  <div style={{ padding: '32px 24px', textAlign: 'center' }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: '#445566',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        animation: 'pulse 1.5s infinite',
+                      }}
+                    >
+                      Loading alert data…
+                    </div>
+                  </div>
+                ) : displayAhus.length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}

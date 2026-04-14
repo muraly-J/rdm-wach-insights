@@ -131,6 +131,7 @@ const KPIStrip: React.FC<KPIStripProps> = ({
         isOpen={alertsOpen}
         onClose={() => setAlertsOpen(false)}
         ahus={summary.alertAHUs ?? []}
+        alertCount={summary.ahusInAlert}
       />
       <div className="flex gap-3 mb-6 flex-wrap">
         <KPICard
