@@ -55,9 +55,9 @@ class TestRateLimitHTTP:
     @pytest.fixture
     def client_with_low_limit(self, monkeypatch):
         import routes.query as qmod
-        from middleware.rate_limiter import make_rate_limiter
-        # Replace _check_rate_limit with a new instance that has limit=2
-        monkeypatch.setattr(qmod, "_check_rate_limit", make_rate_limiter(limit=2, window=60))
+        from middleware.rate_limiter import InMemoryRateLimiter
+        # Replace _limiter with a new instance that has limit=2
+        monkeypatch.setattr(qmod, "_limiter", InMemoryRateLimiter(max_requests=2, window_seconds=60))
         from main import app
         return TestClient(app)
 
