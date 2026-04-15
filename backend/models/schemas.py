@@ -662,3 +662,60 @@ def get_devices_by_department(department_name: str) -> list[str]:
 
     level_num = dept_level["level_number"]
     return AHU_LEVEL_CONFIG[level_num]["device_ids"].copy()
+
+
+# ── Work Order models ─────────────────────────────────────────────────────────
+
+
+class WorkOrderCreate(BaseModel):
+    ahu_id: str
+    level: int
+    title: str
+    description: str | None = None
+    severity: str  # "critical" | "warning" | "info"
+    trigger_source: str = "chat"  # "watchman" | "chat" | "manual"
+    fair_snapshot: dict | None = None  # {F, A, I, R, composite}
+
+
+class WorkOrder(BaseModel):
+    id: int
+    ahu_id: str
+    level: int
+    title: str
+    description: str | None
+    severity: str
+    status: str
+    created_by: str
+    created_at: str
+    updated_at: str
+    resolved_at: str | None
+    trigger_source: str
+    fair_snapshot: dict | None
+    notified_via: str
+    approved_by: str | None
+
+
+class WorkOrderUpdate(BaseModel):
+    status: str
+    notes: str | None = None
+    approved_by: str | None = None
+
+
+# ── Agent memory model ────────────────────────────────────────────────────────
+
+
+class AgentMemoryEntry(BaseModel):
+    key: str
+    value: dict
+    expires_at: str | None = None  # ISO datetime string
+
+
+# ── Watchman alert model ──────────────────────────────────────────────────────
+
+
+class WatchmanAlert(BaseModel):
+    ahu_id: str
+    level: int
+    fair_score: float
+    severity: str  # "critical" | "warning"
+    fair_breakdown: dict  # {F, A, I, R}
