@@ -361,7 +361,7 @@ function App() {
                     <HealthIndexChart data={healthChartData as any} devices={chartDevices} />
                   </div>
 
-                  <ScoreCardsGrid scoreData={scoreCardData} />
+                  <ScoreCardsGrid scoreData={scoreCardDataWithIsOn} />
 
                   <CombinedScoresChart scoreData={scoreCardDataWithIsOn} timeRange={chartRange} />
 

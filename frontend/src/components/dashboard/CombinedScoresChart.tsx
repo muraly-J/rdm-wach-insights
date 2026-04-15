@@ -44,7 +44,10 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
     if (!firstScore || firstScore.data.length === 0) return [];
 
     return firstScore.data.map((point, idx) => {
-      const entry: Record<string, any> = { timestamp: point.timestamp };
+      const entry: Record<string, any> = {
+        timestamp: point.timestamp,
+        is_on: (point as any).is_on,
+      };
       SCORE_NAMES.forEach(({ key }) => {
         entry[key] = scoreData[key]?.data[idx]?.value ?? null;
       });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { AreaChart, Area, ResponsiveContainer, YAxis } from 'recharts';
+import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
 import InfoTooltip from '../shared/InfoTooltip';
 
 interface SafetyFlagCardProps {
@@ -126,6 +127,7 @@ const SafetyFlagCard: React.FC<SafetyFlagCardProps> = ({
                 dot={false}
                 connectNulls
               />
+              {renderOffPeriodAreas(data)}
             </AreaChart>
           </ResponsiveContainer>
         </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
+import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
 import InfoTooltip from '../shared/InfoTooltip';
 
 interface ScoreCardProps {
@@ -70,6 +71,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
               strokeWidth={1.5}
               dot={false}
             />
+            {renderOffPeriodAreas(data)}
           </LineChart>
         </ResponsiveContainer>
       </div>
