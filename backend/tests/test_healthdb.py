@@ -205,3 +205,68 @@ def test_predictions_upsert_and_query(tmp_path):
     # Verify no-filter path returns all AHUs
     all_results = db.get_latest_predictions()
     assert len(all_results) == 1
+
+
+def test_etl_runs_table_created(db):
+    """etl_runs table exists after HealthDB init."""
+    result = db._conn().execute(
+        "SELECT table_name FROM information_schema.tables WHERE table_name='etl_runs'"
+    ).fetchone()
+    assert result is not None, "etl_runs table should exist"
+
+
+def test_record_etl_start_and_complete(db):
+    """record_etl_start creates a running row; record_etl_complete updates it."""
+    run_id = db.record_etl_start(level=1)
+    assert run_id is not None
+    assert isinstance(run_id, int)
+
+    # Check it's in 'running' state
+    row = db._conn().execute(
+        "SELECT status, completed_at, rows_written FROM etl_runs WHERE run_id = ?",
+        [run_id],
+    ).fetchone()
+    assert row[0] == "running"
+    assert row[1] is None  # completed_at is NULL
+    assert row[2] is None  # rows_written is NULL
+
+    # Complete it
+    db.record_etl_complete(run_id, status="success", rows_written=42)
+
+    row = db._conn().execute(
+        "SELECT status, completed_at, rows_written FROM etl_runs WHERE run_id = ?",
+        [run_id],
+    ).fetchone()
+    assert row[0] == "success"
+    assert row[1] is not None  # completed_at is set
+    assert row[2] == 42
+
+
+def test_get_last_sync_returns_metadata(db):
+    """get_last_sync returns data_as_of and sync_age_seconds."""
+    run_id = db.record_etl_start(level=None)
+    db.record_etl_complete(run_id, status="success", rows_written=10)
+
+    meta = db.get_last_sync()
+    assert "data_as_of" in meta
+    assert "sync_age_seconds" in meta
+    assert meta["sync_age_seconds"] >= 0
+    assert isinstance(meta["data_as_of"], str)
+    from datetime import datetime
+    datetime.fromisoformat(meta["data_as_of"])  # raises if not valid ISO8601
+
+
+def test_get_last_sync_empty_db(db):
+    """get_last_sync returns None fields when no ETL has run."""
+    meta = db.get_last_sync()
+    assert meta["data_as_of"] is None
+    assert meta["sync_age_seconds"] is None
+
+
+def test_get_last_sync_ignores_failed_runs(db):
+    """get_last_sync only considers successful runs."""
+    run_id = db.record_etl_start(level=None)
+    db.record_etl_complete(run_id, status="failed", rows_written=0)
+
+    meta = db.get_last_sync()
+    assert meta["data_as_of"] is None
