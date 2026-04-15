@@ -33,6 +33,11 @@ export function renderOffPeriodAreas(data: any[] | OffPeriod[] | undefined): Rea
   }
 
   // New: handle data array with is_on flags - generate off-periods
+  // Use timestamp values when available (required for categorical XAxis charts),
+  // fall back to numeric indices for charts without an explicit XAxis.
+  const hasTsKey = 'timestamp' in data[0];
+  const xVal = (idx: number) => (hasTsKey ? data[idx].timestamp : idx);
+
   const areas: React.ReactNode[] = [];
   let offStart: number | null = null;
 
@@ -51,8 +56,8 @@ export function renderOffPeriodAreas(data: any[] | OffPeriod[] | undefined): Rea
         areas.push(
           <ReferenceArea
             key={`off-period-${offStart}-${index - 1}`}
-            x1={offStart}
-            x2={index - 1}
+            x1={xVal(offStart)}
+            x2={xVal(index - 1)}
             fill="rgba(128, 128, 128, 0.15)" // Light grey
             stroke="none"
             label={null}
@@ -68,8 +73,8 @@ export function renderOffPeriodAreas(data: any[] | OffPeriod[] | undefined): Rea
     areas.push(
       <ReferenceArea
         key={`off-period-${offStart}-end`}
-        x1={offStart}
-        x2={data.length - 1}
+        x1={xVal(offStart)}
+        x2={xVal(data.length - 1)}
         fill="rgba(128, 128, 128, 0.15)"
         stroke="none"
         label={null}
