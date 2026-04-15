@@ -17,7 +17,6 @@ Why both exist:
   for a tighter per-route limit (e.g. 20 req/60s) without a separate implementation.
 """
 
-import os
 import time
 from collections import defaultdict
 from collections.abc import Callable
@@ -27,6 +26,8 @@ from fastapi import HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+
+from config import settings
 
 
 class RateLimiter(Protocol):
@@ -62,8 +63,8 @@ class InMemoryRateLimiter:
 def get_rate_limiter() -> RateLimiter:
     """Factory — returns configured InMemoryRateLimiter."""
     return InMemoryRateLimiter(
-        max_requests=int(os.getenv("RATE_LIMIT_REQUESTS", "100")),
-        window_seconds=int(os.getenv("RATE_LIMIT_WINDOW", "60")),
+        max_requests=settings.rate_limit_requests,
+        window_seconds=settings.rate_limit_window,
     )
 
 
