@@ -29,6 +29,7 @@ const PredictionView = React.lazy(() => import('./components/prediction/Predicti
 // Chat
 import ChatWidget from './components/chat/ChatWidget';
 import LatestOverview from './components/dashboard/LatestOverview';
+import DataFreshnessIndicator from './components/DataFreshnessIndicator';
 
 // State
 import { useAppStore } from './store/useAppStore';
@@ -84,6 +85,8 @@ function App() {
   const [rankingRows, setRankingRows] = React.useState<AHURankRow[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  const [dataAsOf, setDataAsOf] = React.useState<string | null>(null);
 
   const [levelDevices, setLevelDevices] = React.useState<
     Array<{ id: string; label: string; department: string; area: string }>
@@ -165,6 +168,9 @@ function App() {
     const apiRange = rangeMap[timeRange] ?? 'last_7d';
     fetchDashboardRanking(selectedLevel, apiRange)
       .then((data: any) => {
+        if (data.metadata?.data_as_of) {
+          setDataAsOf(data.metadata.data_as_of);
+        }
         const allDevices = [...(data.best ?? []), ...(data.worst ?? [])];
         const seen = new Set<string>();
         const rows: AHURankRow[] = allDevices
@@ -324,6 +330,10 @@ function App() {
         />
 
         <ModeToggle />
+
+        <div className="flex justify-end mb-2">
+          <DataFreshnessIndicator dataAsOf={dataAsOf} />
+        </div>
 
         {isLoading && (
           <div className="flex justify-center py-4">
