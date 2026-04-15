@@ -23,6 +23,7 @@ import re
 from core.logger import get_logger
 from core.query_classifier import classify_query_complexity
 from fastapi import APIRouter, HTTPException
+from llm.circuit_breaker import LLMUnavailableError
 from llm.client_factory import get_chat_client
 from llm.persona_detector import detect_persona
 from llm.prompts import build_system_prompt
@@ -116,6 +117,11 @@ async def chat(body: ChatRequest) -> dict:
             messages=messages,
             tools=TOOLS,
             tool_dispatcher=dispatch_tool,
+        )
+    except LLMUnavailableError:
+        raise HTTPException(
+            status_code=503,
+            detail="AI is temporarily unavailable, please try again in a few minutes."
         )
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"AI service unavailable: {e}")

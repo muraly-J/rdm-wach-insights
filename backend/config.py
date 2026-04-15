@@ -76,6 +76,10 @@ class Settings(BaseSettings):
     wach_department: str = "Department"
     hospital_id: str = "wach"
 
+    # ── LLM Circuit Breaker ───────────────────────────────────────────────────
+    llm_failure_threshold: int = 3
+    llm_cooldown_seconds: float = 300.0
+
     # ── Debug flags ───────────────────────────────────────────────────────────
     csv_debug: bool = False
 

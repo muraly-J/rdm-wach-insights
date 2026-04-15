@@ -19,6 +19,7 @@ Production notes:
 
 import json
 import re
+from typing import Union
 
 from config import settings
 from core.logger import get_logger
@@ -118,89 +119,35 @@ async def translate_query(user_query: str) -> tuple[StructuredQuery | None, str 
     return query, None
 
 
-def _parse_query_rules(user_query: str) -> tuple[StructuredQuery | None, str | None]:
+def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], Union[str, None]]:
     """
-    Rule-based query parser for production (when LLM is disabled).
+    Rule-based query parser (production path when ENABLE_LLM=false).
 
-    Extracts device_id, metric, and time_range from the query using pattern matching.
-    Returns a StructuredQuery or an error message.
-
-    This is a fallback when the LLM server is not available in production.
+    Uses resolve_metric() from schemas.py for metric resolution.
     """
     import re
+    from models.schemas import QueryType, AHU_LEVEL_CONFIG, resolve_metric
 
     query_lower = user_query.lower().strip()
 
-    # Default device and metric from common patterns
-    default_metric = "power_total"
-    default_time_range = "last_7d"
+    # ── Extract device IDs (e0101, e0202, etc.) ──────────────────────────────
+    devices = re.findall(r'\be\d{4}\b', query_lower)
 
-    # Extract device IDs (e0101, e0202, etc.) - match full pattern first
-    device_pattern = r'\be\d{4}\b'
-    devices = re.findall(device_pattern, query_lower)
-
-    # Extract Level keywords and expand to all device IDs for that level
-    # Pattern: "Level X" or "Level 0X" where X is 1-11
-    # Capture everything after 'levels?' until 'for' or end of string
+    # ── Extract levels (e.g., "level 3", "level 03") ────────────────────────
     level_pattern = r'levels?\s+(.+?)(?:\bfor\b|$)'
     level_matches = re.findall(level_pattern, query_lower)
-
-    # Convert to zero-padded level (e.g., "1" -> "01", "7" -> "07")
-    levels_expanded = []
+    levels_expanded: list[str] = []
     for match in level_matches:
-        # Extract all level numbers from the captured text
         for level_str in re.findall(r'\b(0?[1-9]|1[01])\b', match):
             level_num = int(level_str)
             if 1 <= level_num <= 11:
                 levels_expanded.append(f"{level_num:02d}")
-    # Extract metric keywords
-    # Order matters — first match wins. The dict is organised in three tiers:
-    #   1. Full underscore names (most specific) — e.g. 'current_l3_thd'
-    #   2. Multi-word natural-language phrases   — e.g. 'phase imbalance', 'thd l3'
-    #   3. Single-keyword aliases (least specific) — e.g. 'thd', 'voltage', 'current'
-    # Within tier 3, if a query contains multiple single keywords (e.g. "current voltage"),
-    # the first matching key wins. This is a known limitation — ambiguous single-keyword
-    # combinations resolve to the first alphabetically-earlier key in insertion order.
-    metric_map = {
-        # Full underscore names first (most specific)
-        'apparent_power_total':  'apparent_power_total',
-        'power_factor_avg':      'power_factor_avg',
-        'reactive_power_total':  'reactive_power_total',
-        'current_l1_thd':        'current_l1_thd',
-        'current_l3_thd':        'current_l3_thd',
-        'volts_unbalance':       'volts_unbalance',
-        'current_unbalance':     'current_unbalance',
-        # Natural-language phrases (multi-word before single-word — order matters for substring matching)
-        'phase imbalance':       'current_unbalance',
-        'phase unbalance':       'current_unbalance',
-        'voltage unbalance':     'volts_unbalance',
-        'voltage imbalance':     'volts_unbalance',
-        'apparent power':        'apparent_power_total',
-        'power factor':          'power_factor_avg',
-        'reactive power':        'reactive_power_total',
-        'thd l3':                'current_l3_thd',
-        'thd l1':                'current_l1_thd',
-        'energy consumption':    'energy_import',
-        'energy usage':          'energy_import',
-        'energy import':         'energy_import',
-        # Single keywords (last, least specific)
-        'power_total':           'power_total',
-        'energy_import':         'energy_import',
-        'current_avg':           'current_avg',
-        'volts_l_n_avg':         'volts_l_n_avg',
-        'voltage':               'volts_l_n_avg',
-        'current':               'current_avg',
-        'energy':                'energy_import',
-        'thd':                   'current_l1_thd',
-        'unbalance':             'current_unbalance',
-    }
 
-    for keyword, metric in metric_map.items():
-        if keyword in query_lower:
-            default_metric = metric
-            break
+    # ── Resolve metric via registry ──────────────────────────────────────────
+    resolved = resolve_metric(query_lower)
+    default_metric = resolved if resolved else "power_total"
 
-    # Extract time range keywords
+    # ── Extract time range ───────────────────────────────────────────────────
     if 'today' in query_lower or '24h' in query_lower:
         default_time_range = "last_24h"
     elif 'week' in query_lower or '7d' in query_lower:
@@ -209,92 +156,73 @@ def _parse_query_rules(user_query: str) -> tuple[StructuredQuery | None, str | N
         default_time_range = "last_30d"
     elif 'all time' in query_lower or 'entire' in query_lower:
         default_time_range = "all_time"
+    else:
+        default_time_range = "last_7d"
 
-    # Determine query type
-    # Check for ranking keywords - queries that rank/compare devices
+    # ── Determine query type ─────────────────────────────────────────────────
     is_ranking = any(word in query_lower for word in [
         'rank', 'top', 'compare', 'worst', 'lowest', 'highest',
         'devices have', 'comparison', 'comparing'
     ])
 
-    # Prediction intent detection
     prediction_keywords = {
         'predict', 'forecast', 'next', 'upcoming', 'future',
         'ahead', 'will', 'tomorrow', 'expect', 'projection', 'estimate', 'spike'
     }
     is_prediction = any(kw in query_lower for kw in prediction_keywords)
 
-    # Health index intent detection
     health_index_keywords = {
         'health index', 'health score', 'fair score', 'ahu score',
         'health trend', 'score trend', 'overall health'
     }
     is_health_index = any(kw in query_lower for kw in health_index_keywords)
 
-    # Route special query types
     if is_health_index:
         query_type = QueryType.health_index
     elif is_prediction:
         query_type = QueryType.prediction
+    elif is_ranking:
+        query_type = QueryType.ranking
     else:
-        query_type = QueryType.ranking if is_ranking else QueryType.time_series
+        query_type = QueryType.time_series
 
-    # Partial match: metric + level, no explicit devices, no time intent → ranking
+    # ── Auto-upgrade to ranking: metric + level, no devices, no time intent ──
     time_keywords = {
         'today', '24h', 'week', '7d', 'month', '30 days',
         'all time', 'entire', 'trend', 'over time', 'history', 'past'
     }
     has_time_intent = any(kw in query_lower for kw in time_keywords)
 
-    # Check if a metric keyword was mentioned (even if it didn't match the metric_map exactly)
-    # This includes both full metric_map keys and common metric-related words
-    metric_mention_keywords = {
-        'power', 'apparent', 'reactive', 'energy', 'current', 'voltage',
-        'volts', 'frequency', 'thd', 'unbalance', 'imbalance', 'factor',
-        'consumption', 'usage', 'import', 'export'
-    }
-    # Also include all keys from metric_map
-    metric_mention_keywords.update(metric_map.keys())
-    explicitly_named_metric = any(kw in query_lower for kw in metric_mention_keywords)
-
     if (
-        query_type == QueryType.time_series  # only upgrade time_series, not override special types
-        and levels_expanded          # a level was mentioned
-        and not devices              # no specific device IDs like e0101
-        and explicitly_named_metric  # user actually named a metric
-        and not has_time_intent      # no time context implies "compare now"
+        query_type == QueryType.time_series
+        and levels_expanded
+        and not devices
+        and resolved is not None
+        and not has_time_intent
     ):
         query_type = QueryType.ranking
 
-    # Determine top_n for ranking queries
-    # If user asks for "all", "every", or "whole" devices, don't limit
-    # If user says "compare" without specifying count, assume they want all devices
+    # ── Determine top_n for ranking ──────────────────────────────────────────
     top_n = None
     if query_type == QueryType.ranking:
-        # Check for "top N" pattern (e.g., "top 5", "top 10")
         top_n_match = re.search(r'top\s+(\d+)', query_lower)
         if top_n_match:
             top_n = int(top_n_match.group(1))
         elif any(word in query_lower for word in ['all', 'every', 'whole']):
-            # User wants all devices, no limit
             top_n = None
         elif 'compare' in query_lower and not any(word in query_lower for word in ['top', 'highest', 'lowest', 'best', 'worst']):
-            # "Compare" without top/bottom qualifiers means all devices
             top_n = None
         else:
-            # Default to 10 for ranking queries (top/bottom N)
             top_n = 10
 
-    # ── Confidence gate ─────────────────────────────────────────────────────────
-    # If we understood nothing from the query, return a helpful error rather than
-    # silently defaulting to e0101/power_total garbage.
+    # ── Confidence gate ──────────────────────────────────────────────────────
     understood_anything = (
-        bool(devices)           # explicit device ID (e0101)
-        or bool(levels_expanded)  # level mention
-        or is_ranking             # ranking keyword
-        or is_prediction          # prediction keyword
-        or is_health_index        # health index keyword
-        or any(kw in query_lower for kw in metric_map)  # recognised metric
+        bool(devices)
+        or bool(levels_expanded)
+        or is_ranking
+        or is_prediction
+        or is_health_index
+        or resolved is not None
     )
 
     if not understood_anything:
@@ -304,75 +232,37 @@ def _parse_query_rules(user_query: str) -> tuple[StructuredQuery | None, str | N
             "'forecast power for level 5', or 'health index level 2'."
         )
 
-    # Build structured query
+    # ── Build device_ids ─────────────────────────────────────────────────────
+    device_ids: list[str] = []
+
+    # Expand levels to device IDs
+    if levels_expanded and not devices:
+        for level_str in levels_expanded:
+            level_int = int(level_str)
+            if level_int in AHU_LEVEL_CONFIG:
+                device_ids.extend(AHU_LEVEL_CONFIG[level_int]['device_ids'])
+        device_ids = list(dict.fromkeys(device_ids))  # deduplicate
+
+    # Handle "all devices/levels" for ranking
+    if query_type == QueryType.ranking:
+        has_all_levels = any(phrase in query_lower for phrase in [
+            'all levels', 'across all', 'all ahus', 'all devices',
+            'every level', 'entire building', 'building-wide'
+        ])
+        if has_all_levels and not levels_expanded:
+            device_ids = []  # empty means "all" for ranking
+
+    # Fall back to explicit device IDs or default
+    if not device_ids and not (query_type == QueryType.ranking and not levels_expanded and not devices):
+        device_ids = devices if devices else ["e0101"]
+
     try:
-        device_ids = []  # Initialize to avoid undefined variable error
-
-        # Check if query asks for "all levels" or "across all levels"
-        # In that case, device_ids should be empty (meaning ALL devices for ranking)
-        if query_type == QueryType.ranking:
-            has_all_levels = any(phrase in query_lower for phrase in [
-                'all levels', 'across all', 'all ahus', 'all devices',
-                'every level', 'entire building', 'building-wide'
-            ])
-            if has_all_levels and not levels_expanded:
-                # For ranking queries with "all" language, use empty device_ids to mean ALL devices
-                device_ids = []
-            elif levels_expanded and not devices:
-                # Get all device IDs for the specified level(s) (convert to int keys)
-                for level_str in levels_expanded:
-                    level_int = int(level_str)
-                    if level_int in AHU_LEVEL_CONFIG:
-                        device_ids.extend(AHU_LEVEL_CONFIG[level_int]['device_ids'])
-                # Remove duplicates (don't limit here - let top_n handle it)
-                device_ids = list(dict.fromkeys(device_ids))
-        elif levels_expanded and not devices:
-            # For non-ranking queries with specific levels
-            for level_str in levels_expanded:
-                level_int = int(level_str)
-                if level_int in AHU_LEVEL_CONFIG:
-                    device_ids.extend(AHU_LEVEL_CONFIG[level_int]['device_ids'])
-            # Remove duplicates
-            device_ids = list(dict.fromkeys(device_ids))
-
-        if not devices and not levels_expanded:
-            # Default to first device if no level or specific device mentioned
-            devices = ["e0101"]
-
-        # Check if query asks for "all levels" or "across all levels"
-        # In that case, device_ids should be empty (meaning ALL devices for ranking)
-        if query_type == QueryType.ranking and not levels_expanded:
-            has_all_levels = any(phrase in query_lower for phrase in [
-                'all levels', 'across all', 'all ahus', 'all devices',
-                'every level', 'entire building', 'building-wide'
-            ])
-            if has_all_levels:
-                # For ranking queries with "all" language, use empty device_ids to mean ALL devices
-                device_ids = []
-            else:
-                # Combine any level-based device IDs with explicitly mentioned devices
-                if levels_expanded and devices:
-                    # Both level and specific devices - keep both
-                    pass  # Keep as is
-                if not device_ids:
-                    device_ids = devices if devices else ["e0101"]
-        else:
-            # Combine any level-based device IDs with explicitly mentioned devices
-            if levels_expanded and devices:
-                # Both level and specific devices - keep both
-                pass  # Keep as is
-            if not device_ids:
-                device_ids = devices if devices else ["e0101"]
-
-        structured_query = StructuredQuery(
+        return StructuredQuery(
             query_type=query_type,
             device_ids=device_ids,
             metric=default_metric,
             time_range=default_time_range,
-            top_n=top_n
-        )
-
-        return structured_query, None
-
+            top_n=top_n,
+        ), None
     except Exception as e:
         return None, f"Could not parse query: {user_query}. Error: {e}"

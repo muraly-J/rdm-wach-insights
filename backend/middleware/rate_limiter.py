@@ -20,11 +20,52 @@ Why both exist:
 import time
 from collections import defaultdict
 from collections.abc import Callable
+from typing import Protocol
 
 from fastapi import HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+
+from config import settings
+
+
+class RateLimiter(Protocol):
+    """Protocol for rate limiters — allows swapping to Redis later."""
+
+    def check(self, key: str) -> None:
+        """Raise HTTPException(429) if rate limit exceeded."""
+        ...
+
+
+class InMemoryRateLimiter:
+    """Sliding-window rate limiter using in-memory storage."""
+
+    def __init__(self, max_requests: int, window_seconds: int):
+        self._max_requests = max_requests
+        self._window_seconds = window_seconds
+        self._store: dict[str, list[float]] = defaultdict(list)
+
+    def check(self, key: str) -> None:
+        now = time.time()
+        hits = [t for t in self._store[key] if now - t < self._window_seconds]
+        hits.append(now)
+        self._store[key] = hits
+        if len(hits) > self._max_requests:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "Too many requests. Please wait a moment before trying again."
+                },
+            )
+
+
+def get_rate_limiter() -> RateLimiter:
+    """Factory — returns configured InMemoryRateLimiter."""
+    return InMemoryRateLimiter(
+        max_requests=settings.rate_limit_requests,
+        window_seconds=settings.rate_limit_window,
+    )
 
 
 def make_rate_limiter(limit: int = 100, window: int = 60) -> Callable[[str], None]:

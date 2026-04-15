@@ -31,75 +31,116 @@ from pydantic import BaseModel, field_validator
 
 ALLOWED_METRICS_WITH_UNITS = {
     # POWER (kW, kVAR, kVA)
-    "power_total": ("kW", "Total active power across all phases"),
-    "power_l1": ("kW", "Active power Phase L1"),
-    "power_l2": ("kW", "Active power Phase L2"),
-    "power_l3": ("kW", "Active power Phase L3"),
-    "power_demand": ("kW", "Rolling average demand"),
-    "max_power_demand": ("kW", "Peak demand recorded"),
-    "apparent_power_total": ("kVA", "Total apparent power"),
-    "apparent_power_l1": ("kVA", "Apparent power Phase L1"),
-    "apparent_power_l2": ("kVA", "Apparent power Phase L2"),
-    "apparent_power_l3": ("kVA", "Apparent power Phase L3"),
-    "apparent_power_demand": ("kVA", "Apparent power demand"),
-    "reactive_power_total": ("kVAR", "Total reactive power"),
-    "reactive_power_l1": ("kVAR", "Reactive power Phase L1"),
-    "reactive_power_l2": ("kVAR", "Reactive power Phase L2"),
-    "reactive_power_l3": ("kVAR", "Reactive power Phase L3"),
-    "reactive_power_demand": ("kVAR", "Reactive power demand"),
-
+    "power_total": {
+        "unit": "kW",
+        "description": "Total active power across all phases",
+        "aliases": ["power", "total power", "active power"],
+    },
+    "power_l1": {"unit": "kW", "description": "Active power Phase L1", "aliases": []},
+    "power_l2": {"unit": "kW", "description": "Active power Phase L2", "aliases": []},
+    "power_l3": {"unit": "kW", "description": "Active power Phase L3", "aliases": []},
+    "power_demand": {"unit": "kW", "description": "Rolling average demand", "aliases": []},
+    "max_power_demand": {"unit": "kW", "description": "Peak demand recorded", "aliases": ["peak demand"]},
+    "apparent_power_total": {"unit": "kVA", "description": "Total apparent power", "aliases": ["apparent power"]},
+    "apparent_power_l1": {"unit": "kVA", "description": "Apparent power Phase L1", "aliases": []},
+    "apparent_power_l2": {"unit": "kVA", "description": "Apparent power Phase L2", "aliases": []},
+    "apparent_power_l3": {"unit": "kVA", "description": "Apparent power Phase L3", "aliases": []},
+    "apparent_power_demand": {"unit": "kVA", "description": "Apparent power demand", "aliases": []},
+    "reactive_power_total": {"unit": "kVAR", "description": "Total reactive power", "aliases": ["reactive power"]},
+    "reactive_power_l1": {"unit": "kVAR", "description": "Reactive power Phase L1", "aliases": []},
+    "reactive_power_l2": {"unit": "kVAR", "description": "Reactive power Phase L2", "aliases": []},
+    "reactive_power_l3": {"unit": "kVAR", "description": "Reactive power Phase L3", "aliases": []},
+    "reactive_power_demand": {"unit": "kVAR", "description": "Reactive power demand", "aliases": []},
     # ENERGY (kWh, kVARh, kVAh)
-    "energy_import": ("kWh", "Energy consumed from grid"),
-    "energy_export": ("kWh", "Energy sent to grid"),
-    "reactive_energy_import": ("kVARh", "Reactive energy consumed"),
-    "reactive_energy_export": ("kVARh", "Reactive energy sent to grid"),
-    "apparent_energy": ("kVAh", "Total apparent energy"),
-
+    "energy_import": {"unit": "kWh", "description": "Energy consumed from grid", "aliases": ["energy", "energy consumption", "energy usage", "energy import"]},
+    "energy_export": {"unit": "kWh", "description": "Energy sent to grid", "aliases": []},
+    "reactive_energy_import": {"unit": "kVARh", "description": "Reactive energy consumed", "aliases": []},
+    "reactive_energy_export": {"unit": "kVARh", "description": "Reactive energy sent to grid", "aliases": []},
+    "apparent_energy": {"unit": "kVAh", "description": "Total apparent energy", "aliases": []},
     # CURRENT (A)
-    "current_avg": ("A", "Average current across phases"),
-    "current_l1": ("A", "Current Phase L1"),
-    "current_l2": ("A", "Current Phase L2"),
-    "current_l3": ("A", "Current Phase L3"),
+    "current_avg": {"unit": "A", "description": "Average current across phases", "aliases": ["current"]},
+    "current_l1": {"unit": "A", "description": "Current Phase L1", "aliases": []},
+    "current_l2": {"unit": "A", "description": "Current Phase L2", "aliases": []},
+    "current_l3": {"unit": "A", "description": "Current Phase L3", "aliases": []},
     # CURRENT THD (%)
-    "current_l1_thd": ("%", "Current THD Phase L1"),
-    "current_l3_thd": ("%", "Current THD Phase L3"),
-
+    "current_l1_thd": {"unit": "%", "description": "Current THD Phase L1", "aliases": ["thd", "thd l1"]},
+    "current_l3_thd": {"unit": "%", "description": "Current THD Phase L3", "aliases": ["thd l3"]},
     # VOLTAGE (V)
-    "volts_l_n_avg": ("V", "Phase-to-neutral voltage average"),
-    "volts_l_l_avg": ("V", "Phase-to-phase voltage average"),
-    "volts_l1_n": ("V", "Phase L1 to neutral voltage"),
-    "volts_l2_n": ("V", "Phase L2 to neutral voltage"),
-    "volts_l3_n": ("V", "Phase L3 to neutral voltage"),
-    "volts_l1_l2": ("V", "Phase L1 to L2 voltage"),
-    "volts_l2_l3": ("V", "Phase L2 to L3 voltage"),
-    "volts_l3_l1": ("V", "Phase L3 to L1 voltage"),
-
+    "volts_l_n_avg": {"unit": "V", "description": "Phase-to-neutral voltage average", "aliases": ["voltage", "voltage readings"]},
+    "volts_l_l_avg": {"unit": "V", "description": "Phase-to-phase voltage average", "aliases": []},
+    "volts_l1_n": {"unit": "V", "description": "Phase L1 to neutral voltage", "aliases": []},
+    "volts_l2_n": {"unit": "V", "description": "Phase L2 to neutral voltage", "aliases": []},
+    "volts_l3_n": {"unit": "V", "description": "Phase L3 to neutral voltage", "aliases": []},
+    "volts_l1_l2": {"unit": "V", "description": "Phase L1 to L2 voltage", "aliases": []},
+    "volts_l2_l3": {"unit": "V", "description": "Phase L2 to L3 voltage", "aliases": []},
+    "volts_l3_l1": {"unit": "V", "description": "Phase L3 to L1 voltage", "aliases": []},
     # THD (%)
-    "volts_l1_thd": ("%", "Voltage THD Phase L1"),
-    "volts_l2_thd": ("%", "Voltage THD Phase L2"),
-    "volts_l3_thd": ("%", "Voltage THD Phase L3"),
-
-    # POWER FACTOR (unitless, -1 to 1)
-    "power_factor_avg": ("", "Power factor average (unitless ratio -1 to 1)"),
-    "power_factor_l1": ("", "Power factor Phase L1 (unitless ratio -1 to 1)"),
-    "power_factor_l2": ("", "Power factor Phase L2 (unitless ratio -1 to 1)"),
-    "power_factor_l3": ("", "Power factor Phase L3 (unitless ratio -1 to 1)"),
-
+    "volts_l1_thd": {"unit": "%", "description": "Voltage THD Phase L1", "aliases": []},
+    "volts_l2_thd": {"unit": "%", "description": "Voltage THD Phase L2", "aliases": []},
+    "volts_l3_thd": {"unit": "%", "description": "Voltage THD Phase L3", "aliases": []},
+    # POWER FACTOR (unitless)
+    "power_factor_avg": {"unit": "", "description": "Power factor average (unitless ratio -1 to 1)", "aliases": ["power factor"]},
+    "power_factor_l1": {"unit": "", "description": "Power factor Phase L1 (unitless ratio -1 to 1)", "aliases": []},
+    "power_factor_l2": {"unit": "", "description": "Power factor Phase L2 (unitless ratio -1 to 1)", "aliases": []},
+    "power_factor_l3": {"unit": "", "description": "Power factor Phase L3 (unitless ratio -1 to 1)", "aliases": []},
     # FREQUENCY (Hz)
-    "freq": ("Hz", "System frequency"),
-
+    "freq": {"unit": "Hz", "description": "System frequency", "aliases": ["frequency"]},
     # UNBALANCE (%)
-    "current_unbalance": ("%", "Current unbalance percentage"),
-    "volts_unbalance": ("%", "Voltage unbalance percentage"),
-
+    "current_unbalance": {"unit": "%", "description": "Current unbalance percentage", "aliases": ["unbalance", "phase imbalance", "phase unbalance", "current imbalance"]},
+    "volts_unbalance": {"unit": "%", "description": "Voltage unbalance percentage", "aliases": ["voltage unbalance", "voltage imbalance"]},
     # OTHER
-    "digital_input_1_and_2": ("", "Binary status inputs"),
+    "digital_input_1_and_2": {"unit": "", "description": "Binary status inputs", "aliases": []},
 }
 
 
 # ── Allowed values ────────────────────────────────────────────────────────────
 
 ALLOWED_METRICS = list(ALLOWED_METRICS_WITH_UNITS.keys())
+
+# ── Metric alias resolver ────────────────────────────────────────────────────
+
+def _build_alias_lookup() -> dict[str, str]:
+    """
+    Build reverse lookup: alias string -> metric key.
+    Sorted longest-first so multi-word aliases match before single-word.
+    """
+    lookup: dict[str, str] = {}
+    # First pass: add all metric key names themselves
+    for key in ALLOWED_METRICS_WITH_UNITS:
+        lookup[key] = key
+    # Second pass: add aliases (longer aliases inserted first for priority)
+    pairs: list[tuple[str, str]] = []
+    for key, entry in ALLOWED_METRICS_WITH_UNITS.items():
+        for alias in entry["aliases"]:
+            pairs.append((alias.lower(), key))
+    # Sort by alias length descending — longest match wins
+    pairs.sort(key=lambda p: len(p[0]), reverse=True)
+    for alias, key in pairs:
+        if alias not in lookup:  # don't override metric key names
+            lookup[alias] = key
+    return lookup
+
+
+_ALIAS_LOOKUP: dict[str, str] = _build_alias_lookup()
+# Sorted by length descending for substring matching
+_ALIAS_KEYS_BY_LENGTH: list[str] = sorted(_ALIAS_LOOKUP.keys(), key=len, reverse=True)
+
+
+def resolve_metric(text: str) -> str | None:
+    """
+    Resolve a natural-language query text to a metric key.
+
+    Matching strategy:
+      1. Exact metric key match (e.g., "power_total" in text)
+      2. Longest alias substring match (multi-word before single-word)
+
+    Returns the metric key string, or None if no match.
+    """
+    text_lower = text.lower()
+    for alias in _ALIAS_KEYS_BY_LENGTH:
+        if alias in text_lower:
+            return _ALIAS_LOOKUP[alias]
+    return None
 
 ALLOWED_TIME_RANGES = {
     "last_24h": "-24h",
@@ -451,9 +492,10 @@ def get_metric_unit(metric: str) -> str:
     Returns:
         Unit string (e.g., "kW", "kWh", "A")
     """
-    if metric in ALLOWED_METRICS_WITH_UNITS:
-        return ALLOWED_METRICS_WITH_UNITS[metric][0]
-    return ""
+    entry = ALLOWED_METRICS_WITH_UNITS.get(metric)
+    if entry is None:
+        return ""
+    return entry["unit"]
 
 
 def get_metric_description(metric: str) -> str:
@@ -466,9 +508,10 @@ def get_metric_description(metric: str) -> str:
     Returns:
         Description string
     """
-    if metric in ALLOWED_METRICS_WITH_UNITS:
-        return ALLOWED_METRICS_WITH_UNITS[metric][1]
-    return ""
+    entry = ALLOWED_METRICS_WITH_UNITS.get(metric)
+    if entry is None:
+        return ""
+    return entry["description"]
 
 
 def is_valid_ahu_id(device_id: str) -> bool:

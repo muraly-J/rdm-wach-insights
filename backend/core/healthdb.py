@@ -33,6 +33,19 @@ else:
     # Local development: use data/ directory
     _DEFAULT_DB_PATH = str(settings.data_dir / 'healthdb.duckdb')
 
+_ETL_RUNS_SEQ_SQL = "CREATE SEQUENCE IF NOT EXISTS etl_runs_seq START 1;"
+
+_ETL_RUNS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS etl_runs (
+    run_id        INTEGER PRIMARY KEY DEFAULT nextval('etl_runs_seq'),
+    started_at    TIMESTAMPTZ NOT NULL,
+    completed_at  TIMESTAMPTZ,
+    status        VARCHAR NOT NULL DEFAULT 'running',
+    rows_written  INTEGER,
+    level         INTEGER
+);
+"""
+
 _PREDICTIONS_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS predictions (
     timestamp       TIMESTAMPTZ NOT NULL,
@@ -182,6 +195,8 @@ class HealthDB:
         with self._conn(write=True) as conn:
             conn.execute(_SCHEMA_SQL)
             conn.execute(_PREDICTIONS_SCHEMA_SQL)
+            conn.execute(_ETL_RUNS_SEQ_SQL)
+            conn.execute(_ETL_RUNS_SCHEMA_SQL)
             # Migrate existing DBs: add new columns (no-op if already present)
             for stmt in _MIGRATE_SCHEMA_SQL.strip().split(';'):
                 stmt = stmt.strip()
@@ -377,3 +392,56 @@ class HealthDB:
         """
         with self._conn() as conn:
             return conn.execute(query, params).df()
+
+    # ── ETL Heartbeat ─────────────────────────────────────────────────────
+
+    def record_etl_start(self, level: int | None = None) -> int:
+        """Record the start of an ETL run. Returns the run_id."""
+        with self._conn(write=True) as conn:
+            result = conn.execute(
+                "INSERT INTO etl_runs (started_at, status, level) "
+                "VALUES (now(), 'running', ?) RETURNING run_id",
+                [level],
+            ).fetchone()
+        if result is None:
+            raise RuntimeError("etl_runs INSERT RETURNING returned no row")
+        return result[0]
+
+    def record_etl_complete(
+        self, run_id: int, status: str = "success", rows_written: int = 0
+    ) -> None:
+        """Update an ETL run with completion status."""
+        with self._conn(write=True) as conn:
+            conn.execute(
+                "UPDATE etl_runs SET completed_at = now(), status = ?, rows_written = ? "
+                "WHERE run_id = ?",
+                [status, rows_written, run_id],
+            )
+
+    def get_last_sync(self) -> dict:
+        """
+        Returns metadata about the most recent successful ETL run.
+
+        Returns:
+            {"data_as_of": ISO8601 string or None, "sync_age_seconds": int or None}
+        """
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT completed_at FROM etl_runs "
+                "WHERE status = 'success' "
+                "ORDER BY completed_at DESC LIMIT 1"
+            ).fetchone()
+
+        if row is None or row[0] is None:
+            return {"data_as_of": None, "sync_age_seconds": None}
+
+        completed = row[0]
+        if hasattr(completed, 'tzinfo') and completed.tzinfo is None:
+            completed = completed.replace(tzinfo=timezone.utc)
+
+        now = datetime.now(timezone.utc)
+        age = int((now - completed).total_seconds())
+        return {
+            "data_as_of": completed.isoformat(),
+            "sync_age_seconds": age,
+        }

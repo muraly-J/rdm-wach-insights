@@ -34,6 +34,7 @@ import numpy as np
 
 # Import ETL components
 from core.influx_client import fetch_latest_hourly_data, get_available_devices
+from core.healthdb import HealthDB
 
 # Add models for AHU level config
 from models.schemas import AHU_LEVEL_CONFIG, get_devices_by_level, DEVICE_TO_LEVEL as _DEVICE_TO_LEVEL
@@ -1064,69 +1065,89 @@ def run_etl_pipeline(dry_run=False, level=None, scheduled=False):
         "level_filter": level,
     }
 
-    # STEP 1: EXTRACT
-    start_timer("STEP 1: Extract raw data")
-    df_raw = extract_raw_data(level_filter=level)
-    step_timings["extract"] = end_timer("STEP 1: Extract raw data")
-    if df_raw is None:
-        results["status"] = "error"
-        return results
+    # Record ETL start in heartbeat table
+    heartbeat_db = HealthDB()
+    etl_run_id = heartbeat_db.record_etl_start(level=level)
 
-    results["rows_extracted"] = len(df_raw)
+    try:
+        # STEP 1: EXTRACT
+        start_timer("STEP 1: Extract raw data")
+        df_raw = extract_raw_data(level_filter=level)
+        step_timings["extract"] = end_timer("STEP 1: Extract raw data")
+        if df_raw is None:
+            results["status"] = "error"
+            heartbeat_db.record_etl_complete(etl_run_id, status="failed", rows_written=0)
+            return results
 
-    # STEP 2: TRANSFORM
-    start_timer("STEP 2: Transform (FAIR scoring)")
-    df_scores = transform_health_scores(df_raw)
-    step_timings["transform"] = end_timer("STEP 2: Transform (FAIR scoring)")
-    if df_scores is None:
-        results["status"] = "error"
-        return results
+        results["rows_extracted"] = len(df_raw)
 
-    results["rows_transformed"] = len(df_scores)
+        # STEP 2: TRANSFORM
+        start_timer("STEP 2: Transform (FAIR scoring)")
+        df_scores = transform_health_scores(df_raw)
+        step_timings["transform"] = end_timer("STEP 2: Transform (FAIR scoring)")
+        if df_scores is None:
+            results["status"] = "error"
+            heartbeat_db.record_etl_complete(etl_run_id, status="failed", rows_written=0)
+            return results
 
-    # STEP 3: LOAD
-    if dry_run:
-        print("\n[DRY RUN] Skipping file write")
-    results["rows_loaded"] = len(df_scores)
+        results["rows_transformed"] = len(df_scores)
 
-    # STEP 3c: Load to DuckDB (always runs, passes dry_run flag)
-    save_health_duckdb(df_scores, dry_run=dry_run)
+        # STEP 3: LOAD
+        if dry_run:
+            print("\n[DRY RUN] Skipping file write")
+        results["rows_loaded"] = len(df_scores)
 
-    # STEP 4: Safety Flags Summary
-    print_safety_flags_summary(df_scores)
+        # STEP 3c: Load to DuckDB (always runs, passes dry_run flag)
+        save_health_duckdb(df_scores, dry_run=dry_run)
 
-    # Total time calculation
-    total_elapsed = time.time() - total_start
+        # STEP 4: Safety Flags Summary
+        print_safety_flags_summary(df_scores)
 
-    # Final summary with timing
-    if not scheduled:
-        print("\n" + "="*70)
-        print("ETL PIPELINE COMPLETE")
-        print("="*70)
-        print(f"  Status: {results['status']}")
-        print(f"  Rows extracted:   {results['rows_extracted']}")
-        print(f"  Rows transformed: {results['rows_transformed']}")
-        print(f"  Rows loaded:      {results['rows_loaded']}")
-        if level:
-            print(f"  Level filter:     Level {level} only")
-        print("-"*70)
-        print("  TIMING BREAKDOWN:")
-        print(f"    Extract:     {step_timings.get('extract', 0):.2f}s")
-        print(f"    Transform:   {step_timings.get('transform', 0):.2f}s")
-        print(f"    Load:        {step_timings.get('load', 0):.2f}s")
-        print(f"    TOTAL:       {total_elapsed:.2f}s")
-        print("="*70)
+        # Total time calculation
+        total_elapsed = time.time() - total_start
 
-        # Check if within target
-        if total_elapsed < 45:
-            print(f"\n✓ Pipeline completed in {total_elapsed:.2f}s (TARGET: <45s)")
+        # Final summary with timing
+        if not scheduled:
+            print("\n" + "="*70)
+            print("ETL PIPELINE COMPLETE")
+            print("="*70)
+            print(f"  Status: {results['status']}")
+            print(f"  Rows extracted:   {results['rows_extracted']}")
+            print(f"  Rows transformed: {results['rows_transformed']}")
+            print(f"  Rows loaded:      {results['rows_loaded']}")
+            if level:
+                print(f"  Level filter:     Level {level} only")
+            print("-"*70)
+            print("  TIMING BREAKDOWN:")
+            print(f"    Extract:     {step_timings.get('extract', 0):.2f}s")
+            print(f"    Transform:   {step_timings.get('transform', 0):.2f}s")
+            print(f"    Load:        {step_timings.get('load', 0):.2f}s")
+            print(f"    TOTAL:       {total_elapsed:.2f}s")
+            print("="*70)
+
+            # Check if within target
+            if total_elapsed < 45:
+                print(f"\n✓ Pipeline completed in {total_elapsed:.2f}s (TARGET: <45s)")
+            else:
+                print(f"\n⚠ Pipeline took {total_elapsed:.2f}s (TARGET: <45s)")
         else:
-            print(f"\n⚠ Pipeline took {total_elapsed:.2f}s (TARGET: <45s)")
-    else:
-        # Scheduled mode: print minimal summary
-        print(f"[INFO] ETL Complete | Status: {results['status']} | Rows: {results['rows_loaded']} | Time: {total_elapsed:.1f}s")
+            # Scheduled mode: print minimal summary
+            print(f"[INFO] ETL Complete | Status: {results['status']} | Rows: {results['rows_loaded']} | Time: {total_elapsed:.1f}s")
 
-    return results
+        # Record ETL completion
+        heartbeat_db.record_etl_complete(
+            etl_run_id,
+            status=results["status"],
+            rows_written=results["rows_loaded"],
+        )
+
+        return results
+
+    except Exception as e:
+        heartbeat_db.record_etl_complete(etl_run_id, status="failed", rows_written=0)
+        print(f"[ERROR] ETL pipeline failed: {e}")
+        results["status"] = "error"
+        return results
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -15,6 +15,7 @@ import logging
 from datetime import datetime
 
 import pandas as pd
+from core.healthdb import HealthDB
 from core.influx_client import get_available_devices
 from core.risk_engine import (
     generate_fleet_risk_assessment,
@@ -31,6 +32,16 @@ FLAG_LABELS = {
 }
 
 # FAIR scoring imports
+
+
+def _get_metadata() -> dict:
+    """Get data freshness metadata for API responses."""
+    try:
+        db = HealthDB()
+        return db.get_last_sync()
+    except Exception:
+        return {"data_as_of": None, "sync_age_seconds": None}
+
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
@@ -109,6 +120,7 @@ async def dashboard_ranking(
             "snapshot_time": datetime.now().isoformat(),
             "best": best_list,
             "worst": worst_list,
+            "metadata": _get_metadata(),
         }
 
     except HTTPException:
@@ -265,6 +277,7 @@ async def dashboard_trend(
             "range": range,
             "ahus": [a["device_id"] for a in assessments],
             "series": series,
+            "metadata": _get_metadata(),
             "latest_snapshot": {
                 a["device_id"]: round(a["health_index"], 1)
                 for a in assessments
@@ -645,7 +658,8 @@ async def dashboard_summary(
             "level": level,
             "range": range,
             "device_id": ahu_id,
-            "summaries": summaries
+            "summaries": summaries,
+            "metadata": _get_metadata(),
         }
 
     except HTTPException:

@@ -17,9 +17,10 @@ from core.influx_client import fetch_ranking, fetch_time_series
 from core.logger import get_logger
 from core.summarizer import summarize
 from fastapi import APIRouter, HTTPException, Request
+from llm.circuit_breaker import LLMUnavailableError
 from llm.translator import translate_query
 from middleware.query_logger import log_query
-from middleware.rate_limiter import make_rate_limiter
+from middleware.rate_limiter import get_rate_limiter
 from middleware.validator import validate_structured_query
 from models.schemas import ALLOWED_DEVICES, ALLOWED_METRICS, QueryType
 from pydantic import BaseModel, validator
@@ -30,7 +31,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 # ── Rate limiter (in-memory, per IP) ────────────────────────────────────────
-_check_rate_limit = make_rate_limiter(limit=20, window=60)
+_limiter = get_rate_limiter()
 
 # ── Injection & abuse patterns ───────────────────────────────────────────────
 _INJECTION_PATTERNS = [
@@ -169,7 +170,7 @@ async def handle_query(request: Request, body: QueryRequest) -> dict:
     client_ip = request.client.host or 'unknown'
 
     # 1. Rate limit
-    _check_rate_limit(client_ip)
+    _limiter.check(client_ip)
 
     # 2. Input injection detection
     _check_injection(body.user_query)
@@ -179,6 +180,14 @@ async def handle_query(request: Request, body: QueryRequest) -> dict:
     # 3. LLM translation
     try:
         structured, error = await translate_query(body.user_query)
+    except LLMUnavailableError:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "AI is temporarily unavailable, please try again in a few minutes.",
+                "suggestion": "The system will automatically retry. Please wait a moment."
+            }
+        )
     except Exception as e:
         # Catch any unexpected errors during translation
         error = "Could not reach the server. Please try again in a moment."
