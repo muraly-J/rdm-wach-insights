@@ -219,7 +219,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
             name="Score"
           />
 
-          {renderOffPeriodAreas(mergedData)}
+          {renderOffPeriodAreas(mergedData, 'timestamp')}
         </LineChart>
       </ResponsiveContainer>
 

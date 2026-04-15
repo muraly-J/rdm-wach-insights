@@ -10,7 +10,7 @@ interface ScoreDerivationSectionProps {
   deviceId: string;
   rawData: Record<string, any>;
   timeRange: '24h' | '7d' | '30d';
-  healthChartData?: Array<{ timestamp?: string; is_on?: boolean; [key: string]: any }>;
+  isOnByTimestamp?: Record<string, boolean>;
 }
 
 /**
@@ -39,20 +39,21 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
   deviceId,
   rawData,
   timeRange,
-  healthChartData,
+  isOnByTimestamp = {},
 }) => {
-  // Enrich all scoreData with is_on flags from healthChartData
+  // Enrich all scoreData with is_on flags via timestamp lookup
   const enrichedRawData = React.useMemo(() => {
-    if (!healthChartData?.length || !rawData) return rawData;
+    const hasIsOn = Object.keys(isOnByTimestamp).length > 0;
+    if (!hasIsOn || !rawData) return rawData;
 
     const enriched: Record<string, any> = {};
     Object.entries(rawData).forEach(([key, value]) => {
       if (value && typeof value === 'object' && 'scoreData' in value) {
         enriched[key] = {
           ...value,
-          scoreData: (value as any).scoreData.map((point: any, i: number) => ({
+          scoreData: (value as any).scoreData.map((point: any) => ({
             ...point,
-            is_on: healthChartData[i]?.is_on ?? true,
+            is_on: isOnByTimestamp[point.timestamp] ?? true,
           })),
         };
       } else {
@@ -60,7 +61,7 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
       }
     });
     return enriched;
-  }, [rawData, healthChartData]);
+  }, [rawData, isOnByTimestamp]);
 
   return (
     <motion.div

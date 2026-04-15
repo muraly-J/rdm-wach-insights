@@ -12,6 +12,7 @@ interface DeepDiveViewProps {
   timeRange: string;
   isSelectedDeviceOn?: boolean;
   healthChartData?: Array<{ timestamp?: string; is_on?: boolean; [key: string]: any }>;
+  isOnByTimestamp?: Record<string, boolean>;
 }
 
 const DeepDiveView: React.FC<DeepDiveViewProps> = ({
@@ -20,6 +21,7 @@ const DeepDiveView: React.FC<DeepDiveViewProps> = ({
   timeRange,
   isSelectedDeviceOn = true,
   healthChartData,
+  isOnByTimestamp = {},
 }) => {
   const { selectedDevice, deepDiveSubMode, setDeepDiveSubMode, compareDevices } = useAppStore();
   const [offPeriods, setOffPeriods] = React.useState<OffPeriod[]>([]);
@@ -80,6 +82,7 @@ const DeepDiveView: React.FC<DeepDiveViewProps> = ({
             timeRange={timeRange}
             isOn={isSelectedDeviceOn}
             healthChartData={healthChartData}
+            isOnByTimestamp={isOnByTimestamp}
           />
         ) : (
           <div style={{ padding: 40, textAlign: 'center', color: '#556677', fontSize: 13 }}>

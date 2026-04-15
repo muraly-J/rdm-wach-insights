@@ -133,7 +133,7 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
                 connectNulls
               />
             ))}
-            {renderOffPeriodAreas(mergedData)}
+            {renderOffPeriodAreas(mergedData, 'timestamp')}
           </LineChart>
         </ResponsiveContainer>
       </div>

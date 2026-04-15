@@ -226,6 +226,20 @@ function App() {
     });
   }, [healthData, selectedDevice, chartRange, labelMap]);
 
+  // Map raw ISO timestamps → is_on from health data (for enriching other charts)
+  const isOnByTimestamp = React.useMemo<Record<string, boolean>>(() => {
+    if (!selectedDevice || selectedDevice === 'all' || !healthData?.devices?.length) return {};
+    const dev = healthData.devices.find((d) => d.id === selectedDevice);
+    if (!dev?.data?.length) return {};
+    const map: Record<string, boolean> = {};
+    dev.data.forEach((pt: any) => {
+      if (pt.timestamp && pt.is_on !== undefined) {
+        map[pt.timestamp] = pt.is_on;
+      }
+    });
+    return map;
+  }, [healthData, selectedDevice]);
+
   const isSingleDevice = selectedDevice && selectedDevice !== 'all';
 
   const chartDevices = React.useMemo(() => {
@@ -282,7 +296,8 @@ function App() {
 
   // Merge is_on flags from health data into score data for chart greying
   const scoreCardDataWithIsOn = React.useMemo(() => {
-    if (!scoreCardData || Object.keys(scoreCardData).length === 0 || !healthChartData?.length) {
+    const hasIsOn = Object.keys(isOnByTimestamp).length > 0;
+    if (!scoreCardData || Object.keys(scoreCardData).length === 0 || !hasIsOn) {
       return scoreCardData;
     }
 
@@ -290,14 +305,14 @@ function App() {
     Object.entries(scoreCardData).forEach(([key, entry]) => {
       enrichedData[key] = {
         ...entry,
-        data: entry.data.map((point, i) => ({
+        data: entry.data.map((point) => ({
           ...point,
-          is_on: healthChartData[i]?.is_on ?? true,
+          is_on: isOnByTimestamp[point.timestamp] ?? true,
         })),
       };
     });
     return enrichedData;
-  }, [scoreCardData, healthChartData]);
+  }, [scoreCardData, isOnByTimestamp]);
 
   const deviceHealth = React.useMemo(() => {
     if (!selectedDevice || selectedDevice === 'all' || !healthData) return null;
@@ -391,7 +406,7 @@ function App() {
                         deviceId={selectedDevice ?? ''}
                         rawData={rawData}
                         timeRange={chartRange}
-                        healthChartData={healthChartData}
+                        isOnByTimestamp={isOnByTimestamp}
                       />
                     </React.Suspense>
                   )}
@@ -427,6 +442,7 @@ function App() {
                   timeRange={timeRange}
                   isSelectedDeviceOn={isSelectedDeviceOn}
                   healthChartData={healthChartData}
+                  isOnByTimestamp={isOnByTimestamp}
                 />
               </React.Suspense>
             </motion.div>

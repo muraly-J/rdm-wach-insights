@@ -211,7 +211,7 @@ const HealthIndexChart: React.FC<HealthIndexChartProps> = ({ data, devices, offP
               />
             ))}
 
-            {renderOffPeriodAreas(data)}
+            {renderOffPeriodAreas(data, 'timestamp')}
           </AreaChart>
         </ResponsiveContainer>
       </div>

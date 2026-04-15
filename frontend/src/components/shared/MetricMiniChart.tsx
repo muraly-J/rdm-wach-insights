@@ -77,7 +77,7 @@ export default function MetricMiniChart({
             dot={false}
             connectNulls
           />
-          {renderOffPeriodAreas(data)}
+          {renderOffPeriodAreas(data, 'timestamp')}
         </LineChart>
       </ResponsiveContainer>
     </div>

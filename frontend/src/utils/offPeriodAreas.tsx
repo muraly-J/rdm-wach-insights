@@ -14,7 +14,10 @@ import type { OffPeriod } from '../types';
  * @param data - Either OffPeriod[] OR data array with is_on flags
  * @returns Array of ReferenceArea components to render in AreaChart
  */
-export function renderOffPeriodAreas(data: any[] | OffPeriod[] | undefined): React.ReactNode {
+export function renderOffPeriodAreas(
+  data: any[] | OffPeriod[] | undefined,
+  xKey?: string
+): React.ReactNode {
   if (!data?.length) return null;
 
   // Check if this is an OffPeriod array (has start/end properties)
@@ -33,10 +36,10 @@ export function renderOffPeriodAreas(data: any[] | OffPeriod[] | undefined): Rea
   }
 
   // New: handle data array with is_on flags - generate off-periods
-  // Use timestamp values when available (required for categorical XAxis charts),
-  // fall back to numeric indices for charts without an explicit XAxis.
-  const hasTsKey = 'timestamp' in data[0];
-  const xVal = (idx: number) => (hasTsKey ? data[idx].timestamp : idx);
+  // When xKey is provided (e.g. 'timestamp'), use that field's value for ReferenceArea x1/x2
+  // so it matches the categorical XAxis. Without xKey, use numeric indices (works for
+  // sparkline charts with no explicit XAxis).
+  const xVal = (idx: number) => (xKey ? data[idx]?.[xKey] ?? idx : idx);
 
   const areas: React.ReactNode[] = [];
   let offStart: number | null = null;

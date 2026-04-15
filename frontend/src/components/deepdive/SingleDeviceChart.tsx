@@ -21,6 +21,7 @@ interface SingleDeviceChartProps {
   timeRange: string;
   isOn?: boolean;
   healthChartData?: Array<{ timestamp?: string; is_on?: boolean; [key: string]: any }>;
+  isOnByTimestamp?: Record<string, boolean>;
 }
 
 function toApiRange(timeRange: string): '24h' | '7d' | '30d' {
@@ -34,6 +35,7 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
   timeRange,
   isOn = true,
   healthChartData,
+  isOnByTimestamp = {},
 }) => {
   const { selectedMetrics, setSelectedMetrics, toggleMetric } = useMetricSelection();
   const [chartData, setChartData] = React.useState<Record<string, number | string | null>[]>([]);
@@ -64,14 +66,15 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
       .finally(() => setIsLoading(false));
   }, [deviceId, selectedMetrics, timeRange]);
 
-  // Merge is_on flags from healthChartData
+  // Merge is_on flags via timestamp lookup
   const chartDataWithIsOn = React.useMemo(() => {
-    if (!chartData?.length || !healthChartData?.length) return chartData;
-    return chartData.map((point, i) => ({
+    const hasIsOn = Object.keys(isOnByTimestamp).length > 0;
+    if (!chartData?.length || !hasIsOn) return chartData;
+    return chartData.map((point) => ({
       ...point,
-      is_on: healthChartData[i]?.is_on ?? true,
+      is_on: isOnByTimestamp[point.timestamp as string] ?? true,
     }));
-  }, [chartData, healthChartData]);
+  }, [chartData, isOnByTimestamp]);
 
   return (
     <div>
@@ -236,7 +239,7 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
                   strokeWidth={1.5}
                 />
               ))}
-              {renderOffPeriodAreas(chartDataWithIsOn)}
+              {renderOffPeriodAreas(chartDataWithIsOn, 'timestamp')}
             </LineChart>
           </ResponsiveContainer>
         )}
