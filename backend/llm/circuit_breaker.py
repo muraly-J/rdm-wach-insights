@@ -7,7 +7,6 @@ States: CLOSED → OPEN → HALF_OPEN → CLOSED (or back to OPEN).
 Prevents repeated 60-second timeouts when LM Studio is down.
 """
 
-import os
 import time
 import threading
 
@@ -31,13 +30,14 @@ class CircuitBreaker:
         failure_threshold: int | None = None,
         cooldown_seconds: float | None = None,
     ):
+        from config import settings
         self._failure_threshold = (
             failure_threshold if failure_threshold is not None
-            else int(os.getenv("LLM_FAILURE_THRESHOLD", "3"))
+            else settings.llm_failure_threshold
         )
         self._cooldown_seconds = (
             cooldown_seconds if cooldown_seconds is not None
-            else float(os.getenv("LLM_COOLDOWN_SECONDS", "300"))
+            else settings.llm_cooldown_seconds
         )
         self._consecutive_failures = 0
         self._opened_at: float | None = None

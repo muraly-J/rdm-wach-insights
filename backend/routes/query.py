@@ -17,6 +17,7 @@ from core.influx_client import fetch_ranking, fetch_time_series
 from core.logger import get_logger
 from core.summarizer import summarize
 from fastapi import APIRouter, HTTPException, Request
+from llm.circuit_breaker import LLMUnavailableError
 from llm.translator import translate_query
 from middleware.query_logger import log_query
 from middleware.rate_limiter import make_rate_limiter
@@ -179,6 +180,14 @@ async def handle_query(request: Request, body: QueryRequest) -> dict:
     # 3. LLM translation
     try:
         structured, error = await translate_query(body.user_query)
+    except LLMUnavailableError:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "AI is temporarily unavailable, please try again in a few minutes.",
+                "suggestion": "The system will automatically retry. Please wait a moment."
+            }
+        )
     except Exception as e:
         # Catch any unexpected errors during translation
         error = "Could not reach the server. Please try again in a moment."

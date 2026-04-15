@@ -15,6 +15,7 @@ from functools import partial
 
 from config import get_lms_api_key, get_lms_base_url, get_lms_model, settings
 from core.logger import get_logger
+from llm.circuit_breaker import CircuitBreaker, LLMUnavailableError
 from openai import OpenAI
 
 logger = get_logger(__name__)
@@ -38,6 +39,7 @@ class QwenClient:
             timeout=timeout,
         )
         self._model = get_lms_model()
+        self._breaker = CircuitBreaker()
         logger.info(f"QwenClient initialised — model={self._model}, base_url={get_lms_base_url()}")
 
     async def generate_text(
@@ -53,6 +55,7 @@ class QwenClient:
             messages.append({"role": "system", "content": system_instruction})
         messages.append({"role": "user", "content": prompt})
 
+        self._breaker.check_state()
         loop = asyncio.get_event_loop()
         try:
             response = await loop.run_in_executor(
@@ -65,10 +68,14 @@ class QwenClient:
                     max_tokens=max_output_tokens,
                 ),
             )
+            self._breaker.record_success()
             return _strip_think(response.choices[0].message.content)
+        except LLMUnavailableError:
+            raise
         except Exception as e:
+            self._breaker.record_failure()
             logger.warning(f"LM Studio unreachable: {e}")
-            return "Local LM Studio is not available in this environment."
+            raise LLMUnavailableError(f"LM Studio unreachable: {e}")
 
     async def generate_chat_response(
         self,
@@ -90,6 +97,7 @@ class QwenClient:
             content = msg["parts"][0] if isinstance(msg["parts"], list) else msg["parts"]
             oai_messages.append({"role": role, "content": content})
 
+        self._breaker.check_state()
         loop = asyncio.get_event_loop()
         try:
             response = await loop.run_in_executor(
@@ -102,10 +110,14 @@ class QwenClient:
                     max_tokens=max_output_tokens,
                 ),
             )
+            self._breaker.record_success()
             return _strip_think(response.choices[0].message.content)
+        except LLMUnavailableError:
+            raise
         except Exception as e:
+            self._breaker.record_failure()
             logger.warning(f"LM Studio unreachable: {e}")
-            return "Local LM Studio is not available in this environment."
+            raise LLMUnavailableError(f"LM Studio unreachable: {e}")
 
     async def generate_with_tools(
         self,
@@ -139,6 +151,7 @@ class QwenClient:
             Final assistant response string with <think> blocks stripped.
         """
         import json
+        self._breaker.check_state()
         full_messages = [{"role": "system", "content": system_prompt}] + list(messages)
 
         for round_num in range(max_tool_rounds + 1):
@@ -163,15 +176,19 @@ class QwenClient:
                     None,
                     partial(self._client.chat.completions.create, **kwargs),
                 )
+            except LLMUnavailableError:
+                raise
             except Exception as e:
+                self._breaker.record_failure()
                 logger.warning(f"LM Studio unreachable: {e}")
-                return "Local LM Studio is not available in this environment."
+                raise LLMUnavailableError(f"LM Studio unreachable: {e}")
 
             choice = response.choices[0]
             tool_calls = getattr(choice.message, "tool_calls", None)
 
             # No tool calls → final answer
             if not tool_calls:
+                self._breaker.record_success()
                 content = choice.message.content or ""
                 return _strip_think(content)
 

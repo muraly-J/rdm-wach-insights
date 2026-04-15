@@ -1,5 +1,6 @@
 """Tests for the AI-powered POST /api/chat endpoint."""
 import os
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from dotenv import load_dotenv
@@ -20,7 +21,16 @@ def client():
     return TestClient(app)
 
 
-def test_chat_returns_reply_field(client):
+@pytest.fixture
+def mock_llm_client():
+    """Patch the LLM client to return a canned reply without hitting LM Studio."""
+    mock = AsyncMock()
+    mock.generate_with_tools = AsyncMock(return_value="Mocked LLM reply.")
+    with patch("routes.chat.get_chat_client", return_value=mock):
+        yield mock
+
+
+def test_chat_returns_reply_field(client, mock_llm_client):
     """Chat endpoint must return JSON with a 'reply' key."""
     resp = client.post(
         "/api/chat",
@@ -33,7 +43,7 @@ def test_chat_returns_reply_field(client):
     assert len(resp.json()["reply"]) > 0
 
 
-def test_chat_accepts_history(client):
+def test_chat_accepts_history(client, mock_llm_client):
     """Chat endpoint must accept a history array without errors."""
     payload = {
         "message": "What does that mean?",
@@ -61,7 +71,7 @@ def test_chat_empty_message_rejected(client):
     assert resp.status_code == 422
 
 
-def test_chat_accepts_context(client):
+def test_chat_accepts_context(client, mock_llm_client):
     """Chat endpoint must accept optional context without errors."""
     payload = {"message": "How is this level doing?", "context": {"level": 3}}
     resp = client.post(
@@ -70,3 +80,19 @@ def test_chat_accepts_context(client):
         headers=_AUTH_HEADERS,
     )
     assert resp.status_code == 200
+
+
+def test_chat_llm_unavailable_returns_503(client):
+    """Chat endpoint must return 503 when circuit breaker is open."""
+    from llm.circuit_breaker import LLMUnavailableError
+
+    mock = AsyncMock()
+    mock.generate_with_tools = AsyncMock(side_effect=LLMUnavailableError("breaker open"))
+    with patch("routes.chat.get_chat_client", return_value=mock):
+        resp = client.post(
+            "/api/chat",
+            json={"message": "hello"},
+            headers=_AUTH_HEADERS,
+        )
+    assert resp.status_code == 503
+    assert "temporarily unavailable" in resp.json()["detail"]
