@@ -20,8 +20,6 @@ export default function DataFreshnessIndicator({ dataAsOf }: DataFreshnessIndica
   if (!dataAsOf) return null;
 
   return (
-    <span className="text-xs text-gray-500 font-mono">
-      Data as of {formatTimeAgo(dataAsOf)}
-    </span>
+    <span className="text-xs text-gray-500 font-mono">Data as of {formatTimeAgo(dataAsOf)}</span>
   );
 }

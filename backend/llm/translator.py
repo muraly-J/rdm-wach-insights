@@ -25,7 +25,7 @@ from config import settings
 from core.logger import get_logger
 from llm.prompts import SYSTEM_PROMPT
 from middleware.validator import validate_raw_dict
-from models.schemas import AHU_LEVEL_CONFIG, QueryType, StructuredQuery
+from models.schemas import StructuredQuery
 
 # Disable LLM by default for local development
 # Set ENABLE_LLM=true to enable AI translation via Gemini
@@ -125,8 +125,7 @@ def _parse_query_rules(user_query: str) -> tuple[Union[StructuredQuery, None], U
 
     Uses resolve_metric() from schemas.py for metric resolution.
     """
-    import re
-    from models.schemas import QueryType, AHU_LEVEL_CONFIG, resolve_metric
+    from models.schemas import AHU_LEVEL_CONFIG, QueryType, resolve_metric
 
     query_lower = user_query.lower().strip()
 

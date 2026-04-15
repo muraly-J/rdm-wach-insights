@@ -22,12 +22,11 @@ from collections import defaultdict
 from collections.abc import Callable
 from typing import Protocol
 
+from config import settings
 from fastapi import HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
-
-from config import settings
 
 
 class RateLimiter(Protocol):
