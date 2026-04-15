@@ -137,3 +137,28 @@ def test_empty_query_returns_error():
     q, err = _parse_query_rules("")
     assert q is None
     assert err is not None
+
+
+def test_ranking_query_all_levels():
+    """'rank all devices by energy' should produce ranking with empty device_ids."""
+    from llm.translator import _parse_query_rules
+    from models.schemas import QueryType
+    q, err = _parse_query_rules("rank all devices by energy")
+    assert err is None
+    assert q.query_type == QueryType.ranking
+
+
+def test_top_n_extraction():
+    """'top 5 devices by power level 3' should set top_n=5."""
+    from llm.translator import _parse_query_rules
+    q, err = _parse_query_rules("top 5 devices by power level 3")
+    assert err is None
+    assert q.top_n == 5
+
+
+def test_time_range_month():
+    """'energy for e0101 this month' should set time_range to last_30d."""
+    from llm.translator import _parse_query_rules
+    q, err = _parse_query_rules("energy for e0101 this month")
+    assert err is None
+    assert q.time_range == "last_30d"
