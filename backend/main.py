@@ -193,7 +193,24 @@ async def lifespan(app):
         logger.info("Query logging initialized")
     except Exception as e:
         logger.warning("Could not initialize query logger", extra={"error": str(e)})
+
+    # Start Watchman background pulse
+    watchman_task = None
+    if settings.watchman_enabled:
+        import asyncio
+        from core.watchman import start_pulse
+        watchman_task = asyncio.create_task(start_pulse())
+        logger.info("Watchman pulse started")
+
     yield
+
+    # Shutdown
+    if watchman_task:
+        watchman_task.cancel()
+        try:
+            await watchman_task
+        except asyncio.CancelledError:
+            pass
     logger.info("Application shutdown complete")
 
 
