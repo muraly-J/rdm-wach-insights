@@ -60,7 +60,9 @@ const BotMessage: React.FC<BotMessageProps> = ({
   actions,
 }) => {
   const [showModal, setShowModal] = useState(false);
-  const [actionStates, setActionStates] = useState<Record<number, 'idle' | 'loading' | 'done' | 'dismissed'>>({});
+  const [actionStates, setActionStates] = useState<
+    Record<number, 'idle' | 'loading' | 'done' | 'dismissed'>
+  >({});
 
   const handleApprove = async (workOrderId: number) => {
     setActionStates((prev) => ({ ...prev, [workOrderId]: 'loading' }));
@@ -91,7 +93,8 @@ const BotMessage: React.FC<BotMessageProps> = ({
     : null;
 
   const chartData = extractChartData(content);
-  const showActions = (isLast && (navigateLabel || onClearChat || chartData)) || (actions && actions.length > 0);
+  const showActions =
+    (isLast && (navigateLabel || onClearChat || chartData)) || (actions && actions.length > 0);
 
   return (
     <>
@@ -173,37 +176,42 @@ const BotMessage: React.FC<BotMessageProps> = ({
                 </button>
               )}
 
-              {actions && actions.length > 0 && (() => {
-                // Group actions by work_order_id
-                const byId: Record<number, ActionItem[]> = {};
-                for (const a of actions) {
-                  if (!byId[a.work_order_id]) byId[a.work_order_id] = [];
-                  byId[a.work_order_id].push(a);
-                }
-                return Object.entries(byId).map(([idStr, items]) => {
-                  const woId = parseInt(idStr);
-                  const state = actionStates[woId] || 'idle';
-
-                  if (state === 'dismissed') return null;
-
-                  if (state === 'done') {
-                    return (
-                      <span key={woId} className="text-xs text-[#00E5A0] border border-[#00E5A0]/30 rounded-full px-3 py-2.5 min-h-[44px] flex items-center">
-                        Ticket Submitted
-                      </span>
-                    );
+              {actions &&
+                actions.length > 0 &&
+                (() => {
+                  // Group actions by work_order_id
+                  const byId: Record<number, ActionItem[]> = {};
+                  for (const a of actions) {
+                    if (!byId[a.work_order_id]) byId[a.work_order_id] = [];
+                    byId[a.work_order_id].push(a);
                   }
+                  return Object.entries(byId).map(([idStr, items]) => {
+                    const woId = parseInt(idStr);
+                    const state = actionStates[woId] || 'idle';
 
-                  const approveItem = items.find((i) => i.type === 'approve_work_order');
-                  const dismissItem = items.find((i) => i.type === 'dismiss');
+                    if (state === 'dismissed') return null;
 
-                  return (
-                    <div key={woId} className="flex items-center gap-2 flex-wrap">
-                      {approveItem && (
-                        <button
-                          disabled={state === 'loading'}
-                          onClick={() => handleApprove(woId)}
-                          className="
+                    if (state === 'done') {
+                      return (
+                        <span
+                          key={woId}
+                          className="text-xs text-[#00E5A0] border border-[#00E5A0]/30 rounded-full px-3 py-2.5 min-h-[44px] flex items-center"
+                        >
+                          Ticket Submitted
+                        </span>
+                      );
+                    }
+
+                    const approveItem = items.find((i) => i.type === 'approve_work_order');
+                    const dismissItem = items.find((i) => i.type === 'dismiss');
+
+                    return (
+                      <div key={woId} className="flex items-center gap-2 flex-wrap">
+                        {approveItem && (
+                          <button
+                            disabled={state === 'loading'}
+                            onClick={() => handleApprove(woId)}
+                            className="
                             flex items-center gap-1.5 text-xs font-medium
                             text-[#0B0F14] bg-[#00E5A0]
                             rounded-full px-3 py-2.5 min-h-[44px]
@@ -211,15 +219,15 @@ const BotMessage: React.FC<BotMessageProps> = ({
                             disabled:opacity-50
                             transition-colors duration-150
                           "
-                        >
-                          {state === 'loading' ? '...' : approveItem.label}
-                        </button>
-                      )}
-                      {dismissItem && (
-                        <button
-                          disabled={state === 'loading'}
-                          onClick={() => handleDismiss(woId)}
-                          className="
+                          >
+                            {state === 'loading' ? '...' : approveItem.label}
+                          </button>
+                        )}
+                        {dismissItem && (
+                          <button
+                            disabled={state === 'loading'}
+                            onClick={() => handleDismiss(woId)}
+                            className="
                             flex items-center gap-1.5 text-xs font-medium
                             text-[#6d6e71] border border-[#6d6e71]/20
                             rounded-full px-3 py-2.5 min-h-[44px]
@@ -227,14 +235,14 @@ const BotMessage: React.FC<BotMessageProps> = ({
                             disabled:opacity-50
                             transition-colors duration-150
                           "
-                        >
-                          {dismissItem.label}
-                        </button>
-                      )}
-                    </div>
-                  );
-                });
-              })()}
+                          >
+                            {dismissItem.label}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
             </div>
           )}
         </div>

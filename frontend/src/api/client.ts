@@ -234,18 +234,14 @@ export async function fetchWorkOrders(
 /**
  * POST /api/work-orders/{id}/approve — Approve a draft work order
  */
-export async function approveWorkOrder(
-  id: number
-): Promise<{ id: number; status: string }> {
+export async function approveWorkOrder(id: number): Promise<{ id: number; status: string }> {
   return apiFetch(`/work-orders/${id}/approve`, { method: 'POST' });
 }
 
 /**
  * POST /api/work-orders/{id}/dismiss — Dismiss a work order
  */
-export async function dismissWorkOrder(
-  id: number
-): Promise<{ id: number; status: string }> {
+export async function dismissWorkOrder(id: number): Promise<{ id: number; status: string }> {
   return apiFetch(`/work-orders/${id}/dismiss`, { method: 'POST' });
 }
 

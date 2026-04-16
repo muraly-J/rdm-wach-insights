@@ -39,7 +39,7 @@ export function renderOffPeriodAreas(
   // When xKey is provided (e.g. 'timestamp'), use that field's value for ReferenceArea x1/x2
   // so it matches the categorical XAxis. Without xKey, use numeric indices (works for
   // sparkline charts with no explicit XAxis).
-  const xVal = (idx: number) => (xKey ? data[idx]?.[xKey] ?? idx : idx);
+  const xVal = (idx: number) => (xKey ? (data[idx]?.[xKey] ?? idx) : idx);
 
   const areas: React.ReactNode[] = [];
   let offStart: number | null = null;
