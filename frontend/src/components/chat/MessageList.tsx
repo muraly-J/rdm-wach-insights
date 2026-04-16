@@ -4,13 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import BotMessage from './BotMessage';
 import UserMessage from './UserMessage';
 import TypingIndicator from './TypingIndicator';
-import { NavigateTarget } from '../../api/client';
+import { NavigateTarget, ActionItem } from '../../api/client';
 
 interface Message {
   id: string;
   role: 'user' | 'bot';
   content: string;
   navigate?: NavigateTarget | null;
+  actions?: ActionItem[];
 }
 
 interface MessageListProps {
@@ -60,6 +61,7 @@ const MessageList: React.FC<MessageListProps> = ({
                 onNavigate={onNavigate}
                 isLast={idx === lastBotIndex && !isTyping}
                 onClearChat={onClearChat}
+                actions={msg.actions ?? []}
               />
             ) : (
               <UserMessage content={msg.content} />
