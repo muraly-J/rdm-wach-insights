@@ -95,11 +95,7 @@ export async function fetchRawScoreRelationship(
   return apiFetch(`/device/${deviceId}/raw-score-relationship?range=${range}`);
 }
 
-export interface NavigateTarget {
-  level: number;
-  device?: string;
-  view?: 'prediction' | 'dashboard';
-}
+export type { NavigateTarget } from '../types/chat';
 
 export type { ActionItem, WorkOrder };
 

@@ -1,4 +1,8 @@
-import { NavigateTarget } from '../api/client';
+export interface NavigateTarget {
+  level: number;
+  device?: string;
+  view?: 'prediction' | 'dashboard';
+}
 
 export interface ActionItem {
   type: 'approve_work_order' | 'dismiss' | 'edit_draft';
