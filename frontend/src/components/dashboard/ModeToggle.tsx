@@ -1,13 +1,19 @@
 import React from 'react';
-import { useAppStore, DashboardMode } from '../../store/useAppStore';
+import { DashboardMode, useAppStore } from '../../store/useAppStore';
 
-const MODES: DashboardMode[] = ['simple', 'deepdive'];
+const MODES: DashboardMode[] = ['simple', 'deepdive', 'workorders'];
 
 const ModeToggle: React.FC = () => {
   const { dashboardMode, setDashboardMode, selectedDevice } = useAppStore();
   const [hint, setHint] = React.useState(false);
 
   const deepDiveEnabled = Boolean(selectedDevice && selectedDevice !== 'all');
+
+  const getModeLabel = (mode: DashboardMode): string => {
+    if (mode === 'simple') return 'Simple Mode';
+    if (mode === 'deepdive') return 'Deep Dive Mode';
+    return 'Work Orders';
+  };
 
   const handleClick = (mode: DashboardMode) => {
     if (mode === 'deepdive' && !deepDiveEnabled) {
@@ -32,7 +38,7 @@ const ModeToggle: React.FC = () => {
         {MODES.map((mode) => {
           const isActive = dashboardMode === mode;
           const isDisabled = mode === 'deepdive' && !deepDiveEnabled;
-          const label = mode === 'simple' ? 'Simple Mode' : 'Deep Dive Mode';
+          const label = getModeLabel(mode);
           return (
             <button
               key={mode}

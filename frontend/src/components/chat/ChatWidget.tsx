@@ -1,9 +1,9 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ActionItem, NavigateTarget } from '../../api/client';
 import { useAppStore } from '../../store/useAppStore';
 import ChatBubbleButton from './ChatBubbleButton';
 import ChatWindow from './ChatWindow';
-import { NavigateTarget, ActionItem } from '../../api/client';
 
 interface Message {
   id: string;
@@ -28,12 +28,24 @@ const ChatWidget: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [isMinimized, setIsMinimized] = useState(false);
 
-  // "fullscreen" in this widget means: expand to fill full height on the right side
+  const isSplit = chatMode === 'split';
   const isExpanded = chatMode === 'fullscreen';
 
   const toggleExpanded = () => {
-    setChatMode(isExpanded ? 'panel' : 'fullscreen');
-    if (!isExpanded) setIsMinimized(false);
+    if (chatMode === 'panel') {
+      setChatMode('fullscreen');
+      setIsMinimized(false);
+    } else if (chatMode === 'fullscreen') {
+      setChatMode('split');
+      setIsMinimized(false);
+    } else {
+      setChatMode('panel');
+      setIsMinimized(false);
+    }
+  };
+
+  const toggleSplit = () => {
+    setChatMode(isSplit ? 'panel' : 'split');
   };
 
   const handleClose = () => {
@@ -42,7 +54,34 @@ const ChatWidget: React.FC = () => {
     setChatMode('panel');
   };
 
-  // Height: minimized = header bar only, normal = 520px, expanded = fills up to top
+  // Split mode: render without fixed positioning (consumed by App.tsx layout)
+  if (isSplit) {
+    return (
+      <div
+        style={{
+          width: '40%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          borderRight: '1px solid #2e3f55',
+        }}
+      >
+        <ChatWindow
+          mode="split"
+          onClose={handleClose}
+          onToggleMode={toggleExpanded}
+          onSplitMode={toggleSplit}
+          messages={messages}
+          setMessages={setMessages}
+          isMinimized={false}
+          onMinimize={() => { }}
+        />
+      </div>
+    );
+  }
+
+  // Panel/Fullscreen mode: fixed position on right side
   const panelHeight = isMinimized ? 52 : isExpanded ? 'calc(100vh - 32px)' : 520;
 
   return (
@@ -72,6 +111,7 @@ const ChatWidget: React.FC = () => {
               mode={isExpanded ? 'fullscreen' : 'panel'}
               onClose={handleClose}
               onToggleMode={toggleExpanded}
+              onSplitMode={toggleSplit}
               messages={messages}
               setMessages={setMessages}
               isMinimized={isMinimized}

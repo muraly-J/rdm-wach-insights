@@ -1,9 +1,10 @@
 import React from 'react';
 
 interface ChatHeaderProps {
-  mode: 'panel' | 'fullscreen';
+  mode: 'panel' | 'fullscreen' | 'split';
   onClose: () => void;
   onToggleMode: () => void;
+  onSplitMode?: () => void;
   isMinimized?: boolean;
   onMinimize?: () => void;
 }
@@ -12,6 +13,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   mode,
   onClose,
   onToggleMode,
+  onSplitMode,
   isMinimized,
   onMinimize,
 }) => {
@@ -72,10 +74,16 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
           </button>
         )}
 
-        {/* Toggle fullscreen/panel button */}
+        {/* Toggle panel/fullscreen/split button */}
         <button
           onClick={onToggleMode}
-          title={mode === 'panel' ? 'Expand to Fullscreen' : 'Collapse to Panel'}
+          title={
+            mode === 'panel'
+              ? 'Expand to Fullscreen'
+              : mode === 'fullscreen'
+                ? 'Split View'
+                : 'Collapse to Panel'
+          }
           className="
             w-11 h-11 rounded-full hover:bg-[#2e3f55]
             flex items-center justify-center
@@ -95,7 +103,22 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
               <line x1="21" y1="3" x2="14" y2="10" />
               <line x1="3" y1="21" x2="10" y2="14" />
             </svg>
+          ) : mode === 'fullscreen' ? (
+            /* Split icon */
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#E8ECF1"
+              strokeWidth="2"
+            >
+              <line x1="12" y1="3" x2="12" y2="21" />
+              <polyline points="3 12 6 15 9 12" />
+              <polyline points="21 12 18 15 15 12" />
+            </svg>
           ) : (
+            /* Collapse icon */
             <svg
               width="16"
               height="16"

@@ -58,6 +58,8 @@ export interface AppState {
   dashboardData: DashboardData | null;
   isLoading: boolean;
   heroVisible: boolean; // Hero overlay visibility (not persisted)
+  workOrderPanelOpen?: boolean; // Work order slide-out panel visibility
+  workOrderDraftsCount?: number; // Count of draft work orders
 }
 
 // Chat types (from spec Section 6)

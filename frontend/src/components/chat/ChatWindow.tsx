@@ -1,11 +1,11 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
-import ChatHeader from './ChatHeader';
-import MessageList from './MessageList';
-import ChatInput from './ChatInput';
-import { sendChatMessage, NavigateTarget, ActionItem } from '../../api/client';
+import { ActionItem, NavigateTarget, sendChatMessage } from '../../api/client';
 import { useAppStore } from '../../store/useAppStore';
+import ChatHeader from './ChatHeader';
+import ChatInput from './ChatInput';
+import MessageList from './MessageList';
 
 export interface Message {
   id: string;
@@ -16,9 +16,10 @@ export interface Message {
 }
 
 interface ChatWindowProps {
-  mode: 'panel' | 'fullscreen';
+  mode: 'panel' | 'fullscreen' | 'split';
   onClose: () => void;
   onToggleMode: () => void;
+  onSplitMode?: () => void;
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   isMinimized: boolean;
@@ -154,6 +155,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         mode={mode}
         onClose={onClose}
         onToggleMode={onToggleMode}
+        onSplitMode={onSplitMode}
         isMinimized={isMinimized}
         onMinimize={onMinimize}
       />

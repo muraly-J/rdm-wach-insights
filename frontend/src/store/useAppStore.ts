@@ -23,10 +23,12 @@ export const initialState: AppState = {
   deepDiveSubMode: 'single' as const,
   compareDevices: [] as string[],
   chatMode: 'panel' as const,
+  workOrderPanelOpen: false,
+  workOrderDraftsCount: 0,
 };
 
 export type TimeRange = '24h' | '7d' | '30d' | 'all';
-export type DashboardMode = 'simple' | 'deepdive';
+export type DashboardMode = 'simple' | 'deepdive' | 'workorders';
 export type DeepDiveSubMode = 'single' | 'compare';
 
 // Zustand store (from spec Section 8.1)
@@ -86,8 +88,15 @@ interface AppStore extends AppState {
   setCompareDevices: (devices: string[]) => void;
 
   // Chat mode
-  chatMode: 'panel' | 'fullscreen';
-  setChatMode: (mode: 'panel' | 'fullscreen') => void;
+  chatMode: 'panel' | 'fullscreen' | 'split';
+  setChatMode: (mode: 'panel' | 'fullscreen' | 'split') => void;
+
+  // Work orders
+  workOrderPanelOpen: boolean;
+  setWorkOrderPanelOpen: (open: boolean) => void;
+  toggleWorkOrderPanel: () => void;
+  workOrderDraftsCount: number;
+  setWorkOrderDraftsCount: (count: number) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -175,8 +184,20 @@ export const useAppStore = create<AppStore>((set) => ({
   setCompareDevices: (devices) => set({ compareDevices: devices.slice(0, 3) }),
 
   // Chat mode
-  /** Get the current chat display mode (panel or fullscreen) */
+  /** Get the current chat display mode (panel, fullscreen, or split) */
   chatMode: 'panel',
-  /** Set the chat display mode (panel or fullscreen) */
+  /** Set the chat display mode (panel, fullscreen, or split) */
   setChatMode: (mode) => set({ chatMode: mode }),
+
+  // Work orders
+  /** Get work order panel open state */
+  workOrderPanelOpen: false,
+  /** Set work order panel open state */
+  setWorkOrderPanelOpen: (open) => set({ workOrderPanelOpen: open }),
+  /** Toggle work order panel open/closed */
+  toggleWorkOrderPanel: () => set((state) => ({ workOrderPanelOpen: !state.workOrderPanelOpen })),
+  /** Get count of draft work orders */
+  workOrderDraftsCount: 0,
+  /** Set count of draft work orders */
+  setWorkOrderDraftsCount: (count) => set({ workOrderDraftsCount: count }),
 }));
