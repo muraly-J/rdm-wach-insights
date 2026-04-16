@@ -1,9 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
+import SuggestedPrompts from './SuggestedPrompts';
 import { NavigateTarget } from '../../api/client';
 import { useAppStore } from '../../store/useAppStore';
 import { Message } from '../../types/chat';
@@ -38,6 +39,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const [selectedPersona, setSelectedPersona] = useState<
     'general' | 'technical' | 'technician' | 'financial' | null
   >(null);
+  const [latestSuggestions, setLatestSuggestions] = useState<string[]>([]);
 
   const selectedLevel = useAppStore((s) => s.selectedLevel);
   const selectedDevice = useAppStore((s) => s.selectedDevice);
@@ -53,6 +55,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
     }, 600);
   };
+
+  // Track suggestions from latest bot message
+  useEffect(() => {
+    const lastBot = [...messages].reverse().find((m) => m.role === 'bot');
+    if (lastBot?.suggestions?.length) {
+      setLatestSuggestions(lastBot.suggestions);
+    }
+  }, [messages]);
 
   const { sendStreaming, isStreaming: sseStreaming } = useSSEChat({
     onNavigate: handleNavigate,
@@ -96,6 +106,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     [sendStreaming, messages, setMessages, selectedLevel, selectedDevice, financialImpact, selectedPersona]
   );
 
+  const handlePromptSelect = useCallback(
+    (prompt: string) => {
+      handleSendMessage(prompt);
+      setLatestSuggestions([]);
+    },
+    [handleSendMessage]
+  );
+
   return (
     <motion.div
       layoutId="chat-window"
@@ -131,6 +149,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               isTyping={sseStreaming}
               onNavigate={handleNavigate}
               onClearChat={handleClearChat}
+            />
+            <SuggestedPrompts
+              suggestions={latestSuggestions}
+              onSelect={handlePromptSelect}
+              hasMessages={messages.length > 1}
             />
             <ChatInput
               onSendMessage={handleSendMessage}
