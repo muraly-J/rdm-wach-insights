@@ -1,9 +1,10 @@
 import React from 'react';
 
 interface ChatHeaderProps {
-  mode: 'panel' | 'fullscreen';
+  mode: 'panel' | 'fullscreen' | 'split';
   onClose: () => void;
   onToggleMode: () => void;
+  onSplitMode?: () => void;
   isMinimized?: boolean;
   onMinimize?: () => void;
 }
@@ -12,6 +13,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   mode,
   onClose,
   onToggleMode,
+  onSplitMode,
   isMinimized,
   onMinimize,
 }) => {
@@ -111,6 +113,21 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
             </svg>
           )}
         </button>
+
+        {/* Split view toggle */}
+        {onSplitMode && (
+          <button
+            onClick={onSplitMode}
+            title="Split view"
+            className="w-11 h-11 rounded-full hover:bg-[#2e3f55] flex items-center justify-center"
+            style={mode === 'split' ? { border: '1px solid #00E5A0', background: 'rgba(0,229,160,0.1)' } : undefined}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <rect x="1" y="1" width="5" height="12" rx="1" stroke={mode === 'split' ? '#00E5A0' : '#8899aa'} strokeWidth="1.5" />
+              <rect x="8" y="1" width="5" height="12" rx="1" stroke={mode === 'split' ? '#00E5A0' : '#8899aa'} strokeWidth="1.5" />
+            </svg>
+          </button>
+        )}
 
         {/* Close button */}
         <button

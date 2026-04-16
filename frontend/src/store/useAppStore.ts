@@ -86,8 +86,8 @@ interface AppStore extends AppState {
   setCompareDevices: (devices: string[]) => void;
 
   // Chat mode
-  chatMode: 'panel' | 'fullscreen';
-  setChatMode: (mode: 'panel' | 'fullscreen') => void;
+  chatMode: 'panel' | 'fullscreen' | 'split';
+  setChatMode: (mode: 'panel' | 'fullscreen' | 'split') => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({

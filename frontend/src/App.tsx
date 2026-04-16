@@ -77,6 +77,7 @@ function App() {
     siteSummaryData,
     dashboardMode,
     setFinancialImpact,
+    chatMode,
   } = useAppStore();
 
   const [healthData, setHealthData] = React.useState<HealthIndexResponse | null>(null);
@@ -330,6 +331,42 @@ function App() {
     const dev = healthData.devices.find((d) => d.id === selectedDevice);
     return dev?.is_on ?? true;
   }, [healthData, selectedDevice]);
+
+  if (chatMode === 'split') {
+    return (
+      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0B0F14' }}>
+        <div style={{ flex: '0 0 40%', height: '100%', overflow: 'hidden' }}>
+          <ChatWidget />
+        </div>
+        <div style={{ flex: 1, height: '100%', overflowY: 'auto' }} className="text-[#E8ECF1]">
+          <FilterBar levelDevices={levelDevices} />
+          <div className="max-w-[1280px] mx-auto px-4 sm:px-6 pt-6 pb-16">
+            <KPIStrip
+              summary={siteSummaryData}
+              selectedLevel={selectedLevel}
+              selectedDevice={selectedDevice}
+              deviceLabel={deviceLabel}
+              deviceHealth={deviceHealth}
+            />
+            <ModeToggle />
+            <div className="flex justify-end mb-2">
+              <DataFreshnessIndicator dataAsOf={dataAsOf} />
+            </div>
+            {isLoading && (
+              <div className="flex justify-center py-4">
+                <span className="text-[#556677] text-sm animate-pulse">Loading Data…</span>
+              </div>
+            )}
+            {error && !isLoading && (
+              <div className="mb-4 px-4 py-3 rounded bg-red-900/20 border border-red-700 text-red-400 text-sm">
+                Failed to load data: {error}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#E8ECF1]">

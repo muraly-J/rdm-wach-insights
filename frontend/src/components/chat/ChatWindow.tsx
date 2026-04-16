@@ -13,9 +13,10 @@ import { useSSEChat } from '../../hooks/useSSEChat';
 import { useConversationHistory } from '../../hooks/useConversationHistory';
 
 interface ChatWindowProps {
-  mode: 'panel' | 'fullscreen';
+  mode: 'panel' | 'fullscreen' | 'split';
   onClose: () => void;
   onToggleMode: () => void;
+  onSplitMode?: () => void;
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   isMinimized: boolean;
@@ -33,6 +34,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   mode,
   onClose,
   onToggleMode,
+  onSplitMode,
   messages,
   setMessages,
   isMinimized,
@@ -165,6 +167,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         mode={mode}
         onClose={onClose}
         onToggleMode={onToggleMode}
+        onSplitMode={onSplitMode}
         isMinimized={isMinimized}
         onMinimize={onMinimize}
       />
