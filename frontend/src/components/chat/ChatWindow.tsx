@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
-import { sendChatMessage, NavigateTarget } from '../../api/client';
+import { NavigateTarget } from '../../api/client';
 import { useAppStore } from '../../store/useAppStore';
 import { Message } from '../../types/chat';
+import { useSSEChat } from '../../hooks/useSSEChat';
 
 interface ChatWindowProps {
   mode: 'panel' | 'fullscreen';
@@ -34,7 +35,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   isMinimized,
   onMinimize,
 }) => {
-  const [isTyping, setIsTyping] = useState(false);
   const [selectedPersona, setSelectedPersona] = useState<
     'general' | 'technical' | 'technician' | 'financial' | null
   >(null);
@@ -53,6 +53,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
     }, 600);
   };
+
+  const { sendStreaming, isStreaming: sseStreaming } = useSSEChat({
+    onNavigate: handleNavigate,
+  });
 
   const handleClearChat = () => {
     setMessages([INITIAL_MESSAGE]);
@@ -80,56 +84,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  const handleSendMessage = async (text: string) => {
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text };
-    setMessages((prev) => [...prev, userMsg]);
-    setIsTyping(true);
-
-    // Build history for the API (exclude the initial bot greeting)
-    const history = messages.slice(1).map((m) => ({
-      role: m.role === 'bot' ? ('model' as const) : ('user' as const),
-      content: m.content,
-    }));
-
-    try {
-      const data = await sendChatMessage(text, {
+  const handleSendMessage = useCallback(
+    async (text: string) => {
+      await sendStreaming(text, messages, setMessages, {
         level: selectedLevel ?? undefined,
-        device: selectedDevice ?? undefined,
-        financial_impact: financialImpact ?? undefined,
-        history,
+        device: selectedDevice,
+        financial_impact: financialImpact?.grand_total ?? null,
         persona: selectedPersona,
       });
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `bot-${Date.now()}`,
-          role: 'bot' as const,
-          content: data.reply,
-          navigate: data.navigate ?? null,
-          actions: data.actions ?? [],
-        },
-      ]);
-      if (data.pending_drafts_count && data.pending_drafts_count > 0 && messages.length <= 1) {
-        const draftMsg: Message = {
-          id: `drafts-${Date.now()}`,
-          role: 'bot',
-          content: `You have **${data.pending_drafts_count}** pending work order draft${data.pending_drafts_count > 1 ? 's' : ''} since your last session. Want me to walk through them?`,
-        };
-        setMessages((prev) => [...prev.slice(0, -1), draftMsg, prev[prev.length - 1]]);
-      }
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: 'bot',
-          content: 'Sorry, I had trouble connecting. Please try again in a moment.',
-        },
-      ]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
+    },
+    [sendStreaming, messages, setMessages, selectedLevel, selectedDevice, financialImpact, selectedPersona]
+  );
 
   return (
     <motion.div
@@ -163,7 +128,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           >
             <MessageList
               messages={messages}
-              isTyping={isTyping}
+              isTyping={sseStreaming}
               onNavigate={handleNavigate}
               onClearChat={handleClearChat}
             />
