@@ -9,8 +9,8 @@ from tools.tool_registry import TOOLS, dispatch_tool
 
 
 def test_tools_list_has_six_entries():
-    # 6 tools: original 5 + query_building_summary added for efficient building-wide queries
-    assert len(TOOLS) == 6
+    # Updated: 6 query tools + 3 action tools = 9
+    assert len(TOOLS) == 9
 
 
 def test_all_tools_have_required_fields():
@@ -30,6 +30,9 @@ def test_tool_names_are_correct():
         "query_ranking",
         "query_financial_impact",
         "search_docs",
+        "create_work_order",
+        "send_notification",
+        "update_work_order",
     }
 
 
