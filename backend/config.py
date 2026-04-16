@@ -85,6 +85,20 @@ class Settings(BaseSettings):
     # ── Debug flags ───────────────────────────────────────────────────────────
     csv_debug: bool = False
 
+    # ── Telegram notifications ─────────────────────────────────────────────────
+    telegram_bot_token: str = ""
+    telegram_recipient_technician: str = ""
+    telegram_recipient_manager: str = ""
+    telegram_recipient_on_call: str = ""
+
+    # ── Watchman (background health monitor) ──────────────────────────────────
+    watchman_interval_seconds: int = 1800          # 30 minutes
+    watchman_critical_threshold: float = 40.0      # FAIR < 40 → critical
+    watchman_warning_threshold: float = 60.0       # FAIR < 60 → warning
+    watchman_cooldown_critical_hours: int = 4
+    watchman_cooldown_warning_hours: int = 24
+    watchman_enabled: bool = True
+
     # ── Derived properties ────────────────────────────────────────────────────
 
     @property
