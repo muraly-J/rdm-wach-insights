@@ -53,8 +53,11 @@ const MessageList: React.FC<MessageListProps> = ({
                 navigate={msg.navigate}
                 onNavigate={onNavigate}
                 isLast={idx === lastBotIndex && !isTyping}
-                onClearChat={onClearChat}
-                actions={msg.actions ?? []}
+                onClearChat={idx === lastBotIndex && !isTyping ? onClearChat : undefined}
+                actions={msg.actions}
+                tool_calls={msg.tool_calls}
+                ahu_summary={msg.ahu_summary}
+                chart_data={msg.chart_data}
               />
             ) : (
               <UserMessage content={msg.content} />
