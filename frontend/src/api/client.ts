@@ -100,6 +100,26 @@ export interface NavigateTarget {
   view?: 'prediction' | 'dashboard';
 }
 
+export interface ActionItem {
+  type: 'approve_work_order' | 'dismiss' | 'edit_draft';
+  work_order_id: number;
+  label: string;
+  description: string;
+}
+
+export interface WorkOrder {
+  id: number;
+  ahu_id: string;
+  level: number;
+  title: string;
+  description: string | null;
+  severity: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  trigger_source: string;
+}
+
 /**
  * POST /api/chat — Chat widget messaging
  */
@@ -114,7 +134,12 @@ export async function sendChatMessage(
   }
 ) {
   const { history, persona, ...context } = options ?? {};
-  return apiFetch<{ reply: string; navigate?: NavigateTarget | null }>('/chat', {
+  return apiFetch<{
+    reply: string;
+    navigate?: NavigateTarget | null;
+    actions?: ActionItem[];
+    pending_drafts_count?: number;
+  }>('/chat', {
     method: 'POST',
     body: JSON.stringify({
       message,
@@ -194,4 +219,45 @@ export async function fetchOffPeriods(
   } catch {
     return [];
   }
+}
+
+/**
+ * GET /api/work-orders — List work orders, optional ?status= filter
+ */
+export async function fetchWorkOrders(
+  status?: string
+): Promise<{ work_orders: WorkOrder[]; count: number }> {
+  const params = status ? `?status=${status}` : '';
+  return apiFetch(`/work-orders${params}`);
+}
+
+/**
+ * POST /api/work-orders/{id}/approve — Approve a draft work order
+ */
+export async function approveWorkOrder(
+  id: number
+): Promise<{ id: number; status: string }> {
+  return apiFetch(`/work-orders/${id}/approve`, { method: 'POST' });
+}
+
+/**
+ * POST /api/work-orders/{id}/dismiss — Dismiss a work order
+ */
+export async function dismissWorkOrder(
+  id: number
+): Promise<{ id: number; status: string }> {
+  return apiFetch(`/work-orders/${id}/dismiss`, { method: 'POST' });
+}
+
+/**
+ * PATCH /api/work-orders/{id} — Edit work order title/description
+ */
+export async function editWorkOrder(
+  id: number,
+  body: { title?: string; description?: string }
+): Promise<{ id: number; updated: boolean }> {
+  return apiFetch(`/work-orders/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
 }

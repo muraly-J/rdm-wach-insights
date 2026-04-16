@@ -3,13 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import ChatBubbleButton from './ChatBubbleButton';
 import ChatWindow from './ChatWindow';
-import { NavigateTarget } from '../../api/client';
+import { NavigateTarget, ActionItem } from '../../api/client';
 
 interface Message {
   id: string;
   role: 'user' | 'bot';
   content: string;
   navigate?: NavigateTarget | null;
+  actions?: ActionItem[];
 }
 
 const INITIAL_MESSAGE: Message = {

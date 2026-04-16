@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
-import { sendChatMessage, NavigateTarget } from '../../api/client';
+import { sendChatMessage, NavigateTarget, ActionItem } from '../../api/client';
 import { useAppStore } from '../../store/useAppStore';
 
 export interface Message {
@@ -12,6 +12,7 @@ export interface Message {
   role: 'user' | 'bot';
   content: string;
   navigate?: NavigateTarget | null;
+  actions?: ActionItem[];
 }
 
 interface ChatWindowProps {
@@ -98,7 +99,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }));
 
     try {
-      const { reply, navigate } = await sendChatMessage(text, {
+      const data = await sendChatMessage(text, {
         level: selectedLevel ?? undefined,
         device: selectedDevice ?? undefined,
         financial_impact: financialImpact ?? undefined,
@@ -107,8 +108,22 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       });
       setMessages((prev) => [
         ...prev,
-        { id: (Date.now() + 1).toString(), role: 'bot', content: reply, navigate },
+        {
+          id: `bot-${Date.now()}`,
+          role: 'bot' as const,
+          content: data.reply,
+          navigate: data.navigate ?? null,
+          actions: data.actions ?? [],
+        },
       ]);
+      if (data.pending_drafts_count && data.pending_drafts_count > 0 && messages.length <= 1) {
+        const draftMsg: Message = {
+          id: `drafts-${Date.now()}`,
+          role: 'bot',
+          content: `You have **${data.pending_drafts_count}** pending work order draft${data.pending_drafts_count > 1 ? 's' : ''} since your last session. Want me to walk through them?`,
+        };
+        setMessages((prev) => [...prev.slice(0, -1), draftMsg, prev[prev.length - 1]]);
+      }
     } catch {
       setMessages((prev) => [
         ...prev,
