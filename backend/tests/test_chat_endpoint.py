@@ -23,10 +23,10 @@ def client():
 
 @pytest.fixture
 def mock_llm_client():
-    """Patch the LLM client to return a canned reply without hitting LM Studio."""
+    """Patch the analysis agent's LLM client to return a canned reply without hitting LM Studio."""
     mock = AsyncMock()
     mock.generate_with_tools = AsyncMock(return_value="Mocked LLM reply.")
-    with patch("routes.chat.get_chat_client", return_value=mock):
+    with patch("agents.analysis_agent.get_chat_client", return_value=mock):
         yield mock
 
 
@@ -83,16 +83,14 @@ def test_chat_accepts_context(client, mock_llm_client):
 
 
 def test_chat_llm_unavailable_returns_503(client):
-    """Chat endpoint must return 503 when circuit breaker is open."""
+    """Chat endpoint must return 503 when the agent raises an exception."""
     from llm.circuit_breaker import LLMUnavailableError
 
-    mock = AsyncMock()
-    mock.generate_with_tools = AsyncMock(side_effect=LLMUnavailableError("breaker open"))
-    with patch("routes.chat.get_chat_client", return_value=mock):
+    with patch("agents.analysis_agent.run", new=AsyncMock(side_effect=LLMUnavailableError("breaker open"))):
         resp = client.post(
             "/api/chat",
             json={"message": "hello"},
             headers=_AUTH_HEADERS,
         )
     assert resp.status_code == 503
-    assert "temporarily unavailable" in resp.json()["detail"]
+    assert "AI service unavailable" in resp.json()["detail"]
