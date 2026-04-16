@@ -5,10 +5,12 @@ import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import SuggestedPrompts from './SuggestedPrompts';
+import ConversationHistory from './ConversationHistory';
 import { NavigateTarget } from '../../api/client';
 import { useAppStore } from '../../store/useAppStore';
 import { Message } from '../../types/chat';
 import { useSSEChat } from '../../hooks/useSSEChat';
+import { useConversationHistory } from '../../hooks/useConversationHistory';
 
 interface ChatWindowProps {
   mode: 'panel' | 'fullscreen';
@@ -41,6 +43,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   >(null);
   const [latestSuggestions, setLatestSuggestions] = useState<string[]>([]);
 
+  const {
+    conversations,
+    activeId,
+    saveCurrentConversation,
+    loadConversation,
+    deleteConversation,
+    startNewConversation,
+  } = useConversationHistory();
+
   const selectedLevel = useAppStore((s) => s.selectedLevel);
   const selectedDevice = useAppStore((s) => s.selectedDevice);
   const financialImpact = useAppStore((s) => s.financialImpact);
@@ -63,6 +74,30 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       setLatestSuggestions(lastBot.suggestions);
     }
   }, [messages]);
+
+  // Auto-save conversation when messages change
+  useEffect(() => {
+    if (messages.length > 1) {
+      saveCurrentConversation(messages);
+    }
+  }, [messages, saveCurrentConversation]);
+
+  const handleLoadConversation = useCallback(
+    (id: string) => {
+      const msgs = loadConversation(id);
+      if (msgs) setMessages(msgs);
+    },
+    [loadConversation, setMessages]
+  );
+
+  const handleNewChat = useCallback(() => {
+    startNewConversation();
+    setMessages([{
+      id: 'greeting',
+      role: 'bot',
+      content: "Hello! I'm **RDM-Atlas**, your building health assistant. How can I help you today?",
+    }]);
+  }, [startNewConversation, setMessages]);
 
   const { sendStreaming, isStreaming: sseStreaming } = useSSEChat({
     onNavigate: handleNavigate,
@@ -144,22 +179,35 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
           >
-            <MessageList
-              messages={messages}
-              isTyping={sseStreaming}
-              onNavigate={handleNavigate}
-              onClearChat={handleClearChat}
-            />
-            <SuggestedPrompts
-              suggestions={latestSuggestions}
-              onSelect={handlePromptSelect}
-              hasMessages={messages.length > 1}
-            />
-            <ChatInput
-              onSendMessage={handleSendMessage}
-              onPersonaChange={handlePersonaChange}
-              selectedPersona={selectedPersona}
-            />
+            <div className="flex flex-1 overflow-hidden min-h-0">
+              {mode === 'fullscreen' && (
+                <ConversationHistory
+                  conversations={conversations}
+                  activeId={activeId}
+                  onSelect={handleLoadConversation}
+                  onDelete={deleteConversation}
+                  onNewChat={handleNewChat}
+                />
+              )}
+              <div className="flex flex-1 flex-col overflow-hidden min-h-0">
+                <MessageList
+                  messages={messages}
+                  isTyping={sseStreaming}
+                  onNavigate={handleNavigate}
+                  onClearChat={handleClearChat}
+                />
+                <SuggestedPrompts
+                  suggestions={latestSuggestions}
+                  onSelect={handlePromptSelect}
+                  hasMessages={messages.length > 1}
+                />
+                <ChatInput
+                  onSendMessage={handleSendMessage}
+                  onPersonaChange={handlePersonaChange}
+                  selectedPersona={selectedPersona}
+                />
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
