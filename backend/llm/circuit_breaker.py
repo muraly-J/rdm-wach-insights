@@ -7,6 +7,8 @@ States: CLOSED → OPEN → HALF_OPEN → CLOSED (or back to OPEN).
 Prevents repeated 60-second timeouts when LM Studio is down.
 """
 
+from __future__ import annotations
+
 import threading
 import time
 
