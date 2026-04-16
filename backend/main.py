@@ -11,7 +11,6 @@ For local development:
 Backend and frontend communicate via /api endpoints.
 """
 import os
-import signal
 import sys
 from collections.abc import Callable
 from contextlib import asynccontextmanager
@@ -147,16 +146,6 @@ class AlertingMiddleware(BaseHTTPMiddleware):
 
 # ── Startup checks and SIGTERM handler ────────────────────────────────────────
 
-def _handle_sigterm(*_) -> None:
-    """Flush query log and shut down cleanly on SIGTERM (e.g. Docker stop)."""
-    logger.info("SIGTERM received — flushing query log and shutting down")
-    # SQLite commits happen inside context managers in query_logger.py,
-    # so no explicit flush is needed; log the path for ops visibility.
-    from middleware.query_logger import _DB_PATH
-    logger.info("Query log location", extra={"db_path": str(_DB_PATH)})
-    sys.exit(0)
-
-
 def _startup_checks() -> None:
     """
     Verify DuckDB and ChromaDB are accessible on boot.
@@ -187,7 +176,6 @@ def _startup_checks() -> None:
 async def lifespan(app):
     """FastAPI lifespan: startup checks + SIGTERM registration."""
     _startup_checks()
-    signal.signal(signal.SIGTERM, _handle_sigterm)
     try:
         init_db()
         logger.info("Query logging initialized")
@@ -206,6 +194,9 @@ async def lifespan(app):
     yield
 
     # Shutdown
+    logger.info("SIGTERM received — flushing query log and shutting down")
+    from middleware.query_logger import _DB_PATH
+    logger.info("Query log location", extra={"db_path": str(_DB_PATH)})
     if watchman_task:
         watchman_task.cancel()
         try:
