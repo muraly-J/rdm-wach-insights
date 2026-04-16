@@ -32,6 +32,7 @@ import ChatWidget from './components/chat/ChatWidget';
 // Work Orders
 import WorkOrderBadge from './components/workorders/WorkOrderBadge';
 import WorkOrderPanel from './components/workorders/WorkOrderPanel';
+const WorkOrdersView = React.lazy(() => import('./components/workorders/WorkOrdersView'));
 import LatestOverview from './components/dashboard/LatestOverview';
 import DataFreshnessIndicator from './components/DataFreshnessIndicator';
 
@@ -465,6 +466,20 @@ function App() {
               ) : (
                 <LatestOverview />
               )}
+            </motion.div>
+          ) : dashboardMode === 'workorders' ? (
+            <motion.div
+              key="workorders"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+            >
+              <React.Suspense
+                fallback={<div className="h-64 animate-pulse bg-[#1a2234] rounded-xl" />}
+              >
+                <WorkOrdersView />
+              </React.Suspense>
             </motion.div>
           ) : (
             <motion.div
