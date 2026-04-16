@@ -28,6 +28,10 @@ const PredictionView = React.lazy(() => import('./components/prediction/Predicti
 
 // Chat
 import ChatWidget from './components/chat/ChatWidget';
+
+// Work Orders
+import WorkOrderBadge from './components/workorders/WorkOrderBadge';
+import WorkOrderPanel from './components/workorders/WorkOrderPanel';
 import LatestOverview from './components/dashboard/LatestOverview';
 import DataFreshnessIndicator from './components/DataFreshnessIndicator';
 
@@ -492,6 +496,10 @@ function App() {
       </div>
 
       <ChatWidget />
+      <WorkOrderPanel />
+      <div style={{ position: 'fixed', bottom: 88, right: 24, zIndex: 65 }}>
+        <WorkOrderBadge />
+      </div>
     </div>
   );
 }
