@@ -179,6 +179,55 @@ def run_health_etl(dry_run: bool = False) -> tuple:
     return success, output
 
 
+WATCHMAN_LOG = os.path.join(LOGS_DIR, "watchman.log")
+
+
+def run_watchman_analysis(dry_run: bool = False) -> tuple:
+    """
+    Process the watchman queue: dequeue flagged AHUs and run Resolution Agent
+    on each one to create work orders and send notifications.
+    """
+    if dry_run:
+        log_scheduler("[DRY-RUN] Would run: watchman queue processing")
+        return True, "Dry run - no execution"
+
+    log_scheduler("Starting Watchman queue processing...")
+
+    # Run as a subprocess to avoid importing all backend deps into the scheduler
+    script_path = os.path.join(PROJECT_ROOT, "scripts", "watchman_processor.py")
+    if not os.path.exists(script_path):
+        log_scheduler(f"  Watchman processor script not found at {script_path}, skipping")
+        return True, "Skipped — processor script not found"
+
+    try:
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=os.path.join(PROJECT_ROOT, "backend"),
+        )
+        output = result.stdout + result.stderr
+        with open(WATCHMAN_LOG, "a") as f:
+            from datetime import datetime as _dt
+            f.write(f"\n{'='*70}\n")
+            f.write(f"RUN: {_dt.now().isoformat()}\n")
+            f.write(f"{'='*70}\n")
+            f.write(output + "\n")
+            f.write(f"STATUS: {'SUCCESS' if result.returncode == 0 else 'FAILED'}\n")
+
+        if result.returncode == 0:
+            log_scheduler("Watchman queue processing completed")
+        else:
+            log_scheduler(f"Watchman processing had issues: {output[:200]}")
+
+        return result.returncode == 0, output
+    except subprocess.TimeoutExpired:
+        return False, "ERROR: Watchman processor timed out"
+    except Exception as e:
+        return False, f"ERROR: {str(e)}"
+
+
 def main():
     """Main scheduler loop."""
     # Parse command-line arguments
@@ -271,10 +320,17 @@ Examples:
         if iteration == 1 or not args.dry_run:
             log_scheduler("")
             success, output = run_health_etl(dry_run=args.dry_run)
-            
+
             if not success:
                 log_scheduler(f"  ⚠️  Health Scoring ETL had issues (see {HEALTH_LOG})")
-        
+
+        # Run Watchman queue processing (after ETL so fresh scores are used)
+        if iteration == 1 or not args.dry_run:
+            log_scheduler("")
+            success, output = run_watchman_analysis(dry_run=args.dry_run)
+            if not success:
+                log_scheduler(f"  ⚠️  Watchman processing had issues (see {WATCHMAN_LOG})")
+
         # Calculate wait time
         elapsed = (datetime.now() - start_time).total_seconds()
         
