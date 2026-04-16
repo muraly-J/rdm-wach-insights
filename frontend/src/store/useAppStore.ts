@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { AppState, ChatMessage, DashboardData, FinancialImpact, SiteSummaryData } from '../types';
+import type { Toast } from '../hooks/useToast';
 
 // Default chat message for initial bot greeting
 const INITIAL_BOT_MESSAGE: ChatMessage = {
@@ -97,6 +98,11 @@ interface AppStore extends AppState {
   // Work order drafts count (badge on mode toggle)
   workOrderDraftsCount: number;
   setWorkOrderDraftsCount: (count: number) => void;
+
+  // Toast notifications
+  toasts: Toast[];
+  addToast: (toast: Toast) => void;
+  removeToast: (id: string) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -197,4 +203,11 @@ export const useAppStore = create<AppStore>((set) => ({
   // Work order drafts count
   workOrderDraftsCount: 0,
   setWorkOrderDraftsCount: (count) => set({ workOrderDraftsCount: count }),
+
+  // Toast notifications
+  toasts: [],
+  addToast: (toast) =>
+    set((state) => ({ toasts: [...state.toasts, toast] })),
+  removeToast: (id) =>
+    set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
 }));

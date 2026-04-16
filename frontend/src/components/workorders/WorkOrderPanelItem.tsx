@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { WorkOrder } from '../../types/chat';
 import { approveWorkOrder, dismissWorkOrder } from '../../api/client';
+import { useToast } from '../../hooks/useToast';
 
 interface WorkOrderPanelItemProps {
   order: WorkOrder;
@@ -16,6 +17,7 @@ const SEVERITY_COLOR: Record<string, string> = {
 
 const WorkOrderPanelItem: React.FC<WorkOrderPanelItemProps> = ({ order, onUpdated }) => {
   const [loading, setLoading] = useState<'approve' | 'dismiss' | null>(null);
+  const { showToast } = useToast();
 
   const severityColor = SEVERITY_COLOR[order.severity?.toLowerCase()] ?? '#8899aa';
 
@@ -23,9 +25,10 @@ const WorkOrderPanelItem: React.FC<WorkOrderPanelItemProps> = ({ order, onUpdate
     setLoading('approve');
     try {
       await approveWorkOrder(order.id);
+      showToast(`Work order #${order.id} approved`, 'success');
       onUpdated();
     } catch {
-      /* swallow — user can retry */
+      showToast('Failed to approve work order', 'error');
     } finally {
       setLoading(null);
     }
@@ -35,9 +38,10 @@ const WorkOrderPanelItem: React.FC<WorkOrderPanelItemProps> = ({ order, onUpdate
     setLoading('dismiss');
     try {
       await dismissWorkOrder(order.id);
+      showToast(`Work order #${order.id} dismissed`, 'info');
       onUpdated();
     } catch {
-      /* swallow */
+      showToast('Failed to dismiss work order', 'error');
     } finally {
       setLoading(null);
     }

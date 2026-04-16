@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { WorkOrder } from '../../types/chat';
 import { approveWorkOrder, dismissWorkOrder, editWorkOrder } from '../../api/client';
+import { useToast } from '../../hooks/useToast';
 import StatusTimeline from './StatusTimeline';
 
 interface WorkOrderDetailModalProps {
@@ -22,6 +23,7 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onCl
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [loading, setLoading] = useState<'approve' | 'dismiss' | 'save' | null>(null);
+  const { showToast } = useToast();
 
   React.useEffect(() => {
     if (order) {
@@ -36,8 +38,11 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onCl
     setLoading('approve');
     try {
       await approveWorkOrder(order.id);
+      showToast(`Work order #${order.id} approved`, 'success');
       onUpdated();
       onClose();
+    } catch {
+      showToast('Failed to approve work order', 'error');
     } finally {
       setLoading(null);
     }
@@ -48,8 +53,11 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onCl
     setLoading('dismiss');
     try {
       await dismissWorkOrder(order.id);
+      showToast(`Work order #${order.id} dismissed`, 'info');
       onUpdated();
       onClose();
+    } catch {
+      showToast('Failed to dismiss work order', 'error');
     } finally {
       setLoading(null);
     }
@@ -60,8 +68,11 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onCl
     setLoading('save');
     try {
       await editWorkOrder(order.id, { title: editTitle, description: editDesc });
+      showToast('Work order updated', 'success');
       onUpdated();
       setEditing(false);
+    } catch {
+      showToast('Failed to save changes', 'error');
     } finally {
       setLoading(null);
     }

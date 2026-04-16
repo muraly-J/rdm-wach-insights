@@ -28,6 +28,7 @@ const PredictionView = React.lazy(() => import('./components/prediction/Predicti
 
 // Chat
 import ChatWidget from './components/chat/ChatWidget';
+import ToastContainer from './components/shared/ToastContainer';
 
 // Work Orders
 import WorkOrderBadge from './components/workorders/WorkOrderBadge';
@@ -515,6 +516,7 @@ function App() {
       <div style={{ position: 'fixed', bottom: 88, right: 24, zIndex: 65 }}>
         <WorkOrderBadge />
       </div>
+      <ToastContainer />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { WorkOrder } from '../../types/chat';
 import { approveWorkOrder, dismissWorkOrder } from '../../api/client';
+import { useToast } from '../../hooks/useToast';
 
 interface WorkOrderTableProps {
   orders: WorkOrder[];
@@ -23,13 +24,17 @@ const STATUS_COLOR: Record<string, string> = {
 
 const WorkOrderTable: React.FC<WorkOrderTableProps> = ({ orders, onRefresh, onSelectOrder }) => {
   const [loadingId, setLoadingId] = React.useState<number | null>(null);
+  const { showToast } = useToast();
 
   const handleApprove = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     setLoadingId(id);
     try {
       await approveWorkOrder(id);
+      showToast(`Work order #${id} approved`, 'success');
       onRefresh();
+    } catch {
+      showToast('Failed to approve work order', 'error');
     } finally {
       setLoadingId(null);
     }
@@ -40,7 +45,10 @@ const WorkOrderTable: React.FC<WorkOrderTableProps> = ({ orders, onRefresh, onSe
     setLoadingId(id);
     try {
       await dismissWorkOrder(id);
+      showToast(`Work order #${id} dismissed`, 'info');
       onRefresh();
+    } catch {
+      showToast('Failed to dismiss work order', 'error');
     } finally {
       setLoadingId(null);
     }
