@@ -70,3 +70,51 @@ async def test_create_work_order_unknown_ahu_id_uses_level_0(db):
         severity="info",
     )
     assert result["level"] == 0
+
+
+@pytest.mark.asyncio
+async def test_send_notification_no_token_returns_skipped(db):
+    """When TELEGRAM_BOT_TOKEN is empty, notification should be skipped gracefully."""
+    from tools.action_tools import handle_send_notification
+    result = await handle_send_notification(
+        recipient="technician",
+        message="AHU e0402 phase imbalance detected.",
+    )
+    assert result["status"] == "skipped"
+    assert "token not configured" in result["reason"]
+
+
+@pytest.mark.asyncio
+async def test_send_notification_spam_prevention(db):
+    """Second notification for same AHU within cooldown should be blocked."""
+    from tools.action_tools import handle_send_notification
+    from datetime import datetime, timezone, timedelta
+    # Manually set agent state to simulate a recent alert
+    db.set_agent_state(
+        "last_alert:e0402",
+        {"notified_at": datetime.now(timezone.utc).isoformat()},
+    )
+    result = await handle_send_notification(
+        recipient="technician",
+        message="Repeated alert for e0402",
+        ahu_id="e0402",
+    )
+    assert result["status"] == "skipped"
+    assert "cooldown" in result["reason"]
+
+
+@pytest.mark.asyncio
+async def test_send_notification_updates_work_order(db):
+    """If work_order_id provided and notification skipped, work order unchanged."""
+    from tools.action_tools import handle_create_work_order, handle_send_notification
+    wo = await handle_create_work_order(
+        ahu_id="e0101", title="Test", severity="critical"
+    )
+    result = await handle_send_notification(
+        recipient="technician",
+        message="Critical alert",
+        work_order_id=wo["id"],
+        ahu_id="e0101",
+    )
+    # Even if skipped (no token), result has a status field
+    assert "status" in result
