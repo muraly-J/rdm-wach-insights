@@ -26,7 +26,7 @@ export const initialState: AppState = {
 };
 
 export type TimeRange = '24h' | '7d' | '30d' | 'all';
-export type DashboardMode = 'simple' | 'deepdive';
+export type DashboardMode = 'simple' | 'deepdive' | 'workorders';
 export type DeepDiveSubMode = 'single' | 'compare';
 
 // Zustand store (from spec Section 8.1)
@@ -88,6 +88,15 @@ interface AppStore extends AppState {
   // Chat mode
   chatMode: 'panel' | 'fullscreen' | 'split';
   setChatMode: (mode: 'panel' | 'fullscreen' | 'split') => void;
+
+  // Work order panel
+  workOrderPanelOpen: boolean;
+  toggleWorkOrderPanel: () => void;
+  setWorkOrderPanelOpen: (open: boolean) => void;
+
+  // Work order drafts count (badge on mode toggle)
+  workOrderDraftsCount: number;
+  setWorkOrderDraftsCount: (count: number) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -179,4 +188,13 @@ export const useAppStore = create<AppStore>((set) => ({
   chatMode: 'panel',
   /** Set the chat display mode (panel or fullscreen) */
   setChatMode: (mode) => set({ chatMode: mode }),
+
+  // Work order panel
+  workOrderPanelOpen: false,
+  toggleWorkOrderPanel: () => set((state) => ({ workOrderPanelOpen: !state.workOrderPanelOpen })),
+  setWorkOrderPanelOpen: (open) => set({ workOrderPanelOpen: open }),
+
+  // Work order drafts count
+  workOrderDraftsCount: 0,
+  setWorkOrderDraftsCount: (count) => set({ workOrderDraftsCount: count }),
 }));
