@@ -129,6 +129,72 @@ export async function sendChatMessage(
   });
 }
 
+// ── SSE Chat Stream ─────────────────────────────────────────────────────────
+
+export interface SSEEvent {
+  type: 'text_delta' | 'tool_call_start' | 'tool_call_result' | 'actions' | 'navigate' | 'suggestions' | 'ahu_summary' | 'chart_data' | 'done';
+  data: unknown;
+}
+
+export async function* streamChat(
+  message: string,
+  options?: {
+    level?: number;
+    device?: string | null;
+    financial_impact?: number | null;
+    history?: Array<{ role: 'user' | 'model'; content: string }>;
+    persona?: string | null;
+  }
+): AsyncGenerator<SSEEvent> {
+  const { history, persona, ...context } = options ?? {};
+  const url = `${API_BASE}/chat/stream`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${API_KEY}`,
+    },
+    body: JSON.stringify({
+      message,
+      context,
+      history: history ?? [],
+      persona: persona ?? null,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Stream error: ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No response body');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === '[DONE]') return;
+        try {
+          yield JSON.parse(jsonStr) as SSEEvent;
+        } catch {
+          // skip malformed JSON
+        }
+      }
+    }
+  }
+}
+
 /**
  * GET /api/dashboard/ranking — Top 5 best/worst AHUs by health index
  * Existing: backend/routes/dashboard.py#L24
