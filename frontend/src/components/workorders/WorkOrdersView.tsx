@@ -45,7 +45,8 @@ const WorkOrdersView: React.FC = () => {
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
       if (filters.status !== 'all' && o.status !== filters.status) return false;
-      if (filters.severity !== 'all' && o.severity?.toLowerCase() !== filters.severity) return false;
+      if (filters.severity !== 'all' && o.severity?.toLowerCase() !== filters.severity)
+        return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
         if (
@@ -62,7 +63,14 @@ const WorkOrdersView: React.FC = () => {
 
   return (
     <div style={{ paddingTop: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 16,
+        }}
+      >
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#E8ECF1' }}>Work Orders</h2>
         <button
           onClick={load}
@@ -81,7 +89,14 @@ const WorkOrdersView: React.FC = () => {
             gap: 6,
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <polyline points="23 4 23 10 17 10" />
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
           </svg>
@@ -90,26 +105,42 @@ const WorkOrdersView: React.FC = () => {
       </div>
 
       {error && (
-        <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: 8, color: '#ef4444', fontSize: 12 }}>
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '10px 14px',
+            background: 'rgba(239,68,68,0.1)',
+            border: '1px solid #ef4444',
+            borderRadius: 8,
+            color: '#ef4444',
+            fontSize: 12,
+          }}
+        >
           {error}
         </div>
       )}
 
       <WorkOrderStatsBar orders={orders} />
 
-      <div style={{ background: '#111827', border: '1px solid #2a3649', borderRadius: 12, padding: '16px 16px' }}>
+      <div
+        style={{
+          background: '#111827',
+          border: '1px solid #2a3649',
+          borderRadius: 12,
+          padding: '16px 16px',
+        }}
+      >
         <WorkOrderFilters filters={filters} onChange={setFilters} />
-        <WorkOrderTable
-          orders={filteredOrders}
-          onRefresh={load}
-          onSelectOrder={setSelectedOrder}
-        />
+        <WorkOrderTable orders={filteredOrders} onRefresh={load} onSelectOrder={setSelectedOrder} />
       </div>
 
       <WorkOrderDetailModal
         order={selectedOrder}
         onClose={() => setSelectedOrder(null)}
-        onUpdated={() => { setSelectedOrder(null); load(); }}
+        onUpdated={() => {
+          setSelectedOrder(null);
+          load();
+        }}
       />
     </div>
   );

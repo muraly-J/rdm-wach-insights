@@ -45,7 +45,15 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ order }) => {
       {events.map((ev, idx) => (
         <div key={ev.label} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
           {/* Connector column */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 20, flexShrink: 0 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              width: 20,
+              flexShrink: 0,
+            }}
+          >
             <div
               style={{
                 width: 10,

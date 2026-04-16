@@ -105,9 +105,7 @@ const BotMessage: React.FC<BotMessageProps> = ({
           </div>
 
           {/* Agent reasoning */}
-          {tool_calls && tool_calls.length > 0 && (
-            <AgentReasoning toolCalls={tool_calls} />
-          )}
+          {tool_calls && tool_calls.length > 0 && <AgentReasoning toolCalls={tool_calls} />}
 
           {/* Structured cards */}
           {ahu_summary && <AHUSummaryCard summary={ahu_summary} />}

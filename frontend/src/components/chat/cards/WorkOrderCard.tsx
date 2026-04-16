@@ -14,7 +14,9 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 export default function WorkOrderCard({ actions }: WorkOrderCardProps) {
-  const [states, setStates] = useState<Record<number, 'idle' | 'loading' | 'done' | 'dismissed'>>({});
+  const [states, setStates] = useState<Record<number, 'idle' | 'loading' | 'done' | 'dismissed'>>(
+    {}
+  );
   const [editing, setEditing] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
@@ -94,16 +96,36 @@ export default function WorkOrderCard({ actions }: WorkOrderCardProps) {
                   className="bg-[#0D1520] border border-[#1a2638] rounded-md px-2 py-1.5 text-[#E8ECF1] text-xs outline-none resize-none"
                 />
                 <div className="flex gap-1.5">
-                  <button onClick={() => handleEdit(woId)} className="bg-[#00E5A0] text-[#0B0F14] rounded-full px-3 py-1 text-[11px] font-semibold cursor-pointer border-none">Save</button>
-                  <button onClick={() => setEditing(null)} className="bg-transparent text-[#6d6e71] border border-[#1a2638] rounded-full px-3 py-1 text-[11px] cursor-pointer">Cancel</button>
+                  <button
+                    onClick={() => handleEdit(woId)}
+                    className="bg-[#00E5A0] text-[#0B0F14] rounded-full px-3 py-1 text-[11px] font-semibold cursor-pointer border-none"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditing(null)}
+                    className="bg-transparent text-[#6d6e71] border border-[#1a2638] rounded-full px-3 py-1 text-[11px] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             ) : (
               <div>
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: severityColor }} />
-                  <span className="text-[12px] font-semibold text-[#E8ECF1]">Work Order #{woId}</span>
-                  <span className="text-[10px] font-semibold uppercase" style={{ color: severityColor }}>{severity}</span>
+                  <span
+                    className="inline-block w-1.5 h-1.5 rounded-full"
+                    style={{ background: severityColor }}
+                  />
+                  <span className="text-[12px] font-semibold text-[#E8ECF1]">
+                    Work Order #{woId}
+                  </span>
+                  <span
+                    className="text-[10px] font-semibold uppercase"
+                    style={{ color: severityColor }}
+                  >
+                    {severity}
+                  </span>
                 </div>
                 <p className="text-[11px] text-[#8899aa] mb-2">
                   {approveItem?.description ?? dismissItem?.description ?? ''}
@@ -120,7 +142,11 @@ export default function WorkOrderCard({ actions }: WorkOrderCardProps) {
                   )}
                   {editItem && (
                     <button
-                      onClick={() => { setEditing(woId); setEditTitle(''); setEditDesc(''); }}
+                      onClick={() => {
+                        setEditing(woId);
+                        setEditTitle('');
+                        setEditDesc('');
+                      }}
                       className="bg-transparent text-[#8899aa] border border-[#1a2638] rounded-full px-3 py-1 text-[11px] cursor-pointer"
                     >
                       {editItem.label}

@@ -79,7 +79,14 @@ const WorkOrderStatsBar: React.FC<WorkOrderStatsBarProps> = ({ orders }) => {
           >
             {count}
           </span>
-          <span style={{ fontSize: 10, color: '#556677', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <span
+            style={{
+              fontSize: 10,
+              color: '#556677',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}
+          >
             {label}
           </span>
         </div>

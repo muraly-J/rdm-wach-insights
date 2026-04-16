@@ -76,7 +76,14 @@ const WorkOrderPanel: React.FC = () => {
                 padding: 4,
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
@@ -101,7 +108,16 @@ const WorkOrderPanel: React.FC = () => {
 
             {drafts.length > 0 && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', letterSpacing: '0.07em', marginBottom: 8, textTransform: 'uppercase' }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: '#f59e0b',
+                    letterSpacing: '0.07em',
+                    marginBottom: 8,
+                    textTransform: 'uppercase',
+                  }}
+                >
                   Drafts · {drafts.length}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
@@ -114,7 +130,16 @@ const WorkOrderPanel: React.FC = () => {
 
             {others.length > 0 && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#556677', letterSpacing: '0.07em', marginBottom: 8, textTransform: 'uppercase' }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: '#556677',
+                    letterSpacing: '0.07em',
+                    marginBottom: 8,
+                    textTransform: 'uppercase',
+                  }}
+                >
                   Recent · {others.length}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

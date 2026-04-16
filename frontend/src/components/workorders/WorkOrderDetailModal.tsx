@@ -18,7 +18,11 @@ const SEVERITY_COLOR: Record<string, string> = {
   low: '#22c55e',
 };
 
-const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onClose, onUpdated }) => {
+const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
+  order,
+  onClose,
+  onUpdated,
+}) => {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
@@ -78,7 +82,9 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onCl
     }
   };
 
-  const severityColor = order ? (SEVERITY_COLOR[order.severity?.toLowerCase()] ?? '#8899aa') : '#8899aa';
+  const severityColor = order
+    ? (SEVERITY_COLOR[order.severity?.toLowerCase()] ?? '#8899aa')
+    : '#8899aa';
 
   return (
     <AnimatePresence>
@@ -175,7 +181,14 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onCl
                   flexShrink: 0,
                 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -183,10 +196,28 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onCl
             </div>
 
             {/* Body */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '16px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 20,
+              }}
+            >
               {/* Description */}
               <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#556677', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: '#556677',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    marginBottom: 8,
+                  }}
+                >
                   Description
                 </div>
                 {editing ? (
@@ -208,7 +239,14 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onCl
                     }}
                   />
                 ) : (
-                  <p style={{ margin: 0, fontSize: 13, color: order.description ? '#C8D4E0' : '#556677', lineHeight: 1.6 }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 13,
+                      color: order.description ? '#C8D4E0' : '#556677',
+                      lineHeight: 1.6,
+                    }}
+                  >
                     {order.description ?? 'No description provided.'}
                   </p>
                 )}
@@ -217,16 +255,43 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onCl
               {/* FAIR Snapshot */}
               {order.fair_snapshot && Object.keys(order.fair_snapshot).length > 0 && (
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#556677', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: '#556677',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      marginBottom: 8,
+                    }}
+                  >
                     FAIR Snapshot
                   </div>
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     {Object.entries(order.fair_snapshot).map(([key, val]) => (
-                      <div key={key} style={{ background: '#1a2234', border: '1px solid #2a3649', borderRadius: 6, padding: '8px 12px', minWidth: 70 }}>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: '#E8ECF1', fontVariantNumeric: 'tabular-nums' }}>
+                      <div
+                        key={key}
+                        style={{
+                          background: '#1a2234',
+                          border: '1px solid #2a3649',
+                          borderRadius: 6,
+                          padding: '8px 12px',
+                          minWidth: 70,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 700,
+                            color: '#E8ECF1',
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        >
                           {typeof val === 'number' ? val.toFixed(1) : val}
                         </div>
-                        <div style={{ fontSize: 10, color: '#556677', textTransform: 'uppercase' }}>{key}</div>
+                        <div style={{ fontSize: 10, color: '#556677', textTransform: 'uppercase' }}>
+                          {key}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -235,7 +300,16 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onCl
 
               {/* Timeline */}
               <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#556677', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: '#556677',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    marginBottom: 12,
+                  }}
+                >
                   Timeline
                 </div>
                 <StatusTimeline order={order} />
@@ -249,7 +323,15 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onCl
                   { label: 'Notified via', value: order.notified_via },
                   { label: 'Status', value: order.status },
                 ].map(({ label, value }) => (
-                  <div key={label} style={{ background: '#1a2234', border: '1px solid #2a3649', borderRadius: 6, padding: '8px 12px' }}>
+                  <div
+                    key={label}
+                    style={{
+                      background: '#1a2234',
+                      border: '1px solid #2a3649',
+                      borderRadius: 6,
+                      padding: '8px 12px',
+                    }}
+                  >
                     <div style={{ fontSize: 10, color: '#556677', marginBottom: 2 }}>{label}</div>
                     <div style={{ fontSize: 12, color: '#E8ECF1', fontWeight: 600 }}>{value}</div>
                   </div>

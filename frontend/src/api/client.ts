@@ -132,7 +132,16 @@ export async function sendChatMessage(
 // ── SSE Chat Stream ─────────────────────────────────────────────────────────
 
 export interface SSEEvent {
-  type: 'text_delta' | 'tool_call_start' | 'tool_call_result' | 'actions' | 'navigate' | 'suggestions' | 'ahu_summary' | 'chart_data' | 'done';
+  type:
+    | 'text_delta'
+    | 'tool_call_start'
+    | 'tool_call_result'
+    | 'actions'
+    | 'navigate'
+    | 'suggestions'
+    | 'ahu_summary'
+    | 'chart_data'
+    | 'done';
   data: unknown;
 }
 
@@ -279,18 +288,14 @@ export async function fetchWorkOrders(
 /**
  * POST /api/work-orders/{id}/approve — Approve a draft work order
  */
-export async function approveWorkOrder(
-  id: number
-): Promise<{ id: number; status: string }> {
+export async function approveWorkOrder(id: number): Promise<{ id: number; status: string }> {
   return apiFetch(`/work-orders/${id}/approve`, { method: 'POST' });
 }
 
 /**
  * POST /api/work-orders/{id}/dismiss — Dismiss a work order
  */
-export async function dismissWorkOrder(
-  id: number
-): Promise<{ id: number; status: string }> {
+export async function dismissWorkOrder(id: number): Promise<{ id: number; status: string }> {
   return apiFetch(`/work-orders/${id}/dismiss`, { method: 'POST' });
 }
 

@@ -206,8 +206,6 @@ export const useAppStore = create<AppStore>((set) => ({
 
   // Toast notifications
   toasts: [],
-  addToast: (toast) =>
-    set((state) => ({ toasts: [...state.toasts, toast] })),
-  removeToast: (id) =>
-    set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
+  addToast: (toast) => set((state) => ({ toasts: [...state.toasts, toast] })),
+  removeToast: (id) => set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
 }));

@@ -67,7 +67,17 @@ const WorkOrderFilters: React.FC<WorkOrderFiltersProps> = ({ filters, onChange }
 
       {/* Status chips */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 10, color: '#556677', marginRight: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status:</span>
+        <span
+          style={{
+            fontSize: 10,
+            color: '#556677',
+            marginRight: 4,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+          }}
+        >
+          Status:
+        </span>
         {STATUS_OPTIONS.map((s) => (
           <button
             key={s}
@@ -81,7 +91,17 @@ const WorkOrderFilters: React.FC<WorkOrderFiltersProps> = ({ filters, onChange }
 
       {/* Severity chips */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 10, color: '#556677', marginRight: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Severity:</span>
+        <span
+          style={{
+            fontSize: 10,
+            color: '#556677',
+            marginRight: 4,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+          }}
+        >
+          Severity:
+        </span>
         {SEVERITY_OPTIONS.map((s) => (
           <button
             key={s}

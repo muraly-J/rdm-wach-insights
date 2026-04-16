@@ -296,6 +296,11 @@ async def dispatch_tool(name: str, args: dict) -> dict[str, Any]:
 
     logger.info(f"tool_call: {name}({args})")
 
+    from tools.action_tools import (
+        handle_create_work_order,
+        handle_send_notification,
+        handle_update_work_order,
+    )
     from tools.health_tools import (
         handle_query_building_summary,
         handle_query_financial_impact,
@@ -303,11 +308,6 @@ async def dispatch_tool(name: str, args: dict) -> dict[str, Any]:
         handle_query_live_readings,
         handle_query_ranking,
         handle_search_docs,
-    )
-    from tools.action_tools import (
-        handle_create_work_order,
-        handle_send_notification,
-        handle_update_work_order,
     )
 
     handlers = {

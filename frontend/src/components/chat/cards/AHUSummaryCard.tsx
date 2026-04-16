@@ -57,7 +57,9 @@ export default function AHUSummaryCard({ summary }: AHUSummaryCardProps) {
       {/* Composite */}
       <div className="mt-1.5 flex justify-between text-[11px] text-[#8899aa]">
         <span>Composite</span>
-        <span className="font-semibold" style={{ color }}>{summary.fair.composite}</span>
+        <span className="font-semibold" style={{ color }}>
+          {summary.fair.composite}
+        </span>
       </div>
     </div>
   );

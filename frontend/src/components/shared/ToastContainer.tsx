@@ -5,9 +5,9 @@ import { Toast, ToastVariant } from '../../hooks/useToast';
 
 const VARIANT_STYLES: Record<ToastVariant, { border: string; icon: string; color: string }> = {
   success: { border: '#00E5A0', icon: '✓', color: '#00E5A0' },
-  error:   { border: '#ef4444', icon: '✕', color: '#ef4444' },
+  error: { border: '#ef4444', icon: '✕', color: '#ef4444' },
   warning: { border: '#f59e0b', icon: '⚠', color: '#f59e0b' },
-  info:    { border: '#60a5fa', icon: 'ℹ', color: '#60a5fa' },
+  info: { border: '#60a5fa', icon: 'ℹ', color: '#60a5fa' },
 };
 
 const ToastItem: React.FC<{ toast: Toast }> = ({ toast }) => {

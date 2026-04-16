@@ -96,8 +96,9 @@ async def edit_work_order(wo_id: int, body: WorkOrderPatch) -> dict:
     if not wo:
         raise HTTPException(status_code=404, detail=f"Work order {wo_id} not found")
 
-    import duckdb
     from datetime import datetime, timezone
+
+    import duckdb
     now = datetime.now(timezone.utc).isoformat()
 
     updates = ["updated_at = ?"]

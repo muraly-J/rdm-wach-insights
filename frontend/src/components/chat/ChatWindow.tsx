@@ -94,11 +94,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const handleNewChat = useCallback(() => {
     startNewConversation();
-    setMessages([{
-      id: 'greeting',
-      role: 'bot',
-      content: "Hello! I'm **RDM-Atlas**, your building health assistant. How can I help you today?",
-    }]);
+    setMessages([
+      {
+        id: 'greeting',
+        role: 'bot',
+        content:
+          "Hello! I'm **RDM-Atlas**, your building health assistant. How can I help you today?",
+      },
+    ]);
   }, [startNewConversation, setMessages]);
 
   const { sendStreaming, isStreaming: sseStreaming } = useSSEChat({
@@ -140,7 +143,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         persona: selectedPersona,
       });
     },
-    [sendStreaming, messages, setMessages, selectedLevel, selectedDevice, financialImpact, selectedPersona]
+    [
+      sendStreaming,
+      messages,
+      setMessages,
+      selectedLevel,
+      selectedDevice,
+      financialImpact,
+      selectedPersona,
+    ]
   );
 
   const handlePromptSelect = useCallback(

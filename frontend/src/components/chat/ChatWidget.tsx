@@ -24,8 +24,10 @@ const ChatWidget: React.FC = () => {
   const isSplit = chatMode === 'split';
 
   const toggleExpanded = () => {
-    if (chatMode === 'panel') { setChatMode('fullscreen'); setIsMinimized(false); }
-    else if (chatMode === 'fullscreen') setChatMode('panel');
+    if (chatMode === 'panel') {
+      setChatMode('fullscreen');
+      setIsMinimized(false);
+    } else if (chatMode === 'fullscreen') setChatMode('panel');
     else setChatMode('panel'); // split → panel
   };
 
@@ -42,7 +44,9 @@ const ChatWidget: React.FC = () => {
   // Split mode: rendered by App.tsx layout — just return the window
   if (isSplit) {
     return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#0B0F14' }}>
+      <div
+        style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#0B0F14' }}
+      >
         <ChatWindow
           mode="split"
           onClose={handleClose}

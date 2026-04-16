@@ -87,8 +87,9 @@ async def test_send_notification_no_token_returns_skipped(db):
 @pytest.mark.asyncio
 async def test_send_notification_spam_prevention(db):
     """Second notification for same AHU within cooldown should be blocked."""
+    from datetime import datetime, timedelta, timezone
+
     from tools.action_tools import handle_send_notification
-    from datetime import datetime, timezone, timedelta
     # Manually set agent state to simulate a recent alert
     db.set_agent_state(
         "last_alert:e0402",

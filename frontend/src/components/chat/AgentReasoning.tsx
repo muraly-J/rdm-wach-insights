@@ -59,10 +59,7 @@ export default function AgentReasoning({ toolCalls }: AgentReasoningProps) {
               "
             >
               {toolCalls.map((tc, i) => (
-                <div
-                  key={i}
-                  className="text-[11px] font-mono leading-relaxed"
-                >
+                <div key={i} className="text-[11px] font-mono leading-relaxed">
                   <span className="text-[#00E5A0]">{tc.name}</span>
                   <span className="text-[#556677]">
                     (
@@ -71,9 +68,7 @@ export default function AgentReasoning({ toolCalls }: AgentReasoningProps) {
                       .join(', ')}
                     )
                   </span>
-                  {tc.result && (
-                    <span className="text-[#6d6e71]"> → {tc.result}</span>
-                  )}
+                  {tc.result && <span className="text-[#6d6e71]"> → {tc.result}</span>}
                 </div>
               ))}
             </div>

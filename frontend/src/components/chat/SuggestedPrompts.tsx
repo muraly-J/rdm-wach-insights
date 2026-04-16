@@ -25,15 +25,20 @@ function getInitialPrompts(level: number | null, device: string | null): string[
   return prompts.slice(0, 6);
 }
 
-export default function SuggestedPrompts({ suggestions, onSelect, hasMessages }: SuggestedPromptsProps) {
+export default function SuggestedPrompts({
+  suggestions,
+  onSelect,
+  hasMessages,
+}: SuggestedPromptsProps) {
   const selectedLevel = useAppStore((s) => s.selectedLevel);
   const selectedDevice = useAppStore((s) => s.selectedDevice);
 
-  const prompts = suggestions && suggestions.length > 0
-    ? suggestions
-    : !hasMessages
-      ? getInitialPrompts(selectedLevel, selectedDevice)
-      : [];
+  const prompts =
+    suggestions && suggestions.length > 0
+      ? suggestions
+      : !hasMessages
+        ? getInitialPrompts(selectedLevel, selectedDevice)
+        : [];
 
   if (!prompts.length) return null;
 

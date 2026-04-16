@@ -63,17 +63,23 @@ export function useConversationHistory() {
     [activeId]
   );
 
-  const loadConversation = useCallback((id: string): Message[] | null => {
-    const convo = conversations.find((c) => c.id === id);
-    if (!convo) return null;
-    setActiveId(id);
-    return convo.messages;
-  }, [conversations]);
+  const loadConversation = useCallback(
+    (id: string): Message[] | null => {
+      const convo = conversations.find((c) => c.id === id);
+      if (!convo) return null;
+      setActiveId(id);
+      return convo.messages;
+    },
+    [conversations]
+  );
 
-  const deleteConversation = useCallback((id: string) => {
-    setConversations((prev) => prev.filter((c) => c.id !== id));
-    if (activeId === id) setActiveId(null);
-  }, [activeId]);
+  const deleteConversation = useCallback(
+    (id: string) => {
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      if (activeId === id) setActiveId(null);
+    },
+    [activeId]
+  );
 
   const startNewConversation = useCallback(() => {
     setActiveId(null);

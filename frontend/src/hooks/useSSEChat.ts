@@ -69,10 +69,7 @@ export function useSSEChat(options?: UseSSEChatOptions) {
                 msg.content += event.data as string;
                 break;
               case 'tool_call_start':
-                msg.tool_calls = [
-                  ...(msg.tool_calls ?? []),
-                  event.data as ToolCall,
-                ];
+                msg.tool_calls = [...(msg.tool_calls ?? []), event.data as ToolCall];
                 break;
               case 'tool_call_result': {
                 const result = event.data as { name: string; result: string };

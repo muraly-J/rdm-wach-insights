@@ -95,7 +95,9 @@ const WorkOrderPanelItem: React.FC<WorkOrderPanelItemProps> = ({ order, onUpdate
         </p>
       )}
 
-      <div style={{ fontSize: 10, color: '#556677' }}>AHU {order.ahu_id} · Level {order.level}</div>
+      <div style={{ fontSize: 10, color: '#556677' }}>
+        AHU {order.ahu_id} · Level {order.level}
+      </div>
 
       {order.status === 'draft' && (
         <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>

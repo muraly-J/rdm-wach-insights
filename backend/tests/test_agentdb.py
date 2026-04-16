@@ -2,7 +2,7 @@
 import os
 import sys
 import tempfile
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -81,7 +81,7 @@ def test_get_missing_agent_state_returns_none(db):
 
 
 def test_agent_state_expired_returns_none(db):
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
     past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
     db.set_agent_state("stale:key", {"data": 1}, expires_at=past)
     val = db.get_agent_state("stale:key")

@@ -26,9 +26,7 @@ from agents.router import classify_intent
 from core.logger import get_logger
 from core.query_classifier import classify_query_complexity
 from fastapi import APIRouter, HTTPException
-from llm.client_factory import get_chat_client
 from llm.persona_detector import detect_persona
-from llm.prompts import build_system_prompt
 from models.schemas import ChatHistoryItem
 from pydantic import BaseModel, field_validator
 

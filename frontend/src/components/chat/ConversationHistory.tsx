@@ -75,7 +75,10 @@ export default function ConversationHistory({
                   {convo.title}
                 </span>
                 <button
-                  onClick={(e) => { e.stopPropagation(); onDelete(convo.id); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(convo.id);
+                  }}
                   className="bg-transparent border-none text-[#556677] cursor-pointer text-[12px] px-0.5 opacity-50 hover:opacity-100 flex-shrink-0 ml-1"
                 >
                   ×

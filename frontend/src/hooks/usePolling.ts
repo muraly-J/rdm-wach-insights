@@ -20,10 +20,7 @@ interface UsePollingOptions {
  * - Pauses when the tab is hidden and resumes when it becomes visible again.
  * - Applies exponential backoff on consecutive errors; resets on success.
  */
-export function usePolling(
-  fn: () => Promise<void> | void,
-  options: UsePollingOptions = {}
-): void {
+export function usePolling(fn: () => Promise<void> | void, options: UsePollingOptions = {}): void {
   const {
     interval = 30_000,
     maxInterval = 300_000,
@@ -115,5 +112,14 @@ export function usePolling(
     }
 
     return clearTimer;
-  }, [enabled, runOnMount, pauseOnHidden, interval, maxInterval, backoffMultiplier, schedule, clearTimer]);
+  }, [
+    enabled,
+    runOnMount,
+    pauseOnHidden,
+    interval,
+    maxInterval,
+    backoffMultiplier,
+    schedule,
+    clearTimer,
+  ]);
 }

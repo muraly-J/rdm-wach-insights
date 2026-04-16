@@ -15,6 +15,7 @@ reads the queue and runs the Resolution Agent for heavy LLM analysis.
 """
 
 import asyncio
+
 from core.logger import get_logger
 
 logger = get_logger(__name__)

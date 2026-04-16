@@ -12,7 +12,6 @@ Uses a two-step approach:
 Returns "analysis" (→ Analysis Agent) or "resolution" (→ Resolution Agent).
 """
 
-import re
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -95,8 +94,9 @@ def _llm_classify(message: str, history: list[dict]) -> str:
     if not settings.enable_llm:
         return "analysis"
 
-    from llm.client_factory import get_chat_client
     import asyncio
+
+    from llm.client_factory import get_chat_client
 
     system_prompt = (
         "Classify the user message. "
