@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { AppState, ChatMessage, DashboardData, FinancialImpact, SiteSummaryData } from '../types';
+import type { Toast } from '../hooks/useToast';
 
 // Default chat message for initial bot greeting
 const INITIAL_BOT_MESSAGE: ChatMessage = {
@@ -91,12 +92,19 @@ interface AppStore extends AppState {
   chatMode: 'panel' | 'fullscreen' | 'split';
   setChatMode: (mode: 'panel' | 'fullscreen' | 'split') => void;
 
-  // Work orders
+  // Work order panel
   workOrderPanelOpen: boolean;
-  setWorkOrderPanelOpen: (open: boolean) => void;
   toggleWorkOrderPanel: () => void;
+  setWorkOrderPanelOpen: (open: boolean) => void;
+
+  // Work order drafts count (badge on mode toggle)
   workOrderDraftsCount: number;
   setWorkOrderDraftsCount: (count: number) => void;
+
+  // Toast notifications
+  toasts: Toast[];
+  addToast: (toast: Toast) => void;
+  removeToast: (id: string) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -189,15 +197,17 @@ export const useAppStore = create<AppStore>((set) => ({
   /** Set the chat display mode (panel, fullscreen, or split) */
   setChatMode: (mode) => set({ chatMode: mode }),
 
-  // Work orders
-  /** Get work order panel open state */
+  // Work order panel
   workOrderPanelOpen: false,
-  /** Set work order panel open state */
-  setWorkOrderPanelOpen: (open) => set({ workOrderPanelOpen: open }),
-  /** Toggle work order panel open/closed */
   toggleWorkOrderPanel: () => set((state) => ({ workOrderPanelOpen: !state.workOrderPanelOpen })),
-  /** Get count of draft work orders */
+  setWorkOrderPanelOpen: (open) => set({ workOrderPanelOpen: open }),
+
+  // Work order drafts count
   workOrderDraftsCount: 0,
-  /** Set count of draft work orders */
   setWorkOrderDraftsCount: (count) => set({ workOrderDraftsCount: count }),
+
+  // Toast notifications
+  toasts: [],
+  addToast: (toast) => set((state) => ({ toasts: [...state.toasts, toast] })),
+  removeToast: (id) => set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
 }));

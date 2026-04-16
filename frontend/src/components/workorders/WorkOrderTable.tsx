@@ -1,114 +1,204 @@
-import { motion } from 'framer-motion';
-
-export interface WorkOrderRow {
-    id: number;
-    title: string;
-    ahu_id: string;
-    status: 'draft' | 'pending' | 'approved' | 'dismissed';
-    severity: 'critical' | 'warning' | 'info';
-    created_at: string;
-}
+import React from 'react';
+import { WorkOrder } from '../../types/chat';
+import { approveWorkOrder, dismissWorkOrder } from '../../api/client';
+import { useToast } from '../../hooks/useToast';
 
 interface WorkOrderTableProps {
-    rows: WorkOrderRow[];
-    onRowClick?: (row: WorkOrderRow) => void;
-    isLoading?: boolean;
+  orders: WorkOrder[];
+  onRefresh: () => void;
+  onSelectOrder: (order: WorkOrder) => void;
 }
 
-const SEVERITY_COLORS: Record<string, string> = {
-    critical: '#FF4D4D',
-    warning: '#FFA31A',
-    info: '#4DA6FF',
+const SEVERITY_COLOR: Record<string, string> = {
+  critical: '#ef4444',
+  high: '#f97316',
+  medium: '#f59e0b',
+  low: '#22c55e',
 };
 
-export default function WorkOrderTable({ rows, onRowClick, isLoading }: WorkOrderTableProps) {
-    const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
-    };
+const STATUS_COLOR: Record<string, string> = {
+  draft: '#f59e0b',
+  approved: '#00E5A0',
+  dismissed: '#556677',
+};
 
-    if (isLoading) {
-        return (
-            <div className="flex justify-center py-8">
-                <span className="text-[#556677] text-sm animate-pulse">Loading work orders…</span>
-            </div>
-        );
+const WorkOrderTable: React.FC<WorkOrderTableProps> = ({ orders, onRefresh, onSelectOrder }) => {
+  const [loadingId, setLoadingId] = React.useState<number | null>(null);
+  const { showToast } = useToast();
+
+  const handleApprove = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    setLoadingId(id);
+    try {
+      await approveWorkOrder(id);
+      showToast(`Work order #${id} approved`, 'success');
+      onRefresh();
+    } catch {
+      showToast('Failed to approve work order', 'error');
+    } finally {
+      setLoadingId(null);
     }
+  };
 
-    if (rows.length === 0) {
-        return (
-            <div className="flex items-center justify-center py-12 bg-[#1a2234] rounded-lg border border-[#2a3649]">
-                <span className="text-[#556677] text-sm">No work orders found</span>
-            </div>
-        );
+  const handleDismiss = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    setLoadingId(id);
+    try {
+      await dismissWorkOrder(id);
+      showToast(`Work order #${id} dismissed`, 'info');
+      onRefresh();
+    } catch {
+      showToast('Failed to dismiss work order', 'error');
+    } finally {
+      setLoadingId(null);
     }
+  };
 
+  if (orders.length === 0) {
     return (
-        <div className="overflow-x-auto rounded-lg border border-[#2a3649]">
-            <table className="w-full">
-                <thead className="bg-[#1a2234]">
-                    <tr className="border-b border-[#2a3649]">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#8899aa]">Title</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#8899aa]">AHU</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#8899aa]">Severity</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#8899aa]">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#8899aa]">Created</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map((row, idx) => (
-                        <motion.tr
-                            key={row.id}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: idx * 0.05 }}
-                            onClick={() => onRowClick?.(row)}
-                            className="border-b border-[#2a3649] hover:bg-[#1a2234] cursor-pointer"
-                        >
-                            <td className="px-4 py-3 text-sm text-[#E8ECF1] font-medium">{row.title}</td>
-                            <td className="px-4 py-3 text-sm text-[#8899aa] font-mono">{row.ahu_id}</td>
-                            <td className="px-4 py-3 text-sm">
-                                <span
-                                    className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold"
-                                    style={{
-                                        background: `${SEVERITY_COLORS[row.severity]}20`,
-                                        color: SEVERITY_COLORS[row.severity],
-                                        border: `1px solid ${SEVERITY_COLORS[row.severity]}`,
-                                    }}
-                                >
-                                    {row.severity.charAt(0).toUpperCase() + row.severity.slice(1)}
-                                </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm">
-                                <span
-                                    className="inline-block px-2 py-1 rounded text-xs font-semibold"
-                                    style={{
-                                        background:
-                                            row.status === 'draft'
-                                                ? '#FFA31A20'
-                                                : row.status === 'pending'
-                                                    ? '#4DA6FF20'
-                                                    : row.status === 'approved'
-                                                        ? '#00E5A020'
-                                                        : '#55667720',
-                                        color:
-                                            row.status === 'draft'
-                                                ? '#FFA31A'
-                                                : row.status === 'pending'
-                                                    ? '#4DA6FF'
-                                                    : row.status === 'approved'
-                                                        ? '#00E5A0'
-                                                        : '#8899aa',
-                                    }}
-                                >
-                                    {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
-                                </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-[#556677]">{formatDate(row.created_at)}</td>
-                        </motion.tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+      <div style={{ color: '#556677', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>
+        No work orders match the current filters.
+      </div>
     );
-}
+  }
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid #2a3649' }}>
+            {['#', 'Title', 'AHU', 'Level', 'Severity', 'Status', 'Created', 'Actions'].map((h) => (
+              <th
+                key={h}
+                style={{
+                  padding: '8px 10px',
+                  textAlign: 'left',
+                  color: '#556677',
+                  fontWeight: 600,
+                  fontSize: 10,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map((order) => {
+            const severityColor = SEVERITY_COLOR[order.severity?.toLowerCase()] ?? '#8899aa';
+            const statusColor = STATUS_COLOR[order.status] ?? '#8899aa';
+            const createdDate = new Date(order.created_at).toLocaleDateString();
+
+            return (
+              <tr
+                key={order.id}
+                onClick={() => onSelectOrder(order)}
+                style={{
+                  borderBottom: '1px solid #1a2234',
+                  cursor: 'pointer',
+                  transition: 'background 0.1s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#1a2234')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <td style={{ padding: '10px 10px', color: '#556677', fontWeight: 600 }}>
+                  #{order.id}
+                </td>
+                <td style={{ padding: '10px 10px', color: '#E8ECF1', maxWidth: 260 }}>
+                  <span
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {order.title}
+                  </span>
+                </td>
+                <td style={{ padding: '10px 10px', color: '#8899aa', whiteSpace: 'nowrap' }}>
+                  {order.ahu_id}
+                </td>
+                <td style={{ padding: '10px 10px', color: '#8899aa', whiteSpace: 'nowrap' }}>
+                  L{order.level}
+                </td>
+                <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
+                  <span
+                    style={{
+                      color: severityColor,
+                      fontWeight: 700,
+                      fontSize: 10,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {order.severity}
+                  </span>
+                </td>
+                <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
+                  <span
+                    style={{
+                      color: statusColor,
+                      fontWeight: 600,
+                      fontSize: 10,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {order.status}
+                  </span>
+                </td>
+                <td style={{ padding: '10px 10px', color: '#556677', whiteSpace: 'nowrap' }}>
+                  {createdDate}
+                </td>
+                <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
+                  {order.status === 'draft' && (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        onClick={(e) => handleApprove(e, order.id)}
+                        disabled={loadingId === order.id}
+                        style={{
+                          background: '#00E5A0',
+                          color: '#000',
+                          border: 'none',
+                          borderRadius: 4,
+                          padding: '4px 10px',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          cursor: loadingId === order.id ? 'not-allowed' : 'pointer',
+                          opacity: loadingId === order.id ? 0.6 : 1,
+                        }}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={(e) => handleDismiss(e, order.id)}
+                        disabled={loadingId === order.id}
+                        style={{
+                          background: 'transparent',
+                          color: '#8899aa',
+                          border: '1px solid #2a3649',
+                          borderRadius: 4,
+                          padding: '4px 10px',
+                          fontSize: 10,
+                          fontWeight: 600,
+                          cursor: loadingId === order.id ? 'not-allowed' : 'pointer',
+                          opacity: loadingId === order.id ? 0.6 : 1,
+                        }}
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+export default WorkOrderTable;

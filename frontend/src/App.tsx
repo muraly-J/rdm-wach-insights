@@ -31,6 +31,12 @@ const PredictionView = React.lazy(() => import('./components/prediction/Predicti
 
 // Chat
 import ChatWidget from './components/chat/ChatWidget';
+import ToastContainer from './components/shared/ToastContainer';
+
+// Work Orders
+import WorkOrderBadge from './components/workorders/WorkOrderBadge';
+import WorkOrderPanel from './components/workorders/WorkOrderPanel';
+const WorkOrdersView = React.lazy(() => import('./components/workorders/WorkOrdersView'));
 import LatestOverview from './components/dashboard/LatestOverview';
 import DataFreshnessIndicator from './components/DataFreshnessIndicator';
 
@@ -335,6 +341,42 @@ function App() {
     return dev?.is_on ?? true;
   }, [healthData, selectedDevice]);
 
+  if (chatMode === 'split') {
+    return (
+      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0B0F14' }}>
+        <div style={{ flex: '0 0 40%', height: '100%', overflow: 'hidden' }}>
+          <ChatWidget />
+        </div>
+        <div style={{ flex: 1, height: '100%', overflowY: 'auto' }} className="text-[#E8ECF1]">
+          <FilterBar levelDevices={levelDevices} />
+          <div className="max-w-[1280px] mx-auto px-4 sm:px-6 pt-6 pb-16">
+            <KPIStrip
+              summary={siteSummaryData}
+              selectedLevel={selectedLevel}
+              selectedDevice={selectedDevice}
+              deviceLabel={deviceLabel}
+              deviceHealth={deviceHealth}
+            />
+            <ModeToggle />
+            <div className="flex justify-end mb-2">
+              <DataFreshnessIndicator dataAsOf={dataAsOf} />
+            </div>
+            {isLoading && (
+              <div className="flex justify-center py-4">
+                <span className="text-[#556677] text-sm animate-pulse">Loading Data…</span>
+              </div>
+            )}
+            {error && !isLoading && (
+              <div className="mb-4 px-4 py-3 rounded bg-red-900/20 border border-red-700 text-red-400 text-sm">
+                Failed to load data: {error}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {chatMode === 'split' ? (
@@ -620,17 +662,57 @@ function App() {
                   </React.Suspense>
                 </motion.div>
               )}
-            </AnimatePresence>
+            </motion.div>
+          ) : dashboardMode === 'workorders' ? (
+            <motion.div
+              key="workorders"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+            >
+              <React.Suspense
+                fallback={<div className="h-64 animate-pulse bg-[#1a2234] rounded-xl" />}
+              >
+                <WorkOrdersView />
+              </React.Suspense>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="deepdive"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+            >
+              <React.Suspense
+                fallback={<div className="h-64 animate-pulse bg-[#1a2234] rounded-xl" />}
+              >
+                <DeepDiveView
+                  levelDevices={levelDevices}
+                  labelMap={labelMap}
+                  timeRange={timeRange}
+                  isSelectedDeviceOn={isSelectedDeviceOn}
+                  healthChartData={healthChartData}
+                  isOnByTimestamp={isOnByTimestamp}
+                />
+              </React.Suspense>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
             <p className="text-center text-xs mt-12 pb-4" style={{ color: '#3a4a5a' }}>
               ⚠ Data shown covers monitored AHUs only. Not all devices may be represented.
             </p>
           </div>
 
-          <ChatWidget />
-        </div>
-      )}
-    </>
+      <ChatWidget />
+      <WorkOrderPanel />
+      <div style={{ position: 'fixed', bottom: 88, right: 24, zIndex: 65 }}>
+        <WorkOrderBadge />
+      </div>
+      <ToastContainer />
+    </div>
   );
 }
 

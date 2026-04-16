@@ -1,114 +1,159 @@
+import React, { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import React, { useState } from 'react';
-import { usePolling } from '../../hooks/usePolling';
 import { useAppStore } from '../../store/useAppStore';
-import WorkOrderPanelItem, { WorkOrder } from './WorkOrderPanelItem';
+import { fetchWorkOrders } from '../../api/client';
+import { WorkOrder } from '../../types/chat';
+import WorkOrderPanelItem from './WorkOrderPanelItem';
 
-// Mock fetch function - replace with actual API call
-async function fetchWorkOrders(): Promise<WorkOrder[]> {
-    // TODO: Replace with actual API call
-    // return await fetch('/api/work-orders?status=draft').then(r => r.json());
-    return [];
-}
+const WorkOrderPanel: React.FC = () => {
+  const { workOrderPanelOpen, setWorkOrderPanelOpen, setWorkOrderDraftsCount } = useAppStore();
+  const [orders, setOrders] = useState<WorkOrder[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export default function WorkOrderPanel() {
-    const { workOrderPanelOpen, toggleWorkOrderPanel, setWorkOrderDraftsCount } = useAppStore();
-    const { data: workOrders = [], refetch } = usePolling(fetchWorkOrders, 5000);
-    const [loadingIds, setLoadingIds] = useState<number[]>([]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchWorkOrders();
+      setOrders(res.work_orders);
+      setWorkOrderDraftsCount(res.work_orders.filter((o) => o.status === 'draft').length);
+    } catch {
+      setError('Failed to load work orders');
+    } finally {
+      setLoading(false);
+    }
+  }, [setWorkOrderDraftsCount]);
 
-    React.useEffect(() => {
-        if (workOrders) {
-            setWorkOrderDraftsCount(workOrders.filter((wo) => wo.status === 'draft').length);
-        }
-    }, [workOrders, setWorkOrderDraftsCount]);
+  useEffect(() => {
+    if (workOrderPanelOpen) load();
+  }, [workOrderPanelOpen, load]);
 
-    const handleApprove = async (id: number) => {
-        setLoadingIds((prev) => [...prev, id]);
-        try {
-            // TODO: Call API to approve work order
-            // await approveWorkOrder(id);
-            await refetch();
-        } finally {
-            setLoadingIds((prev) => prev.filter((wid) => wid !== id));
-        }
-    };
+  const drafts = orders.filter((o) => o.status === 'draft');
+  const others = orders.filter((o) => o.status !== 'draft');
 
-    const handleDismiss = async (id: number) => {
-        setLoadingIds((prev) => [...prev, id]);
-        try {
-            // TODO: Call API to dismiss work order
-            // await dismissWorkOrder(id);
-            await refetch();
-        } finally {
-            setLoadingIds((prev) => prev.filter((wid) => wid !== id));
-        }
-    };
+  return (
+    <AnimatePresence>
+      {workOrderPanelOpen && (
+        <motion.div
+          key="wo-panel"
+          initial={{ x: '100%', opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: '100%', opacity: 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            right: 0,
+            width: 340,
+            height: '100vh',
+            background: '#111827',
+            borderLeft: '1px solid #2a3649',
+            zIndex: 80,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 16px',
+              borderBottom: '1px solid #2a3649',
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ fontWeight: 700, fontSize: 14, color: '#E8ECF1' }}>Work Orders</span>
+            <button
+              onClick={() => setWorkOrderPanelOpen(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#8899aa',
+                cursor: 'pointer',
+                padding: 4,
+              }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
 
-    return (
-        <AnimatePresence>
-            {workOrderPanelOpen && (
-                <motion.div
-                    initial={{ x: 380, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    exit={{ x: 380, opacity: 0 }}
-                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="fixed right-0 top-0 bottom-0 w-[380px] bg-[#0B0F14] border-l border-[#2a3649] z-40 flex flex-col"
-                >
-                    {/* Header */}
-                    <div className="px-4 py-4 border-b border-[#2a3649] flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-[#00E5A0]">
-                            Work Orders ({workOrders.filter((wo) => wo.status === 'draft').length} Draft)
-                        </h3>
-                        <button
-                            onClick={toggleWorkOrderPanel}
-                            className="w-8 h-8 rounded hover:bg-[#2a3649] flex items-center justify-center"
-                            title="Close panel"
-                        >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8ECF1" strokeWidth="2">
-                                <line x1="18" y1="6" x2="6" y2="18" />
-                                <line x1="6" y1="6" x2="18" y2="18" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto px-2 py-3">
-                        <AnimatePresence mode="popLayout">
-                            {workOrders.length === 0 ? (
-                                <div className="flex items-center justify-center h-40 text-[#556677] text-sm">
-                                    No pending work orders
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {workOrders.map((wo) => (
-                                        <WorkOrderPanelItem
-                                            key={wo.id}
-                                            workOrder={wo}
-                                            onApprove={handleApprove}
-                                            onDismiss={handleDismiss}
-                                            isLoading={loadingIds.includes(wo.id)}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="px-4 py-3 border-t border-[#2a3649]">
-                        <button
-                            onClick={() => {
-                                // Navigate to Work Orders dashboard
-                                // TODO: Implement navigation
-                            }}
-                            className="w-full px-3 py-2 text-xs bg-[#00E5A0] text-black rounded font-semibold hover:opacity-90"
-                        >
-                            View All
-                        </button>
-                    </div>
-                </motion.div>
+          {/* Body */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px' }}>
+            {loading && (
+              <div style={{ color: '#556677', fontSize: 12, textAlign: 'center', paddingTop: 24 }}>
+                Loading…
+              </div>
             )}
-        </AnimatePresence>
-    );
-}
+            {error && !loading && (
+              <div style={{ color: '#ef4444', fontSize: 12, paddingTop: 12 }}>{error}</div>
+            )}
+            {!loading && !error && orders.length === 0 && (
+              <div style={{ color: '#556677', fontSize: 12, textAlign: 'center', paddingTop: 24 }}>
+                No work orders yet.
+              </div>
+            )}
+
+            {drafts.length > 0 && (
+              <>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: '#f59e0b',
+                    letterSpacing: '0.07em',
+                    marginBottom: 8,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Drafts · {drafts.length}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                  {drafts.map((o) => (
+                    <WorkOrderPanelItem key={o.id} order={o} onUpdated={load} />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {others.length > 0 && (
+              <>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: '#556677',
+                    letterSpacing: '0.07em',
+                    marginBottom: 8,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Recent · {others.length}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {others.map((o) => (
+                    <WorkOrderPanelItem key={o.id} order={o} onUpdated={load} />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+export default WorkOrderPanel;

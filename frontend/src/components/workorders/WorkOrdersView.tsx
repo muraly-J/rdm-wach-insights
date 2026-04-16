@@ -1,100 +1,149 @@
-import { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { fetchWorkOrders } from '../../api/client';
+import { WorkOrder } from '../../types/chat';
+import { useAppStore } from '../../store/useAppStore';
 import { usePolling } from '../../hooks/usePolling';
-import WorkOrderDetailModal from './WorkOrderDetailModal';
-import WorkOrderFilters from './WorkOrderFilters';
 import WorkOrderStatsBar from './WorkOrderStatsBar';
-import WorkOrderTable, { WorkOrderRow } from './WorkOrderTable';
+import WorkOrderFilters, { WorkOrderFilterState } from './WorkOrderFilters';
+import WorkOrderTable from './WorkOrderTable';
+import WorkOrderDetailModal from './WorkOrderDetailModal';
 
-// Mock fetch function - replace with actual API
-async function fetchWorkOrders(): Promise<WorkOrderRow[]> {
-    // TODO: Replace with actual API call
-    // return await fetch('/api/work-orders').then(r => r.json());
-    return [];
-}
+const WorkOrdersView: React.FC = () => {
+  const setWorkOrderDraftsCount = useAppStore((s) => s.setWorkOrderDraftsCount);
 
-export default function WorkOrdersView() {
-    const { data: workOrders = [], isLoading: isLoadingWOs } = usePolling(fetchWorkOrders, 5000);
-    const [selectedStatus, setSelectedStatus] = useState('all');
-    const [selectedSeverity, setSelectedSeverity] = useState('all');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedRow, setSelectedRow] = useState<WorkOrderRow | null>(null);
-    const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [orders, setOrders] = useState<WorkOrder[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
+  const [filters, setFilters] = useState<WorkOrderFilterState>({
+    status: 'all',
+    severity: 'all',
+    search: '',
+  });
 
-    // Calculate stats
-    const stats = {
-        drafts: workOrders.filter((wo) => wo.status === 'draft').length,
-        pending: workOrders.filter((wo) => wo.status === 'pending').length,
-        approved: workOrders.filter((wo) => wo.status === 'approved').length,
-        dismissed: workOrders.filter((wo) => wo.status === 'dismissed').length,
-    };
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchWorkOrders();
+      setOrders(res.work_orders);
+      setWorkOrderDraftsCount(res.work_orders.filter((o) => o.status === 'draft').length);
+    } catch {
+      setError('Failed to load work orders');
+    } finally {
+      setLoading(false);
+    }
+  }, [setWorkOrderDraftsCount]);
 
-    // Filter rows
-    const filteredRows = workOrders.filter((wo) => {
-        if (selectedStatus !== 'all' && wo.status !== selectedStatus) return false;
-        if (selectedSeverity !== 'all' && wo.severity !== selectedSeverity) return false;
-        if (searchTerm && !wo.title.toLowerCase().includes(searchTerm.toLowerCase()) && !wo.ahu_id.includes(searchTerm)) {
-            return false;
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Poll every 60 s, pausing when tab hidden
+  usePolling(load, { interval: 60_000, runOnMount: false });
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((o) => {
+      if (filters.status !== 'all' && o.status !== filters.status) return false;
+      if (filters.severity !== 'all' && o.severity?.toLowerCase() !== filters.severity)
+        return false;
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        if (
+          !o.title.toLowerCase().includes(q) &&
+          !(o.description ?? '').toLowerCase().includes(q) &&
+          !o.ahu_id.toLowerCase().includes(q)
+        ) {
+          return false;
         }
-        return true;
+      }
+      return true;
     });
+  }, [orders, filters]);
 
-    const handleRowClick = (row: WorkOrderRow) => {
-        setSelectedRow(row);
-        setDetailModalOpen(true);
-    };
+  return (
+    <div style={{ paddingTop: 8 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 16,
+        }}
+      >
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#E8ECF1' }}>Work Orders</h2>
+        <button
+          onClick={load}
+          disabled={loading}
+          style={{
+            background: 'transparent',
+            border: '1px solid #2a3649',
+            borderRadius: 6,
+            padding: '6px 12px',
+            color: '#8899aa',
+            fontSize: 12,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.6 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
+          {loading ? 'Refreshing…' : 'Refresh'}
+        </button>
+      </div>
 
-    return (
-        <div className="space-y-6">
-            {/* Stats bar */}
-            <WorkOrderStatsBar stats={stats} />
-
-            {/* Filters */}
-            <WorkOrderFilters
-                selectedStatus={selectedStatus}
-                onStatusChange={setSelectedStatus}
-                selectedSeverity={selectedSeverity}
-                onSeverityChange={setSelectedSeverity}
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-            />
-
-            {/* Table */}
-            <WorkOrderTable
-                rows={filteredRows}
-                onRowClick={handleRowClick}
-                isLoading={isLoadingWOs}
-            />
-
-            {/* Detail modal */}
-            {selectedRow && (
-                <WorkOrderDetailModal
-                    isOpen={detailModalOpen}
-                    workOrder={{
-                        ...selectedRow,
-                        timeline: [
-                            {
-                                status: 'draft',
-                                timestamp: selectedRow.created_at,
-                                label: 'Created',
-                            },
-                            {
-                                status: 'pending',
-                                timestamp: new Date().toISOString(),
-                                label: 'Submitted',
-                            },
-                        ],
-                    }}
-                    onClose={() => setDetailModalOpen(false)}
-                    onApprove={(id) => {
-                        console.log('Approve:', id);
-                        setDetailModalOpen(false);
-                    }}
-                    onDismiss={(id) => {
-                        console.log('Dismiss:', id);
-                        setDetailModalOpen(false);
-                    }}
-                />
-            )}
+      {error && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '10px 14px',
+            background: 'rgba(239,68,68,0.1)',
+            border: '1px solid #ef4444',
+            borderRadius: 8,
+            color: '#ef4444',
+            fontSize: 12,
+          }}
+        >
+          {error}
         </div>
-    );
-}
+      )}
+
+      <WorkOrderStatsBar orders={orders} />
+
+      <div
+        style={{
+          background: '#111827',
+          border: '1px solid #2a3649',
+          borderRadius: 12,
+          padding: '16px 16px',
+        }}
+      >
+        <WorkOrderFilters filters={filters} onChange={setFilters} />
+        <WorkOrderTable orders={filteredOrders} onRefresh={load} onSelectOrder={setSelectedOrder} />
+      </div>
+
+      <WorkOrderDetailModal
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        onUpdated={() => {
+          setSelectedOrder(null);
+          load();
+        }}
+      />
+    </div>
+  );
+};
+
+export default WorkOrdersView;
