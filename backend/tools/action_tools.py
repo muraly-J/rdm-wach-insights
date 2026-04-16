@@ -173,3 +173,45 @@ async def handle_send_notification(
                 logger.warning(f"send_notification: could not update notified_via for work_order_id={work_order_id} (invalid transition or not found)")
 
     return {"status": "sent", "recipient": recipient, "channel": "telegram"}
+
+
+# ── update_work_order ──────────────────────────────────────────────────────────
+
+async def handle_update_work_order(
+    work_order_id: int,
+    status: str,
+    notes: str | None = None,
+    approved_by: str | None = None,
+) -> dict:
+    """
+    Transition a work order to a new status.
+
+    Valid transitions:
+      draft → pending_approval | approved | dismissed
+      pending_approval → approved | dismissed
+      approved → in_progress | resolved | dismissed
+      in_progress → resolved
+
+    Returns {"success": bool, "new_status": str, "reason": str}
+    """
+    db = _get_db()
+    wo = db.get_work_order(work_order_id)
+    if not wo:
+        return {"success": False, "reason": f"work order {work_order_id} not found"}
+
+    success = db.update_work_order(
+        work_order_id,
+        status=status,
+        notes=notes,
+        approved_by=approved_by,
+    )
+
+    if success:
+        logger.info(f"update_work_order: id={work_order_id} → {status}")
+        return {"success": True, "new_status": status, "work_order_id": work_order_id}
+    else:
+        return {
+            "success": False,
+            "reason": f"invalid transition: {wo['status']!r} → {status!r}",
+            "current_status": wo["status"],
+        }

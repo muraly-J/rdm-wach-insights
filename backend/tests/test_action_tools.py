@@ -118,3 +118,41 @@ async def test_send_notification_updates_work_order(db):
     )
     # Even if skipped (no token), result has a status field
     assert "status" in result
+
+
+@pytest.mark.asyncio
+async def test_update_work_order_valid_transition(db):
+    from tools.action_tools import handle_create_work_order, handle_update_work_order
+    wo = await handle_create_work_order(
+        ahu_id="e0101", title="Test", severity="warning"
+    )
+    result = await handle_update_work_order(
+        work_order_id=wo["id"],
+        status="approved",
+        approved_by="admin",
+    )
+    assert result["success"] is True
+    assert result["new_status"] == "approved"
+
+
+@pytest.mark.asyncio
+async def test_update_work_order_invalid_transition(db):
+    from tools.action_tools import handle_create_work_order, handle_update_work_order
+    wo = await handle_create_work_order(
+        ahu_id="e0101", title="Test", severity="info"
+    )
+    result = await handle_update_work_order(
+        work_order_id=wo["id"],
+        status="resolved",  # invalid: draft → resolved not allowed
+    )
+    assert result["success"] is False
+
+
+@pytest.mark.asyncio
+async def test_update_work_order_not_found(db):
+    from tools.action_tools import handle_update_work_order
+    result = await handle_update_work_order(
+        work_order_id=99999,
+        status="approved",
+    )
+    assert result["success"] is False
