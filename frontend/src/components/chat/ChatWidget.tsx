@@ -3,15 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import ChatBubbleButton from './ChatBubbleButton';
 import ChatWindow from './ChatWindow';
-import { NavigateTarget, ActionItem } from '../../api/client';
-
-interface Message {
-  id: string;
-  role: 'user' | 'bot';
-  content: string;
-  navigate?: NavigateTarget | null;
-  actions?: ActionItem[];
-}
+import { Message } from '../../types/chat';
 
 const INITIAL_MESSAGE: Message = {
   id: 'init-1',

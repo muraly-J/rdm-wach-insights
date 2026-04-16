@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { NavigateTarget, ActionItem, approveWorkOrder, dismissWorkOrder } from '../../api/client';
+import { NavigateTarget, approveWorkOrder, dismissWorkOrder } from '../../api/client';
+import { ActionItem } from '../../types/chat';
 import ChatChartModal, { ChartEntry } from './ChatChartModal';
 import { replaceDeviceIds } from '../../utils/deviceNames';
 

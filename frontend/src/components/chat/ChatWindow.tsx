@@ -4,16 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
-import { sendChatMessage, NavigateTarget, ActionItem } from '../../api/client';
+import { sendChatMessage, NavigateTarget } from '../../api/client';
 import { useAppStore } from '../../store/useAppStore';
-
-export interface Message {
-  id: string;
-  role: 'user' | 'bot';
-  content: string;
-  navigate?: NavigateTarget | null;
-  actions?: ActionItem[];
-}
+import { Message } from '../../types/chat';
 
 interface ChatWindowProps {
   mode: 'panel' | 'fullscreen';

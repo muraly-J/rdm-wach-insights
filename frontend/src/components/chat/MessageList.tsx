@@ -4,15 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import BotMessage from './BotMessage';
 import UserMessage from './UserMessage';
 import TypingIndicator from './TypingIndicator';
-import { NavigateTarget, ActionItem } from '../../api/client';
-
-interface Message {
-  id: string;
-  role: 'user' | 'bot';
-  content: string;
-  navigate?: NavigateTarget | null;
-  actions?: ActionItem[];
-}
+import { NavigateTarget } from '../../api/client';
+import { Message } from '../../types/chat';
 
 interface MessageListProps {
   messages: Message[];

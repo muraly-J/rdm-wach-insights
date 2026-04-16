@@ -11,6 +11,7 @@ import {
   SiteAlertsResponse,
   SiteSummaryData,
 } from '../types';
+import type { ActionItem, WorkOrder } from '../types/chat';
 
 // API base URL: use backend URL from env, fall back to /api (Vite proxy in dev)
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -100,25 +101,7 @@ export interface NavigateTarget {
   view?: 'prediction' | 'dashboard';
 }
 
-export interface ActionItem {
-  type: 'approve_work_order' | 'dismiss' | 'edit_draft';
-  work_order_id: number;
-  label: string;
-  description: string;
-}
-
-export interface WorkOrder {
-  id: number;
-  ahu_id: string;
-  level: number;
-  title: string;
-  description: string | null;
-  severity: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  trigger_source: string;
-}
+export type { ActionItem, WorkOrder };
 
 /**
  * POST /api/chat — Chat widget messaging
