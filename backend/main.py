@@ -33,6 +33,7 @@ from routes.forecast import router as forecast_router
 from routes.health_scores import router as health_scores_router
 from routes.measurements import router as measurements_router
 from routes.on_off_periods import router as on_off_periods_router
+from routes.work_orders import router as work_orders_router
 from routes.predictions import router as predictions_router
 from routes.query import router as query_router
 from routes.site_summary import router as site_summary_router
@@ -268,6 +269,7 @@ def create_app() -> FastAPI:
     app.include_router(financial_impact_router, prefix="/api")
     app.include_router(site_summary_router, prefix="/api")
     app.include_router(on_off_periods_router, prefix="/api")
+    app.include_router(work_orders_router, prefix="/api")
 
     @app.get('/health')
     async def health() -> dict:
