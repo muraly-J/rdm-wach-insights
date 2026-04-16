@@ -1,0 +1,354 @@
+import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { WorkOrder } from '../../types/chat';
+import { approveWorkOrder, dismissWorkOrder, editWorkOrder } from '../../api/client';
+import StatusTimeline from './StatusTimeline';
+
+interface WorkOrderDetailModalProps {
+  order: WorkOrder | null;
+  onClose: () => void;
+  onUpdated: () => void;
+}
+
+const SEVERITY_COLOR: Record<string, string> = {
+  critical: '#ef4444',
+  high: '#f97316',
+  medium: '#f59e0b',
+  low: '#22c55e',
+};
+
+const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({ order, onClose, onUpdated }) => {
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [loading, setLoading] = useState<'approve' | 'dismiss' | 'save' | null>(null);
+
+  React.useEffect(() => {
+    if (order) {
+      setEditTitle(order.title);
+      setEditDesc(order.description ?? '');
+      setEditing(false);
+    }
+  }, [order]);
+
+  const handleApprove = async () => {
+    if (!order) return;
+    setLoading('approve');
+    try {
+      await approveWorkOrder(order.id);
+      onUpdated();
+      onClose();
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleDismiss = async () => {
+    if (!order) return;
+    setLoading('dismiss');
+    try {
+      await dismissWorkOrder(order.id);
+      onUpdated();
+      onClose();
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!order) return;
+    setLoading('save');
+    try {
+      await editWorkOrder(order.id, { title: editTitle, description: editDesc });
+      onUpdated();
+      setEditing(false);
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const severityColor = order ? (SEVERITY_COLOR[order.severity?.toLowerCase()] ?? '#8899aa') : '#8899aa';
+
+  return (
+    <AnimatePresence>
+      {order && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.6)',
+              zIndex: 90,
+            }}
+          />
+
+          {/* Modal */}
+          <motion.div
+            key="modal"
+            initial={{ opacity: 0, scale: 0.95, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 'min(600px, 90vw)',
+              maxHeight: '85vh',
+              background: '#111827',
+              border: '1px solid #2a3649',
+              borderRadius: 12,
+              zIndex: 91,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                padding: '20px 20px 16px',
+                borderBottom: '1px solid #1a2234',
+                gap: 12,
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: severityColor,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    {order.severity}
+                  </span>
+                  <span style={{ fontSize: 10, color: '#556677' }}>#{order.id}</span>
+                </div>
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: '#E8ECF1',
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {order.title}
+                </h2>
+                <div style={{ fontSize: 11, color: '#556677', marginTop: 4 }}>
+                  AHU {order.ahu_id} · Level {order.level} · {order.trigger_source}
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#8899aa',
+                  cursor: 'pointer',
+                  padding: 4,
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* Description */}
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#556677', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                  Description
+                </div>
+                {editing ? (
+                  <textarea
+                    value={editDesc}
+                    onChange={(e) => setEditDesc(e.target.value)}
+                    rows={4}
+                    style={{
+                      width: '100%',
+                      background: '#1a2234',
+                      border: '1px solid #2a3649',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      color: '#E8ECF1',
+                      fontSize: 12,
+                      resize: 'vertical',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                ) : (
+                  <p style={{ margin: 0, fontSize: 13, color: order.description ? '#C8D4E0' : '#556677', lineHeight: 1.6 }}>
+                    {order.description ?? 'No description provided.'}
+                  </p>
+                )}
+              </div>
+
+              {/* FAIR Snapshot */}
+              {order.fair_snapshot && Object.keys(order.fair_snapshot).length > 0 && (
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#556677', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                    FAIR Snapshot
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    {Object.entries(order.fair_snapshot).map(([key, val]) => (
+                      <div key={key} style={{ background: '#1a2234', border: '1px solid #2a3649', borderRadius: 6, padding: '8px 12px', minWidth: 70 }}>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: '#E8ECF1', fontVariantNumeric: 'tabular-nums' }}>
+                          {typeof val === 'number' ? val.toFixed(1) : val}
+                        </div>
+                        <div style={{ fontSize: 10, color: '#556677', textTransform: 'uppercase' }}>{key}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Timeline */}
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#556677', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+                  Timeline
+                </div>
+                <StatusTimeline order={order} />
+              </div>
+
+              {/* Meta */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[
+                  { label: 'Created by', value: order.created_by },
+                  { label: 'Approved by', value: order.approved_by ?? '—' },
+                  { label: 'Notified via', value: order.notified_via },
+                  { label: 'Status', value: order.status },
+                ].map(({ label, value }) => (
+                  <div key={label} style={{ background: '#1a2234', border: '1px solid #2a3649', borderRadius: 6, padding: '8px 12px' }}>
+                    <div style={{ fontSize: 10, color: '#556677', marginBottom: 2 }}>{label}</div>
+                    <div style={{ fontSize: 12, color: '#E8ECF1', fontWeight: 600 }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            {order.status === 'draft' && (
+              <div
+                style={{
+                  padding: '12px 20px',
+                  borderTop: '1px solid #1a2234',
+                  display: 'flex',
+                  gap: 8,
+                  justifyContent: 'flex-end',
+                }}
+              >
+                {editing ? (
+                  <>
+                    <button
+                      onClick={() => setEditing(false)}
+                      style={{
+                        background: 'transparent',
+                        color: '#8899aa',
+                        border: '1px solid #2a3649',
+                        borderRadius: 6,
+                        padding: '8px 16px',
+                        fontSize: 12,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveEdit}
+                      disabled={loading === 'save'}
+                      style={{
+                        background: '#00E5A0',
+                        color: '#000',
+                        border: 'none',
+                        borderRadius: 6,
+                        padding: '8px 16px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: loading === 'save' ? 'not-allowed' : 'pointer',
+                        opacity: loading === 'save' ? 0.7 : 1,
+                      }}
+                    >
+                      {loading === 'save' ? 'Saving…' : 'Save Changes'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setEditing(true)}
+                      style={{
+                        background: 'transparent',
+                        color: '#8899aa',
+                        border: '1px solid #2a3649',
+                        borderRadius: 6,
+                        padding: '8px 16px',
+                        fontSize: 12,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={handleDismiss}
+                      disabled={loading !== null}
+                      style={{
+                        background: 'transparent',
+                        color: '#8899aa',
+                        border: '1px solid #2a3649',
+                        borderRadius: 6,
+                        padding: '8px 16px',
+                        fontSize: 12,
+                        cursor: loading !== null ? 'not-allowed' : 'pointer',
+                        opacity: loading !== null ? 0.7 : 1,
+                      }}
+                    >
+                      {loading === 'dismiss' ? 'Dismissing…' : 'Dismiss'}
+                    </button>
+                    <button
+                      onClick={handleApprove}
+                      disabled={loading !== null}
+                      style={{
+                        background: '#00E5A0',
+                        color: '#000',
+                        border: 'none',
+                        borderRadius: 6,
+                        padding: '8px 20px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: loading !== null ? 'not-allowed' : 'pointer',
+                        opacity: loading !== null ? 0.7 : 1,
+                      }}
+                    >
+                      {loading === 'approve' ? 'Approving…' : 'Approve'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+export default WorkOrderDetailModal;
