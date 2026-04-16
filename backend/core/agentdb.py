@@ -36,6 +36,9 @@ _VALID_TRANSITIONS: dict[str, set[str]] = {
     "dismissed": set(),
 }
 
+# Module-level singleton — can be monkeypatched in tests
+_db_instance: "AgentDB | None" = None
+
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS work_orders (
     id              INTEGER PRIMARY KEY,
