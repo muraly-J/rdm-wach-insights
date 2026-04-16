@@ -10,7 +10,6 @@ Follows the same pattern as core/healthdb.py.
 """
 
 import json
-import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -37,7 +36,7 @@ _VALID_TRANSITIONS: dict[str, set[str]] = {
 }
 
 # Module-level singleton — can be monkeypatched in tests
-_db_instance: "AgentDB | None" = None
+_db_instance: AgentDB | None = None
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS work_orders (

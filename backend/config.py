@@ -118,7 +118,7 @@ class Settings(BaseSettings):
         return key
 
     @model_validator(mode="after")
-    def warn_on_insecure_influx(self) -> "Settings":
+    def warn_on_insecure_influx(self) -> Settings:
         """Warn (not crash) if InfluxDB uses plain HTTP on a non-localhost host."""
         url = self.influx_url
         is_local = url.startswith("http://localhost") or url.startswith("http://127.0.0.1")

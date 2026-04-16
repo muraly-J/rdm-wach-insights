@@ -46,8 +46,9 @@ def test_is_in_cooldown_no_state_returns_false(agent_db):
 
 
 def test_is_in_cooldown_recent_alert_returns_true(agent_db):
+    from datetime import datetime, timedelta, timezone
+
     from core.watchman import is_in_cooldown
-    from datetime import datetime, timezone, timedelta
     # Set a recent alert in agent state
     expires = (datetime.now(timezone.utc) + timedelta(hours=3)).isoformat()
     agent_db.set_agent_state(
