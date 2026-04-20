@@ -33,10 +33,21 @@ class WorkOrderPatch(BaseModel):
     description: str | None = None
 
 
+class WorkOrderAssign(BaseModel):
+    assigned_to: str  # "any" or a Telegram user_id string
+
+
+class WorkOrderResolve(BaseModel):
+    notes: str | None = None
+
+
 @router.get("/work-orders")
-async def list_work_orders(status: str | None = None) -> dict:
+async def list_work_orders(
+    status: str | None = None,
+    assigned_to: str | None = None,
+) -> dict:
     db = _get_db()
-    work_orders = db.list_work_orders(status=status)
+    work_orders = db.list_work_orders(status=status, assigned_to=assigned_to)
     # Convert any non-JSON-serialisable values
     clean = []
     for wo in work_orders:
@@ -87,6 +98,84 @@ async def dismiss_work_order(wo_id: int) -> dict:
 
     logger.info(f"work_order {wo_id} dismissed by user")
     return {"id": wo_id, "status": "dismissed"}
+
+
+@router.post("/work-orders/{wo_id}/push-to-engineers")
+async def push_work_order_to_engineers(wo_id: int) -> dict:
+    db = _get_db()
+    wo = db.get_work_order(wo_id)
+    if not wo:
+        raise HTTPException(status_code=404, detail=f"Work order {wo_id} not found")
+    success = db.update_work_order(wo_id, status="pending_engineer_review")
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot push work order in status '{wo['status']}' to engineers",
+        )
+    logger.info(f"work_order {wo_id} pushed to engineers")
+    return {"id": wo_id, "status": "pending_engineer_review"}
+
+
+@router.post("/work-orders/{wo_id}/start")
+async def start_work_order(wo_id: int) -> dict:
+    db = _get_db()
+    wo = db.get_work_order(wo_id)
+    if not wo:
+        raise HTTPException(status_code=404, detail=f"Work order {wo_id} not found")
+    success = db.update_work_order(wo_id, status="in_progress")
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot start work order in status '{wo['status']}'",
+        )
+    logger.info(f"work_order {wo_id} started")
+    return {"id": wo_id, "status": "in_progress"}
+
+
+@router.post("/work-orders/{wo_id}/resolve")
+async def resolve_work_order(wo_id: int, body: WorkOrderResolve) -> dict:
+    db = _get_db()
+    wo = db.get_work_order(wo_id)
+    if not wo:
+        raise HTTPException(status_code=404, detail=f"Work order {wo_id} not found")
+    success = db.update_work_order(wo_id, status="resolved", notes=body.notes)
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot resolve work order in status '{wo['status']}'",
+        )
+    logger.info(f"work_order {wo_id} resolved")
+    return {"id": wo_id, "status": "resolved"}
+
+
+@router.post("/work-orders/{wo_id}/assign")
+async def assign_work_order(wo_id: int, body: WorkOrderAssign) -> dict:
+    db = _get_db()
+    wo = db.get_work_order(wo_id)
+    if not wo:
+        raise HTTPException(status_code=404, detail=f"Work order {wo_id} not found")
+    success = db.assign_work_order(wo_id, assigned_to=body.assigned_to)
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Can only assign approved or in_progress work orders, got '{wo['status']}'",
+        )
+    logger.info(f"work_order {wo_id} assigned to {body.assigned_to}")
+    return {"id": wo_id, "assigned_to": body.assigned_to}
+@router.post("/work-orders/{wo_id}/sendback")
+async def sendback_work_order(wo_id: int) -> dict:
+    db = _get_db()
+    wo = db.get_work_order(wo_id)
+    if not wo:
+        raise HTTPException(status_code=404, detail=f"Work order {wo_id} not found")
+    success = db.update_work_order(wo_id, status="pending_approval")
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot send back work order in status '{wo['status']}'",
+        )
+    logger.info(f"work_order {wo_id} sent back to manager by engineer")
+    return {"id": wo_id, "status": "pending_approval"}
 
 
 @router.delete("/work-orders/{wo_id}")

@@ -91,6 +91,13 @@ class Settings(BaseSettings):
     telegram_recipient_manager: str = ""
     telegram_recipient_on_call: str = ""
 
+    # Group chat IDs (bot interactive mode)
+    managers_chat_id: str = ""
+    engineers_chat_id: str = ""
+    technicians_chat_id: str = ""
+    # JSON dict of technician names → telegram user IDs, e.g. '{"Alice": "123456"}'
+    technicians_json: str = "{}"
+
     # ── Watchman (background health monitor) ──────────────────────────────────
     watchman_interval_seconds: int = 1800          # 30 minutes
     watchman_critical_threshold: float = 40.0      # FAIR < 40 → critical
