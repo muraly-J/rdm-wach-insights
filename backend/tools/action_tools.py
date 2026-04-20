@@ -92,6 +92,7 @@ _RECIPIENT_ENV_MAP = {
     "technician": "telegram_recipient_technician",
     "manager":    "telegram_recipient_manager",
     "on_call":    "telegram_recipient_on_call",
+    "engineers":  "engineers_chat_id",
 }
 
 
@@ -143,7 +144,34 @@ async def handle_send_notification(
     if not chat_id:
         return {"status": "skipped", "reason": f"chat_id for {recipient!r} not configured"}
 
-    # Send via Telegram Bot API
+    # Route to group notifier if group chat IDs are configured and work order provided
+    if work_order_id:
+        has_group = (
+            (recipient == "manager" and settings.managers_chat_id) or
+            (recipient == "engineers" and settings.engineers_chat_id) or
+            (recipient == "technician" and settings.technicians_chat_id)
+        )
+        if has_group:
+            try:
+                from bot.push.notifier import notify_group
+                wo = db.get_work_order(work_order_id)
+                if wo:
+                    clean_wo = {k: (str(v) if hasattr(v, "isoformat") else v) for k, v in wo.items()}
+                    await notify_group(recipient, clean_wo, token)
+                    if ahu_id:
+                        from datetime import datetime, timedelta, timezone
+                        cooldown_hours = settings.watchman_cooldown_critical_hours
+                        expires = (datetime.now(timezone.utc) + timedelta(hours=cooldown_hours)).isoformat()
+                        db.set_agent_state(
+                            f"last_alert:{ahu_id}",
+                            {"notified_at": datetime.now(timezone.utc).isoformat(), "recipient": recipient},
+                            expires_at=expires,
+                        )
+                    return {"status": "sent", "recipient": recipient, "channel": "telegram"}
+            except ImportError:
+                pass  # bot module not available, fall through to plain text
+
+    # Plain text fallback (existing code)
     try:
         from telegram import Bot
         bot = Bot(token=token)
