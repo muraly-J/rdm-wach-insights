@@ -136,7 +136,11 @@ const WorkOrdersView: React.FC = () => {
         }}
       >
         <WorkOrderFilters filters={filters} onChange={setFilters} />
-        <WorkOrderTable orders={filteredOrders} onRefresh={load} onSelectOrder={handleSelectOrder} />
+        <WorkOrderTable
+          orders={filteredOrders}
+          onRefresh={load}
+          onSelectOrder={handleSelectOrder}
+        />
       </div>
 
       <WorkOrderDetailModal

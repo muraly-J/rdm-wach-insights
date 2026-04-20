@@ -235,14 +235,14 @@ const WorkOrderTable: React.FC<WorkOrderTableProps> = ({ orders, onRefresh, onSe
                     background: isSelected ? 'rgba(0,229,160,0.04)' : 'transparent',
                   }}
                   onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = isSelected
-                    ? 'rgba(0,229,160,0.07)'
-                    : '#1a2234')
+                    (e.currentTarget.style.background = isSelected
+                      ? 'rgba(0,229,160,0.07)'
+                      : '#1a2234')
                   }
                   onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = isSelected
-                    ? 'rgba(0,229,160,0.04)'
-                    : 'transparent')
+                    (e.currentTarget.style.background = isSelected
+                      ? 'rgba(0,229,160,0.04)'
+                      : 'transparent')
                   }
                 >
                   {/* Row checkbox */}
