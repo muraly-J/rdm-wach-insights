@@ -12,7 +12,8 @@ const WorkOrderPanelItem: React.FC<WorkOrderPanelItemProps> = ({ order, onUpdate
   const [loading, setLoading] = useState<'approve' | 'dismiss' | null>(null);
   const { showToast } = useToast();
 
-  const severityColor = HEALTH_TIER_COLORS[order.severity as keyof typeof HEALTH_TIER_COLORS] ?? '#8899aa';
+  const severityColor =
+    HEALTH_TIER_COLORS[order.severity as keyof typeof HEALTH_TIER_COLORS] ?? '#8899aa';
 
   const handleApprove = async () => {
     setLoading('approve');

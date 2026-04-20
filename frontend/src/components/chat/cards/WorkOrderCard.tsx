@@ -56,8 +56,11 @@ export default function WorkOrderCard({ actions }: WorkOrderCardProps) {
         const approveItem = items.find((i) => i.type === 'approve_work_order');
         const dismissItem = items.find((i) => i.type === 'dismiss');
         const editItem = items.find((i) => i.type === 'edit_draft');
-        const severity = approveItem?.description.match(/severity[:\s]*([\w\s]+?)(?:[,\.]|$)/i)?.[1]?.trim() ?? 'Monitor';
-        const severityColor = HEALTH_TIER_COLORS[severity as keyof typeof HEALTH_TIER_COLORS] ?? '#4DA6FF';
+        const severity =
+          approveItem?.description.match(/severity[:\s]*([\w\s]+?)(?:[,\.]|$)/i)?.[1]?.trim() ??
+          'Monitor';
+        const severityColor =
+          HEALTH_TIER_COLORS[severity as keyof typeof HEALTH_TIER_COLORS] ?? '#4DA6FF';
 
         if (state === 'dismissed') return null;
 

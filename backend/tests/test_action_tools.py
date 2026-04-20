@@ -43,7 +43,7 @@ async def test_create_work_order_critical_creates_approved(db):
         ahu_id="e0301",
         title="Critical health failure",
         description="FAIR score 28",
-        severity="critical",
+        severity="Critical",
     )
     assert result["status"] == "approved"
 

@@ -21,12 +21,12 @@ def agent_db(tmp_path):
 
 def test_classify_score_critical():
     from core.watchman import classify_score
-    assert classify_score(35.0) == "critical"
+    assert classify_score(35.0) == "Critical"
 
 
 def test_classify_score_warning():
     from core.watchman import classify_score
-    assert classify_score(55.0) == "warning"
+    assert classify_score(55.0) == "Maintenance Soon"
 
 
 def test_classify_score_healthy():
@@ -36,7 +36,7 @@ def test_classify_score_healthy():
 
 def test_classify_score_boundary_critical():
     from core.watchman import classify_score
-    assert classify_score(40.0) == "warning"  # 40.0 is not < 40 → warning
+    assert classify_score(40.0) == "Maintenance Soon"  # 40.0 is not < 40 → Maintenance Soon
 
 
 def test_is_in_cooldown_no_state_returns_false(agent_db):
@@ -83,7 +83,7 @@ async def test_run_pulse_flags_critical_ahu(agent_db, monkeypatch):
     alerts = agent_db.dequeue_watchman_alerts()
     assert len(alerts) == 1
     assert alerts[0]["ahu_id"] == "e0402"
-    assert alerts[0]["severity"] == "critical"
+    assert alerts[0]["severity"] == "Critical"
 
 
 @pytest.mark.asyncio

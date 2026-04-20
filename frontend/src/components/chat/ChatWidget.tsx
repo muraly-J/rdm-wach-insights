@@ -7,7 +7,15 @@ import ChatWindow from './ChatWindow';
 const PANEL_WIDTH = 380;
 
 const ChatWidget: React.FC = () => {
-  const { chatOpen, openChat, closeChat, chatMode, setChatMode, chatConversation, setChatConversation } = useAppStore();
+  const {
+    chatOpen,
+    openChat,
+    closeChat,
+    chatMode,
+    setChatMode,
+    chatConversation,
+    setChatConversation,
+  } = useAppStore();
 
   const messages = chatConversation;
   const setMessages = setChatConversation;

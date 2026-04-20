@@ -81,7 +81,8 @@ const WorkOrderTable: React.FC<WorkOrderTableProps> = ({ orders, onRefresh, onSe
         </thead>
         <tbody>
           {orders.map((order) => {
-            const severityColor = HEALTH_TIER_COLORS[order.severity as keyof typeof HEALTH_TIER_COLORS] ?? '#8899aa';
+            const severityColor =
+              HEALTH_TIER_COLORS[order.severity as keyof typeof HEALTH_TIER_COLORS] ?? '#8899aa';
             const statusColor = STATUS_COLOR[order.status] ?? '#8899aa';
             const createdDate = new Date(order.created_at).toLocaleDateString();
 

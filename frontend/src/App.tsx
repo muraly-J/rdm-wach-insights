@@ -386,7 +386,10 @@ function App() {
 
                       <ScoreCardsGrid scoreData={scoreCardDataWithIsOn} />
 
-                      <CombinedScoresChart scoreData={scoreCardDataWithIsOn} timeRange={chartRange} />
+                      <CombinedScoresChart
+                        scoreData={scoreCardDataWithIsOn}
+                        timeRange={chartRange}
+                      />
 
                       {selectedDevice && selectedDevice !== 'all' && selectedDeviceRow ? (
                         <DeviceDetailCard
@@ -422,7 +425,9 @@ function App() {
                       {selectedDevice && selectedDevice !== 'all' && (
                         <div className="mt-8">
                           <React.Suspense
-                            fallback={<div className="h-48 animate-pulse bg-[#2e3f55] rounded-xl" />}
+                            fallback={
+                              <div className="h-48 animate-pulse bg-[#2e3f55] rounded-xl" />
+                            }
                           >
                             <PredictionView deviceId={selectedDevice} />
                           </React.Suspense>

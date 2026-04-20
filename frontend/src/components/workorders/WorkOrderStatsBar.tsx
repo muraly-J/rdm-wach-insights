@@ -15,11 +15,31 @@ const WorkOrderStatsBar: React.FC<WorkOrderStatsBarProps> = ({ orders }) => {
   const stats: StatItem[] = [
     { label: 'Total', count: orders.length, color: '#8899aa' },
     { label: 'Drafts', count: orders.filter((o) => o.status === 'draft').length, color: '#f59e0b' },
-    { label: 'Approved', count: orders.filter((o) => o.status === 'approved').length, color: '#00E5A0' },
-    { label: 'Dismissed', count: orders.filter((o) => o.status === 'dismissed').length, color: '#556677' },
-    { label: 'Critical', count: orders.filter((o) => o.severity === 'Critical').length, color: HEALTH_TIER_COLORS['Critical'] },
-    { label: 'Maint. Soon', count: orders.filter((o) => o.severity === 'Maintenance Soon').length, color: HEALTH_TIER_COLORS['Maintenance Soon'] },
-    { label: 'Monitor', count: orders.filter((o) => o.severity === 'Monitor').length, color: HEALTH_TIER_COLORS['Monitor'] },
+    {
+      label: 'Approved',
+      count: orders.filter((o) => o.status === 'approved').length,
+      color: '#00E5A0',
+    },
+    {
+      label: 'Dismissed',
+      count: orders.filter((o) => o.status === 'dismissed').length,
+      color: '#556677',
+    },
+    {
+      label: 'Critical',
+      count: orders.filter((o) => o.severity === 'Critical').length,
+      color: HEALTH_TIER_COLORS['Critical'],
+    },
+    {
+      label: 'Maint. Soon',
+      count: orders.filter((o) => o.severity === 'Maintenance Soon').length,
+      color: HEALTH_TIER_COLORS['Maintenance Soon'],
+    },
+    {
+      label: 'Monitor',
+      count: orders.filter((o) => o.severity === 'Monitor').length,
+      color: HEALTH_TIER_COLORS['Monitor'],
+    },
   ];
 
   return (
