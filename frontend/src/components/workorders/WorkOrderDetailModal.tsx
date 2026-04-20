@@ -118,352 +118,394 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
               pointerEvents: 'none',
             }}
           >
-          <motion.div
-            key="modal"
-            initial={{ opacity: 0, scale: 0.95, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 8 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            style={{
-              width: 'min(600px, 90vw)',
-              maxHeight: '85vh',
-              background: '#111827',
-              border: '1px solid #2a3649',
-              borderRadius: 12,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              pointerEvents: 'auto',
-            }}
-          >
-            {/* Header */}
-            <div
+            <motion.div
+              key="modal"
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                padding: '20px 20px 16px',
-                borderBottom: '1px solid #1a2234',
-                gap: 12,
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: severityColor,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                    }}
-                  >
-                    {order.severity}
-                  </span>
-                  <span style={{ fontSize: 10, color: '#556677' }}>#{order.id}</span>
-                </div>
-                <h2
-                  style={{
-                    margin: 0,
-                    fontSize: 16,
-                    fontWeight: 700,
-                    color: '#E8ECF1',
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {order.title}
-                </h2>
-                <div style={{ fontSize: 11, color: '#556677', marginTop: 4 }}>
-                  AHU {order.ahu_id} · Level {order.level} · {order.trigger_source}
-                </div>
-              </div>
-              <button
-                onClick={onClose}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#8899aa',
-                  cursor: 'pointer',
-                  padding: 4,
-                  flexShrink: 0,
-                }}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Body */}
-            <div
-              style={{
-                flex: 1,
-                overflowY: 'auto',
-                padding: '16px 20px',
+                width: 'min(600px, 90vw)',
+                maxHeight: '85vh',
+                background: '#111827',
+                border: '1px solid #2a3649',
+                borderRadius: 12,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 20,
+                overflow: 'hidden',
+                pointerEvents: 'auto',
               }}
             >
-              {/* Description */}
-              <div>
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: '#556677',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    marginBottom: 8,
-                  }}
-                >
-                  Description
-                </div>
-                {editing ? (
-                  <textarea
-                    value={editDesc}
-                    onChange={(e) => setEditDesc(e.target.value)}
-                    rows={4}
-                    style={{
-                      width: '100%',
-                      background: '#1a2234',
-                      border: '1px solid #2a3649',
-                      borderRadius: 6,
-                      padding: '8px 10px',
-                      color: '#E8ECF1',
-                      fontSize: 12,
-                      resize: 'vertical',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                ) : (
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 13,
-                      color: order.description ? '#C8D4E0' : '#556677',
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {order.description ?? 'No description provided.'}
-                  </p>
-                )}
-              </div>
-
-              {/* FAIR Snapshot */}
-              {(() => {
-                let snapshot: Record<string, number> | null = null;
-                if (order.fair_snapshot) {
-                  if (typeof order.fair_snapshot === 'string') {
-                    try { snapshot = JSON.parse(order.fair_snapshot); } catch { snapshot = null; }
-                  } else {
-                    snapshot = order.fair_snapshot;
-                  }
-                }
-                if (!snapshot || Object.keys(snapshot).length === 0) return null;
-                const FAIR_ORDER = ['F', 'A', 'I', 'R', 'composite'];
-                const entries = FAIR_ORDER
-                  .filter((k) => k in snapshot!)
-                  .map((k) => [k, snapshot![k]] as [string, number]);
-                return (
-                  <div>
-                    <div
+              {/* Header */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  padding: '20px 20px 16px',
+                  borderBottom: '1px solid #1a2234',
+                  gap: 12,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                    <span
                       style={{
                         fontSize: 10,
                         fontWeight: 700,
-                        color: '#556677',
+                        color: severityColor,
                         textTransform: 'uppercase',
-                        letterSpacing: '0.06em',
-                        marginBottom: 8,
+                        letterSpacing: '0.05em',
                       }}
                     >
-                      FAIR Snapshot
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {entries.map(([key, val]) => {
-                        const score = typeof val === 'number' ? val : parseFloat(String(val));
-                        const barColor = score >= 70 ? '#00E5A0' : score >= 40 ? '#FFB020' : '#FF4D4D';
-                        const isComposite = key === 'composite';
-                        return (
-                          <div
-                            key={key}
-                            style={{
-                              background: '#1a2234',
-                              border: `1px solid ${isComposite ? barColor + '55' : '#2a3649'}`,
-                              borderRadius: 8,
-                              padding: '10px 14px',
-                              minWidth: isComposite ? 90 : 70,
-                              flex: isComposite ? '1 1 auto' : '0 0 auto',
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                              <div style={{ fontSize: 10, color: '#556677', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>
-                                {key}
-                              </div>
-                              <div style={{ fontSize: 15, fontWeight: 700, color: isComposite ? barColor : '#E8ECF1', fontVariantNumeric: 'tabular-nums' }}>
-                                {isNaN(score) ? String(val) : score.toFixed(1)}
-                              </div>
-                            </div>
-                            <div style={{ height: 3, borderRadius: 2, background: '#0d1520', overflow: 'hidden' }}>
-                              <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, isNaN(score) ? 0 : score))}%`, background: barColor, borderRadius: 2, transition: 'width 400ms ease' }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                      {order.severity}
+                    </span>
+                    <span style={{ fontSize: 10, color: '#556677' }}>#{order.id}</span>
                   </div>
-                );
-              })()}
-
-              {/* Timeline */}
-              <div>
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: '#556677',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    marginBottom: 12,
-                  }}
-                >
-                  Timeline
-                </div>
-                <StatusTimeline order={order} />
-              </div>
-
-              {/* Meta */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {[
-                  { label: 'Created by', value: order.created_by },
-                  { label: 'Approved by', value: order.approved_by ?? '—' },
-                  { label: 'Notified via', value: order.notified_via },
-                  { label: 'Status', value: order.status },
-                ].map(({ label, value }) => (
-                  <div
-                    key={label}
+                  <h2
                     style={{
-                      background: '#1a2234',
-                      border: '1px solid #2a3649',
-                      borderRadius: 6,
-                      padding: '8px 12px',
+                      margin: 0,
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: '#E8ECF1',
+                      lineHeight: 1.3,
                     }}
                   >
-                    <div style={{ fontSize: 10, color: '#556677', marginBottom: 2 }}>{label}</div>
-                    <div style={{ fontSize: 12, color: '#E8ECF1', fontWeight: 600 }}>{value}</div>
+                    {order.title}
+                  </h2>
+                  <div style={{ fontSize: 11, color: '#556677', marginTop: 4 }}>
+                    AHU {order.ahu_id} · Level {order.level} · {order.trigger_source}
                   </div>
-                ))}
+                </div>
+                <button
+                  onClick={onClose}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#8899aa',
+                    cursor: 'pointer',
+                    padding: 4,
+                    flexShrink: 0,
+                  }}
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
               </div>
-            </div>
 
-            {/* Footer */}
-            {order.status === 'draft' && (
+              {/* Body */}
               <div
                 style={{
-                  padding: '12px 20px',
-                  borderTop: '1px solid #1a2234',
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '16px 20px',
                   display: 'flex',
-                  gap: 8,
-                  justifyContent: 'flex-end',
+                  flexDirection: 'column',
+                  gap: 20,
                 }}
               >
-                {editing ? (
-                  <>
-                    <button
-                      onClick={() => setEditing(false)}
+                {/* Description */}
+                <div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: '#556677',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      marginBottom: 8,
+                    }}
+                  >
+                    Description
+                  </div>
+                  {editing ? (
+                    <textarea
+                      value={editDesc}
+                      onChange={(e) => setEditDesc(e.target.value)}
+                      rows={4}
                       style={{
-                        background: 'transparent',
-                        color: '#8899aa',
+                        width: '100%',
+                        background: '#1a2234',
                         border: '1px solid #2a3649',
                         borderRadius: 6,
-                        padding: '8px 16px',
+                        padding: '8px 10px',
+                        color: '#E8ECF1',
                         fontSize: 12,
-                        cursor: 'pointer',
+                        resize: 'vertical',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  ) : (
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 13,
+                        color: order.description ? '#C8D4E0' : '#556677',
+                        lineHeight: 1.6,
                       }}
                     >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveEdit}
-                      disabled={loading === 'save'}
+                      {order.description ?? 'No description provided.'}
+                    </p>
+                  )}
+                </div>
+
+                {/* FAIR Snapshot */}
+                {(() => {
+                  let snapshot: Record<string, number> | null = null;
+                  if (order.fair_snapshot) {
+                    if (typeof order.fair_snapshot === 'string') {
+                      try {
+                        snapshot = JSON.parse(order.fair_snapshot);
+                      } catch {
+                        snapshot = null;
+                      }
+                    } else {
+                      snapshot = order.fair_snapshot;
+                    }
+                  }
+                  if (!snapshot || Object.keys(snapshot).length === 0) return null;
+                  const FAIR_ORDER = ['F', 'A', 'I', 'R', 'composite'];
+                  const entries = FAIR_ORDER.filter((k) => k in snapshot!).map(
+                    (k) => [k, snapshot![k]] as [string, number]
+                  );
+                  return (
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: '#556677',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          marginBottom: 8,
+                        }}
+                      >
+                        FAIR Snapshot
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {entries.map(([key, val]) => {
+                          const score = typeof val === 'number' ? val : parseFloat(String(val));
+                          const barColor =
+                            score >= 70 ? '#00E5A0' : score >= 40 ? '#FFB020' : '#FF4D4D';
+                          const isComposite = key === 'composite';
+                          return (
+                            <div
+                              key={key}
+                              style={{
+                                background: '#1a2234',
+                                border: `1px solid ${isComposite ? barColor + '55' : '#2a3649'}`,
+                                borderRadius: 8,
+                                padding: '10px 14px',
+                                minWidth: isComposite ? 90 : 70,
+                                flex: isComposite ? '1 1 auto' : '0 0 auto',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'baseline',
+                                  marginBottom: 6,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    color: '#556677',
+                                    textTransform: 'uppercase',
+                                    fontWeight: 700,
+                                    letterSpacing: '0.05em',
+                                  }}
+                                >
+                                  {key}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 15,
+                                    fontWeight: 700,
+                                    color: isComposite ? barColor : '#E8ECF1',
+                                    fontVariantNumeric: 'tabular-nums',
+                                  }}
+                                >
+                                  {isNaN(score) ? String(val) : score.toFixed(1)}
+                                </div>
+                              </div>
+                              <div
+                                style={{
+                                  height: 3,
+                                  borderRadius: 2,
+                                  background: '#0d1520',
+                                  overflow: 'hidden',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    height: '100%',
+                                    width: `${Math.min(100, Math.max(0, isNaN(score) ? 0 : score))}%`,
+                                    background: barColor,
+                                    borderRadius: 2,
+                                    transition: 'width 400ms ease',
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Timeline */}
+                <div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: '#556677',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      marginBottom: 12,
+                    }}
+                  >
+                    Timeline
+                  </div>
+                  <StatusTimeline order={order} />
+                </div>
+
+                {/* Meta */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {[
+                    { label: 'Created by', value: order.created_by },
+                    { label: 'Approved by', value: order.approved_by ?? '—' },
+                    { label: 'Notified via', value: order.notified_via },
+                    { label: 'Status', value: order.status },
+                  ].map(({ label, value }) => (
+                    <div
+                      key={label}
                       style={{
-                        background: '#00E5A0',
-                        color: '#000',
-                        border: 'none',
-                        borderRadius: 6,
-                        padding: '8px 16px',
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: loading === 'save' ? 'not-allowed' : 'pointer',
-                        opacity: loading === 'save' ? 0.7 : 1,
-                      }}
-                    >
-                      {loading === 'save' ? 'Saving…' : 'Save Changes'}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => setEditing(true)}
-                      style={{
-                        background: 'transparent',
-                        color: '#8899aa',
+                        background: '#1a2234',
                         border: '1px solid #2a3649',
                         borderRadius: 6,
-                        padding: '8px 16px',
-                        fontSize: 12,
-                        cursor: 'pointer',
+                        padding: '8px 12px',
                       }}
                     >
-                      Edit
-                    </button>
-                    <button
-                      onClick={handleDismiss}
-                      disabled={loading !== null}
-                      style={{
-                        background: 'transparent',
-                        color: '#8899aa',
-                        border: '1px solid #2a3649',
-                        borderRadius: 6,
-                        padding: '8px 16px',
-                        fontSize: 12,
-                        cursor: loading !== null ? 'not-allowed' : 'pointer',
-                        opacity: loading !== null ? 0.7 : 1,
-                      }}
-                    >
-                      {loading === 'dismiss' ? 'Dismissing…' : 'Dismiss'}
-                    </button>
-                    <button
-                      onClick={handleApprove}
-                      disabled={loading !== null}
-                      style={{
-                        background: '#00E5A0',
-                        color: '#000',
-                        border: 'none',
-                        borderRadius: 6,
-                        padding: '8px 20px',
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: loading !== null ? 'not-allowed' : 'pointer',
-                        opacity: loading !== null ? 0.7 : 1,
-                      }}
-                    >
-                      {loading === 'approve' ? 'Approving…' : 'Approve'}
-                    </button>
-                  </>
-                )}
+                      <div style={{ fontSize: 10, color: '#556677', marginBottom: 2 }}>{label}</div>
+                      <div style={{ fontSize: 12, color: '#E8ECF1', fontWeight: 600 }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
-          </motion.div>
+
+              {/* Footer */}
+              {order.status === 'draft' && (
+                <div
+                  style={{
+                    padding: '12px 20px',
+                    borderTop: '1px solid #1a2234',
+                    display: 'flex',
+                    gap: 8,
+                    justifyContent: 'flex-end',
+                  }}
+                >
+                  {editing ? (
+                    <>
+                      <button
+                        onClick={() => setEditing(false)}
+                        style={{
+                          background: 'transparent',
+                          color: '#8899aa',
+                          border: '1px solid #2a3649',
+                          borderRadius: 6,
+                          padding: '8px 16px',
+                          fontSize: 12,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveEdit}
+                        disabled={loading === 'save'}
+                        style={{
+                          background: '#00E5A0',
+                          color: '#000',
+                          border: 'none',
+                          borderRadius: 6,
+                          padding: '8px 16px',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: loading === 'save' ? 'not-allowed' : 'pointer',
+                          opacity: loading === 'save' ? 0.7 : 1,
+                        }}
+                      >
+                        {loading === 'save' ? 'Saving…' : 'Save Changes'}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setEditing(true)}
+                        style={{
+                          background: 'transparent',
+                          color: '#8899aa',
+                          border: '1px solid #2a3649',
+                          borderRadius: 6,
+                          padding: '8px 16px',
+                          fontSize: 12,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={handleDismiss}
+                        disabled={loading !== null}
+                        style={{
+                          background: 'transparent',
+                          color: '#8899aa',
+                          border: '1px solid #2a3649',
+                          borderRadius: 6,
+                          padding: '8px 16px',
+                          fontSize: 12,
+                          cursor: loading !== null ? 'not-allowed' : 'pointer',
+                          opacity: loading !== null ? 0.7 : 1,
+                        }}
+                      >
+                        {loading === 'dismiss' ? 'Dismissing…' : 'Dismiss'}
+                      </button>
+                      <button
+                        onClick={handleApprove}
+                        disabled={loading !== null}
+                        style={{
+                          background: '#00E5A0',
+                          color: '#000',
+                          border: 'none',
+                          borderRadius: 6,
+                          padding: '8px 20px',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: loading !== null ? 'not-allowed' : 'pointer',
+                          opacity: loading !== null ? 0.7 : 1,
+                        }}
+                      >
+                        {loading === 'approve' ? 'Approving…' : 'Approve'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </motion.div>
           </div>
         </>
       )}
