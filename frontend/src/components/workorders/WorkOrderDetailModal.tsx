@@ -1,6 +1,11 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState } from 'react';
-import { approveWorkOrder, deleteWorkOrder, dismissWorkOrder, editWorkOrder } from '../../api/client';
+import {
+  approveWorkOrder,
+  deleteWorkOrder,
+  dismissWorkOrder,
+  editWorkOrder,
+} from '../../api/client';
 import { useToast } from '../../hooks/useToast';
 import { WorkOrder } from '../../types/chat';
 import StatusTimeline from './StatusTimeline';
@@ -606,7 +611,8 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
                     lineHeight: 1.5,
                   }}
                 >
-                  This will permanently delete work order #{order?.id}. This action cannot be undone.
+                  This will permanently delete work order #{order?.id}. This action cannot be
+                  undone.
                 </p>
                 <div
                   style={{
