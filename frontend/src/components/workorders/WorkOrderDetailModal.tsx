@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { WorkOrder } from '../../types/chat';
-import { approveWorkOrder, dismissWorkOrder, editWorkOrder } from '../../api/client';
+import React, { useState } from 'react';
+import { approveWorkOrder, deleteWorkOrder, dismissWorkOrder, editWorkOrder } from '../../api/client';
 import { useToast } from '../../hooks/useToast';
+import { WorkOrder } from '../../types/chat';
 import StatusTimeline from './StatusTimeline';
 
 interface WorkOrderDetailModalProps {
@@ -26,7 +26,8 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
-  const [loading, setLoading] = useState<'approve' | 'dismiss' | 'save' | null>(null);
+  const [loading, setLoading] = useState<'approve' | 'dismiss' | 'save' | 'delete' | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { showToast } = useToast();
 
   React.useEffect(() => {
@@ -77,6 +78,22 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
       setEditing(false);
     } catch {
       showToast('Failed to save changes', 'error');
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!order) return;
+    setLoading('delete');
+    try {
+      await deleteWorkOrder(order.id);
+      showToast(`Work order #${order.id} deleted`, 'success');
+      setShowDeleteConfirm(false);
+      onUpdated();
+      onClose();
+    } catch {
+      showToast('Failed to delete work order', 'error');
     } finally {
       setLoading(null);
     }
@@ -413,100 +430,230 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
                     borderTop: '1px solid #1a2234',
                     display: 'flex',
                     gap: 8,
-                    justifyContent: 'flex-end',
+                    justifyContent: 'space-between',
                   }}
                 >
-                  {editing ? (
-                    <>
-                      <button
-                        onClick={() => setEditing(false)}
-                        style={{
-                          background: 'transparent',
-                          color: '#8899aa',
-                          border: '1px solid #2a3649',
-                          borderRadius: 6,
-                          padding: '8px 16px',
-                          fontSize: 12,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSaveEdit}
-                        disabled={loading === 'save'}
-                        style={{
-                          background: '#00E5A0',
-                          color: '#000',
-                          border: 'none',
-                          borderRadius: 6,
-                          padding: '8px 16px',
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: loading === 'save' ? 'not-allowed' : 'pointer',
-                          opacity: loading === 'save' ? 0.7 : 1,
-                        }}
-                      >
-                        {loading === 'save' ? 'Saving…' : 'Save Changes'}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => setEditing(true)}
-                        style={{
-                          background: 'transparent',
-                          color: '#8899aa',
-                          border: '1px solid #2a3649',
-                          borderRadius: 6,
-                          padding: '8px 16px',
-                          fontSize: 12,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={handleDismiss}
-                        disabled={loading !== null}
-                        style={{
-                          background: 'transparent',
-                          color: '#8899aa',
-                          border: '1px solid #2a3649',
-                          borderRadius: 6,
-                          padding: '8px 16px',
-                          fontSize: 12,
-                          cursor: loading !== null ? 'not-allowed' : 'pointer',
-                          opacity: loading !== null ? 0.7 : 1,
-                        }}
-                      >
-                        {loading === 'dismiss' ? 'Dismissing…' : 'Dismiss'}
-                      </button>
-                      <button
-                        onClick={handleApprove}
-                        disabled={loading !== null}
-                        style={{
-                          background: '#00E5A0',
-                          color: '#000',
-                          border: 'none',
-                          borderRadius: 6,
-                          padding: '8px 20px',
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: loading !== null ? 'not-allowed' : 'pointer',
-                          opacity: loading !== null ? 0.7 : 1,
-                        }}
-                      >
-                        {loading === 'approve' ? 'Approving…' : 'Approve'}
-                      </button>
-                    </>
-                  )}
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={loading !== null}
+                    style={{
+                      background: '#FF4D4D',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '8px 16px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: loading !== null ? 'not-allowed' : 'pointer',
+                      opacity: loading !== null ? 0.7 : 1,
+                    }}
+                  >
+                    Delete
+                  </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {editing ? (
+                      <>
+                        <button
+                          onClick={() => setEditing(false)}
+                          style={{
+                            background: 'transparent',
+                            color: '#8899aa',
+                            border: '1px solid #2a3649',
+                            borderRadius: 6,
+                            padding: '8px 16px',
+                            fontSize: 12,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleSaveEdit}
+                          disabled={loading === 'save'}
+                          style={{
+                            background: '#00E5A0',
+                            color: '#000',
+                            border: 'none',
+                            borderRadius: 6,
+                            padding: '8px 16px',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: loading === 'save' ? 'not-allowed' : 'pointer',
+                            opacity: loading === 'save' ? 0.7 : 1,
+                          }}
+                        >
+                          {loading === 'save' ? 'Saving…' : 'Save Changes'}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setEditing(true)}
+                          style={{
+                            background: 'transparent',
+                            color: '#8899aa',
+                            border: '1px solid #2a3649',
+                            borderRadius: 6,
+                            padding: '8px 16px',
+                            fontSize: 12,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={handleDismiss}
+                          disabled={loading !== null}
+                          style={{
+                            background: 'transparent',
+                            color: '#8899aa',
+                            border: '1px solid #2a3649',
+                            borderRadius: 6,
+                            padding: '8px 16px',
+                            fontSize: 12,
+                            cursor: loading !== null ? 'not-allowed' : 'pointer',
+                            opacity: loading !== null ? 0.7 : 1,
+                          }}
+                        >
+                          {loading === 'dismiss' ? 'Dismissing…' : 'Dismiss'}
+                        </button>
+                        <button
+                          onClick={handleApprove}
+                          disabled={loading !== null}
+                          style={{
+                            background: '#00E5A0',
+                            color: '#000',
+                            border: 'none',
+                            borderRadius: 6,
+                            padding: '8px 20px',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: loading !== null ? 'not-allowed' : 'pointer',
+                            opacity: loading !== null ? 0.7 : 1,
+                          }}
+                        >
+                          {loading === 'approve' ? 'Approving…' : 'Approve'}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
             </motion.div>
           </div>
         </>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <>
+            <motion.div
+              key="confirm-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowDeleteConfirm(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(0,0,0,0.6)',
+                zIndex: 92,
+              }}
+            />
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 93,
+                pointerEvents: 'none',
+              }}
+            >
+              <motion.div
+                key="confirm-dialog"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  width: 'min(400px, 90vw)',
+                  background: '#111827',
+                  border: '1px solid #2a3649',
+                  borderRadius: 12,
+                  padding: '24px',
+                  pointerEvents: 'auto',
+                }}
+              >
+                <h3
+                  style={{
+                    margin: '0 0 8px 0',
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: '#E8ECF1',
+                  }}
+                >
+                  Delete Work Order?
+                </h3>
+                <p
+                  style={{
+                    margin: '0 0 24px 0',
+                    fontSize: 13,
+                    color: '#C8D4E0',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  This will permanently delete work order #{order?.id}. This action cannot be undone.
+                </p>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 12,
+                    justifyContent: 'flex-end',
+                  }}
+                >
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={loading === 'delete'}
+                    style={{
+                      background: 'transparent',
+                      color: '#8899aa',
+                      border: '1px solid #2a3649',
+                      borderRadius: 6,
+                      padding: '8px 16px',
+                      fontSize: 12,
+                      cursor: loading === 'delete' ? 'not-allowed' : 'pointer',
+                      opacity: loading === 'delete' ? 0.7 : 1,
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={loading === 'delete'}
+                    style={{
+                      background: '#FF4D4D',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '8px 16px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: loading === 'delete' ? 'not-allowed' : 'pointer',
+                      opacity: loading === 'delete' ? 0.7 : 1,
+                    }}
+                  >
+                    {loading === 'delete' ? 'Deleting…' : 'Delete'}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 };
