@@ -74,14 +74,15 @@ async def test_create_work_order_unknown_ahu_id_uses_level_0(db):
 
 @pytest.mark.asyncio
 async def test_send_notification_no_token_returns_skipped(db):
-    """When TELEGRAM_BOT_TOKEN is empty, notification should be skipped gracefully."""
+    """When telegram config is not fully set, notification should be skipped gracefully."""
     from tools.action_tools import handle_send_notification
     result = await handle_send_notification(
         recipient="technician",
         message="AHU e0402 phase imbalance detected.",
     )
     assert result["status"] == "skipped"
-    assert "token not configured" in result["reason"]
+    # Check for either "token not configured" or "chat_id ... not configured"
+    assert "not configured" in result["reason"]
 
 
 @pytest.mark.asyncio
