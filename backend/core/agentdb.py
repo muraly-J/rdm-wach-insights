@@ -226,6 +226,25 @@ class AgentDB:
             )
         return True
 
+    def assign_work_order(self, wo_id: int, assigned_to: str) -> bool:
+        """Set assigned_to on an approved or in_progress work order without status change."""
+        wo = self.get_work_order(wo_id)
+        if not wo:
+            logger.warning(f"assign_work_order: id={wo_id} not found")
+            return False
+        if wo["status"] not in ("approved", "in_progress"):
+            logger.warning(
+                f"assign_work_order: cannot assign work order in status '{wo['status']}'"
+            )
+            return False
+        now = self._now()
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE work_orders SET assigned_to = ?, updated_at = ? WHERE id = ?",
+                [assigned_to, now, wo_id],
+            )
+        return True
+
     # ── Agent State ────────────────────────────────────────────────────────────
 
     def set_agent_state(
