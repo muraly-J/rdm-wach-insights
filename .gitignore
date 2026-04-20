@@ -219,6 +219,12 @@ raw_data/
 *.parquet
 *.feather
 
+# Unblock LFS-tracked data files (private repo, hospital data approved for Git LFS)
+!data/*.csv
+!data/*.duckdb
+!data/chroma/
+!paraquet_data/*.parquet
+
 # =========================
 # Secrets
 # =========================
