@@ -189,8 +189,19 @@ class QwenClient:
             # No tool calls → final answer
             if not tool_calls:
                 self._breaker.record_success()
-                content = choice.message.content or ""
-                return _strip_think(content)
+                content = _strip_think(choice.message.content or "")
+                # If the model returned an empty final response, ask it to summarize
+                if not content and not is_final_round:
+                    full_messages.append({
+                        "role": "assistant",
+                        "content": "",
+                    })
+                    full_messages.append({
+                        "role": "user",
+                        "content": "Please confirm what was done in one or two sentences.",
+                    })
+                    continue
+                return content
 
             # Append assistant message (with tool_calls) to history
             full_messages.append({

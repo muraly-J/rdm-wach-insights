@@ -170,8 +170,21 @@ async def chat(body: ChatRequest) -> dict:
 
     actions = _build_actions(draft_work_orders)
 
+    reply_text = _sanitize_reply(reply)
+    if not reply_text:
+        if draft_work_orders:
+            wo = draft_work_orders[0]
+            reply_text = (
+                f"Work order #{wo.get('id')} created for {wo.get('ahu_id', 'AHU')} "
+                f"({wo.get('severity', 'unknown')} — status: {wo.get('status', 'draft')})."
+            )
+            if len(draft_work_orders) > 1:
+                reply_text += f" {len(draft_work_orders) - 1} additional work order(s) also created."
+        else:
+            reply_text = "Task completed."
+
     return {
-        "reply": _sanitize_reply(reply),
+        "reply": reply_text,
         "navigate": None,
         "thinking_mode": thinking_mode,
         "actions": actions,
