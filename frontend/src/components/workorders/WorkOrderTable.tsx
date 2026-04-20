@@ -1,5 +1,5 @@
 import React from 'react';
-import { WorkOrder } from '../../types/chat';
+import { WorkOrder, HEALTH_TIER_COLORS } from '../../types/chat';
 import { approveWorkOrder, dismissWorkOrder } from '../../api/client';
 import { useToast } from '../../hooks/useToast';
 
@@ -8,13 +8,6 @@ interface WorkOrderTableProps {
   onRefresh: () => void;
   onSelectOrder: (order: WorkOrder) => void;
 }
-
-const SEVERITY_COLOR: Record<string, string> = {
-  critical: '#ef4444',
-  high: '#f97316',
-  medium: '#f59e0b',
-  low: '#22c55e',
-};
 
 const STATUS_COLOR: Record<string, string> = {
   draft: '#f59e0b',
@@ -88,7 +81,7 @@ const WorkOrderTable: React.FC<WorkOrderTableProps> = ({ orders, onRefresh, onSe
         </thead>
         <tbody>
           {orders.map((order) => {
-            const severityColor = SEVERITY_COLOR[order.severity?.toLowerCase()] ?? '#8899aa';
+            const severityColor = HEALTH_TIER_COLORS[order.severity as keyof typeof HEALTH_TIER_COLORS] ?? '#8899aa';
             const statusColor = STATUS_COLOR[order.status] ?? '#8899aa';
             const createdDate = new Date(order.created_at).toLocaleDateString();
 

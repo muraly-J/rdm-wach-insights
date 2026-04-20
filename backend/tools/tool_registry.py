@@ -202,9 +202,10 @@ ACTION_TOOLS = [
             "description": (
                 "Create a maintenance work order for an AHU. "
                 "Use when an AHU has a confirmed problem that needs physical intervention. "
-                "severity='critical': auto-approved, you should then call send_notification. "
-                "severity='warning': creates a draft for human approval. "
-                "severity='info': logs only, no notification needed."
+                "Use the 4 health tiers as severity — they map directly to FAIR health index ranges: "
+                "severity='Critical' (FAIR < 40): auto-approved, call send_notification next. "
+                "severity='Maintenance Soon' (FAIR 40-59): draft for human approval via HITL. "
+                "severity='Monitor' (FAIR 60-79): draft, logged only, no notification needed."
             ),
             "parameters": {
                 "type": "object",
@@ -213,7 +214,7 @@ ACTION_TOOLS = [
                     "ahu_id": {"type": "string", "description": "Device ID, e.g. 'e0402'"},
                     "title": {"type": "string", "description": "Short issue title, max 80 chars"},
                     "description": {"type": "string", "description": "Detailed description including FAIR scores and financial impact"},
-                    "severity": {"type": "string", "enum": ["critical", "warning", "info"]},
+                    "severity": {"type": "string", "enum": ["Critical", "Maintenance Soon", "Monitor"]},
                     "fair_snapshot": {"type": "object", "description": "FAIR score breakdown at time of issue, e.g. {F: 72, A: 55, I: 40, R: 88, composite: 63}"},
                     "trigger_source": {"type": "string", "enum": ["watchman", "chat", "manual"], "description": "What triggered this work order"},
                 },

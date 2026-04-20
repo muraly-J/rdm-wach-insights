@@ -48,17 +48,17 @@ async def handle_create_work_order(
     ahu_id: str,
     title: str,
     description: str | None = None,
-    severity: str = "warning",
+    severity: str = "Maintenance Soon",
     fair_snapshot: dict | None = None,
     trigger_source: str = "chat",
 ) -> dict:
     """
     Create a work order for an AHU.
 
-    Status is set based on severity:
-      - "critical" → "approved"  (auto-approved, agent should call send_notification next)
-      - "warning"  → "draft"     (needs human approval via HITL)
-      - "info"     → "draft"     (logged only)
+    Severity uses the 4 health tiers (single source of truth: fair_health_scoring.py):
+      - "Critical"         → auto-approved, agent should call send_notification next
+      - "Maintenance Soon" → draft, needs human approval via HITL
+      - "Monitor"          → draft, logged only
 
     Returns the created work order dict with id and status.
     """
@@ -66,7 +66,7 @@ async def handle_create_work_order(
     level = _level_from_ahu_id(ahu_id)
 
     # Severity-based initial status
-    status = "approved" if severity == "critical" else "draft"
+    status = "approved" if severity == "Critical" else "draft"
 
     wo_id = db.create_work_order(
         ahu_id=ahu_id,

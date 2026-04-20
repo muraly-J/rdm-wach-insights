@@ -1,17 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { ActionItem } from '../../../types/chat';
+import { HEALTH_TIER_COLORS } from '../../../types/chat';
 import { approveWorkOrder, dismissWorkOrder, editWorkOrder } from '../../../api/client';
 
 interface WorkOrderCardProps {
   actions: ActionItem[];
 }
-
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#FF4D4D',
-  warning: '#FFB020',
-  info: '#4DA6FF',
-};
 
 export default function WorkOrderCard({ actions }: WorkOrderCardProps) {
   const [states, setStates] = useState<Record<number, 'idle' | 'loading' | 'done' | 'dismissed'>>(
@@ -61,8 +56,8 @@ export default function WorkOrderCard({ actions }: WorkOrderCardProps) {
         const approveItem = items.find((i) => i.type === 'approve_work_order');
         const dismissItem = items.find((i) => i.type === 'dismiss');
         const editItem = items.find((i) => i.type === 'edit_draft');
-        const severity = approveItem?.description.match(/severity[:\s]*(\w+)/i)?.[1] ?? 'info';
-        const severityColor = SEVERITY_COLORS[severity] ?? '#4DA6FF';
+        const severity = approveItem?.description.match(/severity[:\s]*([\w\s]+?)(?:[,\.]|$)/i)?.[1]?.trim() ?? 'Monitor';
+        const severityColor = HEALTH_TIER_COLORS[severity as keyof typeof HEALTH_TIER_COLORS] ?? '#4DA6FF';
 
         if (state === 'dismissed') return null;
 

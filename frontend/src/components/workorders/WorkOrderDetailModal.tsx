@@ -12,10 +12,10 @@ interface WorkOrderDetailModalProps {
 }
 
 const SEVERITY_COLOR: Record<string, string> = {
-  critical: '#ef4444',
-  high: '#f97316',
-  medium: '#f59e0b',
-  low: '#22c55e',
+  Critical: '#FF4D4D',
+  'Maintenance Soon': '#FFB020',
+  Monitor: '#4DA6FF',
+  Healthy: '#00E5A0',
 };
 
 const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
@@ -82,9 +82,7 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
     }
   };
 
-  const severityColor = order
-    ? (SEVERITY_COLOR[order.severity?.toLowerCase()] ?? '#8899aa')
-    : '#8899aa';
+  const severityColor = order ? (SEVERITY_COLOR[order.severity] ?? '#8899aa') : '#8899aa';
 
   return (
     <AnimatePresence>

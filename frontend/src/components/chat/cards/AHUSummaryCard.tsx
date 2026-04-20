@@ -1,20 +1,14 @@
 import type { AHUSummary } from '../../../types/chat';
+import { HEALTH_TIER_COLORS } from '../../../types/chat';
 
 interface AHUSummaryCardProps {
   summary: AHUSummary;
 }
 
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#FF4D4D',
-  warning: '#FFB020',
-  info: '#4DA6FF',
-  healthy: '#00E5A0',
-};
-
 const FAIR_LABELS = ['F', 'A', 'I', 'R'] as const;
 
 export default function AHUSummaryCard({ summary }: AHUSummaryCardProps) {
-  const color = SEVERITY_COLORS[summary.severity] ?? '#4DA6FF';
+  const color = HEALTH_TIER_COLORS[summary.severity] ?? '#4DA6FF';
 
   return (
     <div

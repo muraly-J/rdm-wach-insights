@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { WorkOrder } from '../../types/chat';
+import { WorkOrder, HEALTH_TIER_COLORS } from '../../types/chat';
 import { approveWorkOrder, dismissWorkOrder } from '../../api/client';
 import { useToast } from '../../hooks/useToast';
 
@@ -8,18 +8,11 @@ interface WorkOrderPanelItemProps {
   onUpdated: () => void;
 }
 
-const SEVERITY_COLOR: Record<string, string> = {
-  critical: '#ef4444',
-  high: '#f97316',
-  medium: '#f59e0b',
-  low: '#22c55e',
-};
-
 const WorkOrderPanelItem: React.FC<WorkOrderPanelItemProps> = ({ order, onUpdated }) => {
   const [loading, setLoading] = useState<'approve' | 'dismiss' | null>(null);
   const { showToast } = useToast();
 
-  const severityColor = SEVERITY_COLOR[order.severity?.toLowerCase()] ?? '#8899aa';
+  const severityColor = HEALTH_TIER_COLORS[order.severity as keyof typeof HEALTH_TIER_COLORS] ?? '#8899aa';
 
   const handleApprove = async () => {
     setLoading('approve');

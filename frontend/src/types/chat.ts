@@ -17,11 +17,22 @@ export interface ToolCall {
   result?: string;
 }
 
+// Single source of truth for health tiers — mirrors fair_health_scoring.py HEALTH_TIERS
+// Healthy: FAIR 80-100 | Monitor: 60-79 | Maintenance Soon: 40-59 | Critical: 0-39
+export type HealthTier = 'Healthy' | 'Monitor' | 'Maintenance Soon' | 'Critical';
+
+export const HEALTH_TIER_COLORS: Record<HealthTier, string> = {
+  Critical: '#FF4D4D',
+  'Maintenance Soon': '#FFB020',
+  Monitor: '#4DA6FF',
+  Healthy: '#00E5A0',
+};
+
 export interface AHUSummary {
   ahu_id: string;
   level: number;
   fair: { F: number; A: number; I: number; R: number; composite: number };
-  severity: 'critical' | 'warning' | 'info' | 'healthy';
+  severity: HealthTier;
 }
 
 export interface ChartCardData {

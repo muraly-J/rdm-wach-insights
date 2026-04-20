@@ -46,17 +46,18 @@ def _get_agent_db():
 
 def classify_score(health_index: float) -> str | None:
     """
-    Return "critical", "warning", or None based on health_index.
+    Return health tier string or None based on health_index.
 
-    critical: FAIR < 40
-    warning:  40 <= FAIR < 60
-    healthy:  FAIR >= 60 → None
+    Critical:         FAIR < 40
+    Maintenance Soon: 40 <= FAIR < 60
+    Monitor:          60 <= FAIR < 80 → None (watchman does not alert on Monitor)
+    Healthy:          FAIR >= 80 → None
     """
     from config import settings
     if health_index < settings.watchman_critical_threshold:
-        return "critical"
+        return "Critical"
     if health_index < settings.watchman_warning_threshold:
-        return "warning"
+        return "Maintenance Soon"
     return None
 
 

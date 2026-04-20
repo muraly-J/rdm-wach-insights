@@ -12,7 +12,7 @@ interface WorkOrderFiltersProps {
 }
 
 const STATUS_OPTIONS = ['all', 'draft', 'approved', 'dismissed'];
-const SEVERITY_OPTIONS = ['all', 'critical', 'high', 'medium', 'low'];
+const SEVERITY_OPTIONS = ['all', 'Critical', 'Maintenance Soon', 'Monitor', 'Healthy'];
 
 const chipStyle = (active: boolean, activeColor: string): React.CSSProperties => ({
   padding: '4px 12px',
@@ -29,10 +29,10 @@ const chipStyle = (active: boolean, activeColor: string): React.CSSProperties =>
 
 const SEVERITY_COLORS: Record<string, string> = {
   all: '#8899aa',
-  critical: '#ef4444',
-  high: '#f97316',
-  medium: '#f59e0b',
-  low: '#22c55e',
+  Critical: '#FF4D4D',
+  'Maintenance Soon': '#FFB020',
+  Monitor: '#4DA6FF',
+  Healthy: '#00E5A0',
 };
 
 const STATUS_COLORS: Record<string, string> = {
