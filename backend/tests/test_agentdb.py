@@ -53,7 +53,8 @@ def test_update_work_order_status(db):
     wo_id = db.create_work_order(
         ahu_id="e0101", level=1, title="Test", severity="critical"
     )
-    db.update_work_order(wo_id, status="approved", approved_by="user")
+    result = db.update_work_order(wo_id, status="approved", approved_by="user")
+    assert result is True
     wo = db.get_work_order(wo_id)
     assert wo["status"] == "approved"
     assert wo["approved_by"] == "user"
@@ -97,3 +98,61 @@ def test_enqueue_and_dequeue_watchman_alert(db):
     # After dequeue, they should be marked processed
     alerts_again = db.dequeue_watchman_alerts()
     assert len(alerts_again) == 0
+
+
+def test_push_to_engineers_transition(db):
+    wo_id = db.create_work_order(ahu_id="e0402", level=4, title="T", severity="warning")
+    result = db.update_work_order(wo_id, status="pending_engineer_review")
+    assert result is True
+    assert db.get_work_order(wo_id)["status"] == "pending_engineer_review"
+
+
+def test_engineer_sendback_transition(db):
+    wo_id = db.create_work_order(ahu_id="e0402", level=4, title="T", severity="warning")
+    db.update_work_order(wo_id, status="pending_engineer_review")
+    result = db.update_work_order(wo_id, status="pending_approval")
+    assert result is True
+    assert db.get_work_order(wo_id)["status"] == "pending_approval"
+
+
+def test_engineer_review_to_approved(db):
+    wo_id = db.create_work_order(ahu_id="e0402", level=4, title="T", severity="warning")
+    db.update_work_order(wo_id, status="pending_engineer_review")
+    db.update_work_order(wo_id, status="pending_approval")
+    result = db.update_work_order(wo_id, status="approved", approved_by="manager")
+    assert result is True
+
+
+def test_assigned_to_stored_and_retrieved(db):
+    wo_id = db.create_work_order(ahu_id="e0402", level=4, title="T", severity="warning")
+    result = db.update_work_order(wo_id, status="approved", assigned_to="any")
+    assert result is True
+    wo = db.get_work_order(wo_id)
+    assert wo["assigned_to"] == "any"
+
+
+def test_assigned_to_specific_technician(db):
+    wo_id = db.create_work_order(ahu_id="e0402", level=4, title="T", severity="warning")
+    result = db.update_work_order(wo_id, status="approved", assigned_to="123456789")
+    assert result is True
+    wo = db.get_work_order(wo_id)
+    assert wo["assigned_to"] == "123456789"
+
+
+def test_list_work_orders_by_assigned_to(db):
+    wo1 = db.create_work_order(ahu_id="e0101", level=1, title="T1", severity="warning")
+    wo2 = db.create_work_order(ahu_id="e0102", level=1, title="T2", severity="warning")
+    assert db.update_work_order(wo1, status="approved", assigned_to="any") is True
+    assert db.update_work_order(wo2, status="approved", assigned_to="999") is True
+    results = db.list_work_orders(assigned_to="any")
+    assert len(results) == 1
+    assert results[0]["id"] == wo1
+
+
+def test_invalid_transition_from_resolved(db):
+    wo_id = db.create_work_order(ahu_id="e0402", level=4, title="T", severity="warning")
+    db.update_work_order(wo_id, status="approved")
+    db.update_work_order(wo_id, status="in_progress")
+    db.update_work_order(wo_id, status="resolved")
+    result = db.update_work_order(wo_id, status="in_progress")
+    assert result is False

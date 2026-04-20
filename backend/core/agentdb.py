@@ -27,7 +27,8 @@ else:
 
 # Valid status transitions: key → set of allowed next states
 _VALID_TRANSITIONS: dict[str, set[str]] = {
-    "draft": {"pending_approval", "approved", "dismissed"},
+    "draft": {"pending_engineer_review", "pending_approval", "approved", "dismissed"},
+    "pending_engineer_review": {"pending_approval", "dismissed"},
     "pending_approval": {"approved", "dismissed"},
     "approved": {"in_progress", "resolved", "dismissed"},
     "in_progress": {"resolved"},
@@ -54,7 +55,8 @@ CREATE TABLE IF NOT EXISTS work_orders (
     trigger_source  VARCHAR NOT NULL DEFAULT 'chat',
     fair_snapshot   JSON,
     notified_via    VARCHAR NOT NULL DEFAULT 'none',
-    approved_by     VARCHAR
+    approved_by     VARCHAR,
+    assigned_to     VARCHAR
 );
 
 CREATE SEQUENCE IF NOT EXISTS work_orders_id_seq START 1;
@@ -96,6 +98,10 @@ class AgentDB:
     def _init_tables(self) -> None:
         with self._connect() as conn:
             conn.execute(_SCHEMA_SQL)
+            try:
+                conn.execute("ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS assigned_to VARCHAR")
+            except Exception as e:
+                logger.debug(f"_init_tables migration: assigned_to column guard: {e}")
 
     def _now(self) -> str:
         return datetime.now(timezone.utc).isoformat()
@@ -142,17 +148,25 @@ class AgentDB:
             return None
         return row.iloc[0].to_dict()
 
-    def list_work_orders(self, status: str | None = None) -> list[dict]:
+    def list_work_orders(
+        self,
+        status: str | None = None,
+        assigned_to: str | None = None,
+    ) -> list[dict]:
         with self._connect() as conn:
+            conditions = []
+            params = []
             if status:
-                df = conn.execute(
-                    "SELECT * FROM work_orders WHERE status = ? ORDER BY created_at DESC",
-                    [status],
-                ).fetchdf()
-            else:
-                df = conn.execute(
-                    "SELECT * FROM work_orders ORDER BY created_at DESC"
-                ).fetchdf()
+                conditions.append("status = ?")
+                params.append(status)
+            if assigned_to is not None:
+                conditions.append("assigned_to = ?")
+                params.append(assigned_to)
+            where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+            df = conn.execute(
+                f"SELECT * FROM work_orders {where} ORDER BY created_at DESC",
+                params,
+            ).fetchdf()
         return df.to_dict(orient="records")
 
     def update_work_order(
@@ -162,6 +176,7 @@ class AgentDB:
         notes: str | None = None,
         approved_by: str | None = None,
         notified_via: str | None = None,
+        assigned_to: str | None = None,
     ) -> bool:
         """
         Transition work order to new status. Returns True if transition was valid.
@@ -199,6 +214,9 @@ class AgentDB:
         if notified_via:
             updates.append("notified_via = ?")
             params.append(notified_via)
+        if assigned_to is not None:
+            updates.append("assigned_to = ?")
+            params.append(assigned_to)
 
         params.append(wo_id)
         with self._connect() as conn:
