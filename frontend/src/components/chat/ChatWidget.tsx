@@ -1,24 +1,16 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState } from 'react';
-import { ActionItem, NavigateTarget } from '../../api/client';
 import { useAppStore } from '../../store/useAppStore';
 import ChatBubbleButton from './ChatBubbleButton';
 import ChatWindow from './ChatWindow';
-import { Message } from '../../types/chat';
-
-const INITIAL_MESSAGE: Message = {
-  id: 'init-1',
-  role: 'bot',
-  content:
-    "Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
-};
 
 const PANEL_WIDTH = 380;
 
 const ChatWidget: React.FC = () => {
-  const { chatOpen, openChat, closeChat, chatMode, setChatMode } = useAppStore();
+  const { chatOpen, openChat, closeChat, chatMode, setChatMode, chatConversation, setChatConversation } = useAppStore();
 
-  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
+  const messages = chatConversation;
+  const setMessages = setChatConversation;
   const [isMinimized, setIsMinimized] = useState(false);
 
   const isExpanded = chatMode === 'fullscreen';

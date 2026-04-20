@@ -368,8 +368,116 @@ function App() {
                 Failed to load data: {error}
               </div>
             )}
+
+            <AnimatePresence mode="wait">
+              {dashboardMode === 'simple' ? (
+                <motion.div
+                  key="simple"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {selectedLevel ? (
+                    <>
+                      <div className="mb-8">
+                        <HealthIndexChart data={healthChartData as any} devices={chartDevices} />
+                      </div>
+
+                      <ScoreCardsGrid scoreData={scoreCardDataWithIsOn} />
+
+                      <CombinedScoresChart scoreData={scoreCardDataWithIsOn} timeRange={chartRange} />
+
+                      {selectedDevice && selectedDevice !== 'all' && selectedDeviceRow ? (
+                        <DeviceDetailCard
+                          label={selectedDeviceRow.label}
+                          level={selectedDeviceRow.level}
+                          healthScore={selectedDeviceRow.healthScore}
+                          trend={selectedDeviceRow.trend}
+                          status={selectedDeviceRow.status}
+                          isOn={isSelectedDeviceOn}
+                        />
+                      ) : (
+                        <AHURankingsTable rows={rankingRows} />
+                      )}
+
+                      {showDerivation && rawData && (
+                        <React.Suspense
+                          fallback={
+                            <div className="card p-6 h-40 flex items-center justify-center">
+                              <span className="text-[#556677]">Loading derivation…</span>
+                            </div>
+                          }
+                        >
+                          <ScoreDerivationSection
+                            deviceName={deviceLabel ?? selectedDevice ?? ''}
+                            deviceId={selectedDevice ?? ''}
+                            rawData={rawData}
+                            timeRange={chartRange}
+                            isOnByTimestamp={isOnByTimestamp}
+                          />
+                        </React.Suspense>
+                      )}
+
+                      {selectedDevice && selectedDevice !== 'all' && (
+                        <div className="mt-8">
+                          <React.Suspense
+                            fallback={<div className="h-48 animate-pulse bg-[#2e3f55] rounded-xl" />}
+                          >
+                            <PredictionView deviceId={selectedDevice} />
+                          </React.Suspense>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <LatestOverview />
+                  )}
+                </motion.div>
+              ) : dashboardMode === 'workorders' ? (
+                <motion.div
+                  key="workorders"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <React.Suspense
+                    fallback={<div className="h-64 animate-pulse bg-[#1a2234] rounded-xl" />}
+                  >
+                    <WorkOrdersView />
+                  </React.Suspense>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="deepdive"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <React.Suspense
+                    fallback={<div className="h-64 animate-pulse bg-[#1a2234] rounded-xl" />}
+                  >
+                    <DeepDiveView
+                      levelDevices={levelDevices}
+                      labelMap={labelMap}
+                      timeRange={timeRange}
+                      isSelectedDeviceOn={isSelectedDeviceOn}
+                      healthChartData={healthChartData}
+                      isOnByTimestamp={isOnByTimestamp}
+                    />
+                  </React.Suspense>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <p className="text-center text-xs mt-12 pb-4" style={{ color: '#3a4a5a' }}>
+              ⚠ Data shown covers monitored AHUs only. Not all devices may be represented.
+            </p>
           </div>
         </div>
+        <WorkOrderPanel />
+        <ToastContainer />
       </div>
     );
   }

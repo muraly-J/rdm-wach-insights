@@ -44,6 +44,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     'general' | 'technical' | 'technician' | 'financial' | null
   >(null);
   const [latestSuggestions, setLatestSuggestions] = useState<string[]>([]);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
 
   const {
     conversations,
@@ -194,7 +195,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             transition={{ duration: 0.15 }}
           >
             <div className="flex flex-1 overflow-hidden min-h-0">
-              {mode === 'fullscreen' && (
+              {mode === 'split' && !historyCollapsed && (
                 <ConversationHistory
                   conversations={conversations}
                   activeId={activeId}
@@ -202,6 +203,30 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                   onDelete={deleteConversation}
                   onNewChat={handleNewChat}
                 />
+              )}
+              {mode === 'split' && (
+                <button
+                  onClick={() => setHistoryCollapsed((v) => !v)}
+                  title={historyCollapsed ? 'Show history' : 'Hide history'}
+                  style={{
+                    width: 18,
+                    background: '#0d1117',
+                    border: 'none',
+                    borderRight: '1px solid #1a2638',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#556677',
+                    fontSize: 10,
+                    flexShrink: 0,
+                    transition: 'color 0.15s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#00E5A0')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#556677')}
+                >
+                  {historyCollapsed ? '›' : '‹'}
+                </button>
               )}
               <div className="flex flex-1 flex-col overflow-hidden min-h-0">
                 <MessageList

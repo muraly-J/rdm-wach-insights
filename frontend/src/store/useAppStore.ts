@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { AppState, ChatMessage, DashboardData, FinancialImpact, SiteSummaryData } from '../types';
 import type { Toast } from '../hooks/useToast';
+import type { Message } from '../types/chat';
 
 // Default chat message for initial bot greeting
 const INITIAL_BOT_MESSAGE: ChatMessage = {
@@ -10,6 +11,15 @@ const INITIAL_BOT_MESSAGE: ChatMessage = {
     "Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
   timestamp: new Date(),
 };
+
+const INITIAL_CONVERSATION: Message[] = [
+  {
+    id: 'init-1',
+    role: 'bot',
+    content:
+      "Hey! I'm RDM-Atlas. I can help you understand health scores, investigate anomalies, or explain what's driving a specific score. What would you like to know?",
+  },
+];
 
 // Initial state matching spec Section 8.1
 export const initialState: AppState = {
@@ -91,6 +101,10 @@ interface AppStore extends AppState {
   // Chat mode
   chatMode: 'panel' | 'fullscreen' | 'split';
   setChatMode: (mode: 'panel' | 'fullscreen' | 'split') => void;
+
+  // Chat conversation (persists across mode changes)
+  chatConversation: Message[];
+  setChatConversation: (messages: Message[]) => void;
 
   // Work order panel
   workOrderPanelOpen: boolean;
@@ -196,6 +210,10 @@ export const useAppStore = create<AppStore>((set) => ({
   chatMode: 'panel',
   /** Set the chat display mode (panel, fullscreen, or split) */
   setChatMode: (mode) => set({ chatMode: mode }),
+
+  // Chat conversation (persists across mode changes)
+  chatConversation: INITIAL_CONVERSATION,
+  setChatConversation: (messages) => set({ chatConversation: messages }),
 
   // Work order panel
   workOrderPanelOpen: false,
