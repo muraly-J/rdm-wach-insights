@@ -2,8 +2,8 @@
 import os
 import sys
 
-import pytest
 import httpx
+import pytest
 import respx
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
@@ -26,7 +26,7 @@ async def test_list_work_orders_api_error():
     respx.get("http://localhost:8081/api/work-orders").mock(
         return_value=httpx.Response(503, text="Service unavailable")
     )
-    from bot.api_client import list_work_orders, WACHAPIError
+    from bot.api_client import WACHAPIError, list_work_orders
     with pytest.raises(WACHAPIError) as exc:
         await list_work_orders()
     assert exc.value.status_code == 503

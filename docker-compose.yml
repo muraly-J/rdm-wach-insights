@@ -42,6 +42,17 @@ services:
       - backend
     restart: unless-stopped
 
+  bot:
+    build: .
+    command: python backend/bot/main.py
+    volumes:
+      - duckdb_data:/app/data
+    env_file: .env
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   duckdb_data:
   chroma_data:

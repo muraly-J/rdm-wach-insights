@@ -10,6 +10,7 @@ def test_managers_group_recognized(monkeypatch):
     monkeypatch.setenv("ENGINEERS_CHAT_ID", "-1002222")
     monkeypatch.setenv("TECHNICIANS_CHAT_ID", "-1003333")
     import importlib
+
     import bot.groups as groups_mod
     importlib.reload(groups_mod)
     from bot.groups import get_group
@@ -21,6 +22,7 @@ def test_engineers_group_recognized(monkeypatch):
     monkeypatch.setenv("ENGINEERS_CHAT_ID", "-1002222")
     monkeypatch.setenv("TECHNICIANS_CHAT_ID", "-1003333")
     import importlib
+
     import bot.groups as groups_mod
     importlib.reload(groups_mod)
     from bot.groups import get_group
@@ -32,6 +34,7 @@ def test_technicians_group_recognized(monkeypatch):
     monkeypatch.setenv("ENGINEERS_CHAT_ID", "-1002222")
     monkeypatch.setenv("TECHNICIANS_CHAT_ID", "-1003333")
     import importlib
+
     import bot.groups as groups_mod
     importlib.reload(groups_mod)
     from bot.groups import get_group
@@ -43,6 +46,7 @@ def test_unknown_chat_returns_none(monkeypatch):
     monkeypatch.setenv("ENGINEERS_CHAT_ID", "-1002222")
     monkeypatch.setenv("TECHNICIANS_CHAT_ID", "-1003333")
     import importlib
+
     import bot.groups as groups_mod
     importlib.reload(groups_mod)
     from bot.groups import get_group

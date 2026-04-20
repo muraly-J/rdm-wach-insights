@@ -162,8 +162,6 @@ async def assign_work_order(wo_id: int, body: WorkOrderAssign) -> dict:
         )
     logger.info(f"work_order {wo_id} assigned to {body.assigned_to}")
     return {"id": wo_id, "assigned_to": body.assigned_to}
-
-
 @router.post("/work-orders/{wo_id}/sendback")
 async def sendback_work_order(wo_id: int) -> dict:
     db = _get_db()

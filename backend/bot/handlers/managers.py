@@ -31,7 +31,6 @@ from telegram.ext import (
 
 from bot import api_client
 from bot.config import MANAGERS_CHAT_ID, TECHNICIANS
-from bot.groups import get_group
 from bot.push.notifier import notify_engineers, notify_technicians
 
 _ERR_UNAVAILABLE = "⚠️ WACH backend unavailable. Try again shortly."

@@ -69,6 +69,28 @@ def test_dismiss_work_order(client, tmp_path, monkeypatch):
     assert resp.json()["status"] == "dismissed"
 
 
+def test_sendback_work_order(client, tmp_path, monkeypatch):
+    from core.agentdb import AgentDB
+
+    db = AgentDB(str(tmp_path / "test.duckdb"))
+    wo_id = db.create_work_order(ahu_id="e0402", level=4, title="Test", severity="warning")
+    db.update_work_order(wo_id, status="pending_approval")
+    db.update_work_order(wo_id, status="approved")
+    db.update_work_order(wo_id, status="in_progress")
+
+    import duckdb
+
+    with duckdb.connect(db._path) as conn:
+        conn.execute("UPDATE work_orders SET status = ? WHERE id = ?", ["pending_engineer_review", wo_id])
+
+    import core.agentdb as m
+
+    monkeypatch.setattr(m, "_db_instance", db)
+    resp = client.post(f"/api/work-orders/{wo_id}/sendback")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "pending_approval"
+
+
 def test_approve_nonexistent_work_order_returns_404(client):
     resp = client.post("/api/work-orders/99999/approve")
     assert resp.status_code == 404
