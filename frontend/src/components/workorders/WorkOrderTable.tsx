@@ -1,7 +1,7 @@
 import React from 'react';
-import { WorkOrder, HEALTH_TIER_COLORS } from '../../types/chat';
-import { approveWorkOrder, dismissWorkOrder, deleteWorkOrder } from '../../api/client';
+import { approveWorkOrder, deleteWorkOrder, dismissWorkOrder } from '../../api/client';
 import { useToast } from '../../hooks/useToast';
+import { HEALTH_TIER_COLORS, WorkOrder } from '../../types/chat';
 
 interface WorkOrderTableProps {
   orders: WorkOrder[];
@@ -20,6 +20,11 @@ const WorkOrderTable: React.FC<WorkOrderTableProps> = ({ orders, onRefresh, onSe
   const [selectedIds, setSelectedIds] = React.useState<Set<number>>(new Set());
   const [bulkDeleting, setBulkDeleting] = React.useState(false);
   const { showToast } = useToast();
+
+  const handleRowClick = (order: WorkOrder) => {
+    console.log('[WorkOrderTable] Row clicked:', order.id, order.title);
+    onSelectOrder(order);
+  };
 
   const allSelected = orders.length > 0 && selectedIds.size === orders.length;
   const someSelected = selectedIds.size > 0 && !allSelected;
@@ -222,7 +227,7 @@ const WorkOrderTable: React.FC<WorkOrderTableProps> = ({ orders, onRefresh, onSe
               return (
                 <tr
                   key={order.id}
-                  onClick={() => onSelectOrder(order)}
+                  onClick={() => handleRowClick(order)}
                   style={{
                     borderBottom: '1px solid #1a2234',
                     cursor: 'pointer',
@@ -230,14 +235,14 @@ const WorkOrderTable: React.FC<WorkOrderTableProps> = ({ orders, onRefresh, onSe
                     background: isSelected ? 'rgba(0,229,160,0.04)' : 'transparent',
                   }}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = isSelected
-                      ? 'rgba(0,229,160,0.07)'
-                      : '#1a2234')
+                  (e.currentTarget.style.background = isSelected
+                    ? 'rgba(0,229,160,0.07)'
+                    : '#1a2234')
                   }
                   onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = isSelected
-                      ? 'rgba(0,229,160,0.04)'
-                      : 'transparent')
+                  (e.currentTarget.style.background = isSelected
+                    ? 'rgba(0,229,160,0.04)'
+                    : 'transparent')
                   }
                 >
                   {/* Row checkbox */}

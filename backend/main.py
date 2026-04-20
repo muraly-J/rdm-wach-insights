@@ -10,6 +10,7 @@ For local development:
 
 Backend and frontend communicate via /api endpoints.
 """
+
 import os
 import sys
 from collections.abc import Callable
@@ -72,9 +73,9 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
                 content={
                     "detail": {
                         "error": "Missing API key",
-                        "suggestion": "Include 'Authorization: Bearer <api_key>' header or '?api_key=<key>' query parameter"
+                        "suggestion": "Include 'Authorization: Bearer <api_key>' header or '?api_key=<key>' query parameter",
                     }
-                }
+                },
             )
             return response
 
@@ -96,9 +97,9 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
                 content={
                     "detail": {
                         "error": "Invalid API key",
-                        "suggestion": "Please provide a valid API key"
+                        "suggestion": "Please provide a valid API key",
                     }
-                }
+                },
             )
             return response
 
@@ -107,14 +108,15 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
 
 # ── Security headers middleware ───────────────────────────────────────────────
 
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         response = await call_next(request)
-        response.headers['X-Content-Type-Options']    = 'nosniff'
-        response.headers['X-Frame-Options']           = 'DENY'
-        response.headers['X-XSS-Protection']          = '1; mode=block'
-        response.headers['Referrer-Policy']           = 'strict-origin-when-cross-origin'
-        response.headers['Permissions-Policy']        = 'camera=(), microphone=(), geolocation=()'
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
 
         # --- CSP: Allow same-origin + Vercel/Cloudflare for production ---
         csp = (
@@ -126,11 +128,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "img-src 'self' data: https://fastapi.tiangolo.com; "
             "frame-ancestors 'none';"
         )
-        response.headers['Content-Security-Policy'] = csp
+        response.headers["Content-Security-Policy"] = csp
         return response
 
 
 # ── Alerting middleware ───────────────────────────────────────────────────────
+
 
 class AlertingMiddleware(BaseHTTPMiddleware):
     """Records response status codes for 5xx rate alerting."""
@@ -145,6 +148,7 @@ class AlertingMiddleware(BaseHTTPMiddleware):
 
 
 # ── Startup checks and SIGTERM handler ────────────────────────────────────────
+
 
 def _startup_checks() -> None:
     """
@@ -161,15 +165,23 @@ def _startup_checks() -> None:
             conn.close()
             logger.info("DuckDB startup check passed", extra={"db": db_path})
         except Exception as e:
-            logger.error("DuckDB startup check failed — health scores may be unavailable", extra={"error": str(e)})
+            logger.error(
+                "DuckDB startup check failed — health scores may be unavailable",
+                extra={"error": str(e)},
+            )
     else:
-        logger.warning("DuckDB not found — health scores will be empty on first boot", extra={"db": db_path})
+        logger.warning(
+            "DuckDB not found — health scores will be empty on first boot", extra={"db": db_path}
+        )
 
     chroma_dir = str(settings.chroma_persist_dir)
     if os.path.isdir(chroma_dir):
         logger.info("ChromaDB directory present", extra={"dir": chroma_dir})
     else:
-        logger.warning("ChromaDB directory not found — RAG will be unavailable until ingestion runs", extra={"dir": chroma_dir})
+        logger.warning(
+            "ChromaDB directory not found — RAG will be unavailable until ingestion runs",
+            extra={"dir": chroma_dir},
+        )
 
 
 @asynccontextmanager
@@ -188,6 +200,7 @@ async def lifespan(app):
         import asyncio
 
         from core.watchman import start_pulse
+
         watchman_task = asyncio.create_task(start_pulse())
         logger.info("Watchman pulse started")
 
@@ -196,6 +209,7 @@ async def lifespan(app):
     # Shutdown
     logger.info("SIGTERM received — flushing query log and shutting down")
     from middleware.query_logger import _DB_PATH
+
     logger.info("Query log location", extra={"db_path": str(_DB_PATH)})
     if watchman_task:
         watchman_task.cancel()
@@ -207,6 +221,7 @@ async def lifespan(app):
 
 
 # ── App setup ─────────────────────────────────────────────────────────────────
+
 
 def get_cors_origins() -> list[str]:
     """Get CORS origins from env or use defaults."""
@@ -227,6 +242,7 @@ def create_app() -> FastAPI:
         if app.openapi_schema:
             return app.openapi_schema
         from fastapi.openapi.utils import get_openapi
+
         schema = get_openapi(
             title=app.title,
             version=app.version,
@@ -244,10 +260,10 @@ def create_app() -> FastAPI:
 
     # Add security middleware in order of execution (first to last)
     app.add_middleware(APIKeyAuthMiddleware)  # Authentication
-    app.add_middleware(RateLimitMiddleware)   # Rate limiting
+    app.add_middleware(RateLimitMiddleware)  # Rate limiting
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(AlertingMiddleware)    # 5xx error rate alerting
-    app.add_middleware(RequestIDMiddleware)   # Request ID tracing
+    app.add_middleware(AlertingMiddleware)  # 5xx error rate alerting
+    app.add_middleware(RequestIDMiddleware)  # Request ID tracing
 
     # CORS — restrict to specific origins (not all methods/headers)
     _cors_origins = get_cors_origins()
@@ -256,12 +272,8 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=_cors_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST"],  # Restricted methods
-        allow_headers=[
-            "Authorization",
-            "Content-Type",
-            "X-Request-ID"
-        ],  # Restricted headers
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],  # Restricted headers
     )
 
     # Include all routers with /api prefix for consistent routing
@@ -271,6 +283,7 @@ def create_app() -> FastAPI:
     app.include_router(health_scores_router, prefix="/api")
 
     from routes.chat import router as chat_router
+
     app.include_router(chat_router, prefix="/api")
     app.include_router(predictions_router, prefix="/api")
     app.include_router(measurements_router, prefix="/api")
@@ -280,20 +293,21 @@ def create_app() -> FastAPI:
     app.include_router(on_off_periods_router, prefix="/api")
     app.include_router(work_orders_router, prefix="/api")
 
-    @app.get('/health')
+    @app.get("/health")
     async def health() -> dict:
-        return {'status': 'ok'}
+        return {"status": "ok"}
 
     # Static files for local development
-    DIST_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
+    DIST_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 
     if os.path.isdir(DIST_DIR):
-        app.mount('/assets', StaticFiles(directory=os.path.join(DIST_DIR, 'assets')), name='assets')
+        app.mount("/assets", StaticFiles(directory=os.path.join(DIST_DIR, "assets")), name="assets")
 
     # ── Prometheus metrics ────────────────────────────────────────────────────
     Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
     return app
+
 
 # ── Create the app instance ───────────────────────────────────────────────────
 
@@ -301,6 +315,7 @@ app = create_app()
 
 
 # ── Background ETL backfill (runs once on cold start when DB is empty) ────────
+
 
 def _run_etl_backfill():
     """
@@ -313,15 +328,18 @@ def _run_etl_backfill():
     def _backfill():
         try:
             from core.healthdb import HealthDB
+
             db = HealthDB()
             latest = db.get_latest_timestamp()
             if latest is not None:
                 logger.info("[ETL] DB already has data (latest: %s) — skipping backfill", latest)
                 return
             logger.info("[ETL] DB is empty — running health ETL backfill...")
-            script = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'etl', 'run_health_etl.py')
+            script = os.path.join(
+                os.path.dirname(__file__), "..", "scripts", "etl", "run_health_etl.py"
+            )
             result = subprocess.run(
-                [sys.executable, script, '--level', 'all'],
+                [sys.executable, script, "--level", "all"],
                 capture_output=True,
                 text=True,
                 timeout=600,
@@ -329,7 +347,9 @@ def _run_etl_backfill():
             if result.returncode == 0:
                 logger.info("[ETL] Backfill completed successfully")
             else:
-                logger.warning("[ETL] Backfill exited with code %d: %s", result.returncode, result.stderr[:500])
+                logger.warning(
+                    "[ETL] Backfill exited with code %d: %s", result.returncode, result.stderr[:500]
+                )
         except Exception as exc:
             logger.warning("[ETL] Backfill skipped: %s", exc)
 

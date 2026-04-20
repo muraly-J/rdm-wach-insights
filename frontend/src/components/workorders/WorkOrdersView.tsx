@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchWorkOrders } from '../../api/client';
-import { WorkOrder } from '../../types/chat';
-import { useAppStore } from '../../store/useAppStore';
 import { usePolling } from '../../hooks/usePolling';
-import WorkOrderStatsBar from './WorkOrderStatsBar';
-import WorkOrderFilters, { WorkOrderFilterState } from './WorkOrderFilters';
-import WorkOrderTable from './WorkOrderTable';
+import { useAppStore } from '../../store/useAppStore';
+import { WorkOrder } from '../../types/chat';
 import WorkOrderDetailModal from './WorkOrderDetailModal';
+import WorkOrderFilters, { WorkOrderFilterState } from './WorkOrderFilters';
+import WorkOrderStatsBar from './WorkOrderStatsBar';
+import WorkOrderTable from './WorkOrderTable';
 
 const WorkOrdersView: React.FC = () => {
   const setWorkOrderDraftsCount = useAppStore((s) => s.setWorkOrderDraftsCount);
@@ -20,6 +20,11 @@ const WorkOrdersView: React.FC = () => {
     severity: 'all',
     search: '',
   });
+
+  const handleSelectOrder = (order: WorkOrder) => {
+    console.log('[WorkOrdersView] Selected order:', order.id, order.title);
+    setSelectedOrder(order);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -131,7 +136,7 @@ const WorkOrdersView: React.FC = () => {
         }}
       >
         <WorkOrderFilters filters={filters} onChange={setFilters} />
-        <WorkOrderTable orders={filteredOrders} onRefresh={load} onSelectOrder={setSelectedOrder} />
+        <WorkOrderTable orders={filteredOrders} onRefresh={load} onSelectOrder={handleSelectOrder} />
       </div>
 
       <WorkOrderDetailModal

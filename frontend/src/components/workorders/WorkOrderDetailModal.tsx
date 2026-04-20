@@ -37,6 +37,7 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
 
   React.useEffect(() => {
     if (order) {
+      console.log('[WorkOrderDetailModal] Modal opened for order:', order.id, order.title);
       setEditTitle(order.title);
       setEditDesc(order.description ?? '');
       setEditing(false);
