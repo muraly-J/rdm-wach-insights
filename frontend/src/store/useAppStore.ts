@@ -104,7 +104,7 @@ interface AppStore extends AppState {
 
   // Chat conversation (persists across mode changes)
   chatConversation: Message[];
-  setChatConversation: (messages: Message[]) => void;
+  setChatConversation: (messages: Message[] | ((prev: Message[]) => Message[])) => void;
 
   // Work order panel
   workOrderPanelOpen: boolean;
@@ -213,7 +213,11 @@ export const useAppStore = create<AppStore>((set) => ({
 
   // Chat conversation (persists across mode changes)
   chatConversation: INITIAL_CONVERSATION,
-  setChatConversation: (messages) => set({ chatConversation: messages }),
+  setChatConversation: (messages) =>
+    set((state) => ({
+      chatConversation:
+        typeof messages === 'function' ? messages(state.chatConversation) : messages,
+    })),
 
   // Work order panel
   workOrderPanelOpen: false,
