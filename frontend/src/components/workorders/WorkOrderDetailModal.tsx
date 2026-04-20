@@ -106,7 +106,18 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
             }}
           />
 
-          {/* Modal */}
+          {/* Modal — wrapper handles centering, inner div handles animation */}
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 91,
+              pointerEvents: 'none',
+            }}
+          >
           <motion.div
             key="modal"
             initial={{ opacity: 0, scale: 0.95, y: 16 }}
@@ -114,19 +125,15 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
               width: 'min(600px, 90vw)',
               maxHeight: '85vh',
               background: '#111827',
               border: '1px solid #2a3649',
               borderRadius: 12,
-              zIndex: 91,
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
+              pointerEvents: 'auto',
             }}
           >
             {/* Header */}
@@ -253,50 +260,69 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
               </div>
 
               {/* FAIR Snapshot */}
-              {order.fair_snapshot && Object.keys(order.fair_snapshot).length > 0 && (
-                <div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: '#556677',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      marginBottom: 8,
-                    }}
-                  >
-                    FAIR Snapshot
+              {(() => {
+                let snapshot: Record<string, number> | null = null;
+                if (order.fair_snapshot) {
+                  if (typeof order.fair_snapshot === 'string') {
+                    try { snapshot = JSON.parse(order.fair_snapshot); } catch { snapshot = null; }
+                  } else {
+                    snapshot = order.fair_snapshot;
+                  }
+                }
+                if (!snapshot || Object.keys(snapshot).length === 0) return null;
+                const FAIR_ORDER = ['F', 'A', 'I', 'R', 'composite'];
+                const entries = FAIR_ORDER
+                  .filter((k) => k in snapshot!)
+                  .map((k) => [k, snapshot![k]] as [string, number]);
+                return (
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: '#556677',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        marginBottom: 8,
+                      }}
+                    >
+                      FAIR Snapshot
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {entries.map(([key, val]) => {
+                        const score = typeof val === 'number' ? val : parseFloat(String(val));
+                        const barColor = score >= 70 ? '#00E5A0' : score >= 40 ? '#FFB020' : '#FF4D4D';
+                        const isComposite = key === 'composite';
+                        return (
+                          <div
+                            key={key}
+                            style={{
+                              background: '#1a2234',
+                              border: `1px solid ${isComposite ? barColor + '55' : '#2a3649'}`,
+                              borderRadius: 8,
+                              padding: '10px 14px',
+                              minWidth: isComposite ? 90 : 70,
+                              flex: isComposite ? '1 1 auto' : '0 0 auto',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                              <div style={{ fontSize: 10, color: '#556677', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>
+                                {key}
+                              </div>
+                              <div style={{ fontSize: 15, fontWeight: 700, color: isComposite ? barColor : '#E8ECF1', fontVariantNumeric: 'tabular-nums' }}>
+                                {isNaN(score) ? String(val) : score.toFixed(1)}
+                              </div>
+                            </div>
+                            <div style={{ height: 3, borderRadius: 2, background: '#0d1520', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, isNaN(score) ? 0 : score))}%`, background: barColor, borderRadius: 2, transition: 'width 400ms ease' }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                    {Object.entries(order.fair_snapshot).map(([key, val]) => (
-                      <div
-                        key={key}
-                        style={{
-                          background: '#1a2234',
-                          border: '1px solid #2a3649',
-                          borderRadius: 6,
-                          padding: '8px 12px',
-                          minWidth: 70,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 16,
-                            fontWeight: 700,
-                            color: '#E8ECF1',
-                            fontVariantNumeric: 'tabular-nums',
-                          }}
-                        >
-                          {typeof val === 'number' ? val.toFixed(1) : val}
-                        </div>
-                        <div style={{ fontSize: 10, color: '#556677', textTransform: 'uppercase' }}>
-                          {key}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Timeline */}
               <div>
@@ -438,6 +464,7 @@ const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
               </div>
             )}
           </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
