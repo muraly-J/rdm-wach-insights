@@ -136,6 +136,26 @@ const DEVICE_MAP: Record<string, [string, string]> = {
   e1108: ['PSW', 'Paediatric Surgical Ward'],
 };
 
+/**
+ * Overrides for AHUs whose device ID prefix does not match their assigned level.
+ * Source: backend/data/rag_docs/ahu_directory.md
+ * Format: full display string (label — department)
+ */
+const LABEL_OVERRIDE: Record<string, string> = {
+  // Level 1 — e0212 has a "02" prefix but belongs to Level 1
+  e0212: 'AHU-L1-OT-01 \u2014 Emergency Department (Paediatric)',
+  // Level 3 — e0210/e0211 have "02" prefix; e0401/e0402/e0423 have "04" prefix
+  e0210: 'AHU-L3-PGMC-02 \u2014 Post Graduate Medical Centre',
+  e0211: 'AHU-L3-PGMC-01 \u2014 Post Graduate Medical Centre',
+  e0401: 'AHU-L3-PT-02 \u2014 Pathology Department',
+  e0402: 'AHU-L3-PT-01 \u2014 Pathology Department',
+  e0423: 'AHU-L3-BL-01 \u2014 Biophysiological Department',
+  // Level 4 — e0403 missing from DEVICE_MAP
+  e0403: 'AHU-L4-MK-01 \u2014 Shared Facilities 4',
+  // Level 5 — e0622 has "06" prefix but belongs to Level 5
+  e0622: 'AHU-L5-OT-10 \u2014 Main Operation Theatre Complex',
+};
+
 const DEVICE_RE = /\be(\d{2})(\d{2})\b/g;
 
 /**
@@ -146,6 +166,9 @@ export function deviceIdToDisplay(deviceId?: string | null): string {
   if (!deviceId || typeof deviceId !== 'string') {
     return 'Unknown AHU';
   }
+
+  // Cross-level AHUs: ID prefix doesn't match actual level — use authoritative label
+  if (LABEL_OVERRIDE[deviceId]) return LABEL_OVERRIDE[deviceId];
 
   const entry = DEVICE_MAP[deviceId];
   const match = deviceId.match(/^e(\d{2})(\d{2})$/);

@@ -121,20 +121,23 @@ const LEVEL_AHU_IDS: Record<number, string[]> = {
 
 function healthColor(score: number) {
   if (score >= 80) return '#00E5A0';
-  if (score >= 60) return '#f59e0b';
-  return '#ef4444';
+  if (score >= 60) return '#4DA6FF';
+  if (score >= 40) return '#FFB020';
+  return '#FF4D4D';
 }
 
 function healthBg(score: number) {
   if (score >= 80) return 'rgba(0,229,160,0.08)';
-  if (score >= 60) return 'rgba(245,158,11,0.08)';
-  return 'rgba(239,68,68,0.08)';
+  if (score >= 60) return 'rgba(77,166,255,0.08)';
+  if (score >= 40) return 'rgba(255,176,32,0.08)';
+  return 'rgba(255,77,77,0.08)';
 }
 
 function healthLabel(score: number) {
-  if (score >= 80) return 'GOOD';
-  if (score >= 60) return 'WARN';
-  return 'CRIT';
+  if (score >= 80) return 'HEALTHY';
+  if (score >= 60) return 'MONITOR';
+  if (score >= 40) return 'MAINT.';
+  return 'CRITICAL';
 }
 
 // ── Panel 1: Level Health ──────────────────────────────────────────────────
@@ -253,8 +256,9 @@ function LevelHealthPanel() {
                       border: `1px solid ${color}30`,
                       borderRadius: 4,
                       padding: '2px 5px',
-                      minWidth: 30,
+                      minWidth: 46,
                       textAlign: 'center',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {healthLabel(tile.avgHealth)}

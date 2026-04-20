@@ -89,6 +89,21 @@ async def dismiss_work_order(wo_id: int) -> dict:
     return {"id": wo_id, "status": "dismissed"}
 
 
+@router.delete("/work-orders/{wo_id}")
+async def delete_work_order(wo_id: int) -> dict:
+    db = _get_db()
+    wo = db.get_work_order(wo_id)
+    if not wo:
+        raise HTTPException(status_code=404, detail=f"Work order {wo_id} not found")
+
+    import duckdb
+    with duckdb.connect(db._path) as conn:
+        conn.execute("DELETE FROM work_orders WHERE id = ?", [wo_id])
+
+    logger.info(f"work_order {wo_id} deleted by user")
+    return {"id": wo_id, "deleted": True}
+
+
 @router.patch("/work-orders/{wo_id}")
 async def edit_work_order(wo_id: int, body: WorkOrderPatch) -> dict:
     db = _get_db()

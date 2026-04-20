@@ -300,6 +300,13 @@ export async function dismissWorkOrder(id: number): Promise<{ id: number; status
 }
 
 /**
+ * DELETE /api/work-orders/{id} — Permanently delete a work order
+ */
+export async function deleteWorkOrder(id: number): Promise<{ id: number; deleted: boolean }> {
+  return apiFetch(`/work-orders/${id}`, { method: 'DELETE' });
+}
+
+/**
  * PATCH /api/work-orders/{id} — Edit work order title/description
  */
 export async function editWorkOrder(
