@@ -116,8 +116,10 @@ async def test_send_notification_spam_prevention(db):
 
 
 @pytest.mark.asyncio
-async def test_send_notification_updates_work_order(db):
+async def test_send_notification_updates_work_order(db, monkeypatch):
     """If work_order_id provided and notification skipped, work order unchanged."""
+    import config
+    monkeypatch.setattr(config.settings, "telegram_bot_token", "")
     from tools.action_tools import handle_create_work_order, handle_send_notification
 
     wo = await handle_create_work_order(ahu_id="e0101", title="Test", severity="critical")
