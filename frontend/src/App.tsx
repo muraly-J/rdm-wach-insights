@@ -158,7 +158,7 @@ function App() {
     const range = toApiRange(timeRange);
     fetchSiteSummary(range as '24h' | '7d' | '30d' | 'all')
       .then((data) => setSiteSummaryData(data))
-      .catch(() => { });
+      .catch(() => {});
   }, [timeRange, setSiteSummaryData]);
 
   React.useEffect(() => {
@@ -170,7 +170,7 @@ function App() {
       selectedDevice !== 'all' ? selectedDevice : null
     )
       .then((data) => setFinancialImpact(data))
-      .catch(() => { });
+      .catch(() => {});
   }, [selectedLevel, selectedDevice, timeRange, setFinancialImpact]);
 
   React.useEffect(() => {
