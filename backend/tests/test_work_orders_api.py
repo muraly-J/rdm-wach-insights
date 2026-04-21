@@ -78,7 +78,7 @@ def test_dismiss_work_order(client, tmp_path, monkeypatch):
     assert resp.json()["status"] == "dismissed"
 
 
-def test_sendback_work_order(client, tmp_path, monkeypatch):
+def test_sendback_work_order_from_forced_status(client, tmp_path, monkeypatch):
     from core.agentdb import AgentDB
 
     db = AgentDB(str(tmp_path / "test.duckdb"))

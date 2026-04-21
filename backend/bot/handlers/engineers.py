@@ -33,7 +33,7 @@ from telegram.ext import (
 
 from bot import api_client
 from bot.config import ENGINEERS_CHAT_ID
-from bot.push.notifier import _parse_fair, notify_managers
+from bot.push.notifier import parse_fair, notify_managers
 
 _ERR_UNAVAILABLE = "⚠️ WACH backend unavailable. Try again shortly."
 _ERR_NOT_FOUND = "❌ Work order #{} not found."
@@ -50,7 +50,7 @@ _EDIT_OLD_WO_KEY = "editing_wo_old"
 # ── Formatters ─────────────────────────────────────────────────────────────────
 
 def _format_review_detail(wo: dict[str, Any]) -> str:
-    fair_str = _parse_fair(wo.get("fair_snapshot"))
+    fair_str = parse_fair(wo.get("fair_snapshot"))
     lines = [
         f"*Work Order #{wo['id']} — Review*",
         f"AHU: {wo.get('ahu_id')} · Level {wo.get('level')}",
@@ -122,8 +122,14 @@ async def cmd_sendback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text("❌ ID must be a number.")
         return
     try:
-        await api_client._post(f"/api/work-orders/{wo_id}/sendback")
+        await api_client.sendback_work_order(wo_id)
         wo = await api_client.get_work_order(wo_id)
+    except api_client.WACHAPIError as e:
+        if e.status_code == 404:
+            await update.message.reply_text(_ERR_NOT_FOUND.format(wo_id))
+        else:
+            await update.message.reply_text(_ERR_UNAVAILABLE)
+        return
     except Exception:
         await update.message.reply_text(_ERR_UNAVAILABLE)
         return
@@ -284,10 +290,8 @@ async def edit_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
 
 async def edit_timeout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await context.bot.send_message(
-        chat_id=ENGINEERS_CHAT_ID,
-        text="Edit cancelled — timed out.",
-    )
+    chat_id = update.effective_chat.id if update and update.effective_chat else ENGINEERS_CHAT_ID
+    await context.bot.send_message(chat_id=chat_id, text="Edit cancelled — timed out.")
     return ConversationHandler.END
 
 
@@ -313,8 +317,14 @@ async def cb_sendback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     wo_id = int(query.data.split(":")[1])
     await query.answer()
     try:
-        await api_client._post(f"/api/work-orders/{wo_id}/sendback")
+        await api_client.sendback_work_order(wo_id)
         wo = await api_client.get_work_order(wo_id)
+    except api_client.WACHAPIError as e:
+        if e.status_code == 404:
+            await query.edit_message_text(_ERR_NOT_FOUND.format(wo_id))
+        else:
+            await query.edit_message_text(_ERR_UNAVAILABLE)
+        return
     except Exception:
         await query.edit_message_text(_ERR_UNAVAILABLE)
         return
@@ -332,6 +342,10 @@ def get_handlers() -> list:
             EDIT_DESC: [
                 CommandHandler("skip", edit_skip_desc),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, edit_receive_desc),
+            ],
+            ConversationHandler.TIMEOUT: [
+                MessageHandler(filters.ALL, edit_timeout),
+                CallbackQueryHandler(edit_timeout),
             ],
         },
         fallbacks=[CommandHandler("cancel", edit_cancel)],

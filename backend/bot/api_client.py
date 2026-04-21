@@ -72,6 +72,10 @@ async def dismiss_work_order(wo_id: int) -> dict:
     return await _post(f"/api/work-orders/{wo_id}/dismiss")
 
 
+async def sendback_work_order(wo_id: int) -> dict:
+    return await _post(f"/api/work-orders/{wo_id}/sendback")
+
+
 async def push_to_engineers(wo_id: int) -> dict:
     return await _post(f"/api/work-orders/{wo_id}/push-to-engineers")
 

@@ -23,7 +23,7 @@ _BOT_TOKEN: str = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 
 # ── Message formatters ─────────────────────────────────────────────────────────
 
-def _parse_fair(fair_snapshot: str | dict | None) -> str:
+def parse_fair(fair_snapshot: str | dict | None) -> str:
     """Return 'F:42 A:38 I:61 R:55 · Composite: 49' or empty string."""
     if not fair_snapshot:
         return ""
@@ -44,7 +44,7 @@ def _parse_fair(fair_snapshot: str | dict | None) -> str:
 
 def _format_manager_alert(wo: dict[str, Any]) -> str:
     severity_icon = "🚨" if str(wo.get("severity", "")).lower() == "critical" else "⚠️"
-    fair_str = _parse_fair(wo.get("fair_snapshot"))
+    fair_str = parse_fair(wo.get("fair_snapshot"))
     created = str(wo.get("created_at", ""))[:16].replace("T", " ")
     lines = [
         f"{severity_icon} {wo.get('severity', 'ALERT').upper()} — Level {wo.get('level')} · {wo.get('ahu_id')}",
@@ -58,7 +58,7 @@ def _format_manager_alert(wo: dict[str, Any]) -> str:
 
 
 def _format_engineer_review(wo: dict[str, Any]) -> str:
-    fair_str = _parse_fair(wo.get("fair_snapshot"))
+    fair_str = parse_fair(wo.get("fair_snapshot"))
     lines = [
         f"🔍 Review Requested — Work Order #{wo.get('id')}",
         "",
