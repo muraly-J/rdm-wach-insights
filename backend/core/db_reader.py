@@ -382,20 +382,31 @@ def get_score_breakdown(level: int, time_range: str) -> list[dict]:
             score_group = active if not active.empty else group
         else:
             score_group = group
+        has_is_on = "is_on" in group.columns
         scores = {}
         for col in SCORE_COLUMNS:
             if col not in score_group.columns:
                 continue
-            series = score_group[["timestamp", col]].dropna(subset=[col])
-            if series.empty:
+            # Stats (current, trend) computed from active rows only
+            active_series = score_group[["timestamp", col]].dropna(subset=[col])
+            if active_series.empty:
                 continue
-            values = series[col].astype(float)
-            data_points = [
-                {"timestamp": row["timestamp"].isoformat(), "value": round(float(row[col]), 2)}
-                for _, row in series.iterrows()
-            ]
+            values = active_series[col].astype(float)
             current = round(float(values.iloc[-1]), 2)
             trend = round(float(values.iloc[-1] - values.iloc[0]), 2) if len(values) > 1 else 0.0
+            # Time-series data uses full group so off-period rows (is_on=False) are
+            # included — the frontend uses these to render grey shading on charts.
+            full_cols = ["timestamp", col] + (["is_on"] if has_is_on else [])
+            full_series = group[full_cols].dropna(subset=[col])
+            data_points = []
+            for _, row in full_series.iterrows():
+                point: dict = {
+                    "timestamp": row["timestamp"].isoformat(),
+                    "value": round(float(row[col]), 2),
+                }
+                if has_is_on:
+                    point["is_on"] = bool(row["is_on"])
+                data_points.append(point)
             scores[col] = {"current": current, "trend": trend, "data": data_points}
         meta = labels.get(str(ahu_id), {})
         entry: dict = {

@@ -20,6 +20,6 @@ Rules:
 - Always include context (FAIR scores if available, or user-provided description) in work order descriptions.
 - For "Critical" work orders: ALWAYS call send_notification recipient="technician" after create_work_order. This is mandatory.
 - Be concise. Work order titles must be under 80 characters.
-- Title format: "AHU {id} — {issue description}"
+- Title format: "{id} — {issue description}" (id is in format e0101, e0507, etc. - the frontend will convert to human-readable format)
 - After completing the task, always reply with a brief plain-text confirmation of what was done.
 """

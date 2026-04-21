@@ -31,11 +31,11 @@ import ChatWidget from './components/chat/ChatWidget';
 import ToastContainer from './components/shared/ToastContainer';
 
 // Work Orders
+import LatestOverview from './components/dashboard/LatestOverview';
+import DataFreshnessIndicator from './components/DataFreshnessIndicator';
 import WorkOrderBadge from './components/workorders/WorkOrderBadge';
 import WorkOrderPanel from './components/workorders/WorkOrderPanel';
 const WorkOrdersView = React.lazy(() => import('./components/workorders/WorkOrdersView'));
-import LatestOverview from './components/dashboard/LatestOverview';
-import DataFreshnessIndicator from './components/DataFreshnessIndicator';
 
 // State
 import { useAppStore } from './store/useAppStore';
@@ -45,13 +45,13 @@ import {
   fetchDashboardRanking,
   fetchHealthIndex,
   fetchLevelDevices,
-  // fetchOffPeriods,
+  fetchOffPeriods,
   fetchRawScoreRelationship,
   fetchScoreBreakdown,
   fetchSiteSummary,
 } from './api/client';
 import { fetchFinancialImpact } from './api/financial';
-import type { HealthIndexResponse, RawScoreResponse, ScoresResponse } from './types';
+import type { HealthIndexResponse, OffPeriod, RawScoreResponse, ScoresResponse } from './types';
 import type { TimeRange } from './utils/formatTick';
 
 interface ScoreEntry {
@@ -92,6 +92,7 @@ function App() {
   const [rankingRows, setRankingRows] = React.useState<AHURankRow[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [offPeriods, setOffPeriods] = React.useState<OffPeriod[]>([]);
 
   const [dataAsOf, setDataAsOf] = React.useState<string | null>(null);
 
@@ -143,10 +144,21 @@ function App() {
   }, [selectedDevice, timeRange]);
 
   React.useEffect(() => {
+    if (!selectedDevice || selectedDevice === 'all') {
+      setOffPeriods([]);
+      return;
+    }
+    const range = toApiRange(timeRange);
+    fetchOffPeriods(selectedDevice, range as '24h' | '7d' | '30d' | 'all')
+      .then((periods) => setOffPeriods(periods))
+      .catch(() => setOffPeriods([]));
+  }, [selectedDevice, timeRange]);
+
+  React.useEffect(() => {
     const range = toApiRange(timeRange);
     fetchSiteSummary(range as '24h' | '7d' | '30d' | 'all')
       .then((data) => setSiteSummaryData(data))
-      .catch(() => {});
+      .catch(() => { });
   }, [timeRange, setSiteSummaryData]);
 
   React.useEffect(() => {
@@ -158,7 +170,7 @@ function App() {
       selectedDevice !== 'all' ? selectedDevice : null
     )
       .then((data) => setFinancialImpact(data))
-      .catch(() => {});
+      .catch(() => { });
   }, [selectedLevel, selectedDevice, timeRange, setFinancialImpact]);
 
   React.useEffect(() => {

@@ -6,6 +6,7 @@ GET /api/site/summary?range=7d
 Returns a SiteSummaryData payload used by the frontend dashboard.
 Computes all metrics from CSV data (fast, no InfluxDB per-device calls).
 """
+
 import logging
 
 from fastapi import APIRouter, HTTPException, Query
@@ -16,8 +17,16 @@ router = APIRouter(tags=["Site Summary"])
 
 
 def device_id_to_name(device_id: str) -> str:
-    """Convert e.g. 'e0306' -> 'AHU-L3-06'."""
+    """Convert e.g. 'e0306' -> 'AHU-L3-ES-06' using loaded labels from ahu_relationships.tsv."""
     try:
+        from core.db_reader import _load_ahu_labels
+
+        labels = _load_ahu_labels()
+        if device_id in labels:
+            # Return the full label from TSV (format: AHU-L{level}-{abbr}-{nn})
+            return labels[device_id].get("label", device_id.upper())
+
+        # Fallback for unmapped devices
         level_num = int(device_id[1:3])
         unit_num = int(device_id[3:])
         return f"AHU-L{level_num}-{unit_num:02d}"
@@ -32,8 +41,22 @@ def _empty_response() -> dict:
         "avgSiteHealth": 0.0,
         "ahusInAlert": 0,
         "estMonthlyCostMYR": 0.0,
-        "starAHU": {"id": "", "name": "", "level": 0, "healthScore": 0.0, "monthlyCostMYR": 0.0, "safetyFlags": 0},
-        "criticalAHU": {"id": "", "name": "", "level": 0, "healthScore": 0.0, "monthlyCostMYR": 0.0, "safetyFlags": 0},
+        "starAHU": {
+            "id": "",
+            "name": "",
+            "level": 0,
+            "healthScore": 0.0,
+            "monthlyCostMYR": 0.0,
+            "safetyFlags": 0,
+        },
+        "criticalAHU": {
+            "id": "",
+            "name": "",
+            "level": 0,
+            "healthScore": 0.0,
+            "monthlyCostMYR": 0.0,
+            "safetyFlags": 0,
+        },
         "levelTiles": [],
         "trendDeltas": [],
         "alertAHUs": [],
@@ -68,13 +91,15 @@ async def get_site_alerts(range: str = Query(default="7d", alias="range")):
                 level_num = int(row["level"])
             except (ValueError, AttributeError):
                 level_num = 0
-            ahus.append({
-                "id": ahu_id,
-                "name": device_id_to_name(ahu_id),
-                "level": level_num,
-                "healthScore": round(float(row["health_index"]), 1),
-                "tier": str(row["tier"]),
-            })
+            ahus.append(
+                {
+                    "id": ahu_id,
+                    "name": device_id_to_name(ahu_id),
+                    "level": level_num,
+                    "healthScore": round(float(row["health_index"]), 1),
+                    "tier": str(row["tier"]),
+                }
+            )
 
         return {"ahus": ahus, "total": len(ahus)}
 
@@ -126,13 +151,15 @@ async def get_site_summary(range: str = Query(default="7d", alias="range")):
                 level_num = int(row["level"])
             except (ValueError, AttributeError):
                 level_num = 0
-            alert_ahus.append({
-                "id": ahu_id,
-                "name": device_id_to_name(ahu_id),
-                "level": level_num,
-                "healthScore": round(float(row["health_index"]), 1),
-                "tier": str(row["tier"]),
-            })
+            alert_ahus.append(
+                {
+                    "id": ahu_id,
+                    "name": device_id_to_name(ahu_id),
+                    "level": level_num,
+                    "healthScore": round(float(row["health_index"]), 1),
+                    "tier": str(row["tier"]),
+                }
+            )
 
         # ── Per-level tiles ───────────────────────────────────────────────────
         level_tiles = []
@@ -142,11 +169,13 @@ async def get_site_summary(range: str = Query(default="7d", alias="range")):
             except (ValueError, AttributeError):
                 continue
             avg_h = round(float(grp["health_index"].mean()), 1)
-            level_tiles.append({
-                "level": lvl_num,
-                "avgHealth": avg_h,
-                "ahuCount": len(grp),
-            })
+            level_tiles.append(
+                {
+                    "level": lvl_num,
+                    "avgHealth": avg_h,
+                    "ahuCount": len(grp),
+                }
+            )
         level_tiles.sort(key=lambda x: x["level"])
 
         # ── Spotlight AHUs ────────────────────────────────────────────────────

@@ -1,16 +1,16 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import React, { useCallback, useEffect, useState } from 'react';
 
-import ChatHeader from './ChatHeader';
-import MessageList from './MessageList';
-import ChatInput from './ChatInput';
-import SuggestedPrompts from './SuggestedPrompts';
-import ConversationHistory from './ConversationHistory';
 import { NavigateTarget } from '../../api/client';
+import { useConversationHistory } from '../../hooks/useConversationHistory';
+import { useSSEChat } from '../../hooks/useSSEChat';
 import { useAppStore } from '../../store/useAppStore';
 import { Message } from '../../types/chat';
-import { useSSEChat } from '../../hooks/useSSEChat';
-import { useConversationHistory } from '../../hooks/useConversationHistory';
+import ChatHeader from './ChatHeader';
+import ChatInput from './ChatInput';
+import ConversationHistory from './ConversationHistory';
+import MessageList from './MessageList';
+import SuggestedPrompts from './SuggestedPrompts';
 
 interface ChatWindowProps {
   mode: 'panel' | 'fullscreen' | 'split';
@@ -78,11 +78,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }, [messages]);
 
-  // Auto-save conversation when messages change
+  // Auto-save conversation when messages change (with debounce to prevent rapid duplicate saves)
   useEffect(() => {
-    if (messages.length > 1) {
+    if (messages.length <= 1) return;
+
+    const timeout = setTimeout(() => {
       saveCurrentConversation(messages);
-    }
+    }, 500); // Debounce 500ms
+
+    return () => clearTimeout(timeout);
   }, [messages, saveCurrentConversation]);
 
   const handleLoadConversation = useCallback(
