@@ -157,6 +157,12 @@ async def _finish_done(
     wo_id = context.user_data.get(_DONE_WO_KEY)
     try:
         await api_client.resolve_work_order(wo_id, notes=notes)
+    except api_client.WACHAPIError as e:
+        if e.status_code == 404:
+            await update.message.reply_text(_ERR_NOT_FOUND.format(wo_id))
+        else:
+            await update.message.reply_text(_ERR_UNAVAILABLE)
+        return ConversationHandler.END
     except Exception:
         await update.message.reply_text(_ERR_UNAVAILABLE)
         return ConversationHandler.END
@@ -169,9 +175,15 @@ async def done_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     return ConversationHandler.END
 
 
+async def done_timeout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update and update.message:
+        await update.message.reply_text("⏱️ Timed out. Use /done <id> to try again.")
+    return ConversationHandler.END
+
+
 async def cb_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    if query.message.chat.id != TECHNICIANS_CHAT_ID:
+    if not query.message or query.message.chat.id != TECHNICIANS_CHAT_ID:
         await query.answer()
         return
     wo_id = int(query.data.split(":")[1])
@@ -186,7 +198,7 @@ async def cb_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def cb_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    if query.message.chat.id != TECHNICIANS_CHAT_ID:
+    if not query.message or query.message.chat.id != TECHNICIANS_CHAT_ID:
         await query.answer()
         return
     wo_id = int(query.data.split(":")[1])
@@ -201,6 +213,9 @@ def get_handlers() -> list:
             DONE_NOTE: [
                 CommandHandler("skip", done_skip_note),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, done_receive_note),
+            ],
+            ConversationHandler.TIMEOUT: [
+                MessageHandler(filters.ALL, done_timeout),
             ],
         },
         fallbacks=[CommandHandler("cancel", done_cancel)],

@@ -23,7 +23,11 @@ def test_format_my_work_with_items():
     text = _format_my_work(orders)
     assert "#3" in text
     assert "e0301" in text
+    assert "Vibration fault" in text
     assert "#7" in text
+    assert "e0402" in text
+    assert "▶️" in text   # in_progress icon
+    assert "🔧" in text   # approved icon
 
 
 def test_format_ahu_status_contains_ahu_id():
