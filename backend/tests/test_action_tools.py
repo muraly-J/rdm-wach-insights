@@ -73,8 +73,10 @@ async def test_create_work_order_unknown_ahu_id_uses_level_0(db):
 
 
 @pytest.mark.asyncio
-async def test_send_notification_no_token_returns_skipped(db):
+async def test_send_notification_no_token_returns_skipped(db, monkeypatch):
     """When TELEGRAM_BOT_TOKEN is empty, notification should be skipped gracefully."""
+    import config
+    monkeypatch.setattr(config.settings, "telegram_bot_token", "")
     from tools.action_tools import handle_send_notification
     result = await handle_send_notification(
         recipient="technician",
