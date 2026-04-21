@@ -42,8 +42,8 @@ def test_format_edit_diff_shows_changes():
 
 @pytest.mark.asyncio
 async def test_group_guard_rejects_non_engineer_chat():
-    from unittest.mock import AsyncMock, MagicMock
     import os
+    from unittest.mock import AsyncMock, MagicMock
     os.environ.setdefault("ENGINEERS_CHAT_ID", "-1002222")
     from bot.handlers.engineers import cmd_review
     update = MagicMock()
@@ -58,8 +58,9 @@ async def test_group_guard_rejects_non_engineer_chat():
 @pytest.mark.asyncio
 async def test_cmd_review_404_error():
     from unittest.mock import AsyncMock, MagicMock, patch
-    from bot.handlers.engineers import cmd_review
+
     from bot.api_client import WACHAPIError
+    from bot.handlers.engineers import cmd_review
 
     update = MagicMock()
     update.effective_chat.id = -1002222

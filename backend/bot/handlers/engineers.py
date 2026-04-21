@@ -33,7 +33,7 @@ from telegram.ext import (
 
 from bot import api_client
 from bot.config import ENGINEERS_CHAT_ID
-from bot.push.notifier import parse_fair, notify_managers
+from bot.push.notifier import notify_managers, parse_fair
 
 _ERR_UNAVAILABLE = "⚠️ WACH backend unavailable. Try again shortly."
 _ERR_NOT_FOUND = "❌ Work order #{} not found."
