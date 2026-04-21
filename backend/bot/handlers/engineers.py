@@ -124,6 +124,12 @@ async def cmd_sendback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try:
         await api_client._post(f"/api/work-orders/{wo_id}/sendback")
         wo = await api_client.get_work_order(wo_id)
+    except api_client.WACHAPIError as e:
+        if e.status_code == 404:
+            await update.message.reply_text(_ERR_NOT_FOUND.format(wo_id))
+        else:
+            await update.message.reply_text(_ERR_UNAVAILABLE)
+        return
     except Exception:
         await update.message.reply_text(_ERR_UNAVAILABLE)
         return
@@ -284,10 +290,8 @@ async def edit_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
 
 async def edit_timeout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await context.bot.send_message(
-        chat_id=ENGINEERS_CHAT_ID,
-        text="Edit cancelled — timed out.",
-    )
+    chat_id = update.effective_chat.id if update and update.effective_chat else ENGINEERS_CHAT_ID
+    await context.bot.send_message(chat_id=chat_id, text="Edit cancelled — timed out.")
     return ConversationHandler.END
 
 
@@ -315,6 +319,12 @@ async def cb_sendback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     try:
         await api_client._post(f"/api/work-orders/{wo_id}/sendback")
         wo = await api_client.get_work_order(wo_id)
+    except api_client.WACHAPIError as e:
+        if e.status_code == 404:
+            await query.edit_message_text(_ERR_NOT_FOUND.format(wo_id))
+        else:
+            await query.edit_message_text(_ERR_UNAVAILABLE)
+        return
     except Exception:
         await query.edit_message_text(_ERR_UNAVAILABLE)
         return
@@ -332,6 +342,10 @@ def get_handlers() -> list:
             EDIT_DESC: [
                 CommandHandler("skip", edit_skip_desc),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, edit_receive_desc),
+            ],
+            ConversationHandler.TIMEOUT: [
+                MessageHandler(filters.ALL, edit_timeout),
+                CallbackQueryHandler(edit_timeout),
             ],
         },
         fallbacks=[CommandHandler("cancel", edit_cancel)],
