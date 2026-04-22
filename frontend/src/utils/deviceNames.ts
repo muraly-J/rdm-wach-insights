@@ -137,64 +137,145 @@ const DEVICE_MAP: Record<string, [string, string]> = {
 };
 
 /**
- * Overrides for AHUs whose label cannot be derived from the device ID formula.
- * Covers: cross-level devices (ID prefix ≠ level) AND inpatient ward devices
- * (Levels 7–11) whose real unit numbers and sub-ward abbreviations differ from
- * the generic DEVICE_MAP entries.
- * Source: backend/data/rag_docs/ahu_directory.md
- * Format: full display string (label \u2014 department)
+ * Authoritative label overrides sourced from backend/data/rag_docs/ahu_directory.md.
+ * Covers all devices whose label cannot be derived from the formula (abbr + last-2-digits),
+ * which is the majority of AHUs. Format: 'AHU-L{n}-{abbr}-{nn} — {Department}'.
  */
 const LABEL_OVERRIDE: Record<string, string> = {
-  // Level 1 — e0212 has a "02" prefix but belongs to Level 1
-  e0212: 'AHU-L1-OT-01 \u2014 Emergency Department (Paediatric)',
-  // Level 3 — e0210/e0211 have "02" prefix; e0401/e0402/e0423 have "04" prefix
-  e0210: 'AHU-L3-PGMC-02 \u2014 Post Graduate Medical Centre',
-  e0211: 'AHU-L3-PGMC-01 \u2014 Post Graduate Medical Centre',
-  e0401: 'AHU-L3-PT-02 \u2014 Pathology Department',
-  e0402: 'AHU-L3-PT-01 \u2014 Pathology Department',
-  e0423: 'AHU-L3-BL-01 \u2014 Biophysiological Department',
-  // Level 4 — e0403 missing from DEVICE_MAP
-  e0403: 'AHU-L4-MK-01 \u2014 Shared Facilities 4',
-  // Level 5 — e0622 has "06" prefix but belongs to Level 5
-  e0622: 'AHU-L5-OT-10 \u2014 Main Operation Theatre Complex',
+  // Level 1
+  e0102: 'AHU-L1-BES-01 — Biomedical Engineering Services Unit',
+  e0103: 'AHU-L1-MO-01 — Mortuary Services',
+  e0104: 'AHU-L1-HS-01 — Housekeeping Services',
+  e0105: 'AHU-L1-CA-02 — Catering & Dietetics Department',
+  e0106: 'AHU-L1-CA-01 — Catering & Dietetics Department',
+  e0107: 'AHU-L1-MS-02 — Medical Store',
+  e0108: 'AHU-L1-MS-01 — Medical Store',
+  e0109: 'AHU-L1-SS/T-01 — Security Services',
+  e0110: 'AHU-L1-PAC-01 — Emergency Department',
+  e0111: 'AHU-L1-OSCC-01 — Emergency Department',
+  e0112: 'AHU-L1-ED-03 — Emergency Department',
+  e0113: 'AHU-L1-ED-04 — Emergency Department',
+  e0114: 'AHU-L1-ED-02 — Emergency Department',
+  e0115: 'AHU-L1-ID-04 — Imaging Department',
+  e0116: 'AHU-L1-ED-01 — Emergency Department',
+  e0117: 'AHU-L1-SF-01 — Shared Facilities 1',
+  e0118: 'AHU-L1-ID-03 — Imaging Department',
+  e0120: 'AHU-L1-ID-02 — Imaging Department',
+  e0121: 'AHU-L1-ID-01 — Imaging Department',
+  // Level 1 cross-level — e0212 has "02" prefix but belongs to Level 1
+  e0212: 'AHU-L1-OT-01 — Emergency Department (Paediatric)',
+  // Level 2
+  e0201: 'AHU-L2-CDC-03 — Child Development Centre',
+  e0202: 'AHU-L2-CDC-01 — Child Development Centre',
+  e0203: 'AHU-L2-CDC-04 — Child Development Centre',
+  e0204: 'AHU-L2-CDC-02 — Child Development Centre',
+  e0206: 'AHU-L2-CF-01 — Cafeteria',
+  e0207: 'AHU-L2-MSS-01 — Medical Social Services',
+  e0208: 'AHU-L2-OP-01 — Outpatient Pharmacy',
+  e0209: 'AHU-L2-AR-01 — Admission & Revenue',
+  e0213: 'AHU-L2-WHU-01 — Women Health Unit',
+  e0214: 'AHU-L2-WHU-02 — Women Health Unit',
+  e0215: 'AHU-L2-SPG-04 — O&G Specialist Clinic',
+  e0216: 'AHU-L2-SPG-03 — O&G Specialist Clinic',
+  e0217: 'AHU-L2-SPG-02 — O&G Specialist Clinic',
+  e0218: 'AHU-L2-SPG-01 — O&G Specialist Clinic',
+  // Level 3 cross-level — e0210/e0211 have "02" prefix
+  e0210: 'AHU-L3-PGMC-02 — Post Graduate Medical Centre',
+  e0211: 'AHU-L3-PGMC-01 — Post Graduate Medical Centre',
+  // Level 3 native
+  e0301: 'AHU-L3-PT-04 — Pathology Department',
+  e0303: 'AHU-L3-PT-03 — Pathology Department',
+  e0304: 'AHU-L3-RQA/HEU-01 — RQA Unit',
+  e0306: 'AHU-L3-SPD-02 — Dental Clinic',
+  e0307: 'AHU-L3-SF-01 — Shared Facilities 3',
+  e0308: 'AHU-L3-SPP-03 — Paediatric Specialist Clinic',
+  e0311: 'AHU-L3-SPP-01 — Paediatric Specialist Clinic',
+  e0312: 'AHU-L3-SPP-02 — Paediatric Specialist Clinic',
+  e0313: 'AHU-L3-SPD-01 — Dental Clinic',
+  e0314: 'AHU-L3-CPC-01 — Paediatric Specialist Clinic',
+  e0315: 'AHU-L3-SPD-03 — Dental Clinic',
+  // Level 3 cross-level — e0401/e0402/e0423 have "04" prefix
+  e0401: 'AHU-L3-PT-02 — Pathology Department',
+  e0402: 'AHU-L3-PT-01 — Pathology Department',
+  e0423: 'AHU-L3-BL-01 — Biophysiological Department',
+  // Level 4
+  e0403: 'AHU-L4-MK-01 — Shared Facilities 4',
+  e0404: 'AHU-L4-PD-01 — Inpatient Pharmacy Department',
+  e0406: 'AHU-CDR-01 — Inpatient Pharmacy Department',
+  e0407: 'AHU-L4-PD-02 — Inpatient Pharmacy Department',
+  e0408: 'AHU-L4-SCT-03 — Bone Marrow Transplant Unit',
+  e0409: 'AHU-L4-SCT-01 — Bone Marrow Transplant Unit',
+  e0411: 'AHU-L4-SCT-02 — Bone Marrow Transplant Unit',
+  e0412: 'AHU-L4-OHR-01 — Obstetric High Risk Unit',
+  e0413: 'AHU-L4-MOT-04 — Maternity OT',
+  e0414: 'AHU-L4-MOT-02 — Maternity OT',
+  e0415: 'AHU-L4-MOT-03 — Maternity OT',
+  e0416: 'AHU-L4-MOT-01 — Maternity OT',
+  e0419: 'AHU-L4-SF-01 — Shared Facilities 4',
+  // Level 5 cross-level — e0622 has "06" prefix but belongs to Level 5
+  e0622: 'AHU-L5-OT-10 — Main Operation Theatre Complex',
+  // Level 5 native
+  e0501: 'AHU-L5-PICU-02 — Paediatric Intensive Care Unit',
+  e0502: 'AHU-L5-PHDU-01 — Paediatric High Dependency Unit',
+  e0503: 'AHU-L5-AD-01 — Anaesthesiology Department',
+  e0504: 'AHU-L5-RHU-01 — Respiratory & Haemodynamic Unit',
+  e0505: 'AHU-L5-AICU-02 — Adult Intensive Care Unit',
+  e0506: 'AHU-L5-AHDU-01 — Adult High Dependency Unit',
+  e0507: 'AHU-L5-AICU-01 — Adult Intensive Care Unit',
+  e0508: 'AHU-L5-SF-09 — Shared Facilities 5',
+  e0509: 'AHU-L5-PBU-02 — Paediatric Burn Unit',
+  e0510: 'AHU-L5-PICU-01 — Paediatric Intensive Care Unit',
+  e0511: 'AHU-L5-PBU-01 — Paediatric Burn Unit',
+  // Level 6
+  e0602: 'AHU-L6-LIB-01 — Library',
+  e0603: 'AHU-L6-AU-01 — Administration Unit',
+  e0604: 'AHU-L6-AU-02 — Administration Unit',
+  e0605: 'AHU-L6-CSSD-02 — Central Sterile Supply Unit',
+  e0606: 'AHU-L6-CSSD-01 — Central Sterile Supply Unit',
+  e0607: 'AHU-L6-SOC-01 — Specialist Office Complex',
+  e0611: 'AHU-L6-IT-01 — Information Technology Department',
+  e0625: 'AHU-L6-MR-01 — Medical Record',
+  e0626: 'AHU-L6-SF-01 — Shared Facilities 6',
+  e0627: 'AHU-L6-SOC-02 — Specialist Office Complex',
+  e0628: 'AHU-L6-CSSD-03 — Central Sterile Supply Unit',
   // Level 7 — sub-ward abbreviations (OB1–OB4) with unit numbers from directory
-  e0701: 'AHU-L7-OB3-01 \u2014 Obstetric Ward',
-  e0702: 'AHU-L7-OB4-01 \u2014 Obstetric Ward',
-  e0703: 'AHU-L7-OB1-01 \u2014 Obstetric Ward',
-  e0704: 'AHU-L7-OB2-01 \u2014 Obstetric Ward',
+  e0701: 'AHU-L7-OB3-01 — Obstetric Ward',
+  e0702: 'AHU-L7-OB4-01 — Obstetric Ward',
+  e0703: 'AHU-L7-OB1-01 — Obstetric Ward',
+  e0704: 'AHU-L7-OB2-01 — Obstetric Ward',
   // Level 8 — sub-ward abbreviations and non-sequential unit numbers
-  e0801: 'AHU-L8-CW-02 \u2014 1st Class Ward',
-  e0802: 'AHU-L8-CW-01 \u2014 1st Class Ward',
-  e0803: 'AHU-L8-OCC-01 \u2014 On Call Complex',
-  e0804: 'AHU-L8-GY1-01 \u2014 Gynaecology Ward',
-  e0805: 'AHU-L8-GY2-01 \u2014 Gynaecology Ward',
+  e0801: 'AHU-L8-CW-02 — 1st Class Ward',
+  e0802: 'AHU-L8-CW-01 — 1st Class Ward',
+  e0803: 'AHU-L8-OCC-01 — On Call Complex',
+  e0804: 'AHU-L8-GY1-01 — Gynaecology Ward',
+  e0805: 'AHU-L8-GY2-01 — Gynaecology Ward',
   // Level 9 — sub-ward abbreviations (NP, PM5, NW1, NW2) with directory unit numbers
-  e0901: 'AHU-L9-NP-01 \u2014 Nephrology/Dialysis Ward',
-  e0902: 'AHU-L9-NP-02 \u2014 Nephrology/Dialysis Ward',
-  e0903: 'AHU-L9-PM5-01 \u2014 Paediatric Medical Ward',
-  e0904: 'AHU-L9-PM5-02 \u2014 Paediatric Medical Ward',
-  e0905: 'AHU-L9-NW1-01 \u2014 Neonatology Wards',
-  e0906: 'AHU-L9-NW1-02 \u2014 Neonatology Wards',
-  e0907: 'AHU-L9-NW2-02 \u2014 Neonatology Wards',
-  e0908: 'AHU-L9-NW2-01 \u2014 Neonatology Wards',
+  e0901: 'AHU-L9-NP-01 — Nephrology/Dialysis Ward',
+  e0902: 'AHU-L9-NP-02 — Nephrology/Dialysis Ward',
+  e0903: 'AHU-L9-PM5-01 — Paediatric Medical Ward',
+  e0904: 'AHU-L9-PM5-02 — Paediatric Medical Ward',
+  e0905: 'AHU-L9-NW1-01 — Neonatology Wards',
+  e0906: 'AHU-L9-NW1-02 — Neonatology Wards',
+  e0907: 'AHU-L9-NW2-02 — Neonatology Wards',
+  e0908: 'AHU-L9-NW2-01 — Neonatology Wards',
   // Level 10 — sub-ward abbreviations (PM1–PM4) with directory unit numbers
-  e1001: 'AHU-L10-PM1-02 \u2014 Paediatric Medical Ward',
-  e1002: 'AHU-L10-PM1-01 \u2014 Paediatric Medical Ward',
-  e1003: 'AHU-L10-PM3-01 \u2014 Paediatric Medical Ward',
-  e1004: 'AHU-L10-PM3-02 \u2014 Paediatric Medical Ward',
-  e1005: 'AHU-L10-PM4-02 \u2014 Paediatric Medical Ward',
-  e1006: 'AHU-L10-PM4-01 \u2014 Paediatric Medical Ward',
-  e1007: 'AHU-L10-PM2-01 \u2014 Paediatric Medical Ward',
-  e1008: 'AHU-L10-PM2-02 \u2014 Paediatric Medical Ward',
+  e1001: 'AHU-L10-PM1-02 — Paediatric Medical Ward',
+  e1002: 'AHU-L10-PM1-01 — Paediatric Medical Ward',
+  e1003: 'AHU-L10-PM3-01 — Paediatric Medical Ward',
+  e1004: 'AHU-L10-PM3-02 — Paediatric Medical Ward',
+  e1005: 'AHU-L10-PM4-02 — Paediatric Medical Ward',
+  e1006: 'AHU-L10-PM4-01 — Paediatric Medical Ward',
+  e1007: 'AHU-L10-PM2-01 — Paediatric Medical Ward',
+  e1008: 'AHU-L10-PM2-02 — Paediatric Medical Ward',
   // Level 11 — sub-ward abbreviations (PS1–PS4) with directory unit numbers
-  e1101: 'AHU-L11-PS1-02 \u2014 Paediatric Surgical Ward',
-  e1102: 'AHU-L11-PS1-01 \u2014 Paediatric Surgical Ward',
-  e1103: 'AHU-L11-PS2-01 \u2014 Paediatric Surgical Ward',
-  e1104: 'AHU-L11-PS2-02 \u2014 Paediatric Surgical Ward',
-  e1105: 'AHU-L11-PS4-02 \u2014 Paediatric Surgical Ward',
-  e1106: 'AHU-L11-PS4-01 \u2014 Paediatric Surgical Ward',
-  e1107: 'AHU-L11-PS3-01 \u2014 Paediatric Surgical Ward',
-  e1108: 'AHU-L11-PS3-02 \u2014 Paediatric Surgical Ward',
+  e1101: 'AHU-L11-PS1-02 — Paediatric Surgical Ward',
+  e1102: 'AHU-L11-PS1-01 — Paediatric Surgical Ward',
+  e1103: 'AHU-L11-PS2-01 — Paediatric Surgical Ward',
+  e1104: 'AHU-L11-PS2-02 — Paediatric Surgical Ward',
+  e1105: 'AHU-L11-PS4-02 — Paediatric Surgical Ward',
+  e1106: 'AHU-L11-PS4-01 — Paediatric Surgical Ward',
+  e1107: 'AHU-L11-PS3-01 — Paediatric Surgical Ward',
+  e1108: 'AHU-L11-PS3-02 — Paediatric Surgical Ward',
 };
 
 /**
@@ -216,7 +297,7 @@ export function deviceIdToDisplay(deviceId?: string | null): string {
   const nn = match[2];
   if (!entry) return `AHU-L${level}-${nn}`;
   const [abbr, dept] = entry;
-  return `AHU-L${level}-${abbr}-${nn} \u2014 ${dept}`;
+  return `AHU-L${level}-${abbr}-${nn} — ${dept}`;
 }
 
 /**

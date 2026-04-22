@@ -17,7 +17,7 @@ describe('deviceNames utilities', () => {
   it('replaces raw device IDs inside text with readable names', () => {
     const text = 'Devices: e0101, e0201, and e9999.';
     expect(replaceDeviceIds(text)).toContain('AHU-L1-ES-01 — Engineering Services');
-    expect(replaceDeviceIds(text)).toContain('AHU-L2-CDC-01');
+    expect(replaceDeviceIds(text)).toContain('AHU-L2-CDC-03 — Child Development Centre');
     expect(replaceDeviceIds(text)).toContain('AHU-L99-99');
   });
 
