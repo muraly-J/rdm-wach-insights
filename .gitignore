@@ -280,6 +280,11 @@ data/audit_results*.json
 # =========================
 ward_config.yml
 
+# =========================
+# Superpowers (generated phase plans and specs)
+# =========================
+.superpowers/
+
 # ── Runtime artifacts ─────────────────────────────────────────────────
 nohup.out
 

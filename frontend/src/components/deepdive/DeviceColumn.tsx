@@ -94,17 +94,12 @@ const DeviceColumn: React.FC<DeviceColumnProps> = ({
       >
         {isLoading ? (
           <div
+            className="animate-pulse rounded-lg"
             style={{
               height: CHART_CONFIG.HEIGHTS.DEVICE_COLUMN,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#556677',
-              fontSize: 12,
+              background: '#2a3649',
             }}
-          >
-            Loading…
-          </div>
+          />
         ) : chartData.length === 0 ? (
           <div
             style={{

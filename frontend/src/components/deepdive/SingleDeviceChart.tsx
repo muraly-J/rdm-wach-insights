@@ -20,7 +20,7 @@ interface SingleDeviceChartProps {
   deviceLabel: string;
   timeRange: string;
   isOn?: boolean;
-  healthChartData?: Array<{ timestamp?: string; is_on?: boolean; [key: string]: any }>;
+  healthChartData?: Array<{ timestamp?: string; is_on?: boolean;[key: string]: any }>;
   isOnByTimestamp?: Record<string, boolean>;
 }
 
@@ -190,16 +190,12 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
       >
         {isLoading ? (
           <div
+            className="animate-pulse rounded-lg"
             style={{
               height: CHART_CONFIG.HEIGHTS.LOADING_STATE,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#556677',
+              background: '#2a3649',
             }}
-          >
-            Loading Data…
-          </div>
+          />
         ) : chartData.length === 0 ? (
           <div
             style={{

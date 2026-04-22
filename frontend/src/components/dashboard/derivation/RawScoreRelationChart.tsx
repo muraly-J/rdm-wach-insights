@@ -26,6 +26,7 @@ interface RawScoreRelationChartProps {
   chartColor: string;
   headerAction?: React.ReactNode;
   timeRange: TimeRange;
+  loading?: boolean;
 }
 
 // Color palette for up to 7 left-axis series
@@ -56,7 +57,13 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
   chartColor,
   headerAction,
   timeRange,
+  loading = false,
 }) => {
+  if (loading) {
+    return (
+      <div className="card p-6 w-full h-[560px] bg-[#2a3649] rounded-lg animate-pulse border border-[#2e3f55]" />
+    );
+  }
   // Merge all series into a single data array keyed by index
   // Each series maps to key `s0`, `s1`, etc.
   const mergedData: Record<string, any>[] = [];
