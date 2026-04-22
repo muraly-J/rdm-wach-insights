@@ -20,7 +20,7 @@ interface SingleDeviceChartProps {
   deviceLabel: string;
   timeRange: string;
   isOn?: boolean;
-  healthChartData?: Array<{ timestamp?: string; is_on?: boolean;[key: string]: any }>;
+  healthChartData?: Array<{ timestamp?: string; is_on?: boolean; [key: string]: any }>;
   isOnByTimestamp?: Record<string, boolean>;
 }
 
