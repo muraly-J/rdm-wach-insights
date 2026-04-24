@@ -15,6 +15,14 @@ from core.logger import get_logger
 
 logger = get_logger(__name__)
 
+# ── Safe notifier import ───────────────────────────────────────────────────────
+
+try:
+    from bot.push.notifier import send_draft_card as _send_draft_card
+    _NOTIFIER_AVAILABLE = True
+except ImportError:
+    _NOTIFIER_AVAILABLE = False
+
 # ── Lazy singleton ─────────────────────────────────────────────────────────────
 
 _db_instance = None
@@ -56,17 +64,18 @@ async def handle_create_work_order(
     Create a work order for an AHU.
 
     Severity uses the 4 health tiers (single source of truth: fair_health_scoring.py):
-      - "Critical"         → auto-approved, agent should call send_notification next
-      - "Maintenance Soon" → draft, needs human approval via HITL
+      - "Critical"         → draft, notified to Technicians group for claim
+      - "Maintenance Soon" → draft, needs human review via HITL
       - "Monitor"          → draft, logged only
 
-    Returns the created work order dict with id and status.
+    All work orders start as 'draft'. Technicians claim and verify; Admins set priority/status.
+    Returns the created work order dict with id, status, and ticket_no.
     """
     db = _get_db()
     level = _level_from_ahu_id(ahu_id)
 
-    # Severity-based initial status
-    status = "approved" if severity == "Critical" else "draft"
+    # Always start as draft — technicians claim and verify, admins promote
+    status = "draft"
 
     wo_id = db.create_work_order(
         ahu_id=ahu_id,
@@ -79,11 +88,32 @@ async def handle_create_work_order(
         status=status,
     )
 
-    wo = db.get_work_order(wo_id)
-    logger.info(f"create_work_order: id={wo_id} ahu={ahu_id} severity={severity} status={status}")
+    # Generate and persist a human-readable ticket number
+    ticket_no = db.generate_ticket_no()
+    now = db._now()
+    with db._connect() as conn:
+        conn.execute(
+            "UPDATE work_orders SET ticket_no = ?, updated_at = ? WHERE id = ?",
+            [ticket_no, now, wo_id],
+        )
 
-    # Convert any non-serialisable values to strings
-    return {k: (str(v) if hasattr(v, 'isoformat') else v) for k, v in wo.items()}
+    wo = db.get_work_order(wo_id)
+    logger.info(
+        f"create_work_order: id={wo_id} ticket={ticket_no} ahu={ahu_id} "
+        f"severity={severity} status={status}"
+    )
+
+    # Serialise the work order dict (convert timestamps etc.)
+    wo_dict = {k: (str(v) if hasattr(v, 'isoformat') else v) for k, v in wo.items()}
+
+    # Best-effort: notify the Technicians group with the draft card
+    if _NOTIFIER_AVAILABLE:
+        try:
+            await _send_draft_card(bot=None, ticket_no=ticket_no, wo=wo_dict)
+        except Exception as e:
+            logger.warning(f"Could not send draft card: {e}")
+
+    return wo_dict
 
 
 # ── send_notification ──────────────────────────────────────────────────────────

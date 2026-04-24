@@ -37,10 +37,13 @@ async def test_create_work_order_warning_creates_draft(db):
     assert result["status"] == "draft"
     assert result["id"] > 0
     assert result["ahu_id"] == "e0402"
+    assert result["ticket_no"] is not None
+    assert result["ticket_no"].startswith("TCK-")
 
 
 @pytest.mark.asyncio
-async def test_create_work_order_critical_creates_approved(db):
+async def test_create_work_order_critical_creates_draft(db):
+    """Critical work orders now start as draft — technicians claim, admins promote."""
     from tools.action_tools import handle_create_work_order
 
     result = await handle_create_work_order(
@@ -49,7 +52,9 @@ async def test_create_work_order_critical_creates_approved(db):
         description="FAIR score 28",
         severity="Critical",
     )
-    assert result["status"] == "approved"
+    assert result["status"] == "draft"
+    assert result["ticket_no"] is not None
+    assert result["ticket_no"].startswith("TCK-")
 
 
 @pytest.mark.asyncio
@@ -135,16 +140,17 @@ async def test_send_notification_updates_work_order(db, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_update_work_order_valid_transition(db):
+    """draft → pending_tech_review is the first valid transition in the new lifecycle."""
     from tools.action_tools import handle_create_work_order, handle_update_work_order
 
     wo = await handle_create_work_order(ahu_id="e0101", title="Test", severity="warning")
     result = await handle_update_work_order(
         work_order_id=wo["id"],
-        status="approved",
+        status="pending_tech_review",
         approved_by="admin",
     )
     assert result["success"] is True
-    assert result["new_status"] == "approved"
+    assert result["new_status"] == "pending_tech_review"
 
 
 @pytest.mark.asyncio
