@@ -18,7 +18,7 @@ PRIORITY_ICONS: dict[str, str] = {
 
 STATUS_ICONS: dict[str, str] = {
     "draft": "📋",
-    "pending_tech_review": "📋",
+    "pending_tech_review": "🔍",
     "open": "🟢",
     "in_progress": "🔵",
     "resolved": "✅",
@@ -94,5 +94,5 @@ def status_change_card(
         f"Proposed: {proposed_icon} {proposed_status.replace('_', ' ').title()}",
     ]
     if notes:
-        lines.append(f'\nNote: "{notes}"')
+        lines.extend(["", f'Note: "{notes}"'])
     return "\n".join(lines)
