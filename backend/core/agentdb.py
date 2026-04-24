@@ -26,13 +26,14 @@ else:
     _DEFAULT_DB_PATH = str(settings.data_dir / "healthdb.duckdb")
 
 # Valid status transitions: key → set of allowed next states
+# Updated for 2-role model: Agent → Technician verify → Admin sets priority/status
 _VALID_TRANSITIONS: dict[str, set[str]] = {
-    "draft": {"pending_engineer_review", "pending_approval", "approved", "dismissed"},
-    "pending_engineer_review": {"pending_approval", "dismissed"},
-    "pending_approval": {"approved", "dismissed"},
-    "approved": {"in_progress", "resolved", "dismissed"},
-    "in_progress": {"resolved"},
-    "resolved": set(),
+    "draft": {"pending_tech_review", "dismissed"},
+    "pending_tech_review": {"open", "dismissed"},
+    "open": {"in_progress", "closed"},
+    "in_progress": {"resolved", "open"},
+    "resolved": {"closed", "open"},
+    "closed": set(),
     "dismissed": set(),
 }
 
@@ -82,6 +83,23 @@ CREATE TABLE IF NOT EXISTS watchman_queue (
 );
 
 CREATE SEQUENCE IF NOT EXISTS watchman_queue_id_seq START 1;
+
+CREATE TABLE IF NOT EXISTS status_change_requests (
+    id              INTEGER PRIMARY KEY,
+    ticket_no       VARCHAR NOT NULL,
+    work_order_id   INTEGER NOT NULL,
+    requested_by    VARCHAR NOT NULL,
+    current_status  VARCHAR NOT NULL,
+    proposed_status VARCHAR NOT NULL,
+    notes           VARCHAR,
+    decision        VARCHAR,
+    decided_by      VARCHAR,
+    decided_at      TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL
+);
+
+CREATE SEQUENCE IF NOT EXISTS status_change_seq START 1;
+CREATE SEQUENCE IF NOT EXISTS ticket_no_seq START 1;
 """
 
 
@@ -98,10 +116,21 @@ class AgentDB:
     def _init_tables(self) -> None:
         with self._connect() as conn:
             conn.execute(_SCHEMA_SQL)
-            try:
-                conn.execute("ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS assigned_to VARCHAR")
-            except Exception as e:
-                logger.debug(f"_init_tables migration: assigned_to column guard: {e}")
+            # Migrations for new ticket columns
+            migrations = [
+                "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS assigned_to VARCHAR",
+                "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS ticket_no VARCHAR",
+                "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS category VARCHAR",
+                "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS priority VARCHAR DEFAULT 'not_set'",
+                "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS claimed_by VARCHAR",
+                "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ",
+                "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS attachments JSON",
+            ]
+            for sql in migrations:
+                try:
+                    conn.execute(sql)
+                except Exception as e:
+                    logger.debug(f"_init_tables migration: {e}")
 
     def _now(self) -> str:
         return datetime.now(timezone.utc).isoformat()
@@ -227,12 +256,12 @@ class AgentDB:
         return True
 
     def assign_work_order(self, wo_id: int, assigned_to: str) -> bool:
-        """Set assigned_to on an approved or in_progress work order without status change."""
+        """Set assigned_to on an open or in_progress work order without status change."""
         wo = self.get_work_order(wo_id)
         if not wo:
             logger.warning(f"assign_work_order: id={wo_id} not found")
             return False
-        if wo["status"] not in ("approved", "in_progress"):
+        if wo["status"] not in ("open", "in_progress"):
             logger.warning(
                 f"assign_work_order: cannot assign work order in status '{wo['status']}'"
             )
@@ -244,6 +273,188 @@ class AgentDB:
                 [assigned_to, now, wo_id],
             )
         return True
+
+    # ── Ticket Number ──────────────────────────────────────────────────────────
+
+    def generate_ticket_no(self) -> str:
+        """Generate ever-incrementing TCK-NNN format ticket number."""
+        with self._connect() as conn:
+            seq = conn.execute("SELECT nextval('ticket_no_seq')").fetchone()[0]
+        return f"TCK-{seq:03d}"
+
+    # ── Claim ──────────────────────────────────────────────────────────────────
+
+    def claim_work_order(self, wo_id: int, claimed_by: str) -> bool:
+        """
+        Atomically claim a work order for investigation. First-come-first-served.
+        Returns True if claim succeeded, False if already claimed.
+        """
+        wo = self.get_work_order(wo_id)
+        if not wo:
+            return False
+        if wo.get("claimed_by"):
+            return False  # already claimed
+        now = self._now()
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE work_orders
+                SET claimed_by = ?, claimed_at = ?, updated_at = ?
+                WHERE id = ? AND claimed_by IS NULL
+                """,
+                [claimed_by, now, now, wo_id],
+            )
+            # Verify we won the claim
+            row = conn.execute(
+                "SELECT claimed_by FROM work_orders WHERE id = ?", [wo_id]
+            ).fetchone()
+        return row is not None and row[0] == claimed_by
+
+    # ── Edit Fields ────────────────────────────────────────────────────────────
+
+    def edit_work_order_fields(
+        self,
+        wo_id: int,
+        title: str | None = None,
+        description: str | None = None,
+        category: str | None = None,
+        attachments: list[dict] | None = None,
+    ) -> bool:
+        """Update editable fields on a work order (used by technician review)."""
+        wo = self.get_work_order(wo_id)
+        if not wo:
+            return False
+        now = self._now()
+        updates = ["updated_at = ?"]
+        params: list[Any] = [now]
+        if title is not None:
+            updates.append("title = ?")
+            params.append(title)
+        if description is not None:
+            updates.append("description = ?")
+            params.append(description)
+        if category is not None:
+            updates.append("category = ?")
+            params.append(category)
+        if attachments is not None:
+            updates.append("attachments = ?")
+            params.append(json.dumps(attachments))
+        params.append(wo_id)
+        with self._connect() as conn:
+            conn.execute(
+                f"UPDATE work_orders SET {', '.join(updates)} WHERE id = ?",
+                params,
+            )
+        return True
+
+    # ── Priority ───────────────────────────────────────────────────────────────
+
+    def set_priority(self, wo_id: int, priority: str) -> bool:
+        """Set priority on a work order. Valid values: low, medium, high, not_set."""
+        if priority not in ("low", "medium", "high", "not_set"):
+            return False
+        wo = self.get_work_order(wo_id)
+        if not wo:
+            return False
+        now = self._now()
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE work_orders SET priority = ?, updated_at = ? WHERE id = ?",
+                [priority, now, wo_id],
+            )
+        return True
+
+    # ── Status Change Requests ─────────────────────────────────────────────────
+
+    def create_status_change_request(
+        self,
+        ticket_no: str,
+        work_order_id: int,
+        requested_by: str,
+        current_status: str,
+        proposed_status: str,
+        notes: str | None = None,
+    ) -> int:
+        """Create a status change request. Returns the request ID."""
+        now = self._now()
+        with self._connect() as conn:
+            result = conn.execute(
+                """
+                INSERT INTO status_change_requests
+                    (id, ticket_no, work_order_id, requested_by,
+                     current_status, proposed_status, notes, created_at)
+                VALUES (nextval('status_change_seq'), ?, ?, ?, ?, ?, ?, ?)
+                RETURNING id
+                """,
+                [ticket_no, work_order_id, requested_by,
+                 current_status, proposed_status, notes, now],
+            ).fetchone()
+        return result[0]
+
+    def get_status_change_request(self, request_id: int) -> dict | None:
+        """Get a status change request by ID."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM status_change_requests WHERE id = ?", [request_id]
+            ).fetchone()
+        if not row:
+            return None
+        cols = [
+            "id", "ticket_no", "work_order_id", "requested_by",
+            "current_status", "proposed_status", "notes",
+            "decision", "decided_by", "decided_at", "created_at",
+        ]
+        d = dict(zip(cols, row))
+        for k in ("decided_at", "created_at"):
+            if d[k] and hasattr(d[k], "isoformat"):
+                d[k] = d[k].isoformat()
+        return d
+
+    def decide_status_change(
+        self, request_id: int, decision: str, decided_by: str
+    ) -> bool:
+        """Approve or reject a status change request."""
+        if decision not in ("approved", "rejected"):
+            return False
+        now = self._now()
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE status_change_requests
+                SET decision = ?, decided_by = ?, decided_at = ?
+                WHERE id = ? AND decision IS NULL
+                """,
+                [decision, decided_by, now, request_id],
+            )
+            row = conn.execute(
+                "SELECT decision FROM status_change_requests WHERE id = ?",
+                [request_id],
+            ).fetchone()
+        return row is not None and row[0] == decision
+
+    def list_pending_status_changes(self) -> list[dict]:
+        """List all pending (undecided) status change requests."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM status_change_requests
+                WHERE decision IS NULL
+                ORDER BY created_at DESC
+                """
+            ).fetchall()
+        cols = [
+            "id", "ticket_no", "work_order_id", "requested_by",
+            "current_status", "proposed_status", "notes",
+            "decision", "decided_by", "decided_at", "created_at",
+        ]
+        results = []
+        for row in rows:
+            d = dict(zip(cols, row))
+            for k in ("decided_at", "created_at"):
+                if d[k] and hasattr(d[k], "isoformat"):
+                    d[k] = d[k].isoformat()
+            results.append(d)
+        return results
 
     # ── Agent State ────────────────────────────────────────────────────────────
 

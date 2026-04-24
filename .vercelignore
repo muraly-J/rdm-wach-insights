@@ -1,4 +1,5 @@
 backend/
+venv/
 data/
 logs/
 paraquet_data/
