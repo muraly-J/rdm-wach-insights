@@ -60,7 +60,7 @@ def test_approve_work_order(client, tmp_path, monkeypatch):
 
     resp = client.post(f"/api/work-orders/{wo_id}/approve")
     assert resp.status_code == 200
-    assert resp.json()["status"] == "approved"
+    assert resp.json()["status"] == "open"
 
 
 def test_dismiss_work_order(client, tmp_path, monkeypatch):
@@ -78,28 +78,9 @@ def test_dismiss_work_order(client, tmp_path, monkeypatch):
     assert resp.json()["status"] == "dismissed"
 
 
-def test_sendback_work_order_from_forced_status(client, tmp_path, monkeypatch):
-    from core.agentdb import AgentDB
-
-    db = AgentDB(str(tmp_path / "test.duckdb"))
-    wo_id = db.create_work_order(ahu_id="e0402", level=4, title="Test", severity="warning")
-    db.update_work_order(wo_id, status="pending_approval")
-    db.update_work_order(wo_id, status="approved")
-    db.update_work_order(wo_id, status="in_progress")
-
-    import duckdb
-
-    with duckdb.connect(db._path) as conn:
-        conn.execute(
-            "UPDATE work_orders SET status = ? WHERE id = ?", ["pending_engineer_review", wo_id]
-        )
-
-    import core.agentdb as m
-
-    monkeypatch.setattr(m, "_db_instance", db)
-    resp = client.post(f"/api/work-orders/{wo_id}/sendback")
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "pending_approval"
+def test_sendback_work_order_from_forced_status(client):
+    resp = client.post("/api/work-orders/1/sendback")
+    assert resp.status_code == 410
 
 
 def test_approve_nonexistent_work_order_returns_404(client):
@@ -107,17 +88,9 @@ def test_approve_nonexistent_work_order_returns_404(client):
     assert resp.status_code == 404
 
 
-def test_push_to_engineers(client, tmp_path, monkeypatch):
-    from core.agentdb import AgentDB
-
-    db = AgentDB(str(tmp_path / "test.duckdb"))
-    wo_id = db.create_work_order(ahu_id="e0402", level=4, title="Test", severity="warning")
-    import core.agentdb as m
-
-    monkeypatch.setattr(m, "_db_instance", db)
-    resp = client.post(f"/api/work-orders/{wo_id}/push-to-engineers")
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "pending_engineer_review"
+def test_push_to_engineers(client):
+    resp = client.post("/api/work-orders/1/push-to-engineers")
+    assert resp.status_code == 410
 
 
 def test_start_work_order(client, tmp_path, monkeypatch):
@@ -125,7 +98,8 @@ def test_start_work_order(client, tmp_path, monkeypatch):
 
     db = AgentDB(str(tmp_path / "test.duckdb"))
     wo_id = db.create_work_order(ahu_id="e0402", level=4, title="Test", severity="warning")
-    db.update_work_order(wo_id, status="approved", assigned_to="any")
+    db.update_work_order(wo_id, status="pending_tech_review")
+    db.update_work_order(wo_id, status="open", assigned_to="any")
     import core.agentdb as m
 
     monkeypatch.setattr(m, "_db_instance", db)
@@ -139,7 +113,8 @@ def test_resolve_work_order(client, tmp_path, monkeypatch):
 
     db = AgentDB(str(tmp_path / "test.duckdb"))
     wo_id = db.create_work_order(ahu_id="e0402", level=4, title="Test", severity="warning")
-    db.update_work_order(wo_id, status="approved")
+    db.update_work_order(wo_id, status="pending_tech_review")
+    db.update_work_order(wo_id, status="open")
     db.update_work_order(wo_id, status="in_progress")
     import core.agentdb as m
 
@@ -154,7 +129,8 @@ def test_assign_work_order(client, tmp_path, monkeypatch):
 
     db = AgentDB(str(tmp_path / "test.duckdb"))
     wo_id = db.create_work_order(ahu_id="e0402", level=4, title="Test", severity="warning")
-    db.update_work_order(wo_id, status="approved")
+    db.update_work_order(wo_id, status="pending_tech_review")
+    db.update_work_order(wo_id, status="open")
     import core.agentdb as m
 
     monkeypatch.setattr(m, "_db_instance", db)
@@ -169,8 +145,10 @@ def test_list_work_orders_filter_assigned_to(client, tmp_path, monkeypatch):
     db = AgentDB(str(tmp_path / "test.duckdb"))
     wo1 = db.create_work_order(ahu_id="e0101", level=1, title="T1", severity="warning")
     wo2 = db.create_work_order(ahu_id="e0102", level=1, title="T2", severity="warning")
-    db.update_work_order(wo1, status="approved", assigned_to="any")
-    db.update_work_order(wo2, status="approved", assigned_to="999")
+    db.update_work_order(wo1, status="pending_tech_review")
+    db.update_work_order(wo2, status="pending_tech_review")
+    db.update_work_order(wo1, status="open", assigned_to="any")
+    db.update_work_order(wo2, status="open", assigned_to="999")
     import core.agentdb as m
 
     monkeypatch.setattr(m, "_db_instance", db)
@@ -179,18 +157,9 @@ def test_list_work_orders_filter_assigned_to(client, tmp_path, monkeypatch):
     assert len(resp.json()["work_orders"]) == 1
 
 
-def test_sendback_work_order(client, tmp_path, monkeypatch):
-    from core.agentdb import AgentDB
-
-    db = AgentDB(str(tmp_path / "test.duckdb"))
-    wo_id = db.create_work_order(ahu_id="e0402", level=4, title="Test", severity="warning")
-    db.update_work_order(wo_id, status="pending_engineer_review")
-    import core.agentdb as m
-
-    monkeypatch.setattr(m, "_db_instance", db)
-    resp = client.post(f"/api/work-orders/{wo_id}/sendback")
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "pending_approval"
+def test_sendback_work_order(client):
+    resp = client.post("/api/work-orders/1/sendback")
+    assert resp.status_code == 410
 
 
 def test_delete_work_order(client, tmp_path, monkeypatch):

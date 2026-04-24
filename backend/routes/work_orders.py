@@ -66,20 +66,25 @@ async def get_work_order(wo_id: int) -> dict:
 
 @router.post("/work-orders/{wo_id}/approve")
 async def approve_work_order(wo_id: int) -> dict:
+    """Fast-track a draft ticket to open: draft → pending_tech_review → open."""
     db = _get_db()
     wo = db.get_work_order(wo_id)
     if not wo:
         raise HTTPException(status_code=404, detail=f"Work order {wo_id} not found")
 
-    success = db.update_work_order(wo_id, status="approved", approved_by="user")
+    if wo["status"] == "draft":
+        db.update_work_order(wo_id, status="pending_tech_review")
+
+    success = db.update_work_order(wo_id, status="open", approved_by="user")
     if not success:
+        wo = db.get_work_order(wo_id)
         raise HTTPException(
             status_code=400,
             detail=f"Cannot approve work order in status '{wo['status']}'"
         )
 
-    logger.info(f"work_order {wo_id} approved by user")
-    return {"id": wo_id, "status": "approved"}
+    logger.info(f"work_order {wo_id} approved (fast-tracked to open)")
+    return {"id": wo_id, "status": "open"}
 
 
 @router.post("/work-orders/{wo_id}/dismiss")
@@ -102,18 +107,10 @@ async def dismiss_work_order(wo_id: int) -> dict:
 
 @router.post("/work-orders/{wo_id}/push-to-engineers")
 async def push_work_order_to_engineers(wo_id: int) -> dict:
-    db = _get_db()
-    wo = db.get_work_order(wo_id)
-    if not wo:
-        raise HTTPException(status_code=404, detail=f"Work order {wo_id} not found")
-    success = db.update_work_order(wo_id, status="pending_engineer_review")
-    if not success:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot push work order in status '{wo['status']}' to engineers",
-        )
-    logger.info(f"work_order {wo_id} pushed to engineers")
-    return {"id": wo_id, "status": "pending_engineer_review"}
+    raise HTTPException(
+        status_code=410,
+        detail="Engineer review role removed. Use /approve to open tickets directly.",
+    )
 
 
 @router.post("/work-orders/{wo_id}/start")
@@ -164,18 +161,10 @@ async def assign_work_order(wo_id: int, body: WorkOrderAssign) -> dict:
     return {"id": wo_id, "assigned_to": body.assigned_to}
 @router.post("/work-orders/{wo_id}/sendback")
 async def sendback_work_order(wo_id: int) -> dict:
-    db = _get_db()
-    wo = db.get_work_order(wo_id)
-    if not wo:
-        raise HTTPException(status_code=404, detail=f"Work order {wo_id} not found")
-    success = db.update_work_order(wo_id, status="pending_approval")
-    if not success:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot send back work order in status '{wo['status']}'",
-        )
-    logger.info(f"work_order {wo_id} sent back to manager by engineer")
-    return {"id": wo_id, "status": "pending_approval"}
+    raise HTTPException(
+        status_code=410,
+        detail="Engineer sendback removed. Technicians request status changes directly.",
+    )
 
 
 @router.delete("/work-orders/{wo_id}")
