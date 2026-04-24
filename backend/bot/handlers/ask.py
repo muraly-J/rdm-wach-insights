@@ -38,6 +38,8 @@ async def cmd_ask(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         from bot.agent.ask import ask
         answer = await ask(question=question, user_id=user_id, role=role)
+        if not answer or not isinstance(answer, str):
+            raise ValueError(f"Unexpected agent response: {answer!r}")
     except Exception as e:
         logger.warning(f"Agent ask failed: {e}")
         await update.message.reply_text("⚠️ Could not reach the WACH agent. Try again shortly.")

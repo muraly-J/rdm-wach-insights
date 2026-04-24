@@ -27,22 +27,24 @@ class RateLimiter:
             return True
 
 
-# Default instances (created once, shared)
-_default_limiter: RateLimiter | None = None
-_ask_limiter: RateLimiter | None = None
+def _make_default_limiter() -> RateLimiter:
+    from bot.config import BOT_RATE_LIMIT_DEFAULT
+    return RateLimiter(BOT_RATE_LIMIT_DEFAULT, 60)
+
+
+def _make_ask_limiter() -> RateLimiter:
+    from bot.config import BOT_RATE_LIMIT_ASK
+    return RateLimiter(BOT_RATE_LIMIT_ASK, 300)  # 5 per 5 min
+
+
+# Singletons initialised at import time — no lazy-init race condition.
+_default_limiter: RateLimiter = _make_default_limiter()
+_ask_limiter: RateLimiter = _make_ask_limiter()
 
 
 def get_default_limiter() -> RateLimiter:
-    global _default_limiter
-    if _default_limiter is None:
-        from bot.config import BOT_RATE_LIMIT_DEFAULT
-        _default_limiter = RateLimiter(BOT_RATE_LIMIT_DEFAULT, 60)
     return _default_limiter
 
 
 def get_ask_limiter() -> RateLimiter:
-    global _ask_limiter
-    if _ask_limiter is None:
-        from bot.config import BOT_RATE_LIMIT_ASK
-        _ask_limiter = RateLimiter(BOT_RATE_LIMIT_ASK, 300)  # 5 per 5 min
     return _ask_limiter
