@@ -193,21 +193,24 @@ async def notify_technicians(
 
 
 async def send_draft_card(
-    bot: Bot,
+    bot: Bot | None,
     ticket_no: str,
     wo: dict[str, Any],
+    token: str | None = None,
 ) -> None:
     """Send the '📋 New Draft Ticket' card to TECHNICIANS_CHAT_ID with a claim button."""
     if not _TECHNICIANS_CHAT_ID:
         return
+    effective_bot = bot if bot is not None else Bot(token=token or _BOT_TOKEN)
     try:
-        await bot.send_message(
+        await effective_bot.send_message(
             chat_id=_TECHNICIANS_CHAT_ID,
             text=_format_draft_card(ticket_no, wo),
             reply_markup=_draft_card_keyboard(wo["id"]),
+            parse_mode="Markdown",
         )
     except Exception as e:
-        logger.warning(f"send_draft_card: failed to send draft card: {e}")
+        logger.warning(f"Could not send draft card: {e}")
 
 
 async def emit(event: str, wo: dict[str, Any], bot: Bot | None = None, token: str | None = None) -> None:
