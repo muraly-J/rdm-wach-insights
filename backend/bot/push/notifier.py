@@ -6,19 +6,21 @@ bot/push/notifier.py
 Formats and sends rich Telegram alerts with inline keyboards.
 Called by action_tools.handle_send_notification() and directly by bot handlers.
 
-No backend model imports — only telegram lib and os.environ.
+2-role model: technicians + admins only (engineer role removed).
+No backend model imports — only telegram lib and bot.config.
 """
 
 import json
-import os
+from datetime import datetime, timezone
 from typing import Any
 
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
-_MANAGERS_CHAT_ID: int = int(os.environ.get("MANAGERS_CHAT_ID", "0"))
-_ENGINEERS_CHAT_ID: int = int(os.environ.get("ENGINEERS_CHAT_ID", "0"))
-_TECHNICIANS_CHAT_ID: int = int(os.environ.get("TECHNICIANS_CHAT_ID", "0"))
-_BOT_TOKEN: str = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+from bot.config import ADMIN_CHAT_ID, TECHNICIANS_CHAT_ID, BOT_TOKEN
+
+_ADMIN_CHAT_ID: int = ADMIN_CHAT_ID
+_TECHNICIANS_CHAT_ID: int = TECHNICIANS_CHAT_ID
+_BOT_TOKEN: str = BOT_TOKEN
 
 
 # ── Message formatters ─────────────────────────────────────────────────────────
@@ -57,20 +59,6 @@ def _format_manager_alert(wo: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _format_engineer_review(wo: dict[str, Any]) -> str:
-    fair_str = parse_fair(wo.get("fair_snapshot"))
-    lines = [
-        f"🔍 Review Requested — Work Order #{wo.get('id')}",
-        "",
-        f"Title: {wo.get('title')}",
-        f"Description: {wo.get('description') or 'No description'}",
-        f"AHU: {wo.get('ahu_id')} · Level {wo.get('level')}",
-    ]
-    if fair_str:
-        lines.append(f"FAIR snapshot: {fair_str}")
-    return "\n".join(lines)
-
-
 def _format_technician_assignment(wo: dict[str, Any]) -> str:
     lines = [
         f"🔧 New Work Order Assigned — #{wo.get('id')}",
@@ -82,6 +70,48 @@ def _format_technician_assignment(wo: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _format_draft_card(ticket_no: str, wo: dict[str, Any]) -> str:
+    """Format the 'New Draft Ticket' card sent to technicians when a draft is created."""
+    description = (wo.get("description") or "")[:200]
+    created_at = wo.get("created_at")
+    if created_at:
+        try:
+            if isinstance(created_at, str):
+                # Parse ISO string; strip timezone for a simple relative display
+                dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            else:
+                dt = created_at
+            now = datetime.now(tz=timezone.utc)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            delta = now - dt
+            minutes = int(delta.total_seconds() // 60)
+            if minutes < 1:
+                created_relative = "just now"
+            elif minutes < 60:
+                created_relative = f"{minutes}m ago"
+            else:
+                hours = minutes // 60
+                created_relative = f"{hours}h ago"
+        except Exception:
+            created_relative = str(created_at)[:16].replace("T", " ")
+    else:
+        created_relative = "unknown"
+
+    lines = [
+        f"📋 New Draft Ticket — {ticket_no}",
+        "",
+        f"Subject: {wo.get('title')}",
+        f"Category: {wo.get('category', 'Uncategorised')}",
+        f"AHU: {wo.get('ahu_id')} · Level {wo.get('level')}",
+        "",
+        description,
+        "",
+        f"Created by: 🤖 Agent · {created_relative}",
+    ]
+    return "\n".join(lines)
+
+
 # ── Inline keyboards ───────────────────────────────────────────────────────────
 
 def _manager_alert_keyboard(wo_id: int) -> InlineKeyboardMarkup:
@@ -89,7 +119,6 @@ def _manager_alert_keyboard(wo_id: int) -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton("✅ Approve", callback_data=f"approve:{wo_id}"),
             InlineKeyboardButton("❌ Dismiss", callback_data=f"dismiss:{wo_id}"),
-            InlineKeyboardButton("🔍 Push to Engineers", callback_data=f"push_engineers:{wo_id}"),
         ]
     ])
 
@@ -103,15 +132,6 @@ def _assignment_keyboard(wo_id: int) -> InlineKeyboardMarkup:
     ])
 
 
-def _engineer_review_keyboard(wo_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("📝 Edit", callback_data=f"edit:{wo_id}"),
-            InlineKeyboardButton("✅ Send Back to Manager", callback_data=f"sendback:{wo_id}"),
-        ]
-    ])
-
-
 def _technician_assignment_keyboard(wo_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [
@@ -121,29 +141,25 @@ def _technician_assignment_keyboard(wo_id: int) -> InlineKeyboardMarkup:
     ])
 
 
+def _draft_card_keyboard(wo_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🙋 I'll Investigate", callback_data=f"claim_ticket:{wo_id}"),
+        ]
+    ])
+
+
 # ── Public send functions ──────────────────────────────────────────────────────
 
-async def notify_managers(wo: dict[str, Any], token: str | None = None) -> None:
-    """Send work order alert to managers group with approve/dismiss/engineers buttons."""
-    if not _MANAGERS_CHAT_ID:
+async def notify_admins(wo: dict[str, Any], token: str | None = None) -> None:
+    """Send work order alert to admins group with approve/dismiss buttons."""
+    if not _ADMIN_CHAT_ID:
         return
     bot = Bot(token=token or _BOT_TOKEN)
     await bot.send_message(
-        chat_id=_MANAGERS_CHAT_ID,
+        chat_id=_ADMIN_CHAT_ID,
         text=_format_manager_alert(wo),
         reply_markup=_manager_alert_keyboard(wo["id"]),
-    )
-
-
-async def notify_engineers(wo: dict[str, Any], token: str | None = None) -> None:
-    """Send review request to engineers group with edit/sendback buttons."""
-    if not _ENGINEERS_CHAT_ID:
-        return
-    bot = Bot(token=token or _BOT_TOKEN)
-    await bot.send_message(
-        chat_id=_ENGINEERS_CHAT_ID,
-        text=_format_engineer_review(wo),
-        reply_markup=_engineer_review_keyboard(wo["id"]),
     )
 
 
@@ -163,15 +179,41 @@ async def notify_technicians(
     )
 
 
-async def notify_group(
-    recipient: str,
+async def send_draft_card(
+    bot: Bot,
+    ticket_no: str,
     wo: dict[str, Any],
-    token: str,
 ) -> None:
-    """Route a group notification by recipient name."""
-    if recipient == "manager":
-        await notify_managers(wo, token=token)
-    elif recipient == "engineers":
-        await notify_engineers(wo, token=token)
-    elif recipient == "technician":
-        await notify_technicians(wo, token=token)
+    """Send the '📋 New Draft Ticket' card to TECHNICIANS_CHAT_ID with a claim button."""
+    if not _TECHNICIANS_CHAT_ID:
+        return
+    await bot.send_message(
+        chat_id=_TECHNICIANS_CHAT_ID,
+        text=_format_draft_card(ticket_no, wo),
+        reply_markup=_draft_card_keyboard(wo["id"]),
+    )
+
+
+async def emit(event: str, wo: dict[str, Any], bot: Bot | None = None, token: str | None = None) -> None:
+    """
+    Dispatcher: routes a work-order lifecycle event to the right groups.
+
+    Events:
+      "draft_created"   → send_draft_card to technicians
+      "ticket_opened"   → notify_admins
+      "status_changed"  → notify_admins + notify_technicians
+    """
+    effective_token = token or _BOT_TOKEN
+
+    if event == "draft_created":
+        if bot is None:
+            bot = Bot(token=effective_token)
+        ticket_no = f"#{wo.get('id', '?')}"
+        await send_draft_card(bot, ticket_no, wo)
+
+    elif event == "ticket_opened":
+        await notify_admins(wo, token=effective_token)
+
+    elif event == "status_changed":
+        await notify_admins(wo, token=effective_token)
+        await notify_technicians(wo, token=effective_token)
