@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from telegram.ext import Application
 
-from bot.config import BOT_TOKEN, BOT_ADMIN_IDS
+from bot.config import BOT_ADMIN_IDS, BOT_TOKEN
 from bot.handlers import handler_registry
 
 logging.basicConfig(

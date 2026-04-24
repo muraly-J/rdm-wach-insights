@@ -404,7 +404,7 @@ class AgentDB:
             "current_status", "proposed_status", "notes",
             "decision", "decided_by", "decided_at", "created_at",
         ]
-        d = dict(zip(cols, row))
+        d = dict(zip(cols, row))  # noqa: B905
         for k in ("decided_at", "created_at"):
             if d[k] and hasattr(d[k], "isoformat"):
                 d[k] = d[k].isoformat()
@@ -449,7 +449,7 @@ class AgentDB:
         ]
         results = []
         for row in rows:
-            d = dict(zip(cols, row))
+            d = dict(zip(cols, row))  # noqa: B905
             for k in ("decided_at", "created_at"):
                 if d[k] and hasattr(d[k], "isoformat"):
                     d[k] = d[k].isoformat()

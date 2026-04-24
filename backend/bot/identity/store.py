@@ -15,7 +15,6 @@ from datetime import datetime, timezone
 from typing import Any
 
 import duckdb
-
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -141,7 +140,7 @@ class IdentityStore:
             "user_id", "telegram_username", "display_name",
             "role", "status", "registered_at", "approved_by", "approved_at",
         ]
-        data = dict(zip(cols, row))
+        data = dict(zip(cols, row))  # noqa: B905
         # Convert datetime objects to strings
         for k in ("registered_at", "approved_at"):
             if data[k] and hasattr(data[k], "isoformat"):
@@ -152,7 +151,7 @@ class IdentityStore:
         """Set user status to 'active'. Returns True if user existed."""
         now = self._now()
         with self._connect() as conn:
-            result = conn.execute(
+            conn.execute(
                 """
                 UPDATE bot_users
                 SET status = 'active', approved_by = ?, approved_at = ?
@@ -215,7 +214,7 @@ class IdentityStore:
         ]
         users = []
         for row in rows:
-            data = dict(zip(cols, row))
+            data = dict(zip(cols, row))  # noqa: B905
             for k in ("registered_at", "approved_at"):
                 if data[k] and hasattr(data[k], "isoformat"):
                     data[k] = data[k].isoformat()
@@ -284,7 +283,7 @@ class IdentityStore:
         cols = ["id", "actor_id", "action", "ticket_no", "details", "created_at"]
         results = []
         for row in rows:
-            d = dict(zip(cols, row))
+            d = dict(zip(cols, row))  # noqa: B905
             if d["details"] and isinstance(d["details"], str):
                 d["details"] = json.loads(d["details"])
             if d["created_at"] and hasattr(d["created_at"], "isoformat"):

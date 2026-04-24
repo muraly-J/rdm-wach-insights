@@ -66,7 +66,7 @@ def approved_ticket_card(ticket_no: str, wo: dict, tech_username: str) -> str:
         f"Subject: {wo.get('title', '—')}",
         f"Category: {wo.get('category', '—')}",
         f"Priority: {priority_icon} {priority.replace('_', ' ').title()}",
-        f"Status: 🟢 Open",
+        "Status: 🟢 Open",
         f"AHU: {wo.get('ahu_id', '—')} · Level {wo.get('level', '—')}",
         "",
         f"Verified by: @{tech_username} (Technician)",

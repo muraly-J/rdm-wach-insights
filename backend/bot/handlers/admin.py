@@ -22,9 +22,9 @@ Inline callbacks:
   reject_change:{req_id}           — reject a status change request
 """
 
-import re
 from typing import Any
 
+from core.logger import get_logger
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     CallbackQueryHandler,
@@ -33,10 +33,9 @@ from telegram.ext import (
 )
 
 from bot import api_client
-from bot.config import ADMIN_CHAT_ID, TECHNICIANS_CHAT_ID
+from bot.config import TECHNICIANS_CHAT_ID
 from bot.identity.decorators import require_admin
 from bot.identity.store import get_store
-from core.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -211,7 +210,7 @@ async def cmd_setstatus(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     try:
-        result = await api_client._post(
+        await api_client._post(
             f"/api/work-orders/{wo_id}/status",
             json={"status": new_status},
         )
@@ -365,7 +364,7 @@ async def cb_set_priority(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await api_client._patch(f"/api/work-orders/{wo_id}", json={"priority": priority})
         wo = await api_client.get_work_order(wo_id)
     except Exception:
-        await query.edit_message_text(f"❌ Could not set priority.")
+        await query.edit_message_text("❌ Could not set priority.")
         return
 
     # Re-render the card with updated priority
@@ -404,7 +403,7 @@ async def cb_set_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
         wo = await api_client.get_work_order(wo_id)
     except Exception:
-        await query.edit_message_text(f"❌ Could not set status.")
+        await query.edit_message_text("❌ Could not set status.")
         return
 
     text = _format_ticket_detail(wo)
@@ -447,8 +446,8 @@ async def cb_approve_change(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return
 
     # Get the request
-    from core.agentdb import AgentDB
     import core.agentdb as agentdb_module
+    from core.agentdb import AgentDB
     if agentdb_module._db_instance is None:
         agentdb_module._db_instance = AgentDB()
     db = agentdb_module._db_instance
@@ -519,8 +518,8 @@ async def cb_reject_change(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await query.answer("Not authorized.", show_alert=True)
         return
 
-    from core.agentdb import AgentDB
     import core.agentdb as agentdb_module
+    from core.agentdb import AgentDB
     if agentdb_module._db_instance is None:
         agentdb_module._db_instance = AgentDB()
     db = agentdb_module._db_instance

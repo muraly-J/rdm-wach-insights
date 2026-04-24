@@ -7,7 +7,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
 
 import pytest
 
-
 # ── Basic 25-item scenario ─────────────────────────────────────────────────────
 
 ITEMS_25 = list(range(25))

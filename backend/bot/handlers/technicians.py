@@ -21,8 +21,8 @@ Commands:
 """
 
 import re
-from typing import Any
 
+from core.logger import get_logger
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -38,10 +38,9 @@ from telegram.ext import (
 )
 
 from bot import api_client
-from bot.config import ADMIN_CHAT_ID, TECHNICIANS_CHAT_ID, TICKET_CATEGORIES
+from bot.config import ADMIN_CHAT_ID, TICKET_CATEGORIES
 from bot.identity.decorators import require_role
 from bot.identity.store import get_store
-from core.logger import get_logger
 
 logger = get_logger(__name__)
 

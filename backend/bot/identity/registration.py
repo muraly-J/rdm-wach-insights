@@ -13,6 +13,7 @@ Flow (DM only):
   5. Admin taps [✅ Approve] or [❌ Reject] on the registration card
 """
 
+from core.logger import get_logger
 from telegram import (
     ForceReply,
     InlineKeyboardButton,
@@ -30,7 +31,6 @@ from telegram.ext import (
 
 from bot.config import ADMIN_CHAT_ID
 from bot.identity.store import get_store
-from core.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -119,7 +119,7 @@ async def receive_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     store = get_store()
 
     # Create pending user
-    bot_user = store.create_user(
+    store.create_user(
         user_id=user_id,
         telegram_username=username,
         display_name=display_name,

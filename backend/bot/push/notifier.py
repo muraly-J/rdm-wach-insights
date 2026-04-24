@@ -17,7 +17,7 @@ from typing import Any
 
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
-from bot.config import ADMIN_CHAT_ID, TECHNICIANS_CHAT_ID, BOT_TOKEN
+from bot.config import ADMIN_CHAT_ID, BOT_TOKEN, TECHNICIANS_CHAT_ID
 
 logger = logging.getLogger(__name__)
 

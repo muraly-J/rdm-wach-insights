@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import httpx
+
 from bot.config import API_BASE_URL
 
 

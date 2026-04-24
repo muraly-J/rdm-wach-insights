@@ -114,7 +114,7 @@ async def test_notify_admins_skips_when_no_chat_id():
 
 @pytest.mark.asyncio
 async def test_send_draft_card_sends_to_technicians_with_inline_button():
-    from bot.push.notifier import send_draft_card, _TECHNICIANS_CHAT_ID
+    from bot.push.notifier import _TECHNICIANS_CHAT_ID, send_draft_card
     from telegram import InlineKeyboardMarkup
 
     mock_bot = AsyncMock()

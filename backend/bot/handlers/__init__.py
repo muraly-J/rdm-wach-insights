@@ -13,7 +13,8 @@ logger = get_logger(__name__)
 
 def handler_registry() -> list:
     """Return all handlers from all bot modules, in priority order."""
-    from bot.handlers import common, admin, technicians, ask as ask_handlers
+    from bot.handlers import admin, common, technicians
+    from bot.handlers import ask as ask_handlers
     from bot.identity import registration
 
     handlers = []

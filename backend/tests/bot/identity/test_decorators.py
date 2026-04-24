@@ -13,14 +13,12 @@ import sys
 # Ensure backend/ is on the path for bare imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+from bot.identity.store import BotUser
 from telegram import Update
 from telegram.ext import ContextTypes
-
-from bot.identity.store import BotUser
-
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 

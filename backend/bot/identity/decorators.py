@@ -17,13 +17,13 @@ Usage:
 """
 
 import functools
-from typing import Callable
+from collections.abc import Callable
 
+from core.logger import get_logger
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from bot.identity.store import BotUser, get_store, role_satisfies
-from core.logger import get_logger
+from bot.identity.store import get_store, role_satisfies
 
 logger = get_logger(__name__)
 
