@@ -11,12 +11,15 @@ No backend model imports — only telegram lib and bot.config.
 """
 
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot.config import ADMIN_CHAT_ID, TECHNICIANS_CHAT_ID, BOT_TOKEN
+
+logger = logging.getLogger(__name__)
 
 _ADMIN_CHAT_ID: int = ADMIN_CHAT_ID
 _TECHNICIANS_CHAT_ID: int = TECHNICIANS_CHAT_ID
@@ -151,32 +154,42 @@ def _draft_card_keyboard(wo_id: int) -> InlineKeyboardMarkup:
 
 # ── Public send functions ──────────────────────────────────────────────────────
 
-async def notify_admins(wo: dict[str, Any], token: str | None = None) -> None:
+async def notify_admins(
+    wo: dict[str, Any],
+    token: str | None = None,
+    bot: Bot | None = None,
+) -> None:
     """Send work order alert to admins group with approve/dismiss buttons."""
     if not _ADMIN_CHAT_ID:
         return
-    bot = Bot(token=token or _BOT_TOKEN)
-    await bot.send_message(
-        chat_id=_ADMIN_CHAT_ID,
-        text=_format_manager_alert(wo),
-        reply_markup=_manager_alert_keyboard(wo["id"]),
-    )
+    effective_bot = bot if bot is not None else Bot(token=token or _BOT_TOKEN)
+    try:
+        await effective_bot.send_message(
+            chat_id=_ADMIN_CHAT_ID,
+            text=_format_manager_alert(wo),
+            reply_markup=_manager_alert_keyboard(wo["id"]),
+        )
+    except Exception as e:
+        logger.warning(f"notify_admins: failed to send message to admins: {e}")
 
 
 async def notify_technicians(
     wo: dict[str, Any],
     token: str | None = None,
-    assigned_to: str | None = None,
+    bot: Bot | None = None,
 ) -> None:
     """Send assignment alert to technicians group with start/done buttons."""
     if not _TECHNICIANS_CHAT_ID:
         return
-    bot = Bot(token=token or _BOT_TOKEN)
-    await bot.send_message(
-        chat_id=_TECHNICIANS_CHAT_ID,
-        text=_format_technician_assignment(wo),
-        reply_markup=_technician_assignment_keyboard(wo["id"]),
-    )
+    effective_bot = bot if bot is not None else Bot(token=token or _BOT_TOKEN)
+    try:
+        await effective_bot.send_message(
+            chat_id=_TECHNICIANS_CHAT_ID,
+            text=_format_technician_assignment(wo),
+            reply_markup=_technician_assignment_keyboard(wo["id"]),
+        )
+    except Exception as e:
+        logger.warning(f"notify_technicians: failed to send message to technicians: {e}")
 
 
 async def send_draft_card(
@@ -187,11 +200,14 @@ async def send_draft_card(
     """Send the '📋 New Draft Ticket' card to TECHNICIANS_CHAT_ID with a claim button."""
     if not _TECHNICIANS_CHAT_ID:
         return
-    await bot.send_message(
-        chat_id=_TECHNICIANS_CHAT_ID,
-        text=_format_draft_card(ticket_no, wo),
-        reply_markup=_draft_card_keyboard(wo["id"]),
-    )
+    try:
+        await bot.send_message(
+            chat_id=_TECHNICIANS_CHAT_ID,
+            text=_format_draft_card(ticket_no, wo),
+            reply_markup=_draft_card_keyboard(wo["id"]),
+        )
+    except Exception as e:
+        logger.warning(f"send_draft_card: failed to send draft card: {e}")
 
 
 async def emit(event: str, wo: dict[str, Any], bot: Bot | None = None, token: str | None = None) -> None:
@@ -212,8 +228,8 @@ async def emit(event: str, wo: dict[str, Any], bot: Bot | None = None, token: st
         await send_draft_card(bot, ticket_no, wo)
 
     elif event == "ticket_opened":
-        await notify_admins(wo, token=effective_token)
+        await notify_admins(wo, token=effective_token, bot=bot)
 
     elif event == "status_changed":
-        await notify_admins(wo, token=effective_token)
-        await notify_technicians(wo, token=effective_token)
+        await notify_admins(wo, token=effective_token, bot=bot)
+        await notify_technicians(wo, token=effective_token, bot=bot)

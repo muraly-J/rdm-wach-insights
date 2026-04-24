@@ -172,7 +172,7 @@ async def test_emit_ticket_opened_calls_notify_admins():
     from bot.push import notifier
     with patch.object(notifier, "notify_admins", new_callable=AsyncMock) as mock_na:
         await notifier.emit("ticket_opened", SAMPLE_WO, token="test-token")
-        mock_na.assert_called_once_with(SAMPLE_WO, token="test-token")
+        mock_na.assert_called_once_with(SAMPLE_WO, token="test-token", bot=None)
 
 
 @pytest.mark.asyncio
@@ -183,8 +183,8 @@ async def test_emit_status_changed_notifies_both_groups():
         patch.object(notifier, "notify_technicians", new_callable=AsyncMock) as mock_nt,
     ):
         await notifier.emit("status_changed", SAMPLE_WO, token="test-token")
-        mock_na.assert_called_once_with(SAMPLE_WO, token="test-token")
-        mock_nt.assert_called_once_with(SAMPLE_WO, token="test-token")
+        mock_na.assert_called_once_with(SAMPLE_WO, token="test-token", bot=None)
+        mock_nt.assert_called_once_with(SAMPLE_WO, token="test-token", bot=None)
 
 
 @pytest.mark.asyncio
