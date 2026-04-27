@@ -134,6 +134,8 @@ CREATE TABLE IF NOT EXISTS health_hourly (
     raw_volts_l3_thd                FLOAT,
     raw_volts_unbalance             FLOAT,
     raw_digital_input_1_and_2       FLOAT,
+    operational_state               VARCHAR,
+    last_on_timestamp               TIMESTAMPTZ,
     safety_flags                    VARCHAR DEFAULT '',
     PRIMARY KEY (timestamp, ahu_id)
 );
@@ -176,6 +178,8 @@ ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_volts_l2_l3              
 ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_volts_l3_l1              FLOAT;
 ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_volts_unbalance          FLOAT;
 ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS raw_digital_input_1_and_2   FLOAT;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS operational_state  VARCHAR;
+ALTER TABLE health_hourly ADD COLUMN IF NOT EXISTS last_on_timestamp  TIMESTAMPTZ;
 """
 
 
@@ -202,6 +206,46 @@ class HealthDB:
                 stmt = stmt.strip()
                 if stmt:
                     conn.execute(stmt)
+
+    def _apply_confidence_decay(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Apply confidence decay to Off AHUs based on time since last On state.
+
+        | Now - last_on_timestamp | state returned  | health_index |
+        |------------------------|-----------------|--------------|
+        | <= 48h                 | "Off"           | last known   |
+        | 48h - 168h             | "Off_Stale"     | last known   |
+        | > 168h or null         | "Inactive"      | null         |
+        """
+        now = datetime.now(timezone.utc)
+        df = df.copy()
+
+        for i, row in df.iterrows():
+            if row.get("operational_state") != "Off":
+                continue  # On rows returned as-is
+
+            last_on = row.get("last_on_timestamp")
+            if last_on is None or pd.isna(last_on):
+                df.at[i, "operational_state"] = "Inactive"
+                df.at[i, "health_index"] = None
+                continue
+
+            # Ensure timezone-aware
+            if hasattr(last_on, "tzinfo") and last_on.tzinfo is None:
+                last_on = last_on.replace(tzinfo=timezone.utc)
+
+            elapsed_h = (now - last_on).total_seconds() / 3600.0
+
+            if elapsed_h <= 48:
+                pass  # keep "Off", keep health_index
+            elif elapsed_h <= 168:
+                df.at[i, "operational_state"] = "Off_Stale"
+                # health_index unchanged
+            else:
+                df.at[i, "operational_state"] = "Inactive"
+                df.at[i, "health_index"] = None
+
+        return df
 
     # ── Write ──────────────────────────────────────────────────────────────────
 
@@ -244,7 +288,12 @@ class HealthDB:
             ORDER BY ahu_id
         """
         with self._conn() as conn:
-            return conn.execute(query, params).df()
+            df = conn.execute(query, params).df()
+
+        if df.empty or "operational_state" not in df.columns:
+            return df
+
+        return self._apply_confidence_decay(df)
 
     def get_time_range(
         self,
