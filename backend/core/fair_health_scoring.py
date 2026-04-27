@@ -59,12 +59,12 @@ AHUs with chronically extreme baselines get safety flags in the output.
 These do NOT move the health index — they are a separate engineering audit
 layer. They answer "should this AHU be reviewed regardless of today's score?"
 
-INDEX WEIGHTS    health_index = 100 − (penalty × 100)
-  energy_anomaly   15%         penalty = Σ weight_i × score_i
+INDEX WEIGHTS    health_index = Σ weight_i × health_score_i × 100
+  energy_anomaly   15%         health_score ∈ [0,1] where 1 = healthy.
   pf_degradation   25%
-  phase_imbalance  25%         All scores, all weights in [0,1].
-  thd_drift        15%         Perfect baseline → index = 100.
-  overload         20%         All maxed → index = 0.
+  phase_imbalance  25%         All scores at 1 → index = 100 (perfect).
+  thd_drift        15%         All scores at 0 → index = 0 (critical).
+  overload         20%         Unknown/fallback score = 0.5 (neutral).
 
 HEALTH TIERS
   80–100  Healthy
@@ -351,8 +351,8 @@ def score_energy_anomaly(
         # Insufficient data for trend: return level-only score (trend=0)
         tr = 0.0
 
-    score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
-    return score, round(z, 3)
+    penalty = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    return 1.0 - penalty, round(z, 3)
 
 
 def score_power_factor(
@@ -382,15 +382,15 @@ def score_power_factor(
     Returns (score ∈ [0,1], z_diagnostic)
     """
     if pf is None or np.isnan(pf):
-        return 0.0, np.nan
+        return 0.5, np.nan
 
     if ahu_median_pf is None or np.isnan(ahu_median_pf):
-        return 0.0, np.nan
+        return 0.5, np.nan
 
     # Use robust std with minimum
     rstd = max(ahu_rstd_pf, MIN_RSTD.get("power_factor_avg", 0.008))
     if rstd <= 0:
-        return 0.0, np.nan
+        return 0.5, np.nan
 
     # Level term: z-score (negative means below median)
     z = (ahu_median_pf - pf) / rstd  # positive = below normal = bad
@@ -400,13 +400,13 @@ def score_power_factor(
     slope_n = float(np.clip(ols_slope(hist_pf_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, -slope_n) * SLOPE_SENS)
 
-    score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    penalty = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
 
     # Load discount: if power < 60% of own median, scale score down
     # Note: Need to pass ahu_median_power separately for this calculation
     # For now, skip load discount or add it as separate parameter
 
-    return clamp01(score), round(z, 3)
+    return 1.0 - penalty, round(z, 3)
 
 
 def score_phase_imbalance(
@@ -431,15 +431,15 @@ def score_phase_imbalance(
     Returns (score ∈ [0,1], z_diagnostic)
     """
     if unbal is None or np.isnan(unbal):
-        return 0.0, np.nan
+        return 0.5, np.nan
 
     if ahu_median_unbal is None or np.isnan(ahu_median_unbal):
-        return 0.0, np.nan
+        return 0.5, np.nan
 
     # Use robust std with minimum
     rstd = max(ahu_rstd_unbal, MIN_RSTD.get("current_unbalance", 0.15))
     if rstd <= 0:
-        return 0.0, np.nan
+        return 0.5, np.nan
 
     # Level term: z-score
     z = (unbal - ahu_median_unbal) / rstd
@@ -449,8 +449,8 @@ def score_phase_imbalance(
     slope_n = float(np.clip(ols_slope(hist_unbal_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
 
-    score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
-    return score, round(z, 3)
+    penalty = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    return 1.0 - penalty, round(z, 3)
 
 
 def score_thd_drift(
@@ -475,15 +475,15 @@ def score_thd_drift(
     Returns (score ∈ [0,1], z_diagnostic)
     """
     if thd_24h is None or np.isnan(thd_24h):
-        return 0.0, np.nan
+        return 0.5, np.nan
 
     if ahu_median_thd is None or np.isnan(ahu_median_thd):
-        return 0.0, np.nan
+        return 0.5, np.nan
 
     # Use robust std with minimum
     rstd = max(ahu_rstd_thd, MIN_RSTD.get("composite_thd_24h", 0.15))
     if rstd <= 0:
-        return 0.0, np.nan
+        return 0.5, np.nan
 
     # Level term: z-score
     z = (thd_24h - ahu_median_thd) / rstd
@@ -493,8 +493,8 @@ def score_thd_drift(
     slope_n = float(np.clip(ols_slope(hist_thd_24h_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
 
-    score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
-    return score, round(z, 3)
+    penalty = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    return 1.0 - penalty, round(z, 3)
 
 
 def score_overload(
@@ -573,20 +573,19 @@ def score_overload(
         # Insufficient data for trend: return level-only score (trend=0)
         score_C = 0.0
 
-    score = 0.50 * score_A + 0.30 * score_B + 0.20 * score_C
-    return clamp01(score), round(z, 3)
+    penalty = 0.50 * score_A + 0.30 * score_B + 0.20 * score_C
+    return 1.0 - clamp01(penalty), round(z, 3)
 
 
 def calculate_health_index(scores: dict[str, float]) -> float:
     """
-    health_index = clip(100 − penalty × 100,  0, 100)
-    penalty      = Σ weight_i × score_i   ∈ [0, 1]
+    health_index = clip(weighted_average(health_scores) × 100, 0, 100)
 
-    All scores at 0 (exactly at own baseline) → penalty = 0 → index = 100
-    All scores at 1 (maximum deviation on all metrics) → index = 0
+    All scores at 1 (healthy on every metric) → index = 100
+    All scores at 0 (critical on every metric) → index = 0
     """
-    penalty = sum(HEALTH_INDEX_WEIGHTS.get(k, 0) * score for k, score in scores.items())
-    return float(np.clip(100.0 - penalty * 100.0, 0.0, 100.0))
+    health = sum(HEALTH_INDEX_WEIGHTS.get(k, 0) * score for k, score in scores.items())
+    return float(np.clip(health * 100.0, 0.0, 100.0))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1007,12 +1006,12 @@ def get_level_from_ahu_id(ahu_id: str) -> str:
 
 
 def get_severity(score: float, risk_type: str) -> str:
-    """Map risk score to severity level."""
-    if score >= 0.8:
+    """Map health score to severity level. High score = healthy = Normal."""
+    if score <= 0.2:
         return "Critical"
-    elif score >= 0.6:
+    elif score <= 0.4:
         return "Attention Required"
-    elif score >= 0.4:
+    elif score <= 0.6:
         return "Monitor"
     else:
         return "Normal"
