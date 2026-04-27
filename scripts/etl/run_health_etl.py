@@ -101,6 +101,15 @@ MIN_RSTD = {
 # THD uses 24h rolling mean
 THD_ROLLING_H = 24
 
+# Operational state threshold — all three phases below this = Off
+OPERATIONAL_THRESHOLD_A = 2.0
+
+def is_operational(l1, l2, l3) -> bool:
+    """True if AHU draws power on at least one phase. Unknown values = assume On."""
+    if any(v is None or (isinstance(v, float) and np.isnan(v)) for v in [l1, l2, l3]):
+        return True
+    return not (l1 < OPERATIONAL_THRESHOLD_A and l2 < OPERATIONAL_THRESHOLD_A and l3 < OPERATIONAL_THRESHOLD_A)
+
 # Safety flag thresholds
 SAFETY_FLAGS_DEF = {
     "THD_CHRONIC_HIGH":  ("composite_thd_24h", ">", 5.0),
@@ -499,6 +508,20 @@ def build_baselines(df):
         grp = grp.sort_values("timestamp")
         b   = {}
 
+        # Filter to operational periods only for baseline computation
+        if all(c in grp.columns for c in ["current_l1", "current_l2", "current_l3"]):
+            on_mask = grp.apply(
+                lambda r: is_operational(r["current_l1"], r["current_l2"], r["current_l3"]),
+                axis=1,
+            )
+            grp_on = grp[on_mask]
+        else:
+            grp_on = grp  # fallback: no phase data, use all rows
+
+        if len(grp_on) < 3:
+            baselines[ahu_id] = {}
+            continue
+
         # Standard metrics
         for col, min_r in [
             ("delta_kwh",         MIN_RSTD["delta_kwh"]),
@@ -506,7 +529,7 @@ def build_baselines(df):
             ("current_unbalance", MIN_RSTD["current_unbalance"]),
             ("power_total",       MIN_RSTD["power_total"]),
         ]:
-            vals = grp[col].dropna().values if col in grp.columns else np.array([])
+            vals = grp_on[col].dropna().values if col in grp_on.columns else np.array([])
             if len(vals) < 3:
                 b[col] = dict(
                     median=np.nan,
@@ -527,9 +550,9 @@ def build_baselines(df):
             )
 
         # THD baseline - MUST use 24h rolling mean, not instantaneous
-        if "composite_thd" in grp.columns:
+        if "composite_thd" in grp_on.columns:
             thd_24h_series = (
-                grp["composite_thd"]
+                grp_on["composite_thd"]
                 .rolling(THD_ROLLING_H, min_periods=1)
                 .mean()
                 .dropna()
@@ -557,9 +580,9 @@ def build_baselines(df):
 
         # Per-AHU P95 of max-phase current (for overload chart reference line)
         current_cols = ["current_l1", "current_l2", "current_l3"]
-        avail_current_cols = [c for c in current_cols if c in grp.columns]
+        avail_current_cols = [c for c in current_cols if c in grp_on.columns]
         if avail_current_cols:
-            max_current = grp[avail_current_cols].max(axis=1).dropna().values
+            max_current = grp_on[avail_current_cols].max(axis=1).dropna().values
             if len(max_current) >= 3:
                 b["max_phase_current"] = dict(
                     p95=float(np.percentile(max_current, 95)),
@@ -628,6 +651,23 @@ def transform_health_scores(df_raw):
 
     df_sorted = df_raw.sort_values(['device_id', 'timestamp']).reset_index(drop=True)
 
+    # Pre-compute last On timestamp per AHU
+    last_on_ts: dict[str, str | None] = {}
+    for ahu_id_key in df_sorted["device_id"].unique():
+        ahu_rows = df_sorted[df_sorted["device_id"] == ahu_id_key].copy()
+        if all(c in ahu_rows.columns for c in ["current_l1", "current_l2", "current_l3"]):
+            on_rows = ahu_rows[ahu_rows.apply(
+                lambda r: is_operational(
+                    float(r["current_l1"]) if pd.notna(r.get("current_l1")) else None,
+                    float(r["current_l2"]) if pd.notna(r.get("current_l2")) else None,
+                    float(r["current_l3"]) if pd.notna(r.get("current_l3")) else None,
+                ),
+                axis=1,
+            )]
+            last_on_ts[ahu_id_key] = on_rows["timestamp"].max() if not on_rows.empty else None
+        else:
+            last_on_ts[ahu_id_key] = None
+
     for idx, row in df_sorted.iterrows():
         if (idx + 1) % 100 == 0:
             print(f"  Processing record {idx+1}/{len(df_raw)}...")
@@ -650,6 +690,10 @@ def transform_health_scores(df_raw):
         volts_l1_n  = _f('volts_l1_n');  volts_l2_n  = _f('volts_l2_n');  volts_l3_n  = _f('volts_l3_n')
         volts_l1_thd = _f('volts_l1_thd'); volts_l2_thd = _f('volts_l2_thd'); volts_l3_thd = _f('volts_l3_thd')
         current_l1_thd = _f('current_l1_thd'); current_l3_thd = _f('current_l3_thd')
+
+        # Operational state for this row
+        op_state = "On" if is_operational(current_l1, current_l2, current_l3) else "Off"
+        row_last_on = last_on_ts.get(ahu_id)
 
         # NEMA voltage imbalance (%)
         nema_voltage_imbalance = None
@@ -899,6 +943,10 @@ def transform_health_scores(df_raw):
 
             # === Safety Flags (String) ===
             "safety_flags": safety_flags_str,
+
+            # === Operational State ===
+            "operational_state":   op_state,
+            "last_on_timestamp":   row_last_on,
         })
 
     print(f"[OK] Computed scores for {len(results)} records")
@@ -967,6 +1015,8 @@ def save_health_duckdb(results_df: pd.DataFrame, dry_run: bool = False) -> None:
             "raw_volts_l1_thd", "raw_volts_l2_thd", "raw_volts_l3_thd",
             "raw_volts_unbalance", "raw_digital_input_1_and_2",
             "safety_flags",
+            # Operational state
+            "operational_state", "last_on_timestamp",
         ]
         missing = [c for c in schema_cols if c not in df.columns]
         if missing:
