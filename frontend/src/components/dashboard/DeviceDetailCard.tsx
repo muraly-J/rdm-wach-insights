@@ -1,5 +1,7 @@
 import React from 'react';
 import type { AHUStatus } from './AHURankingsTable';
+import type { OperationalState } from '../../types';
+import StateBadge from '../shared/StateBadge';
 
 interface DeviceDetailCardProps {
   label: string;
@@ -8,6 +10,8 @@ interface DeviceDetailCardProps {
   trend: number;
   status: AHUStatus;
   isOn?: boolean;
+  operational_state?: OperationalState;
+  last_on_timestamp?: string | null;
 }
 
 const STATUS_COLOR: Record<AHUStatus, string> = {
@@ -23,6 +27,8 @@ const DeviceDetailCard: React.FC<DeviceDetailCardProps> = ({
   trend,
   status,
   isOn = true,
+  operational_state,
+  last_on_timestamp,
 }) => (
   <div
     style={{
@@ -87,6 +93,9 @@ const DeviceDetailCard: React.FC<DeviceDetailCardProps> = ({
         <div style={{ fontSize: 24, fontWeight: 700, color: STATUS_COLOR[status] }}>
           {Math.round(healthScore)}
         </div>
+        {operational_state && (
+          <StateBadge state={operational_state} lastMeasured={last_on_timestamp} />
+        )}
       </div>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: 10, color: '#556677', marginBottom: 2 }}>TREND</div>

@@ -24,6 +24,15 @@ Each level has unique department and area associations.
 
 from config import get_building_name, get_department
 
+STATE_MENTION_INSTRUCTION = """
+When reporting AHU health, always mention the operational state using these patterns:
+- On: "e{id} is currently On. Health index: {n} ({tier})."
+- Off (<=48h): "e{id} is currently Off (last operational {X}h ago). Operational health index: {n} ({tier})."
+- Off_Stale (48-168h): "e{id} is currently Off — last measured {X} hours ago. Health data is stale; index was {n} ({tier}) when last operational."
+- Inactive (>168h): "e{id} is Inactive — no operational data in over a week. Health index unavailable."
+Never report a healthy index for an Inactive unit. If health_index is null, say 'unavailable'.
+"""
+
 SYSTEM_PROMPT = """You are a query parser for WACH Insight, a hospital AHU electrical analytics tool.
 YOUR ONLY JOB: Convert the user's natural language question into a structured JSON object.
 You do NOT answer questions, give advice, explain things, or do anything else.
@@ -593,4 +602,7 @@ Financial impact (TNB RP4, effective July 2025):
 
 ## Response Style
 {persona_block}
+
+## Operational State Reporting
+{STATE_MENTION_INSTRUCTION}
 """

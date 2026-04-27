@@ -9,6 +9,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { deviceIdToDisplay } from '../../utils/deviceNames';
+import type { OperationalState } from '../../types';
+import StateBadge from '../shared/StateBadge';
 
 // Static AHU IDs per level (mirrors backend/models/schemas.py AHU_LEVEL_CONFIG)
 const LEVEL_AHU_IDS: Record<number, string[]> = {
@@ -657,6 +659,8 @@ function AlertStatusPanel() {
               selectLevel(criticalAHU.level);
               selectDevice(criticalAHU.id);
             }}
+            operational_state={criticalAHU.operational_state}
+            last_on_timestamp={criticalAHU.last_on_timestamp}
           />
         )}
 
@@ -673,6 +677,8 @@ function AlertStatusPanel() {
               selectLevel(starAHU.level);
               selectDevice(starAHU.id);
             }}
+            operational_state={starAHU.operational_state}
+            last_on_timestamp={starAHU.last_on_timestamp}
           />
         )}
       </div>
@@ -731,6 +737,8 @@ function SpotlightCard({
   score,
   accent,
   onViewDevice,
+  operational_state,
+  last_on_timestamp,
 }: {
   label: string;
   id: string;
@@ -739,6 +747,8 @@ function SpotlightCard({
   score: number;
   accent: string;
   onViewDevice: () => void;
+  operational_state?: OperationalState;
+  last_on_timestamp?: string | null;
 }) {
   return (
     <motion.div
@@ -808,6 +818,9 @@ function SpotlightCard({
         <div style={{ fontSize: 10, color: '#556677', marginTop: 1 }}>
           {name} · L{String(level).padStart(2, '0')}
         </div>
+        {operational_state && (
+          <StateBadge state={operational_state} lastMeasured={last_on_timestamp} />
+        )}
       </div>
 
       {/* View device button */}

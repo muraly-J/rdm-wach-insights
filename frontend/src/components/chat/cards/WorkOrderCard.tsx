@@ -3,12 +3,16 @@ import { motion } from 'framer-motion';
 import type { ActionItem } from '../../../types/chat';
 import { HEALTH_TIER_COLORS } from '../../../types/chat';
 import { approveWorkOrder, dismissWorkOrder, editWorkOrder } from '../../../api/client';
+import StateBadge from '../../shared/StateBadge';
+import type { OperationalState } from '../../../types';
 
 interface WorkOrderCardProps {
   actions: ActionItem[];
+  operational_state?: OperationalState;
+  last_on_timestamp?: string | null;
 }
 
-export default function WorkOrderCard({ actions }: WorkOrderCardProps) {
+export default function WorkOrderCard({ actions, operational_state, last_on_timestamp }: WorkOrderCardProps) {
   const [states, setStates] = useState<Record<number, 'idle' | 'loading' | 'done' | 'dismissed'>>(
     {}
   );
@@ -124,6 +128,12 @@ export default function WorkOrderCard({ actions }: WorkOrderCardProps) {
                   >
                     {severity}
                   </span>
+                  {operational_state && (
+                    <StateBadge
+                      state={operational_state}
+                      lastMeasured={last_on_timestamp}
+                    />
+                  )}
                 </div>
                 <p className="text-[11px] text-[#8899aa] mb-2">
                   {approveItem?.description ?? dismissItem?.description ?? ''}

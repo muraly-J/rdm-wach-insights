@@ -10,6 +10,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { fetchSiteAlerts } from '../../api/client';
 import { deviceIdToDisplay } from '../../utils/deviceNames';
 import type { AlertAHU } from '../../types';
+import StateBadge from '../shared/StateBadge';
 
 interface AlertsModalProps {
   isOpen: boolean;
@@ -146,6 +147,12 @@ function AHURow({
             style={{ height: '100%', background: healthBarColor(ahu.healthScore), borderRadius: 2 }}
           />
         </div>
+        {ahu.operational_state && (
+          <StateBadge
+            state={ahu.operational_state}
+            lastMeasured={ahu.last_on_timestamp}
+          />
+        )}
       </div>
 
       {/* Inspect button */}

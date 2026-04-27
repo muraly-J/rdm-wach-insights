@@ -2,6 +2,8 @@
 // ==================
 // Derived from WACH_INSIGHT_UI_REVAMP_PLAN.md Section 8 & 9
 
+export type OperationalState = 'On' | 'Off' | 'Off_Stale' | 'Inactive';
+
 export type ScoreName =
   | 'energy_anomaly'
   | 'pf_degradation'
@@ -141,6 +143,8 @@ export interface DeviceRank {
   index: number; // health index (0-100)
   tier?: string;
   level?: string;
+  operational_state?: OperationalState;
+  last_on_timestamp?: string | null;
 }
 
 export interface RankingResponse {
@@ -254,6 +258,8 @@ export interface SpotlightAHU {
   healthScore: number;
   monthlyCostMYR: number;
   safetyFlags: number;
+  operational_state?: OperationalState;
+  last_on_timestamp?: string | null;
 }
 
 export interface TrendDelta {
@@ -271,6 +277,8 @@ export interface AlertAHU {
   level: number;
   healthScore: number;
   tier: 'Critical' | 'Maintenance Soon';
+  operational_state?: OperationalState;
+  last_on_timestamp?: string | null;
 }
 
 export interface SiteAlertsResponse {
