@@ -12,7 +12,11 @@ interface WorkOrderCardProps {
   last_on_timestamp?: string | null;
 }
 
-export default function WorkOrderCard({ actions, operational_state, last_on_timestamp }: WorkOrderCardProps) {
+export default function WorkOrderCard({
+  actions,
+  operational_state,
+  last_on_timestamp,
+}: WorkOrderCardProps) {
   const [states, setStates] = useState<Record<number, 'idle' | 'loading' | 'done' | 'dismissed'>>(
     {}
   );
@@ -129,10 +133,7 @@ export default function WorkOrderCard({ actions, operational_state, last_on_time
                     {severity}
                   </span>
                   {operational_state && (
-                    <StateBadge
-                      state={operational_state}
-                      lastMeasured={last_on_timestamp}
-                    />
+                    <StateBadge state={operational_state} lastMeasured={last_on_timestamp} />
                   )}
                 </div>
                 <p className="text-[11px] text-[#8899aa] mb-2">

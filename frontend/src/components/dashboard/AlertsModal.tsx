@@ -148,10 +148,7 @@ function AHURow({
           />
         </div>
         {ahu.operational_state && (
-          <StateBadge
-            state={ahu.operational_state}
-            lastMeasured={ahu.last_on_timestamp}
-          />
+          <StateBadge state={ahu.operational_state} lastMeasured={ahu.last_on_timestamp} />
         )}
       </div>
 

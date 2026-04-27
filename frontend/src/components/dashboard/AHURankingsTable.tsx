@@ -98,7 +98,18 @@ const AHURankingsTable: React.FC<AHURankingsTableProps> = ({ rows }) => {
             <SortHeader label="AHU Name" sortK="label" />
             <SortHeader label="Level" sortK="level" />
             <SortHeader label="Health" sortK="healthScore" />
-            <th style={{ padding: '8px 12px', fontSize: 10, fontWeight: 600, color: '#556677', letterSpacing: '0.06em', textTransform: 'uppercase' }}>State</th>
+            <th
+              style={{
+                padding: '8px 12px',
+                fontSize: 10,
+                fontWeight: 600,
+                color: '#556677',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+              }}
+            >
+              State
+            </th>
             <SortHeader label="Trend" sortK="trend" />
             <SortHeader label="Status" sortK="status" />
           </tr>
@@ -150,10 +161,7 @@ const AHURankingsTable: React.FC<AHURankingsTableProps> = ({ rows }) => {
               </td>
               <td style={{ padding: '10px 12px' }}>
                 {row.operational_state && (
-                  <StateBadge
-                    state={row.operational_state}
-                    lastMeasured={row.last_on_timestamp}
-                  />
+                  <StateBadge state={row.operational_state} lastMeasured={row.last_on_timestamp} />
                 )}
               </td>
               <td

@@ -7,7 +7,10 @@ interface StateBadgeProps {
   className?: string;
 }
 
-const STATE_CONFIG: Record<OperationalState, { label: string; dot: string; color: string; bg: string }> = {
+const STATE_CONFIG: Record<
+  OperationalState,
+  { label: string; dot: string; color: string; bg: string }
+> = {
   On: {
     label: 'On',
     dot: '●',
