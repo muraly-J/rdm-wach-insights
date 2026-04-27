@@ -189,14 +189,14 @@ def score_energy_anomaly(delta_kwh, ahu_median_delta, ahu_rstd_delta, hist_delta
     Returns score ∈ [0,1]
     """
     if delta_kwh is None or np.isnan(delta_kwh) or delta_kwh < 0:
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     if ahu_median_delta is None or np.isnan(ahu_median_delta):
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     rstd = max(ahu_rstd_delta, MIN_RSTD["delta_kwh"])
     if rstd <= 0:
-        return 0.0, np.nan
+        return 0.5, np.nan
     
     z = (delta_kwh - ahu_median_delta) / rstd
     raw = 0.6 * abs(z) + 0.4 * max(0.0, z)
@@ -322,13 +322,13 @@ def score_overload(power, ahu_median_power, ahu_rstd_power, ahu_p95_power, hist_
     C. Trend term (20%): rising load over 7 days
     """
     if power is None or np.isnan(power):
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     if ahu_median_power is None or np.isnan(ahu_median_power):
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     if ahu_p95_power is None or np.isnan(ahu_p95_power) or ahu_p95_power <= 0:
-        return 0.0, np.nan
+        return 0.5, np.nan
     
     rstd = max(ahu_rstd_power, MIN_RSTD["power_total"])
     

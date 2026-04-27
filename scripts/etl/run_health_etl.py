@@ -708,7 +708,7 @@ def transform_health_scores(df_raw):
                 hist_pf if len(hist_pf) >= 2 else np.array([])
             )
         except Exception as e:
-            pf_score, z_pf, lv_pf, tr_pf = 0.0, np.nan, np.nan, np.nan
+            pf_score, z_pf, lv_pf, tr_pf = 0.5, np.nan, np.nan, np.nan
 
         try:
             unbal_score, z_unbal, lv_unbal, tr_unbal = score_phase_imbalance(
@@ -718,7 +718,7 @@ def transform_health_scores(df_raw):
                 hist_unbal if len(hist_unbal) >= 2 else np.array([])
             )
         except Exception as e:
-            unbal_score, z_unbal, lv_unbal, tr_unbal = 0.0, np.nan, np.nan, np.nan
+            unbal_score, z_unbal, lv_unbal, tr_unbal = 0.5, np.nan, np.nan, np.nan
 
         try:
             thd_score, z_thd, lv_thd, tr_thd = score_thd_drift(
@@ -728,7 +728,7 @@ def transform_health_scores(df_raw):
                 hist_df['composite_thd'].values.astype(float) if 'composite_thd' in hist_df.columns else np.array([])
             )
         except Exception as e:
-            thd_score, z_thd, lv_thd, tr_thd = 0.0, np.nan, np.nan, np.nan
+            thd_score, z_thd, lv_thd, tr_thd = 0.5, np.nan, np.nan, np.nan
 
         try:
             overload_score, z_overload, score_A, score_B, score_C = score_overload(
