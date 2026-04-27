@@ -59,21 +59,21 @@ class TestGetHealthTier:
 
 
 class TestCalculateHealthIndex:
-    def test_all_zero_scores_give_100(self):
-        """No penalty at all → perfect health."""
+    def test_all_zero_health_scores_give_zero_index(self):
+        """All scores = 0 (critical on every metric) → health index = 0."""
         scores = {k: 0.0 for k in HEALTH_INDEX_WEIGHTS}
-        assert calculate_health_index(scores) == pytest.approx(100.0, abs=1e-6)
-
-    def test_all_one_scores_give_zero(self):
-        """Maximum penalty on every component → health index 0."""
-        scores = {k: 1.0 for k in HEALTH_INDEX_WEIGHTS}
         assert calculate_health_index(scores) == pytest.approx(0.0, abs=1e-6)
 
-    def test_single_component_penalty(self):
-        """Only energy_anomaly maxed (weight=0.15) → index = 85."""
+    def test_all_one_health_scores_give_100_index(self):
+        """All scores = 1 (healthy on every metric) → health index = 100."""
+        scores = {k: 1.0 for k in HEALTH_INDEX_WEIGHTS}
+        assert calculate_health_index(scores) == pytest.approx(100.0, abs=1e-6)
+
+    def test_single_component_health_energy_only(self):
+        """Only energy_anomaly = 1 (healthy), rest = 0 → index = 15 (15% weight)."""
         scores = {k: 0.0 for k in HEALTH_INDEX_WEIGHTS}
         scores["energy_anomaly"] = 1.0
-        assert calculate_health_index(scores) == pytest.approx(85.0, abs=1e-6)
+        assert calculate_health_index(scores) == pytest.approx(15.0, abs=1e-6)
 
     def test_weights_sum_to_one(self):
         """Sanity check: HEALTH_INDEX_WEIGHTS sum to exactly 1.0."""
