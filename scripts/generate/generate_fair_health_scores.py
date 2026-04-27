@@ -206,8 +206,8 @@ def score_energy_anomaly(delta_kwh, ahu_median_delta, ahu_rstd_delta, hist_delta
     slope_n = float(np.clip(ols_slope(hist_delta_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
     
-    score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
-    return score, round(z, 3)
+    penalty = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    return 1.0 - penalty, round(z, 3)
 
 
 def score_pf_degradation(pf, power, ahu_median_pf, ahu_rstd_pf, hist_pf_series):
@@ -223,30 +223,30 @@ def score_pf_degradation(pf, power, ahu_median_pf, ahu_rstd_pf, hist_pf_series):
     Load discount: if power < 60% of median, scale score × 0.35
     """
     if pf is None or np.isnan(pf):
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     if ahu_median_pf is None or np.isnan(ahu_median_pf):
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     rstd = max(ahu_rstd_pf, MIN_RSTD["power_factor_avg"])
     if rstd <= 0:
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     z = (ahu_median_pf - pf) / rstd   # positive = below own normal = bad
     lv = sigmoid_score(z * SENSITIVITY["pf_degradation"])
-    
+
     slope_n = float(np.clip(ols_slope(hist_pf_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, -slope_n) * SLOPE_SENS)
-    
-    score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
-    
+
+    penalty = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+
     # Load discount
-    if (power is not None and not np.isnan(power) 
+    if (power is not None and not np.isnan(power)
         and ahu_median_pf > 0
         and power < PF_DISCOUNT_THRESHOLD * ahu_median_pf):
-        score *= PF_DISCOUNT_FACTOR
-    
-    return clamp01(score), round(z, 3)
+        penalty *= PF_DISCOUNT_FACTOR
+
+    return 1.0 - clamp01(penalty), round(z, 3)
 
 
 def score_phase_imbalance(unbal, ahu_median_unbal, ahu_rstd_unbal, hist_unbal_series):
@@ -260,23 +260,23 @@ def score_phase_imbalance(unbal, ahu_median_unbal, ahu_rstd_unbal, hist_unbal_se
     Trend term (30%): rising slope = worsening
     """
     if unbal is None or np.isnan(unbal):
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     if ahu_median_unbal is None or np.isnan(ahu_median_unbal):
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     rstd = max(ahu_rstd_unbal, MIN_RSTD["current_unbalance"])
     if rstd <= 0:
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     z = (unbal - ahu_median_unbal) / rstd
     lv = sigmoid_score(z * SENSITIVITY["phase_imbalance"])
-    
+
     slope_n = float(np.clip(ols_slope(hist_unbal_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
-    
-    score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
-    return score, round(z, 3)
+
+    penalty = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    return 1.0 - penalty, round(z, 3)
 
 
 def score_thd_drift(thd_24h, ahu_median_thd, ahu_rstd_thd, hist_thd_24h_series):
@@ -290,23 +290,23 @@ def score_thd_drift(thd_24h, ahu_median_thd, ahu_rstd_thd, hist_thd_24h_series):
     Baseline MUST also be computed on 24h-mean series, not instantaneous.
     """
     if thd_24h is None or np.isnan(thd_24h):
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     if ahu_median_thd is None or np.isnan(ahu_median_thd):
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     rstd = max(ahu_rstd_thd, MIN_RSTD["composite_thd_24h"])
     if rstd <= 0:
-        return 0.0, np.nan
-    
+        return 0.5, np.nan
+
     z = (thd_24h - ahu_median_thd) / rstd
     lv = sigmoid_score(z * SENSITIVITY["thd_drift"])
-    
+
     slope_n = float(np.clip(ols_slope(hist_thd_24h_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
-    
-    score = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
-    return score, round(z, 3)
+
+    penalty = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    return 1.0 - penalty, round(z, 3)
 
 
 def score_overload(power, ahu_median_power, ahu_rstd_power, ahu_p95_power, hist_power_series):
@@ -345,18 +345,17 @@ def score_overload(power, ahu_median_power, ahu_rstd_power, ahu_p95_power, hist_
     slope_n = float(np.clip(ols_slope(hist_power_series) / rstd, -10, 10))
     score_C = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
     
-    score = 0.50 * score_A + 0.30 * score_B + 0.20 * score_C
-    return clamp01(score), round(z, 3)
+    penalty = 0.50 * score_A + 0.30 * score_B + 0.20 * score_C
+    return 1.0 - clamp01(penalty), round(z, 3)
 
 
 def calculate_health_index(risk_scores):
     """
-    health_index = 100 - penalty × 100
-    where penalty = Σ weight_i × score_i
-    
-    All scores at 0 → index = 100 (perfect)
-    All scores at 1 → index = 0 (critical)
-    
+    health_index = clip(weighted_average(health_scores) × 100, 0, 100)
+
+    All scores at 1 (healthy on every metric) → index = 100
+    All scores at 0 (critical on every metric) → index = 0
+
     Weights: energy=0.15, pf=0.25, imbalance=0.25, thd=0.15, overload=0.20
     """
     WEIGHTS = {
@@ -366,10 +365,9 @@ def calculate_health_index(risk_scores):
         "thd_drift": 0.15,
         "overload": 0.20,
     }
-    
-    penalty = sum(WEIGHTS.get(k, 0) * score for k, score in risk_scores.items())
-    health_index = 100 - (penalty * 100)
-    return float(np.clip(health_index, 0.0, 100.0))
+
+    health = sum(WEIGHTS.get(k, 0) * score for k, score in risk_scores.items())
+    return float(np.clip(health * 100.0, 0.0, 100.0))
 
 
 def get_health_tier(health_index):
