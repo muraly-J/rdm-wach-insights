@@ -44,11 +44,12 @@ const WorkOrdersView: React.FC = () => {
   const handleDeleteAll = async () => {
     if (!window.confirm('Delete ALL work orders? This cannot be undone.')) return;
     setDeleting(true);
+    setError(null);
     try {
       await deleteAllWorkOrders();
       await load();
     } catch {
-      // silent fail
+      setError('Failed to delete work orders');
     } finally {
       setDeleting(false);
     }
