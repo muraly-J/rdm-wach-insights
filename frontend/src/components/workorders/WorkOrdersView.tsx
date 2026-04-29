@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { fetchWorkOrders } from '../../api/client';
+import { fetchWorkOrders, deleteAllWorkOrders } from '../../api/client';
 import { usePolling } from '../../hooks/usePolling';
 import { useAppStore } from '../../store/useAppStore';
 import { WorkOrder } from '../../types/chat';
@@ -13,6 +13,7 @@ const WorkOrdersView: React.FC = () => {
 
   const [orders, setOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
   const [filters, setFilters] = useState<WorkOrderFilterState>({
@@ -39,6 +40,19 @@ const WorkOrdersView: React.FC = () => {
       setLoading(false);
     }
   }, [setWorkOrderDraftsCount]);
+
+  const handleDeleteAll = async () => {
+    if (!window.confirm('Delete ALL work orders? This cannot be undone.')) return;
+    setDeleting(true);
+    try {
+      await deleteAllWorkOrders();
+      await load();
+    } catch {
+      // silent fail
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     load();
@@ -106,6 +120,22 @@ const WorkOrdersView: React.FC = () => {
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
           </svg>
           {loading ? 'Refreshing…' : 'Refresh'}
+        </button>
+        <button
+          onClick={handleDeleteAll}
+          disabled={deleting || loading}
+          style={{
+            background: 'transparent',
+            border: '1px solid #4a2030',
+            borderRadius: 6,
+            padding: '6px 12px',
+            color: '#cc4455',
+            fontSize: 12,
+            cursor: deleting || loading ? 'not-allowed' : 'pointer',
+            opacity: deleting || loading ? 0.6 : 1,
+          }}
+        >
+          {deleting ? 'Deleting…' : 'Delete All'}
         </button>
       </div>
 

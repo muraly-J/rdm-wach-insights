@@ -255,6 +255,13 @@ class AgentDB:
             )
         return True
 
+    def delete_all_work_orders(self) -> int:
+        with self._connect() as conn:
+            count = conn.execute("SELECT COUNT(*) FROM work_orders").fetchone()[0]
+            conn.execute("DELETE FROM work_orders")
+        logger.info(f"delete_all_work_orders: removed {count} rows")
+        return count
+
     def assign_work_order(self, wo_id: int, assigned_to: str) -> bool:
         """Set assigned_to on an open or in_progress work order without status change."""
         wo = self.get_work_order(wo_id)

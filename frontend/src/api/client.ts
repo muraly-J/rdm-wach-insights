@@ -307,6 +307,17 @@ export async function deleteWorkOrder(id: number): Promise<{ id: number; deleted
 }
 
 /**
+ * DELETE /api/work-orders — Permanently delete all work orders
+ */
+export async function deleteAllWorkOrders(): Promise<{ deleted: number }> {
+  const res = await fetch(`${API_BASE}/work-orders`, { method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
+  });
+  if (!res.ok) throw new Error('Failed to delete all work orders');
+  return res.json();
+}
+
+/**
  * PATCH /api/work-orders/{id} — Edit work order title/description
  */
 export async function editWorkOrder(

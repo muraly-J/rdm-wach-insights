@@ -167,6 +167,15 @@ async def sendback_work_order(wo_id: int) -> dict:
     )
 
 
+@router.delete("/work-orders")
+async def delete_all_work_orders_route() -> dict:
+    """Delete all work orders. For clean-slate testing/data management."""
+    db = _get_db()
+    deleted = db.delete_all_work_orders()
+    logger.info(f"delete_all: {deleted} records removed")
+    return {"deleted": deleted}
+
+
 @router.delete("/work-orders/{wo_id}")
 async def delete_work_order(wo_id: int) -> dict:
     db = _get_db()
