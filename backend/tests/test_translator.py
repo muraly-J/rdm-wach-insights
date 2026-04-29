@@ -1,4 +1,4 @@
-"""Tests for backend/llm/translator.py — Gemini-backed query translation."""
+"""Tests for backend/llm/translator.py — Qwen-backed query translation."""
 import os
 
 import pytest

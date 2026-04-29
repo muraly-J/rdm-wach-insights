@@ -28,7 +28,7 @@ from middleware.validator import validate_raw_dict
 from models.schemas import StructuredQuery
 
 # Disable LLM by default for local development
-# Set ENABLE_LLM=true to enable AI translation via Gemini
+# Set ENABLE_LLM=true to enable AI translation via Qwen (LM Studio)
 LLM_ENABLED = settings.enable_llm
 
 logger = get_logger(__name__)
@@ -72,7 +72,7 @@ async def translate_query(user_query: str) -> tuple[StructuredQuery | None, str 
     Main entry point. Converts a natural language string to a validated StructuredQuery.
 
     LLM translation is disabled by default for local development.
-    Set ENABLE_LLM=true to enable AI translation via Gemini.
+    Set ENABLE_LLM=true to enable AI translation via Qwen (LM Studio).
 
     When LLM is disabled, queries are parsed using rule-based extraction
     from the structured query schemas.

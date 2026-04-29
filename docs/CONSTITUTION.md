@@ -15,8 +15,7 @@
 | Time-series DB | InfluxDB Cloud | Org: `wach`, Bucket: `wach_bucket_3` |
 | Vector DB | ChromaDB | RAG for chatbot context (`data/chroma/`) |
 | ML Models | XGBoost | Saved at `paraquet_data/models/saved/` (e0202, e0207, e0211 only) |
-| LLM (cloud) | Gemini 2.0 Flash | via Google AI Studio |
-| LLM (local) | Qwen (qwen3-coder-next) | via LM Studio on `localhost:1234` |
+| LLM | Qwen (qwen3-coder-next) | via LM Studio on `localhost:1234` (production) |
 | Frontend host | Vercel | `frontend/dist/` output |
 | Backend tunnel | Cloudflare Tunnel | `*.trycloudflare.com` subdomain |
 | Container | Docker | `python:3.11-slim`, port from `$PORT` env var |
@@ -70,7 +69,7 @@ Rate limit: 200 req / 60 s (env vars: `RATE_LIMIT_REQUESTS`, `RATE_LIMIT_WINDOW`
 | POST | `/api/forecast/{device_id}` | 24 h XGBoost power forecast (e0202, e0207, e0211 only) |
 | GET | `/api/predictions/{device_id}` | Multi-horizon forecasts (1h, 12h, 24h, 168h) |
 | GET | `/api/device/{device_id}/delta-forecast` | 23 hourly delta-kWh predictions |
-| POST | `/api/chat` | Conversational query (Gemini 2.0 Flash or Qwen) |
+| POST | `/api/chat` | Conversational query (Qwen via LM Studio) |
 | POST | `/api/query` | NLU → InfluxDB structured query |
 | GET | `/api/financial-config` | Load TNB tariff rates & maintenance costs |
 | POST | `/api/financial-config` | Save financial parameters |
@@ -159,27 +158,26 @@ def get_hospital_id() -> str:
 
 ---
 
-## 6. LLM_BACKEND Env Var
+## 6. LLM Configuration
 
-The env var is **`LLM_BACKEND`** (not `LLM_PROVIDER` — that name is wrong and should not be used).
+Only Qwen via LM Studio is used. Gemini has been removed.
 
-| Value | Backend | Required env vars | Default model |
-|-------|---------|------------------|---------------|
-| `qwen` **(default)** | LM Studio (local) | `LMS_BASE_URL`, `LMS_MODEL`, `LMS_API_KEY` | `qwen/qwen3-coder-next` |
-| `gemini` | Google AI Studio | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_EMBED_MODEL` | `gemini-2.0-flash` |
+| Env var | Default | Purpose |
+|---------|---------|---------|
+| `LMS_BASE_URL` | `http://localhost:1234/v1` | LM Studio OpenAI-compatible endpoint |
+| `LMS_MODEL` | `qwen/qwen3-coder-next` | Model name loaded in LM Studio |
+| `LMS_API_KEY` | `lm-studio-placeholder` | Placeholder (LM Studio doesn't enforce auth) |
+| `ENABLE_LLM` | `false` | Must be `true` for LLM calls to fire; falls back to rule-based parsing when false |
 
 `.env` snippet:
 ```
-LLM_BACKEND=gemini
-GEMINI_API_KEY=<key>
-# --- or for local ---
-LLM_BACKEND=qwen
+ENABLE_LLM=true
 LMS_BASE_URL=http://localhost:1234/v1
 LMS_MODEL=qwen/qwen3-coder-next
 LMS_API_KEY=lm-studio
 ```
 
-Source: `backend/llm/client_factory.py`
+Source: `backend/llm/client_factory.py`, `backend/llm/qwen_client.py`
 
 ---
 
@@ -234,7 +232,7 @@ InfluxDB Cloud (source of truth, real-time)
     ├── csv_reader.py   reads CSVs for dashboard/chat context (no InfluxDB needed for most reads)
     └── influx_client.py  fetches live data for /api/measurements and fresh score computation
     │
-    ▼  Frontend (React) + Chatbot (Gemini/Qwen)
+    ▼  Frontend (React) + Chatbot (Qwen via LM Studio)
 ```
 
 **ETL entry points:**

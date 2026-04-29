@@ -58,7 +58,7 @@ All issues resolved: 2026-03-24
 
 **Symptom:** The correct env var is `LLM_BACKEND`; the name `LLM_PROVIDER` appeared in verbal
   references and was absent from `.env.example`.
-**Resolution:** Added explicit `LLM_BACKEND=qwen` entry with backend options table (`qwen` /
-  `gemini`) to `.env.example`. Separate sections added for LM Studio and Google Gemini config.
+**Resolution:** Added explicit `LLM_BACKEND=qwen` entry to `.env.example`. LM Studio section
+  added. Gemini has since been removed — Qwen is the only LLM provider.
   CONSTITUTION.md already documented the correct name.
 **Commit:** `72d4cb3`

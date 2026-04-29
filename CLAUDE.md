@@ -23,7 +23,7 @@
 │   ├── models/                # Data models and schemas
 │   ├── middleware/            # Request/response middleware (CORS, logging, etc.)
 │   ├── rag/                   # RAG pipeline for chatbot context
-│   ├── llm/                   # LLM integrations (Gemini, Qwen, embeddings)
+│   ├── llm/                   # LLM integrations (Qwen via LM Studio, embeddings)
 │   ├── data/                  # SQLite db, ChromaDB, exported reports
 │   ├── requirements.txt        # Production dependencies
 │   ├── requirements-dev.txt    # Dev dependencies (pytest, etc.)
@@ -362,7 +362,7 @@ Run with `python main.py` to see logs in stdout.
 - **CSS**: TailwindCSS v3 + PostCSS; `@import` directives must come before `@tailwind`
 - **Type safety**: Maintain type hints in backend; use TypeScript strictly in frontend
 - **Device validation**: Always validate AHU IDs against `AHU_LEVEL_CONFIG` in backend
-- **LLM integrations**: Two providers available — Gemini 2.0 Flash (cloud) and Qwen (local via LM Studio)
+- **LLM integrations**: Qwen only — via LM Studio on `localhost:1234`. Set `ENABLE_LLM=true` to activate; falls back to rule-based parsing when false.
 - **RAG context**: ChromaDB stores vectorized building knowledge; chat uses this for answers
 
 ---
