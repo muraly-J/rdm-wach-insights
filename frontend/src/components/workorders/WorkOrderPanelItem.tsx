@@ -8,6 +8,10 @@ interface WorkOrderPanelItemProps {
   onUpdated: () => void;
 }
 
+// Status machine: draft → pending_tech_review → open → in_progress → resolved → closed/dismissed
+// Active statuses are those where work is in progress
+const ACTIVE_STATUSES = new Set(['pending_tech_review', 'open', 'in_progress']);
+
 const WorkOrderPanelItem: React.FC<WorkOrderPanelItemProps> = ({ order, onUpdated }) => {
   const [loading, setLoading] = useState<'approve' | 'dismiss' | null>(null);
   const { showToast } = useToast();
@@ -140,7 +144,7 @@ const WorkOrderPanelItem: React.FC<WorkOrderPanelItemProps> = ({ order, onUpdate
         <div
           style={{
             fontSize: 10,
-            color: order.status === 'approved' ? '#00E5A0' : '#556677',
+            color: ACTIVE_STATUSES.has(order.status) ? '#00E5A0' : '#556677',
             fontWeight: 600,
             textTransform: 'uppercase',
           }}

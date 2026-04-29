@@ -55,6 +55,7 @@ export interface Message {
 
 export interface WorkOrder {
   id: number;
+  ticket_no: string;
   ahu_id: string;
   level: number;
   title: string;
