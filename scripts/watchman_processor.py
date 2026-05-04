@@ -57,6 +57,21 @@ async def process_queue():
                 f"watchman_processor: {ahu_id} processed — "
                 f"reply_len={len(reply)} drafts={len(drafts)}"
             )
+
+            # Dispatch Telegram notification for each draft work order created
+            if drafts:
+                from bot.push.notifier import dispatch
+
+                for wo in drafts:
+                    try:
+                        await dispatch(event="draft_created", wo=wo)
+                        logger.info(
+                            f"watchman_processor: notified draft wo id={wo.get('id')} for {ahu_id}"
+                        )
+                    except Exception as notify_err:
+                        logger.warning(
+                            f"watchman_processor: Telegram notification failed for {ahu_id} — {notify_err}"
+                        )
         except Exception as e:
             logger.error(f"watchman_processor: failed for {ahu_id} — {e}", exc_info=True)
 
