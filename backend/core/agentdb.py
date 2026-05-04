@@ -177,6 +177,15 @@ class AgentDB:
             return None
         return row.iloc[0].to_dict()
 
+    def get_work_order_by_ticket_no(self, ticket_no: str) -> dict | None:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM work_orders WHERE ticket_no = ?", [ticket_no]
+            ).fetchdf()
+        if rows.empty:
+            return None
+        return rows.iloc[0].to_dict()
+
     def list_work_orders(
         self,
         status: str | None = None,

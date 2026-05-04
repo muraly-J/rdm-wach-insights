@@ -23,6 +23,7 @@ Commands:
 import re
 
 from core.logger import get_logger
+from rag.retriever import Retriever
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -65,6 +66,10 @@ def _get_db():
         from core.agentdb import AgentDB
         m._db_instance = AgentDB()
     return m._db_instance
+
+
+def _get_retriever() -> Retriever:
+    return Retriever()
 
 
 # ── Claim callback ───────────────────────────────────────────────────────
@@ -550,6 +555,46 @@ async def update_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     return ConversationHandler.END
 
 
+async def solve_handler(update, context) -> None:
+    """/solve <ticket_no> — query RAG for fix suggestions."""
+    text = (update.message.text or "").strip()
+    parts = text.split(maxsplit=1)
+    if len(parts) < 2:
+        await update.message.reply_text(
+            "Usage: /solve <ticket_no>  e.g. /solve TCK-005"
+        )
+        return
+
+    ticket_no = parts[1].strip().upper()
+    db = _get_db()
+    wo = db.get_work_order_by_ticket_no(ticket_no)
+
+    if not wo:
+        await update.message.reply_text(f"❌ Ticket {ticket_no} not found.")
+        return
+
+    query = f"{wo['title']}. {wo.get('description', '')}"
+    retriever = _get_retriever()
+    docs = retriever.query(query, top_k=3)
+
+    if not docs:
+        await update.message.reply_text(
+            f"🔍 *{ticket_no}* — No relevant documentation found.\n\n"
+            f"Issue: {wo['title']}",
+            parse_mode="Markdown",
+        )
+        return
+
+    context_text = "\n\n".join(f"• {d}" for d in docs)
+    reply = (
+        f"🧠 *Suggested Fix for {ticket_no}*\n"
+        f"AHU: `{wo['ahu_id']}` | Severity: {wo.get('severity', 'Unknown')}\n\n"
+        f"*Issue:* {wo['title']}\n\n"
+        f"*Relevant guidance:*\n{context_text}"
+    )
+    await update.message.reply_text(reply, parse_mode="Markdown")
+
+
 @require_role("technician")
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """AHU health status."""
@@ -621,6 +666,7 @@ def get_handlers() -> list:
         update_conv,
         CommandHandler("mywork", cmd_mywork),
         CommandHandler("status", cmd_status),
+        CommandHandler("solve", solve_handler),
         CallbackQueryHandler(cb_claim_ticket, pattern=r"^claim_ticket:\d+$"),
         CallbackQueryHandler(cb_approve_ticket, pattern=r"^approve_ticket:\d+$"),
         CallbackQueryHandler(cb_reject_ticket, pattern=r"^reject_ticket:\d+$"),
