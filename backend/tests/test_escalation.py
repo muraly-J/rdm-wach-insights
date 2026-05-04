@@ -1,14 +1,16 @@
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 def test_list_stale_tickets_returns_overdue(tmp_path, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
     import core.agentdb as agentdb_module
     from core.agentdb import AgentDB
-    from datetime import datetime, timedelta, timezone
 
     db = AgentDB(db_path=str(tmp_path / "test.db"))
     monkeypatch.setattr(agentdb_module, "_db_instance", db)
@@ -42,9 +44,10 @@ def test_list_stale_tickets_returns_overdue(tmp_path, monkeypatch):
 
 
 def test_list_stale_tickets_excludes_claimed(tmp_path, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
     import core.agentdb as agentdb_module
     from core.agentdb import AgentDB
-    from datetime import datetime, timedelta, timezone
 
     db = AgentDB(db_path=str(tmp_path / "test.db"))
     monkeypatch.setattr(agentdb_module, "_db_instance", db)
