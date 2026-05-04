@@ -23,6 +23,8 @@
 
 ## Frontend Matrix
 
+<!-- Files in scope: frontend/src/components/dashboard/HealthIndexChart.tsx, frontend/src/components/dashboard/ScoreCard.tsx, frontend/src/components/dashboard/CombinedScoresChart.tsx, frontend/src/components/dashboard/derivation/RawScoreRelationChart.tsx, frontend/src/components/dashboard/derivation/ScoreCardWithSelector.tsx, frontend/src/components/dashboard/derivation/ScoreDerivationSection.tsx, frontend/src/components/dashboard/ScoreCardsGrid.tsx, frontend/src/components/dashboard/LatestOverview.tsx, frontend/src/components/dashboard/SafetyFlagCard.tsx, frontend/src/components/dashboard/AlertsModal.tsx, frontend/src/components/chat/cards/AHUSummaryCard.tsx, frontend/src/components/chat/ChatWindow.tsx, frontend/src/components/deepdive/SingleDeviceChart.tsx, frontend/src/components/deepdive/CompareMode.tsx, frontend/src/components/workorders/WorkOrderDetailModal.tsx -->
+
 | File | Component | Field consumed | Expected scale | Expected direction | Math done in component? | Notes |
 |------|-----------|----------------|----------------|--------------------|-------------------------|-------|
 
