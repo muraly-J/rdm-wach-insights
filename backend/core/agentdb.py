@@ -207,6 +207,27 @@ class AgentDB:
             ).fetchdf()
         return df.to_dict(orient="records")
 
+    def list_stale_tickets(self) -> list[dict]:
+        """Return open/pending unclaimed tickets that exceed their priority age threshold."""
+        with self._connect() as conn:
+            rows = conn.execute("""
+                SELECT *
+                FROM work_orders
+                WHERE status IN ('open', 'pending_tech_review')
+                  AND claimed_by IS NULL
+                  AND CASE
+                        WHEN priority IN ('Critical', 'High') THEN
+                            created_at <= NOW() - INTERVAL '2 hours'
+                        WHEN priority = 'Medium' THEN
+                            created_at <= NOW() - INTERVAL '8 hours'
+                        ELSE
+                            created_at <= NOW() - INTERVAL '24 hours'
+                      END
+            """).fetchdf()
+        if rows.empty:
+            return []
+        return rows.to_dict(orient="records")
+
     def update_work_order(
         self,
         wo_id: int,

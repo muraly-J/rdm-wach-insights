@@ -180,6 +180,49 @@ def run_health_etl(dry_run: bool = False) -> tuple:
 
 
 WATCHMAN_LOG = os.path.join(LOGS_DIR, "watchman.log")
+ESCALATION_LOG = os.path.join(LOGS_DIR, "escalation.log")
+
+
+def run_escalation_checker(dry_run: bool = False) -> tuple:
+    """Run the escalation checker to alert on stale unclaimed tickets."""
+    if dry_run:
+        log_scheduler("[DRY-RUN] Would run: escalation_checker.py")
+        return True, "Dry run - no execution"
+
+    log_scheduler("Starting escalation checker...")
+
+    script_path = os.path.join(PROJECT_ROOT, "scripts", "escalation_checker.py")
+    if not os.path.exists(script_path):
+        log_scheduler(f"  Escalation checker script not found at {script_path}, skipping")
+        return True, "Skipped — escalation checker script not found"
+
+    try:
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=os.path.join(PROJECT_ROOT, "backend"),
+        )
+        output = result.stdout + result.stderr
+        with open(ESCALATION_LOG, "a") as f:
+            from datetime import datetime as _dt
+            f.write(f"\n{'='*70}\n")
+            f.write(f"RUN: {_dt.now().isoformat()}\n")
+            f.write(f"{'='*70}\n")
+            f.write(output + "\n")
+            f.write(f"STATUS: {'SUCCESS' if result.returncode == 0 else 'FAILED'}\n")
+
+        if result.returncode == 0:
+            log_scheduler("Escalation checker completed")
+        else:
+            log_scheduler(f"Escalation checker had issues: {output[:200]}")
+
+        return result.returncode == 0, output
+    except subprocess.TimeoutExpired:
+        return False, "ERROR: Escalation checker timed out"
+    except Exception as e:
+        return False, f"ERROR: {str(e)}"
 
 
 def run_watchman_analysis(dry_run: bool = False) -> tuple:
@@ -330,6 +373,13 @@ Examples:
             success, output = run_watchman_analysis(dry_run=args.dry_run)
             if not success:
                 log_scheduler(f"  ⚠️  Watchman processing had issues (see {WATCHMAN_LOG})")
+
+        # Run escalation checker (alert on stale unclaimed tickets)
+        if iteration == 1 or not args.dry_run:
+            log_scheduler("")
+            success, output = run_escalation_checker(dry_run=args.dry_run)
+            if not success:
+                log_scheduler(f"  ⚠️  Escalation checker had issues (see {ESCALATION_LOG})")
 
         # Calculate wait time
         elapsed = (datetime.now() - start_time).total_seconds()
