@@ -580,7 +580,7 @@ async def solve_handler(update, context) -> None:
 
     query = f"{wo['title']}. {wo.get('description', '')}"
     retriever = _get_retriever()
-    docs = retriever.query(query, top_k=3)
+    docs = await retriever.retrieve(query, top_k=3)
 
     if not docs:
         await update.message.reply_text(

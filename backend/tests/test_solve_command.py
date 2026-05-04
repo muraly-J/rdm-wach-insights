@@ -17,9 +17,9 @@ async def test_solve_returns_rag_suggestion():
         "status": "open",
     }
     mock_retriever = MagicMock()
-    mock_retriever.query.return_value = [
+    mock_retriever.retrieve = AsyncMock(return_value=[
         "THD above 15% indicates harmonic filter degradation. Replace capacitor bank C3."
-    ]
+    ])
     mock_update = MagicMock()
     mock_update.message.text = "/solve TCK-001"
     mock_update.message.reply_text = AsyncMock()
