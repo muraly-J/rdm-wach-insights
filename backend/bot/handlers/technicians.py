@@ -69,7 +69,12 @@ def _get_db():
 
 
 def _get_retriever() -> Retriever:
-    return Retriever()
+    from config import settings
+    from rag.vector_store import VectorStore
+    chroma_dir = str(settings.chroma_persist_dir)
+    collection = settings.rag_collection
+    store = VectorStore(persist_dir=chroma_dir, collection_name=collection)
+    return Retriever(vector_store=store)
 
 
 # ── Claim callback ───────────────────────────────────────────────────────
