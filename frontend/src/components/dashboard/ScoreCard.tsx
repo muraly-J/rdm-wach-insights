@@ -1,5 +1,5 @@
 import React from 'react';
-import { LineChart, Line, ResponsiveContainer } from 'recharts';
+import { Line, LineChart, ResponsiveContainer } from 'recharts';
 import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
 import InfoTooltip from '../shared/InfoTooltip';
 
@@ -13,7 +13,8 @@ interface ScoreCardProps {
 }
 
 /**
- * ScoreCard — risk-direction scoring (0=healthy, 100=critical).
+ * ScoreCard — health-direction scoring (0=critical, 100=healthy).
+ * High score = good (green), low score = bad (red).
  */
 const ScoreCard: React.FC<ScoreCardProps> = ({
   title,
@@ -23,16 +24,16 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
   chartColor,
   infoText,
 }) => {
-  // Risk direction: low value = green (good), high value = red (bad)
-  const getRiskColor = (val: number) => {
-    if (val <= 20) return 'text-[#4fbd95]'; // low risk
-    if (val <= 50) return 'text-[#f9a020]'; // moderate risk
-    return 'text-[#e96852]'; // high risk
+  // Health direction: high value = green (good), low value = red (bad)
+  const getHealthColor = (val: number) => {
+    if (val >= 70) return 'text-[#4fbd95]'; // healthy
+    if (val >= 40) return 'text-[#f9a020]'; // moderate
+    return 'text-[#e96852]'; // critical
   };
 
-  const numberColor = getRiskColor(value);
-  // For risk scores: increasing trend is bad (red), decreasing is good (green)
-  const trendColor = trendValue <= 0 ? 'text-[#4fbd95]' : 'text-[#e96852]';
+  const numberColor = getHealthColor(value);
+  // For health scores: increasing trend is good (green), decreasing is bad (red)
+  const trendColor = trendValue >= 0 ? 'text-[#4fbd95]' : 'text-[#e96852]';
   const trendIcon = trendValue >= 0 ? '↑' : '↓';
 
   return (
@@ -88,3 +89,4 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
 };
 
 export default ScoreCard;
+
