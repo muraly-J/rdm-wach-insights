@@ -391,7 +391,8 @@ def new_energy_anomaly_score(
     slope_n = float(np.clip(ols_slope(hist_delta_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
 
-    return clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    penalty = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    return clamp01(1.0 - penalty)
 
 
 def new_power_factor_risk_score(
@@ -446,7 +447,7 @@ def new_power_factor_risk_score(
         and power < PF_DISCOUNT_THRESHOLD * ahu_median_pf):
         score *= PF_DISCOUNT_FACTOR
 
-    return clamp01(score)
+    return clamp01(1.0 - score)
 
 
 def new_phase_imbalance_score(
@@ -488,7 +489,8 @@ def new_phase_imbalance_score(
     slope_n = float(np.clip(ols_slope(hist_unbal_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
 
-    return clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    penalty = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    return clamp01(1.0 - penalty)
 
 
 def new_thd_drift_score(
@@ -531,7 +533,8 @@ def new_thd_drift_score(
     slope_n = float(np.clip(ols_slope(hist_thd_24h_series) / rstd, -10, 10))
     tr = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
 
-    return clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    penalty = clamp01(LEVEL_WEIGHT * lv + TREND_WEIGHT * tr)
+    return clamp01(1.0 - penalty)
 
 
 def new_overload_score(
@@ -595,8 +598,8 @@ def new_overload_score(
     slope_n = float(np.clip(ols_slope(hist_power_series) / rstd, -10, 10))
     score_C = sigmoid_score(max(0.0, slope_n) * SLOPE_SENS)
 
-    score = 0.50 * score_A + 0.30 * score_B + 0.20 * score_C
-    return clamp01(score)
+    penalty = 0.50 * score_A + 0.30 * score_B + 0.20 * score_C
+    return clamp01(1.0 - penalty)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -951,15 +954,18 @@ def overload_risk_score(
 
 def calculate_ahu_health_index(risk_scores: dict[str, float]) -> tuple[float, str]:
     """
-    Calculate unified AHU Health Index from individual risk scores.
+    Calculate unified AHU Health Index from individual health scores.
 
-    health_index = 100 - weighted_sum(
+    health_index = weighted_sum(
         energy_anomaly_score × 0.15,
         pf_risk_score        × 0.25,
         imbalance_risk_score × 0.25,
         thd_risk_score       × 0.15,
         overload_risk_score  × 0.20
-    )
+    ) × 100
+
+    All scores at 1 (healthy on every metric) → index = 100
+    All scores at 0 (critical on every metric) → index = 0
 
     Args:
         risk_scores: Dict with keys: energy_anomaly, power_factor,
@@ -976,7 +982,7 @@ def calculate_ahu_health_index(risk_scores: dict[str, float]) -> tuple[float, st
             score = 0.5
         weighted_sum += score * weight
 
-    health_index = 100 - (weighted_sum * 100)
+    health_index = weighted_sum * 100
     health_index = max(0, min(100, health_index))  # Clamp to [0, 100]
 
     health_tier = get_health_tier(health_index)
@@ -985,14 +991,14 @@ def calculate_ahu_health_index(risk_scores: dict[str, float]) -> tuple[float, st
 
 def calculate_ahu_health_index_fair(risk_scores: dict[str, float]) -> tuple[float, str]:
     """
-    Calculate unified AHU Health Index from individual risk scores (FAIR method).
+    Calculate unified AHU Health Index from individual health scores (FAIR method).
 
-    Same formula as calculate_ahu_health_index but explicit about weights.
-    health_index = 100 - penalty × 100
-    where penalty = Σ weight_i × score_i
+    Same formula as calculate_ahu_health_index.
+    health_index = weighted_sum(health_scores) × 100
+    where health_score ∈ [0, 1] and 1 = healthy.
 
-    All scores at 0 (exactly at own baseline) → index = 100
-    All scores at 1 (maximum deviation on all metrics) → index = 0
+    All scores at 1 (healthy on every metric) → index = 100
+    All scores at 0 (critical on every metric) → index = 0
 
     Args:
         risk_scores: Dict with keys: energy_anomaly, power_factor,
@@ -1001,18 +1007,15 @@ def calculate_ahu_health_index_fair(risk_scores: dict[str, float]) -> tuple[floa
     Returns:
         Tuple of (health_index: float, health_tier: str)
     """
-    penalty = 0.0
+    weighted_sum = 0.0
     for metric, score in risk_scores.items():
         weight = HEALTH_INDEX_WEIGHTS.get(metric, 0)
-        penalty += score * weight
+        weighted_sum += score * weight
 
-    health_index = 100 - (penalty * 100)
+    health_index = weighted_sum * 100
     health_index = max(0, min(100, health_index))  # Clamp to [0, 100]
 
     health_tier = get_health_tier(health_index)
-    return round(health_index, 1), health_tier
-
-
     return round(health_index, 1), health_tier
 
 

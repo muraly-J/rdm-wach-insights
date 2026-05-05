@@ -35,6 +35,15 @@ SCORE_COLUMNS = [
     "health_index",
 ]
 
+# Component scores stored in DuckDB as 0–1; normalize to 0–100 at API boundary.
+COMPONENT_SCORE_COLUMNS = [
+    "energy_anomaly",
+    "pf_degradation",
+    "phase_imbalance",
+    "thd_drift",
+    "overload",
+]
+
 SCORE_SERIES_MAP: dict[str, list[dict]] = {
     "energy_anomaly": [
         {"col": "raw_hourly_delta", "label": "Actual δ kWh", "unit": "kWh", "style": "solid"},
@@ -392,17 +401,27 @@ def get_score_breakdown(level: int, time_range: str) -> list[dict]:
             if active_series.empty:
                 continue
             values = active_series[col].astype(float)
-            current = round(float(values.iloc[-1]), 2)
-            trend = round(float(values.iloc[-1] - values.iloc[0]), 2) if len(values) > 1 else 0.0
+            raw_current = float(values.iloc[-1])
+            raw_first = float(values.iloc[0])
+            # Normalize component scores from 0–1 to 0–100 at API boundary
+            if col in COMPONENT_SCORE_COLUMNS:
+                raw_current = raw_current * 100.0
+                raw_first = raw_first * 100.0
+            current = round(raw_current, 2)
+            trend = round(raw_current - raw_first, 2) if len(values) > 1 else 0.0
             # Time-series data uses full group so off-period rows (is_on=False) are
             # included — the frontend uses these to render grey shading on charts.
             full_cols = ["timestamp", col] + (["is_on"] if has_is_on else [])
             full_series = group[full_cols].dropna(subset=[col])
             data_points = []
             for _, row in full_series.iterrows():
+                raw_val = float(row[col])
+                # Normalize component scores from 0–1 to 0–100 at API boundary
+                if col in COMPONENT_SCORE_COLUMNS:
+                    raw_val = raw_val * 100.0
                 point: dict = {
                     "timestamp": row["timestamp"].isoformat(),
-                    "value": round(float(row[col]), 2),
+                    "value": round(raw_val, 2),
                 }
                 if has_is_on:
                     point["is_on"] = bool(row["is_on"])
@@ -437,9 +456,13 @@ def get_raw_score_relationship(device_id: str, time_range: str) -> dict:
         score_sub = df[["timestamp", score_col]].dropna(subset=[score_col])
         if score_sub.empty:
             continue
+        raw_vals = [float(r[score_col]) for _, r in score_sub.iterrows()]
+        # Normalize component scores from 0–1 to 0–100 at API boundary
+        if score_col in COMPONENT_SCORE_COLUMNS:
+            raw_vals = [v * 100.0 for v in raw_vals]
         score_data = [
-            {"timestamp": r["timestamp"].isoformat(), "value": round(float(r[score_col]), 2)}
-            for _, r in score_sub.iterrows()
+            {"timestamp": r["timestamp"].isoformat(), "value": round(val, 2)}
+            for (_, r), val in zip(score_sub.iterrows(), raw_vals)
         ]
         series_out = []
         for s in series_defs:
