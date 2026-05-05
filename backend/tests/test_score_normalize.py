@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from backend.core.score_normalize import to_canonical, from_canonical
+from backend.core.score_normalize import from_canonical, to_canonical
 
 
 class TestToCanonical:

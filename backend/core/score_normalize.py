@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Literal, Optional
+from typing import Literal
 
 Scale = Literal["0-1", "0-100"]
 Direction = Literal["high-good", "high-bad"]
@@ -19,9 +19,7 @@ def _check(scale: str, direction: str) -> None:
         raise ValueError(f"direction must be one of {_VALID_DIRECTIONS}, got {direction!r}")
 
 
-def to_canonical(
-    value: Optional[float], *, scale: Scale, direction: Direction
-) -> Optional[float]:
+def to_canonical(value: float | None, *, scale: Scale, direction: Direction) -> float | None:
     """Convert a raw score to canonical 0-100 high=good. None/NaN passthrough as None."""
     _check(scale, direction)
     if value is None:
@@ -37,9 +35,7 @@ def to_canonical(
     return max(0.0, min(100.0, v))
 
 
-def from_canonical(
-    value: Optional[float], *, scale: Scale, direction: Direction
-) -> Optional[float]:
+def from_canonical(value: float | None, *, scale: Scale, direction: Direction) -> float | None:
     """Inverse of to_canonical. Used only for tests/round-trip validation."""
     _check(scale, direction)
     if value is None:

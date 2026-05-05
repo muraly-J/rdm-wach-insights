@@ -462,7 +462,7 @@ def get_raw_score_relationship(device_id: str, time_range: str) -> dict:
             raw_vals = [v * 100.0 for v in raw_vals]
         score_data = [
             {"timestamp": r["timestamp"].isoformat(), "value": round(val, 2)}
-            for (_, r), val in zip(score_sub.iterrows(), raw_vals)
+            for (_, r), val in zip(score_sub.iterrows(), raw_vals, strict=False)
         ]
         series_out = []
         for s in series_defs:
