@@ -1,0 +1,1 @@
+{"healthy":{"ahu_id":"e0401","rationale":"highest health_index (85.0) over latest snapshot, state=On"},"degraded":{"ahu_id":"e0308","rationale":"lowest health_index (42.0) among operational AHUs, state=On"},"off":{"ahu_id":"e0205","rationale":"operational_state=Off in latest snapshot, health_index=54.3"}}
