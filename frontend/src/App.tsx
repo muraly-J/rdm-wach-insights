@@ -90,6 +90,9 @@ function App() {
   const [scoresData, setScoresData] = React.useState<ScoresResponse | null>(null);
   const [rawData, setRawData] = React.useState<RawScoreResponse | null>(null);
   const [rankingRows, setRankingRows] = React.useState<AHURankRow[]>([]);
+  const [deviceStateMap, setDeviceStateMap] = React.useState<
+    Record<string, { operational_state?: string; last_on_timestamp?: string | null }>
+  >({});
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [offPeriods, setOffPeriods] = React.useState<OffPeriod[]>([]);
@@ -208,6 +211,16 @@ function App() {
             status: getStatus(d.index),
           }));
         setRankingRows(rows);
+        const stateMap: Record<string, { operational_state?: string; last_on_timestamp?: string | null }> = {};
+        allDevices.forEach((d: any) => {
+          if (d.ahu_id) {
+            stateMap[d.ahu_id] = {
+              operational_state: d.operational_state,
+              last_on_timestamp: d.last_on_timestamp,
+            };
+          }
+        });
+        setDeviceStateMap(stateMap);
       })
       .catch(() => setRankingRows([]));
   }, [selectedLevel, timeRange, labelMap]);
@@ -430,6 +443,8 @@ function App() {
                             rawData={rawData}
                             timeRange={chartRange}
                             isOnByTimestamp={isOnByTimestamp}
+                            operationalState={deviceStateMap[selectedDevice!]?.operational_state as any}
+                            lastMeasured={deviceStateMap[selectedDevice!]?.last_on_timestamp}
                           />
                         </React.Suspense>
                       )}
@@ -482,6 +497,7 @@ function App() {
                       isSelectedDeviceOn={isSelectedDeviceOn}
                       healthChartData={healthChartData}
                       isOnByTimestamp={isOnByTimestamp}
+                      deviceStateMap={deviceStateMap}
                     />
                   </React.Suspense>
                 </motion.div>
@@ -575,6 +591,8 @@ function App() {
                         rawData={rawData}
                         timeRange={chartRange}
                         isOnByTimestamp={isOnByTimestamp}
+                        operationalState={deviceStateMap[selectedDevice!]?.operational_state as any}
+                        lastMeasured={deviceStateMap[selectedDevice!]?.last_on_timestamp}
                       />
                     </React.Suspense>
                   )}
@@ -625,6 +643,7 @@ function App() {
                   isSelectedDeviceOn={isSelectedDeviceOn}
                   healthChartData={healthChartData}
                   isOnByTimestamp={isOnByTimestamp}
+                  deviceStateMap={deviceStateMap}
                 />
               </React.Suspense>
             </motion.div>

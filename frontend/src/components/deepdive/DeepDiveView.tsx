@@ -2,7 +2,7 @@ import React from 'react';
 import { DeepDiveSubMode, useAppStore } from '../../store/useAppStore';
 import { DeviceInfo } from '../../utils/deviceLabel';
 // import { fetchOffPeriods } from '../../api/client';
-import type { OffPeriod } from '../../types';
+import type { OffPeriod, OperationalState } from '../../types';
 import CompareMode from './CompareMode';
 import SingleDeviceChart from './SingleDeviceChart';
 
@@ -13,6 +13,14 @@ interface DeepDiveViewProps {
   isSelectedDeviceOn?: boolean;
   healthChartData?: Array<{ timestamp?: string; is_on?: boolean; [key: string]: any }>;
   isOnByTimestamp?: Record<string, boolean>;
+  deviceStateMap?: Record<
+    string,
+    {
+      operational_state?: OperationalState;
+      last_on_timestamp?: string | null;
+      confidence?: number;
+    }
+  >;
 }
 
 const DeepDiveView: React.FC<DeepDiveViewProps> = ({
@@ -22,6 +30,7 @@ const DeepDiveView: React.FC<DeepDiveViewProps> = ({
   isSelectedDeviceOn = true,
   healthChartData,
   isOnByTimestamp = {},
+  deviceStateMap = {},
 }) => {
   const { selectedDevice, deepDiveSubMode, setDeepDiveSubMode, compareDevices } = useAppStore();
   const [offPeriods, setOffPeriods] = React.useState<OffPeriod[]>([]);
@@ -83,6 +92,9 @@ const DeepDiveView: React.FC<DeepDiveViewProps> = ({
             isOn={isSelectedDeviceOn}
             healthChartData={healthChartData}
             isOnByTimestamp={isOnByTimestamp}
+            operationalState={deviceStateMap[selectedDevice!]?.operational_state}
+            lastMeasured={deviceStateMap[selectedDevice!]?.last_on_timestamp}
+            confidence={deviceStateMap[selectedDevice!]?.confidence}
           />
         ) : (
           <div style={{ padding: 40, textAlign: 'center', color: '#556677', fontSize: 13 }}>
@@ -90,7 +102,7 @@ const DeepDiveView: React.FC<DeepDiveViewProps> = ({
           </div>
         )
       ) : hasCompareDevices ? (
-        <CompareMode deviceIds={compareDevices} labelMap={labelMap} timeRange={timeRange} />
+        <CompareMode deviceIds={compareDevices} labelMap={labelMap} timeRange={timeRange} stateMap={deviceStateMap} />
       ) : (
         <div style={{ padding: 40, textAlign: 'center', color: '#556677', fontSize: 13 }}>
           Select 2–3 Devices Using the Device Filter Above to Compare Them.
