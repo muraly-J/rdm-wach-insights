@@ -13,7 +13,9 @@ import { fetchMeasurements } from '../../api/client';
 import { CHART_CONFIG } from '../../constants/chartConfig';
 import { METRIC_META, SCORE_METRIC_GROUPS } from '../../constants/metricGroups';
 import { useMetricSelection } from '../../hooks/useMetricSelection';
+import type { OperationalState } from '../../types';
 import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
+import GreyStateWrapper from '../shared/GreyStateWrapper';
 
 interface SingleDeviceChartProps {
   deviceId: string;
@@ -22,6 +24,9 @@ interface SingleDeviceChartProps {
   isOn?: boolean;
   healthChartData?: Array<{ timestamp?: string; is_on?: boolean; [key: string]: any }>;
   isOnByTimestamp?: Record<string, boolean>;
+  operationalState?: OperationalState;
+  lastMeasured?: string | null;
+  confidence?: number;
 }
 
 function toApiRange(timeRange: string): '24h' | '7d' | '30d' {
@@ -36,6 +41,9 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
   isOn = true,
   healthChartData,
   isOnByTimestamp = {},
+  operationalState,
+  lastMeasured,
+  confidence,
 }) => {
   const { selectedMetrics, setSelectedMetrics, toggleMetric } = useMetricSelection();
   const [chartData, setChartData] = React.useState<Record<string, number | string | null>[]>([]);
@@ -77,7 +85,12 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
   }, [chartData, isOnByTimestamp]);
 
   return (
-    <div>
+    <GreyStateWrapper
+      operationalState={operationalState}
+      lastMeasured={lastMeasured}
+      confidence={confidence}
+      isOn={isOn}
+    >
       <div
         style={{
           marginBottom: 12,
@@ -91,22 +104,6 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
         <span style={{ fontSize: 13, color: isOn ? '#00E5A0' : '#8899aa', fontWeight: 600 }}>
           {deviceLabel}
         </span>
-        {!isOn && (
-          <span
-            style={{
-              fontSize: 10,
-              color: '#556677',
-              background: '#1a2234',
-              border: '1px solid #2a3649',
-              borderRadius: 4,
-              padding: '2px 6px',
-              fontWeight: 600,
-              letterSpacing: '0.05em',
-            }}
-          >
-            OFF
-          </span>
-        )}
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
@@ -240,7 +237,7 @@ const SingleDeviceChart: React.FC<SingleDeviceChartProps> = ({
           </ResponsiveContainer>
         )}
       </div>
-    </div>
+    </GreyStateWrapper>
   );
 };
 
