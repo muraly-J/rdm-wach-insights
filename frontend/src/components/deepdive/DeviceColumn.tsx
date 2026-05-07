@@ -11,6 +11,8 @@ import {
 import { fetchMeasurements } from '../../api/client';
 import { CHART_CONFIG } from '../../constants/chartConfig';
 import { METRIC_META } from '../../constants/metricGroups';
+import GreyStateWrapper from '../shared/GreyStateWrapper';
+import type { OperationalState } from '../../types';
 
 interface DeviceColumnProps {
   deviceId: string;
@@ -18,6 +20,9 @@ interface DeviceColumnProps {
   selectedMetrics: string[];
   timeRange: string;
   colorMap: Record<string, string>;
+  operationalState?: OperationalState;
+  lastMeasured?: string | null;
+  confidence?: number;
 }
 
 function toApiRange(timeRange: string): '24h' | '7d' | '30d' {
@@ -31,6 +36,9 @@ const DeviceColumn: React.FC<DeviceColumnProps> = ({
   selectedMetrics,
   timeRange,
   colorMap,
+  operationalState,
+  lastMeasured,
+  confidence,
 }) => {
   const [chartData, setChartData] = React.useState<Record<string, number | string | null>[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -60,6 +68,11 @@ const DeviceColumn: React.FC<DeviceColumnProps> = ({
   }, [deviceId, selectedMetrics, timeRange]);
 
   return (
+    <GreyStateWrapper
+      operationalState={operationalState}
+      lastMeasured={lastMeasured}
+      confidence={confidence}
+    >
     <div style={{ flex: 1, minWidth: 0 }}>
       <div
         style={{
@@ -143,6 +156,7 @@ const DeviceColumn: React.FC<DeviceColumnProps> = ({
         )}
       </div>
     </div>
+    </GreyStateWrapper>
   );
 };
 

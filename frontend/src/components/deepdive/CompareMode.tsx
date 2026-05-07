@@ -1,16 +1,18 @@
 import React from 'react';
-import { SCORE_METRIC_GROUPS } from '../../constants/metricGroups';
-import DeviceColumn from './DeviceColumn';
-import { useMetricSelection } from '../../hooks/useMetricSelection';
 import { CHART_CONFIG } from '../../constants/chartConfig';
+import { SCORE_METRIC_GROUPS } from '../../constants/metricGroups';
+import { useMetricSelection } from '../../hooks/useMetricSelection';
+import type { OperationalState } from '../../types';
+import DeviceColumn from './DeviceColumn';
 
 interface CompareModeProps {
   deviceIds: string[];
   labelMap: Record<string, string>;
   timeRange: string;
+  stateMap?: Record<string, { operational_state?: OperationalState; last_on_timestamp?: string | null; confidence?: number }>;
 }
 
-const CompareMode: React.FC<CompareModeProps> = ({ deviceIds, labelMap, timeRange }) => {
+const CompareMode: React.FC<CompareModeProps> = ({ deviceIds, labelMap, timeRange, stateMap = {} }) => {
   const { selectedMetrics, setSelectedMetrics, toggleMetric } = useMetricSelection();
   const [groupOpen, setGroupOpen] = React.useState<string | null>(null);
 
@@ -117,6 +119,9 @@ const CompareMode: React.FC<CompareModeProps> = ({ deviceIds, labelMap, timeRang
             selectedMetrics={selectedMetrics}
             timeRange={timeRange}
             colorMap={colorMap}
+            operationalState={stateMap[id]?.operational_state}
+            lastMeasured={stateMap[id]?.last_on_timestamp}
+            confidence={stateMap[id]?.confidence}
           />
         ))}
       </div>
