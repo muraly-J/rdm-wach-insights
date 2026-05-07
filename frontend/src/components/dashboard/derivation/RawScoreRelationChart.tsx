@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { DerivationReferenceLine, DerivationSeries } from '../../../types';
+import type { DerivationReferenceLine, DerivationSeries, OperationalState } from '../../../types';
 import {
   formatDateMYT,
   formatTickByRange,
@@ -17,6 +17,7 @@ import {
   type TimeRange,
 } from '../../../utils/formatTick';
 import { renderOffPeriodAreas } from '../../../utils/offPeriodAreas';
+import GreyStateWrapper from '../../shared/GreyStateWrapper';
 
 interface RawScoreRelationChartProps {
   scoreName: string;
@@ -27,6 +28,9 @@ interface RawScoreRelationChartProps {
   headerAction?: React.ReactNode;
   timeRange: TimeRange;
   loading?: boolean;
+  operationalState?: OperationalState;
+  lastMeasured?: string | null;
+  confidence?: number;
 }
 
 // Color palette for up to 7 left-axis series
@@ -58,6 +62,9 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
   headerAction,
   timeRange,
   loading = false,
+  operationalState,
+  lastMeasured,
+  confidence,
 }) => {
   if (loading) {
     return (
@@ -125,6 +132,11 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
   };
 
   return (
+    <GreyStateWrapper
+      operationalState={operationalState}
+      lastMeasured={lastMeasured}
+      confidence={confidence}
+    >
     <div className="card p-6 hover:border-[#2e3f55] transition-all duration-300 w-full">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
@@ -253,6 +265,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
         </div>
       </div>
     </div>
+    </GreyStateWrapper>
   );
 };
 
