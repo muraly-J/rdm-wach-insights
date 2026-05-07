@@ -6,6 +6,7 @@ import type {
   DerivationSeries,
   MeasurementPoint,
   MetricOption,
+  OperationalState,
 } from '../../../types';
 import MetricMiniChart from '../../shared/MetricMiniChart';
 import VariableSelector from '../../shared/VariableSelector';
@@ -21,6 +22,9 @@ interface ScoreCardWithSelectorProps {
   chartColor: string;
   timeRange: '24h' | '7d' | '30d';
   availableMetrics: MetricOption[];
+  operationalState?: OperationalState;
+  lastMeasured?: string | null;
+  confidence?: number;
 }
 
 export default function ScoreCardWithSelector({
@@ -33,6 +37,9 @@ export default function ScoreCardWithSelector({
   chartColor,
   timeRange,
   availableMetrics,
+  operationalState,
+  lastMeasured,
+  confidence,
 }: ScoreCardWithSelectorProps) {
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
   const [measurements, setMeasurements] = useState<Record<string, MeasurementPoint[]>>({});
@@ -83,6 +90,9 @@ export default function ScoreCardWithSelector({
             label="Add Variables"
           />
         }
+        operationalState={operationalState}
+        lastMeasured={lastMeasured}
+        confidence={confidence}
       />
 
       {selectedMetrics.map((key, idx) => (

@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import React from 'react';
 
 import { SCORE_METRIC_GROUPS } from '../../../constants/metricGroups';
-import { ScoreName } from '../../../types';
+import type { OperationalState, ScoreName } from '../../../types';
 import ScoreCardWithSelector from './ScoreCardWithSelector';
 
 interface ScoreDerivationSectionProps {
@@ -11,6 +11,9 @@ interface ScoreDerivationSectionProps {
   rawData: Record<string, any>;
   timeRange: '24h' | '7d' | '30d';
   isOnByTimestamp?: Record<string, boolean>;
+  operationalState?: OperationalState;
+  lastMeasured?: string | null;
+  confidence?: number;
 }
 
 /**
@@ -40,6 +43,9 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
   rawData,
   timeRange,
   isOnByTimestamp = {},
+  operationalState,
+  lastMeasured,
+  confidence,
 }) => {
   // Enrich all scoreData with is_on flags via timestamp lookup
   const enrichedRawData = React.useMemo(() => {
@@ -232,6 +238,9 @@ const ScoreDerivationSection: React.FC<ScoreDerivationSectionProps> = ({
                   chartColor={SCORE_COLORS[index]}
                   timeRange={timeRange}
                   availableMetrics={group?.availableMetrics ?? []}
+                  operationalState={operationalState}
+                  lastMeasured={lastMeasured}
+                  confidence={confidence}
                 />
               );
             });
