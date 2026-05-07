@@ -2,6 +2,7 @@ import React from 'react';
 import type { AHUStatus } from './AHURankingsTable';
 import type { OperationalState } from '../../types';
 import StateBadge from '../shared/StateBadge';
+import { useGreyState } from '../../hooks/useGreyState';
 
 interface DeviceDetailCardProps {
   label: string;
@@ -29,22 +30,30 @@ const DeviceDetailCard: React.FC<DeviceDetailCardProps> = ({
   isOn = true,
   operational_state,
   last_on_timestamp,
-}) => (
-  <div
-    style={{
-      background: '#1a2234',
-      border: `1px solid ${isOn ? STATUS_COLOR[status] : '#556677'}44`,
-      borderRadius: 12,
-      padding: '16px 20px',
-      marginBottom: 24,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 20,
-      flexWrap: 'wrap',
-      opacity: isOn ? 1 : 0.45,
-      filter: isOn ? 'none' : 'grayscale(80%)',
-    }}
-  >
+}) => {
+  const grey = useGreyState({
+    operationalState: operational_state,
+    lastMeasured: last_on_timestamp,
+    isOn,
+  });
+
+  return (
+    <div
+      style={{
+        background: '#1a2234',
+        border: `1px solid ${isOn ? STATUS_COLOR[status] : '#556677'}44`,
+        borderRadius: 12,
+        padding: '16px 20px',
+        marginBottom: 24,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 20,
+        flexWrap: 'wrap',
+        opacity: grey.opacity,
+        filter: grey.filter,
+        transition: 'opacity 200ms ease, filter 200ms ease',
+      }}
+    >
     <div style={{ flex: 1, minWidth: 200 }}>
       <div
         style={{
@@ -119,5 +128,7 @@ const DeviceDetailCard: React.FC<DeviceDetailCardProps> = ({
     </div>
   </div>
 );
+};
 
 export default DeviceDetailCard;
+
