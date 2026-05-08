@@ -181,6 +181,46 @@ def run_health_etl(dry_run: bool = False) -> tuple:
 
 WATCHMAN_LOG = os.path.join(LOGS_DIR, "watchman.log")
 ESCALATION_LOG = os.path.join(LOGS_DIR, "escalation.log")
+WACH_TEMP_LOG = os.path.join(LOGS_DIR, "wach_temp_dump.log")
+
+
+def run_wach_temp_dump(dry_run: bool = False) -> tuple:
+    """Incremental pull of bacnet_points -> wach_temp_data.db (1h mean)."""
+    if dry_run:
+        log_scheduler("[DRY-RUN] Would run: wach_temp_dump.py")
+        return True, "Dry run - no execution"
+
+    log_scheduler("Starting wach_temp incremental dump...")
+    script_path = os.path.join(PROJECT_ROOT, "scripts", "fetch", "wach_temp_dump.py")
+    if not os.path.exists(script_path):
+        log_scheduler(f"  wach_temp_dump script not found at {script_path}, skipping")
+        return True, "Skipped — script not found"
+
+    try:
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            timeout=1500,
+        )
+        output = result.stdout + result.stderr
+        with open(WACH_TEMP_LOG, "a") as f:
+            ts = datetime.now().isoformat()
+            f.write(f"\n{'='*70}\nRUN: {ts}\n{'='*70}\n")
+            if result.stdout: f.write("STDOUT:\n" + result.stdout + "\n")
+            if result.stderr: f.write("STDERR:\n" + result.stderr + "\n")
+            f.write(f"STATUS: {'SUCCESS' if result.returncode == 0 else f'FAILED ({result.returncode})'}\n")
+        if result.returncode == 0:
+            log_scheduler("wach_temp dump completed successfully")
+        else:
+            log_scheduler(f"wach_temp dump failed: {output[:200]}")
+        return result.returncode == 0, output
+    except subprocess.TimeoutExpired:
+        log_scheduler("wach_temp dump timed out")
+        return False, "TIMEOUT"
+    except Exception as e:
+        log_scheduler(f"wach_temp dump exception: {e}")
+        return False, str(e)
 
 
 def run_escalation_checker(dry_run: bool = False) -> tuple:
@@ -380,6 +420,13 @@ Examples:
             success, output = run_escalation_checker(dry_run=args.dry_run)
             if not success:
                 log_scheduler(f"  ⚠️  Escalation checker had issues (see {ESCALATION_LOG})")
+
+        # Incremental wach_temp dump
+        if iteration == 1 or not args.dry_run:
+            log_scheduler("")
+            success, output = run_wach_temp_dump(dry_run=args.dry_run)
+            if not success:
+                log_scheduler(f"  ⚠️  wach_temp dump had issues (see {WACH_TEMP_LOG})")
 
         # Calculate wait time
         elapsed = (datetime.now() - start_time).total_seconds()
