@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { DerivationReferenceLine, DerivationSeries, OperationalState } from '../../../types';
+import type { DerivationReferenceLine, DerivationSeries, OffPeriod, OperationalState } from '../../../types';
 import {
   formatDateMYT,
   formatTickByRange,
@@ -31,6 +31,7 @@ interface RawScoreRelationChartProps {
   operationalState?: OperationalState;
   lastMeasured?: string | null;
   confidence?: number;
+  offPeriods?: OffPeriod[];
 }
 
 // Color palette for up to 7 left-axis series
@@ -65,6 +66,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
   operationalState,
   lastMeasured,
   confidence,
+  offPeriods,
 }) => {
   if (loading) {
     return (
@@ -238,7 +240,7 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
             name="Score"
           />
 
-          {renderOffPeriodAreas(mergedData, 'timestamp')}
+          {renderOffPeriodAreas(offPeriods ?? mergedData, 'timestamp')}
         </LineChart>
       </ResponsiveContainer>
 

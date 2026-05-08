@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { formatTickByRange, tickIntervalByRange, type TimeRange } from '../../utils/formatTick';
 import { renderOffPeriodAreas } from '../../utils/offPeriodAreas';
+import type { OffPeriod } from '../../types';
 
 interface ScoreEntry {
   current: number;
@@ -21,6 +22,7 @@ interface ScoreEntry {
 interface CombinedScoresChartProps {
   scoreData: Record<string, ScoreEntry>;
   timeRange: TimeRange;
+  offPeriods?: OffPeriod[];
 }
 
 /**
@@ -37,7 +39,7 @@ const SCORE_NAMES = [
   { key: 'overload', label: 'Overload', color: '#EF4444' },
 ] as const;
 
-const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, timeRange }) => {
+const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, timeRange, offPeriods }) => {
   // Merge all score series into a single array indexed by position
   const mergedData = React.useMemo(() => {
     const firstScore = scoreData[SCORE_NAMES[0].key];
@@ -133,7 +135,7 @@ const CombinedScoresChart: React.FC<CombinedScoresChartProps> = ({ scoreData, ti
                 connectNulls
               />
             ))}
-            {renderOffPeriodAreas(mergedData, 'timestamp')}
+            {renderOffPeriodAreas(offPeriods ?? mergedData, 'timestamp')}
           </LineChart>
         </ResponsiveContainer>
       </div>

@@ -124,8 +124,8 @@ const AHURankingsTable: React.FC<AHURankingsTableProps> = ({ rows }) => {
             >
               <td style={{ padding: '10px 12px' }}>
                 {(() => {
-                  const display = deviceIdToDisplay(row.id);
-                  const shortName = display.split(' \u2014 ')[0];
+                  const display = row.label || deviceIdToDisplay(row.id);
+                  const shortName = row.label ? display : display.split(' \u2014 ')[0];
                   return (
                     <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       <span
