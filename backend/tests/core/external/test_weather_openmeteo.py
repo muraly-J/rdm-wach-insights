@@ -12,6 +12,7 @@ calls are made.  Each test receives a fresh DuckDB cache via tmp_path.
 from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 import respx
@@ -77,9 +78,9 @@ def test_fetch_weather_returns_expected_schema(tmp_path: Path) -> None:
     assert hasattr(df["ts"].dtype, "tz"), "ts must be timezone-aware"
     assert str(df["ts"].dtype.tz) == "UTC", f"ts timezone must be UTC, got {df['ts'].dtype.tz}"
 
-    # Numeric columns
+    # Numeric columns — must be exactly float64 (not Float64 nullable, float32, etc.)
     for col in ("oat", "oah", "ghi"):
-        assert pd.api.types.is_float_dtype(df[col]), f"{col} must be float"
+        assert df[col].dtype == np.float64, f"{col} dtype is {df[col].dtype}, expected float64"
 
     # Monotonically increasing ts
     assert df["ts"].is_monotonic_increasing, "ts must be monotonically increasing"
@@ -176,3 +177,57 @@ def test_fetch_weather_raises_on_rate_limit(tmp_path: Path) -> None:
             end=end,
             cache_db=tmp_path / "weather.duckdb",
         )
+
+
+# ── Test 5: Rounding consistency between COUNT queries and fetch_weather ───────
+
+
+@respx.mock
+def test_backfill_rounds_lat_lon_consistently(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    _backfill must round lat/lon ONCE and use the same rounded key for both
+    the COUNT-before / COUNT-after queries and the fetch_weather call.
+
+    If the COUNT queries and fetch_weather use different keys, the reported
+    new_rows count would be wrong (either 0 or a negative number).
+
+    Regression test for fix #2: supply coordinates with sub-4dp noise
+    (e.g. 3.13900001) to expose any mismatch.
+    """
+    import duckdb
+    from core.external import weather_openmeteo
+    from core.external.weather_openmeteo import _backfill, _COORD_PRECISION
+
+    # Noisy coordinates that round to the same 4-dp values as the mock response
+    noisy_lat = 3.13900001
+    noisy_lon = 101.68690001
+
+    # 4-hour window so mock payload is small
+    hours = 4
+    start_str = "2025-04-01"
+    end_str = "2025-04-01"
+    # _backfill sets end to hour=23, so expect 24 rows from the mock
+    # but we only need the COUNT integrity — use 4h payload and let
+    # fetch_weather filter; a full-day mock is simpler
+    hours = 24
+    payload = _make_hourly_response("2025-04-01T00:00", hours)
+    respx.get(ARCHIVE_URL).mock(return_value=Response(200, json=payload))
+
+    # Redirect settings so _backfill uses our noisy coords and tmp cache.
+    # data_dir is a computed property so we patch _default_cache_db instead.
+    monkeypatch.setattr(weather_openmeteo.settings, "hospital_lat", noisy_lat)
+    monkeypatch.setattr(weather_openmeteo.settings, "hospital_lon", noisy_lon)
+    cache_path = tmp_path / "weather_cache.duckdb"
+    monkeypatch.setattr(weather_openmeteo, "_default_cache_db", lambda: cache_path)
+
+    new_rows, total_rows = _backfill(start_str, end_str)
+
+    # The number of new rows inserted must equal the total returned by fetch_weather
+    # If rounding were inconsistent, new_rows would be 0 (COUNT keyed on wrong coord).
+    assert total_rows == hours, f"expected {hours} total rows, got {total_rows}"
+    assert new_rows == total_rows, (
+        f"new_rows={new_rows} != total_rows={total_rows}; "
+        "COUNT queries and fetch_weather used different lat/lon keys"
+    )

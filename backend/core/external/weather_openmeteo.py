@@ -22,6 +22,7 @@ CLI (backfill)
 """
 
 import argparse
+import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -231,35 +232,52 @@ def _insert_into_cache(
     df: pd.DataFrame,
 ) -> int:
     """
-    Insert rows into weather_cache. Skips rows already present (idempotent).
+    Bulk-insert rows into weather_cache. Skips rows already present (idempotent).
     Returns count of newly inserted rows.
+
+    Rows where ALL of oat, oah, ghi are NaN are dropped (useless cache entries).
+    Duplicate timestamps within the input are deduplicated (keep last).
     """
     if df.empty:
         return 0
 
-    rows = [
-        (lat, lon, row["ts"].to_pydatetime(), row["oat"], row["oah"], row["ghi"])
-        for _, row in df.iterrows()
-    ]
+    # Drop within-batch timestamp duplicates
+    df = df.drop_duplicates(subset=["ts"], keep="last")
 
-    inserted = 0
+    # Drop rows where ALL weather values are NaN — nothing useful to cache
+    all_nan_mask = df["oat"].isna() & df["oah"].isna() & df["ghi"].isna()
+    df = df[~all_nan_mask]
+
+    if df.empty:
+        return 0
+
+    # Build a typed view DataFrame with lat/lon columns added
+    insert_df = df[["ts", "oat", "oah", "ghi"]].copy()
+    insert_df["lat"] = lat
+    insert_df["lon"] = lon
+
     with duckdb.connect(str(db_path)) as conn:
         conn.execute(_SET_UTC)
-        for row in rows:
-            try:
-                conn.execute(
-                    """
-                    INSERT INTO weather_cache (lat, lon, ts, oat, oah, ghi)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    list(row),
-                )
-                inserted += 1
-            except duckdb.ConstraintException:
-                # Already exists — idempotent
-                pass
 
-    return inserted
+        before = conn.execute(
+            "SELECT COUNT(*) FROM weather_cache WHERE lat = ? AND lon = ?",
+            [lat, lon],
+        ).fetchone()[0]
+
+        # Bulk insert; skip rows that violate the PRIMARY KEY constraint
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO weather_cache (lat, lon, ts, oat, oah, ghi)
+            SELECT lat, lon, ts, oat, oah, ghi FROM insert_df
+            """
+        )
+
+        after = conn.execute(
+            "SELECT COUNT(*) FROM weather_cache WHERE lat = ? AND lon = ?",
+            [lat, lon],
+        ).fetchone()[0]
+
+    return after - before
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -351,10 +369,15 @@ def fetch_weather(
 # ── CLI (backfill) ────────────────────────────────────────────────────────────
 
 
-def _backfill(start_str: str, end_str: str) -> None:
-    """Backfill weather data for the hospital location."""
-    lat = settings.hospital_lat
-    lon = settings.hospital_lon
+def _backfill(start_str: str, end_str: str) -> tuple[int, int]:
+    """
+    Backfill weather data for the hospital location.
+
+    Returns (new_rows, total_rows).
+    """
+    # Round ONCE so COUNT queries and fetch_weather use the same key
+    lat = _round_coord(settings.hospital_lat)
+    lon = _round_coord(settings.hospital_lon)
 
     start = datetime.fromisoformat(start_str).replace(tzinfo=timezone.utc)
     end = datetime.fromisoformat(end_str).replace(hour=23, tzinfo=timezone.utc)
@@ -367,7 +390,7 @@ def _backfill(start_str: str, end_str: str) -> None:
         conn.execute(_SET_UTC)
         before = conn.execute(
             "SELECT COUNT(*) FROM weather_cache WHERE lat = ? AND lon = ? AND ts >= ? AND ts <= ?",
-            [_round_coord(lat), _round_coord(lon), start, end],
+            [lat, lon, start, end],
         ).fetchone()[0]
 
     df = fetch_weather(lat=lat, lon=lon, start=start, end=end, cache_db=db_path)
@@ -378,14 +401,14 @@ def _backfill(start_str: str, end_str: str) -> None:
         conn.execute(_SET_UTC)
         after = conn.execute(
             "SELECT COUNT(*) FROM weather_cache WHERE lat = ? AND lon = ? AND ts >= ? AND ts <= ?",
-            [_round_coord(lat), _round_coord(lon), start, end],
+            [lat, lon, start, end],
         ).fetchone()[0]
 
     new_rows = after - before
-    print(f"Backfilled {total_rows} hours; cached {new_rows} new rows.")
+    return new_rows, total_rows
 
 
-def _main() -> None:
+def _main() -> int:
     parser = argparse.ArgumentParser(
         description="Open-meteo weather adapter CLI",
         prog="python -m backend.core.external.weather_openmeteo",
@@ -409,8 +432,14 @@ def _main() -> None:
     args = parser.parse_args()
 
     if args.command == "backfill":
-        _backfill(args.start, args.end)
+        try:
+            new_rows, total_rows = _backfill(args.start, args.end)
+        except OpenMeteoError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(f"Backfilled {total_rows} hours; cached {new_rows} new rows.")
+    return 0
 
 
 if __name__ == "__main__":
-    _main()
+    sys.exit(_main())
