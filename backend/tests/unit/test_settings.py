@@ -67,6 +67,26 @@ class TestSettingsModel:
         assert "http://localhost:3000" in origins
         assert "http://localhost:5173" in origins
 
+    def test_holiday_subdivision_validator_accepts_known_code(self, monkeypatch):
+        monkeypatch.setenv("HOLIDAY_SUBDIVISION", "kul")  # lowercase env override
+        from config import Settings
+        s = Settings()
+        assert s.holiday_subdivision == "KUL"  # normalised to upper
+
+    def test_holiday_subdivision_validator_rejects_unknown(self, monkeypatch):
+        monkeypatch.setenv("HOLIDAY_SUBDIVISION", "KLU")  # typo
+        from config import Settings
+        import pytest
+        with pytest.raises(ValueError, match="holiday_subdivision must be one of"):
+            Settings()
+
+    def test_holiday_subdivision_validator_accepts_none_and_empty(self, monkeypatch):
+        monkeypatch.delenv("HOLIDAY_SUBDIVISION", raising=False)
+        from config import Settings
+        assert Settings().holiday_subdivision is None
+        monkeypatch.setenv("HOLIDAY_SUBDIVISION", "")
+        assert Settings().holiday_subdivision is None
+
     def test_no_raw_getenv_outside_config(self):
         """No module other than config.py may call os.getenv directly."""
         backend = pathlib.Path("backend")

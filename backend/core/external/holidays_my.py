@@ -27,12 +27,17 @@ specify a year window.
 
 import functools
 from datetime import date, datetime
+from typing import Any
 
 import holidays
 
 from config import settings
 
 __all__ = ["is_holiday", "holiday_name"]
+
+# Private sentinel — used so that the `subdivision` default is re-read from
+# `settings` on every call rather than frozen at module import time.
+_UNSET: Any = object()
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
@@ -63,7 +68,7 @@ def _calendar(subdivision: str | None) -> holidays.HolidayBase:
 # ── Public API ────────────────────────────────────────────────────────────────
 
 
-def is_holiday(d: date | datetime, *, subdivision: str | None = settings.holiday_subdivision) -> bool:
+def is_holiday(d: date | datetime, *, subdivision: str | None | Any = _UNSET) -> bool:
     """
     Return True if *d* is a Malaysian public holiday.
 
@@ -73,17 +78,20 @@ def is_holiday(d: date | datetime, *, subdivision: str | None = settings.holiday
         The date to query.  ``datetime`` values are coerced to their date part.
     subdivision : str | None
         ISO 3166-2:MY subdivision code (e.g. ``"KUL"``, ``"SGR"``).
-        ``None`` (default) checks federal holidays only.
-        Falls back to ``settings.holiday_subdivision`` if not supplied.
+        ``None`` checks federal holidays only.
+        When omitted, falls back to ``settings.holiday_subdivision`` (re-read
+        on every call — not frozen at import time).
 
     Returns
     -------
     bool
     """
+    if subdivision is _UNSET:
+        subdivision = settings.holiday_subdivision
     return _to_date(d) in _calendar(subdivision)
 
 
-def holiday_name(d: date | datetime, *, subdivision: str | None = settings.holiday_subdivision) -> str | None:
+def holiday_name(d: date | datetime, *, subdivision: str | None | Any = _UNSET) -> str | None:
     """
     Return the canonical name for a Malaysian public holiday, or None.
 
@@ -93,12 +101,15 @@ def holiday_name(d: date | datetime, *, subdivision: str | None = settings.holid
         The date to query.  ``datetime`` values are coerced to their date part.
     subdivision : str | None
         ISO 3166-2:MY subdivision code (e.g. ``"KUL"``, ``"SGR"``).
-        ``None`` (default) checks federal holidays only.
-        Falls back to ``settings.holiday_subdivision`` if not supplied.
+        ``None`` checks federal holidays only.
+        When omitted, falls back to ``settings.holiday_subdivision`` (re-read
+        on every call — not frozen at import time).
 
     Returns
     -------
     str | None
         The canonical holiday name, or ``None`` if *d* is not a holiday.
     """
+    if subdivision is _UNSET:
+        subdivision = settings.holiday_subdivision
     return _calendar(subdivision).get(_to_date(d))

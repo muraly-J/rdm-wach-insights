@@ -18,6 +18,7 @@ from datetime import date, datetime
 
 import pytest
 
+from config import settings
 from core.external.holidays_my import holiday_name, is_holiday
 
 
@@ -95,3 +96,26 @@ def test_subdivision_unlocks_state_holiday():
     assert is_holiday(thaipusam_2026, subdivision="KUL") is True, (
         "Thaipusam 2026-02-01 should appear in the KUL state calendar"
     )
+
+    name = holiday_name(date(2026, 2, 1), subdivision="KUL")
+    assert name is not None, "Expected a holiday name for Thaipusam in KUL but got None"
+    assert "thaipusam" in name.lower(), (
+        f"Expected holiday name to contain 'thaipusam' (case-insensitive); got: {name!r}"
+    )
+
+
+def test_subdivision_default_reads_settings_dynamically(monkeypatch):
+    """Default subdivision must re-read settings on every call, not freeze at import."""
+    # Thaipusam 2026-02-01 — federal: no; KUL: yes
+    target = date(2026, 2, 1)
+
+    # With no settings override, federal-only by default
+    monkeypatch.setattr(settings, "holiday_subdivision", None)
+    assert is_holiday(target) is False
+
+    # After monkey-patching settings to KUL, default-kwarg call should now pick it up
+    monkeypatch.setattr(settings, "holiday_subdivision", "KUL")
+    assert is_holiday(target) is True
+
+    # Explicit subdivision=None overrides settings — forces federal-only
+    assert is_holiday(target, subdivision=None) is False

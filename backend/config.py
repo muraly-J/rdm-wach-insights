@@ -18,12 +18,18 @@ haven't been migrated yet — they delegate to `settings`.
 from pathlib import Path
 
 from core.logger import get_logger
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = get_logger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
+
+# Known ISO 3166-2:MY subdivision codes accepted by the holidays package.
+_MY_SUBDIVISIONS = frozenset({
+    "JHR", "KDH", "KTN", "KUL", "LBN", "MLK", "NSN", "PHG",
+    "PJY", "PLS", "PNG", "PRK", "SBH", "SGR", "SWK", "TRG",
+})
 
 
 class Settings(BaseSettings):
@@ -82,6 +88,19 @@ class Settings(BaseSettings):
     hospital_lat: float = 3.139       # default: Kuala Lumpur central; override via HOSPITAL_LAT env var
     hospital_lon: float = 101.6869    # default: Kuala Lumpur central; override via HOSPITAL_LON env var
     holiday_subdivision: str | None = None  # None = federal holidays only; e.g. "KUL", "SGR" for state holidays
+
+    @field_validator("holiday_subdivision")
+    @classmethod
+    def _validate_holiday_subdivision(cls, v: str | None) -> str | None:
+        """Accept None/empty (→ None) or a known MY subdivision code (normalised to upper)."""
+        if v is None or v == "":
+            return None
+        v_upper = v.upper()
+        if v_upper not in _MY_SUBDIVISIONS:
+            raise ValueError(
+                f"holiday_subdivision must be one of {sorted(_MY_SUBDIVISIONS)} or None; got {v!r}"
+            )
+        return v_upper
 
     # ── LLM Circuit Breaker ───────────────────────────────────────────────────
     llm_failure_threshold: int = 3
