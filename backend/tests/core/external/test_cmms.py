@@ -288,3 +288,24 @@ def test_csv_import_timezone_aware_timestamps(tmp_path: Path) -> None:
     assert ts.hour == 0
     assert ts.day == 1
     assert ts.month == 4
+
+
+# ── Test 10: import rejects unparseable timestamp ─────────────────────────────
+
+
+def test_csv_import_rejects_unparseable_timestamp(tmp_path: Path) -> None:
+    """
+    A CSV row with an unparseable timestamp value raises CMMSValidationError.
+    The error message must include the offending raw value and the row_index
+    must be 0 (zero-based, excluding the header).
+    """
+    csv = tmp_path / "bad_ts.csv"
+    csv.write_text(
+        "event_id,ahu_id,ts,event_type\n"
+        "evt-1,e0101,not-a-real-timestamp,filter_change\n"
+    )
+    backend = CSVCMMSBackend(cache_db=tmp_path / "cache.duckdb")
+    with pytest.raises(CMMSValidationError) as exc_info:
+        backend.import_csv(csv)
+    assert "not-a-real-timestamp" in str(exc_info.value)
+    assert exc_info.value.row_index == 0

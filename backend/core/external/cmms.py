@@ -41,7 +41,7 @@ import argparse
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 import duckdb
 import pandas as pd
@@ -56,18 +56,24 @@ logger = get_logger(__name__)
 
 _SET_UTC = "SET TimeZone = 'UTC'"
 
-# Inline DDL — mirrors backend/data/migrations/0001_cmms_events.duckdb.sql
-_CACHE_DDL = """
-CREATE TABLE IF NOT EXISTS cmms_events (
-    event_id    TEXT PRIMARY KEY,
-    ahu_id      TEXT NOT NULL,
-    ts          TIMESTAMP NOT NULL,
-    event_type  TEXT NOT NULL,
-    notes       TEXT,
-    source      TEXT NOT NULL DEFAULT 'manual'
-);
-CREATE INDEX IF NOT EXISTS idx_cmms_events_ahu_ts ON cmms_events (ahu_id, ts);
-"""
+# Runtime DDL — one canonical Python-side source of the schema.
+# IMPORTANT: must remain byte-equivalent (modulo whitespace) to
+# backend/data/migrations/0001_cmms_events.duckdb.sql.
+# The two are intentionally maintained as a pair: this tuple is used at
+# runtime; the .sql file is the human-readable migration artefact.
+_CACHE_DDL_STATEMENTS: tuple[str, ...] = (
+    """
+    CREATE TABLE IF NOT EXISTS cmms_events (
+        event_id    TEXT PRIMARY KEY,
+        ahu_id      TEXT NOT NULL,
+        ts          TIMESTAMP NOT NULL,
+        event_type  TEXT NOT NULL,
+        notes       TEXT,
+        source      TEXT NOT NULL DEFAULT 'manual'
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_cmms_events_ahu_ts ON cmms_events (ahu_id, ts)",
+)
 
 # Columns required in the CSV
 _REQUIRED_COLUMNS = {"event_id", "ahu_id", "ts", "event_type"}
@@ -114,29 +120,19 @@ def _default_cache_db() -> Path:
     return settings.data_dir / "cmms_events.duckdb"
 
 
+def _open(cache_db: Path) -> duckdb.DuckDBPyConnection:
+    """Open a DuckDB connection and set the session timezone to UTC."""
+    conn = duckdb.connect(str(cache_db))
+    conn.execute(_SET_UTC)
+    return conn
+
+
 def _init_cache(db_path: Path) -> None:
     """Ensure the cache table + index exist."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    with duckdb.connect(str(db_path)) as conn:
-        conn.execute(_SET_UTC)
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS cmms_events (
-                event_id    TEXT PRIMARY KEY,
-                ahu_id      TEXT NOT NULL,
-                ts          TIMESTAMP NOT NULL,
-                event_type  TEXT NOT NULL,
-                notes       TEXT,
-                source      TEXT NOT NULL DEFAULT 'manual'
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_cmms_events_ahu_ts
-            ON cmms_events (ahu_id, ts)
-            """
-        )
+    with _open(db_path) as conn:
+        for stmt in _CACHE_DDL_STATEMENTS:
+            conn.execute(stmt)
 
 
 def _normalise_ts(ts: pd.Timestamp) -> datetime:
@@ -198,29 +194,21 @@ class CSVCMMSBackend:
         if since is not None and since.tzinfo is None:
             since = since.replace(tzinfo=timezone.utc)
 
-        with duckdb.connect(str(self._db_path)) as conn:
-            conn.execute(_SET_UTC)
-            if since is not None:
-                rows = conn.execute(
-                    """
-                    SELECT event_id, ahu_id, ts, event_type, notes, source
-                    FROM   cmms_events
-                    WHERE  ahu_id = ?
-                      AND  ts >= ?
-                    ORDER  BY ts
-                    """,
-                    [ahu_id, since],
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    """
-                    SELECT event_id, ahu_id, ts, event_type, notes, source
-                    FROM   cmms_events
-                    WHERE  ahu_id = ?
-                    ORDER  BY ts
-                    """,
-                    [ahu_id],
-                ).fetchall()
+        clauses: list[str] = ["ahu_id = ?"]
+        params: list[Any] = [ahu_id]
+        if since is not None:
+            clauses.append("ts >= ?")
+            params.append(since)
+
+        sql = (
+            "SELECT event_id, ahu_id, ts, event_type, notes, source "
+            "FROM cmms_events "
+            f"WHERE {' AND '.join(clauses)} "
+            "ORDER BY ts"
+        )
+
+        with _open(self._db_path) as conn:
+            rows = conn.execute(sql, params).fetchall()
 
         return [self._row_to_event(r) for r in rows]
 
@@ -260,11 +248,21 @@ class CSVCMMSBackend:
                 f"CSV is missing required column(s): {sorted(missing_cols)}"
             )
 
-        # Parse timestamps; errors='coerce' → NaT for unparseable values
+        # Parse timestamps; errors='coerce' → NaT for unparseable values.
+        # Keep the raw string column for error reporting before overwriting.
+        raw_ts = df["ts"].astype(str)
         df["ts"] = pd.to_datetime(df["ts"], utc=False, errors="coerce")
 
-        # Validate event_type values row by row
+        # Validate row by row: reject NaT timestamps and unknown event_types.
         for idx, row in df.iterrows():
+            if pd.isna(row["ts"]):
+                raise CMMSValidationError(
+                    row_index=int(idx),
+                    bad_value=raw_ts.iloc[int(idx)],
+                    message=(
+                        f"Row {idx}: unparseable timestamp {raw_ts.iloc[int(idx)]!r}"
+                    ),
+                )
             et = str(row["event_type"])
             if et not in VALID_EVENT_TYPES:
                 raise CMMSValidationError(
@@ -303,9 +301,7 @@ class CSVCMMSBackend:
         insert_df["event_type"] = insert_df["event_type"].astype(str)
         insert_df["source"] = insert_df["source"].astype(str)
 
-        with duckdb.connect(str(self._db_path)) as conn:
-            conn.execute(_SET_UTC)
-
+        with _open(self._db_path) as conn:
             before = conn.execute("SELECT COUNT(*) FROM cmms_events").fetchone()[0]
 
             conn.execute(
