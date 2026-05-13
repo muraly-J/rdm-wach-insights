@@ -78,6 +78,10 @@ class Settings(BaseSettings):
     wach_department: str = "Department"
     hospital_id: str = "wach"
 
+    # ── Geographic ────────────────────────────────────────────────────────────
+    hospital_lat: float = 3.139       # default: Kuala Lumpur central; override via HOSPITAL_LAT env var
+    hospital_lon: float = 101.6869    # default: Kuala Lumpur central; override via HOSPITAL_LON env var
+
     # ── LLM Circuit Breaker ───────────────────────────────────────────────────
     llm_failure_threshold: int = 3
     llm_cooldown_seconds: float = 300.0
