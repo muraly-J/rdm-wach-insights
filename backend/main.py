@@ -204,6 +204,16 @@ async def lifespan(app):
         watchman_task = asyncio.create_task(start_pulse())
         logger.info("Watchman pulse started")
 
+    # Start feature refresh background loop
+    feature_refresh_task = None
+    if settings.feature_refresh_enabled:
+        import asyncio
+
+        from core.etl.scheduler_features import start_feature_refresh_loop
+
+        feature_refresh_task = asyncio.create_task(start_feature_refresh_loop())
+        logger.info("lifespan: feature refresh loop registered")
+
     yield
 
     # Shutdown
@@ -215,6 +225,12 @@ async def lifespan(app):
         watchman_task.cancel()
         try:
             await watchman_task
+        except asyncio.CancelledError:
+            pass
+    if feature_refresh_task:
+        feature_refresh_task.cancel()
+        try:
+            await feature_refresh_task
         except asyncio.CancelledError:
             pass
     logger.info("Application shutdown complete")

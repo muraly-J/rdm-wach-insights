@@ -130,6 +130,10 @@ class Settings(BaseSettings):
     watchman_cooldown_warning_hours: int = 24
     watchman_enabled: bool = True
 
+    # ── Feature refresh (async ETL loop) ──────────────────────────────────────
+    feature_refresh_enabled: bool = True
+    feature_refresh_interval_seconds: int = 300    # 5 minutes
+
     # ── Derived properties ────────────────────────────────────────────────────
 
     @property
