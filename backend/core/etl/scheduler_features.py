@@ -27,14 +27,14 @@ Benefits over a fixed-clock scheduler:
 2. Resilient: if one run fails, the next still covers the missed window because
    the 2-hour window overlaps the previous run's range.
 3. Idempotent: ``build_features`` uses DuckDB ``INSERT OR IGNORE`` — re-running
-   on an already-persisted (ahu_id, ts) pair is a no-op.
+   on an already-inserted (ahu_id, ts) pair is a no-op.
 
 Error policy
 ------------
 - Per-AHU errors (e.g. bad telemetry from one device) are caught, logged, and
   counted as 0 rows — one AHU failing does NOT stop others.
 - Weather fetch errors halt the entire run.  Partial completion when weather is
-  unavailable would silently persist features with NaN oat/oah/ghi, which would
+  unavailable would silently insert features with NaN oat/oah/ghi, which would
   corrupt downstream models.  A logged error + skip-this-run is the safer choice.
 
 CLI usage
@@ -116,13 +116,16 @@ async def refresh_recent_features(
     Returns
     -------
     dict[str, int]
-        ``{ahu_id: rows_persisted}``.  AHUs that error are reported as 0.
+        ``{ahu_id: rows_built}``.  AHUs that error are reported as 0.
+        Note: this count is the rows BUILT (output of build_features),
+        not the count newly INSERTED into DuckDB — repeat runs will report
+        the same count even though INSERT OR IGNORE deduplicates.
 
     Raises
     ------
     OpenMeteoError
         If the weather fetch fails.  One failure halts the whole run —
-        partial completion would silently persist NaN weather columns.
+        partial completion would silently insert NaN weather columns.
     """
     from config import settings  # noqa: PLC0415
     from core.etl.feature_builder import build_features  # noqa: PLC0415
@@ -224,7 +227,7 @@ def backfill(
     Returns
     -------
     dict[str, int]
-        ``{ahu_id: rows_persisted}``.
+        ``{ahu_id: rows_built}``.
 
     Raises
     ------
@@ -278,7 +281,7 @@ def backfill(
             results[ahu_id] = 0
 
     total = sum(results.values())
-    print(f"Backfill complete: {len(target_ids)} AHUs, {total} total rows persisted.")
+    print(f"Backfill complete: {len(target_ids)} AHUs, {total} total feature rows built.")
     return results
 
 
