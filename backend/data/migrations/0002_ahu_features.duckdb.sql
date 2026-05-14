@@ -1,0 +1,55 @@
+-- 0002_ahu_features.duckdb.sql
+-- DDL for the AHU hourly feature cache table.
+-- Executed inline by build_features() in core/etl/feature_builder.py;
+-- this file is the canonical schema reference for code reviewers and future
+-- migrations.
+
+CREATE TABLE IF NOT EXISTS ahu_features (
+    ahu_id                          TEXT NOT NULL,
+    ts                              TIMESTAMP NOT NULL,
+    hourly_energy_kwh               DOUBLE,
+    total_tons                      DOUBLE,
+    sat                             DOUBLE,
+    sat_minus_rat                   DOUBLE,
+    rat                             DOUBLE,
+    rah                             DOUBLE,
+    co2                             DOUBLE,
+    wst                             DOUBLE,
+    wrt                             DOUBLE,
+    wst_minus_wrt                   DOUBLE,
+    oat                             DOUBLE,
+    oah                             DOUBLE,
+    ghi                             DOUBLE,
+    rat_sp                          DOUBLE,
+    co2_sp                          DOUBLE,
+    rah_sp                          DOUBLE,
+    dsp_sp                          DOUBLE,
+    dsp                             DOUBLE,
+    dsp_dev                         DOUBLE,
+    fa_dmpr                         DOUBLE,
+    fa_dmpr_min                     DOUBLE,
+    mvlv                            DOUBLE,
+    mcvlv                           DOUBLE,
+    oct                             BOOLEAN,
+    am                              BOOLEAN,
+    vsd_fb                          DOUBLE,
+    vsd_ctrl                        DOUBLE,
+    vsd_dev                         DOUBLE,
+    fltr                            BOOLEAN,
+    sts                             BOOLEAN,
+    dp                              DOUBLE,
+    runtime                         INTEGER,
+    power_factor_avg                DOUBLE,
+    hour_of_day                     INTEGER NOT NULL,
+    day_of_week                     INTEGER NOT NULL,
+    is_weekend                      BOOLEAN NOT NULL,
+    is_holiday                      BOOLEAN NOT NULL,
+    energy_lag_1h                   DOUBLE,
+    energy_lag_24h                  DOUBLE,
+    energy_lag_168h                 DOUBLE,
+    energy_rolling_24h_mean         DOUBLE,
+    total_tons_rolling_24h_mean     DOUBLE,
+    oat_rolling_24h_mean            DOUBLE,
+    PRIMARY KEY (ahu_id, ts)
+);
+CREATE INDEX IF NOT EXISTS idx_ahu_features_ts ON ahu_features (ts);
