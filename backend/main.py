@@ -11,6 +11,7 @@ For local development:
 Backend and frontend communicate via /api endpoints.
 """
 
+import asyncio
 import os
 import sys
 from collections.abc import Callable
@@ -197,8 +198,6 @@ async def lifespan(app):
     # Start Watchman background pulse
     watchman_task = None
     if settings.watchman_enabled:
-        import asyncio
-
         from core.watchman import start_pulse
 
         watchman_task = asyncio.create_task(start_pulse())
@@ -207,8 +206,6 @@ async def lifespan(app):
     # Start feature refresh background loop
     feature_refresh_task = None
     if settings.feature_refresh_enabled:
-        import asyncio
-
         from core.etl.scheduler_features import start_feature_refresh_loop
 
         feature_refresh_task = asyncio.create_task(start_feature_refresh_loop())

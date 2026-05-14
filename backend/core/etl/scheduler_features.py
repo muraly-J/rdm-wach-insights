@@ -48,11 +48,12 @@ CLI usage
 import argparse
 import asyncio
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
 from core.etl.telemetry_provider import RawTelemetryProvider
+from core.external.weather_openmeteo import OpenMeteoError
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -130,14 +131,6 @@ async def refresh_recent_features(
 
     now = datetime.now(tz=timezone.utc)
     end = now.replace(minute=0, second=0, microsecond=0)  # floor to current hour
-    start = end.replace(hour=end.hour - hours_back) if end.hour >= hours_back else (
-        end.replace(
-            day=end.day - 1 if end.day > 1 else end.day,
-            hour=24 + end.hour - hours_back,
-        )
-    )
-    # Recalculate properly using timedelta
-    from datetime import timedelta  # noqa: PLC0415
     start = end - timedelta(hours=hours_back)
 
     _provider = provider if provider is not None else InfluxTelemetryProvider()
@@ -206,8 +199,6 @@ async def start_feature_refresh_loop() -> None:
     while True:
         try:
             await refresh_recent_features()
-        except asyncio.CancelledError:
-            raise
         except Exception as exc:
             logger.error("feature_refresh: loop iteration error — %s", exc, exc_info=True)
         await asyncio.sleep(interval)
@@ -266,7 +257,7 @@ def backfill(
             start,
             end,
         )
-    except Exception as exc:
+    except OpenMeteoError as exc:
         print(f"ERROR: weather fetch failed — {exc}", file=sys.stderr)
         sys.exit(1)
 
