@@ -29,7 +29,9 @@ import duckdb
 import pandas as pd
 
 from config import settings
+from core.etl.telemetry_provider import RawTelemetryProvider
 from core.external.holidays_my import is_holiday as _default_is_holiday
+from core.external.weather_openmeteo import fetch_weather as _fetch_weather
 from core.logger import get_logger
 from models.feature_schema import AHUFeatureRow
 
@@ -71,7 +73,7 @@ def _validate_ahu_id(ahu_id: str) -> None:
 _SET_UTC = "SET TimeZone = 'UTC'"
 
 # DDL for the ahu_features table.
-# IMPORTANT: must remain byte-equivalent (modulo whitespace) to
+# IMPORTANT: must remain semantically equivalent (modulo whitespace) to
 # backend/data/migrations/0002_ahu_features.duckdb.sql.
 # The two are intentionally maintained as a pair: this tuple is used at
 # runtime; the .sql file is the human-readable migration artefact.
@@ -124,7 +126,7 @@ CREATE TABLE IF NOT EXISTS ahu_features (
     total_tons_rolling_24h_mean     DOUBLE,
     oat_rolling_24h_mean            DOUBLE,
     PRIMARY KEY (ahu_id, ts)
-)
+);
 """,
     "CREATE INDEX IF NOT EXISTS idx_ahu_features_ts ON ahu_features (ts)",
 )
@@ -154,6 +156,14 @@ def _default_cache_db() -> Path:
 _FEATURE_COLUMNS: list[str] = list(AHUFeatureRow.model_fields.keys())
 
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+
+def _safe_bool(v: float) -> bool:
+    """Convert a float 0/1 telemetry value to bool; treat NaN as False."""
+    return False if pd.isna(v) else bool(v)
+
+
 # ── Main feature builder ──────────────────────────────────────────────────────
 
 
@@ -162,7 +172,7 @@ def build_features(
     start: datetime,
     end: datetime,
     *,
-    provider: object,  # RawTelemetryProvider — untyped to avoid circular imports
+    provider: RawTelemetryProvider,
     cache_db: Path | None = None,
     weather: pd.DataFrame | None = None,
     holidays_fn: Callable[[date], bool] | None = None,
@@ -213,7 +223,7 @@ def build_features(
         end = end.replace(tzinfo=timezone.utc)
 
     # ── Step 2: fetch telemetry ────────────────────────────────────────────────
-    tele = provider.fetch_hourly(ahu_id, start, end)  # type: ignore[union-attr]
+    tele = provider.fetch_hourly(ahu_id, start, end)
     tele = tele.sort_values("ts").reset_index(drop=True)
 
     # Ensure ts is UTC-aware
@@ -224,9 +234,7 @@ def build_features(
 
     # ── Step 3: fetch weather ─────────────────────────────────────────────────
     if weather is None:
-        from core.external.weather_openmeteo import fetch_weather  # noqa: PLC0415
-
-        weather = fetch_weather(
+        weather = _fetch_weather(
             settings.hospital_lat,
             settings.hospital_lon,
             start,
@@ -287,7 +295,7 @@ def build_features(
     # ── Step 12: type coercions ───────────────────────────────────────────────
     # Discrete signals → bool
     for col in ("sts", "am", "oct", "fltr"):
-        df[col] = df[col].astype(float).map(lambda v: bool(v) if not pd.isna(v) else False).astype(bool)
+        df[col] = df[col].astype(float).map(_safe_bool).astype(bool)
 
     # Temporal booleans → bool (guaranteed non-null)
     df["is_weekend"] = df["is_weekend"].astype(bool)
