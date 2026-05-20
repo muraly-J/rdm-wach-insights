@@ -28,7 +28,10 @@ function isOff(input: UseGreyStateInput): boolean {
   return s === 'Off' || s === 'Inactive';
 }
 
-function isStale(lastMeasured: string | null | undefined, operationalState?: OperationalState): boolean {
+function isStale(
+  lastMeasured: string | null | undefined,
+  operationalState?: OperationalState
+): boolean {
   if (operationalState === 'Off_Stale') return true;
   if (!lastMeasured) return false;
   const ageMs = Date.now() - new Date(lastMeasured).getTime();

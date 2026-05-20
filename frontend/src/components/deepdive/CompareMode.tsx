@@ -9,10 +9,18 @@ interface CompareModeProps {
   deviceIds: string[];
   labelMap: Record<string, string>;
   timeRange: string;
-  stateMap?: Record<string, { operational_state?: OperationalState; last_on_timestamp?: string | null; confidence?: number }>;
+  stateMap?: Record<
+    string,
+    { operational_state?: OperationalState; last_on_timestamp?: string | null; confidence?: number }
+  >;
 }
 
-const CompareMode: React.FC<CompareModeProps> = ({ deviceIds, labelMap, timeRange, stateMap = {} }) => {
+const CompareMode: React.FC<CompareModeProps> = ({
+  deviceIds,
+  labelMap,
+  timeRange,
+  stateMap = {},
+}) => {
   const { selectedMetrics, setSelectedMetrics, toggleMetric } = useMetricSelection();
   const [groupOpen, setGroupOpen] = React.useState<string | null>(null);
 

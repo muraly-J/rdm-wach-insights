@@ -211,7 +211,10 @@ function App() {
             status: getStatus(d.index),
           }));
         setRankingRows(rows);
-        const stateMap: Record<string, { operational_state?: string; last_on_timestamp?: string | null }> = {};
+        const stateMap: Record<
+          string,
+          { operational_state?: string; last_on_timestamp?: string | null }
+        > = {};
         allDevices.forEach((d: any) => {
           if (d.ahu_id) {
             stateMap[d.ahu_id] = {
@@ -443,7 +446,9 @@ function App() {
                             rawData={rawData}
                             timeRange={chartRange}
                             isOnByTimestamp={isOnByTimestamp}
-                            operationalState={deviceStateMap[selectedDevice!]?.operational_state as any}
+                            operationalState={
+                              deviceStateMap[selectedDevice!]?.operational_state as any
+                            }
                             lastMeasured={deviceStateMap[selectedDevice!]?.last_on_timestamp}
                           />
                         </React.Suspense>

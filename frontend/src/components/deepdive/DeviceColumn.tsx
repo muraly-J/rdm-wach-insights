@@ -73,89 +73,89 @@ const DeviceColumn: React.FC<DeviceColumnProps> = ({
       lastMeasured={lastMeasured}
       confidence={confidence}
     >
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div
-        style={{
-          background: '#1a2234',
-          border: '1px solid #2a3649',
-          borderRadius: 10,
-          padding: '10px 14px',
-          marginBottom: 8,
-        }}
-      >
-        <div style={{ fontSize: 10, color: '#556677', marginBottom: 2 }}>Device</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: 12,
-            color: '#00E5A0',
-            fontWeight: 600,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            background: '#1a2234',
+            border: '1px solid #2a3649',
+            borderRadius: 10,
+            padding: '10px 14px',
+            marginBottom: 8,
           }}
         >
-          {deviceLabel}
-        </div>
-      </div>
-      <div
-        style={{
-          background: '#1a2234',
-          border: '1px solid #2a3649',
-          borderRadius: 10,
-          padding: 12,
-        }}
-      >
-        {isLoading ? (
-          <div
-            className="animate-pulse rounded-lg"
-            style={{
-              height: CHART_CONFIG.HEIGHTS.DEVICE_COLUMN,
-              background: '#2a3649',
-            }}
-          />
-        ) : chartData.length === 0 ? (
+          <div style={{ fontSize: 10, color: '#556677', marginBottom: 2 }}>Device</div>
           <div
             style={{
-              height: CHART_CONFIG.HEIGHTS.DEVICE_COLUMN,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#556677',
               fontSize: 12,
+              color: '#00E5A0',
+              fontWeight: 600,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
-            No Data.
+            {deviceLabel}
           </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHTS.DEVICE_COLUMN}>
-            <LineChart data={chartData} margin={CHART_CONFIG.MARGINS.COMPARE}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a3649" />
-              <XAxis dataKey="timestamp" tick={{ fontSize: 9, fill: '#556677' }} />
-              <YAxis tick={{ fontSize: 9, fill: '#556677' }} width={36} />
-              <Tooltip
-                contentStyle={{
-                  background: '#141D28',
-                  border: '1px solid #2a3649',
-                  borderRadius: 6,
-                  fontSize: 10,
-                }}
-              />
-              {selectedMetrics.map((metricKey) => (
-                <Line
-                  key={metricKey}
-                  type="monotone"
-                  dataKey={metricKey}
-                  name={METRIC_META[metricKey]?.label ?? metricKey}
-                  stroke={colorMap[metricKey] ?? CHART_CONFIG.THEME.ACCENT}
-                  dot={false}
-                  strokeWidth={1.5}
+        </div>
+        <div
+          style={{
+            background: '#1a2234',
+            border: '1px solid #2a3649',
+            borderRadius: 10,
+            padding: 12,
+          }}
+        >
+          {isLoading ? (
+            <div
+              className="animate-pulse rounded-lg"
+              style={{
+                height: CHART_CONFIG.HEIGHTS.DEVICE_COLUMN,
+                background: '#2a3649',
+              }}
+            />
+          ) : chartData.length === 0 ? (
+            <div
+              style={{
+                height: CHART_CONFIG.HEIGHTS.DEVICE_COLUMN,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#556677',
+                fontSize: 12,
+              }}
+            >
+              No Data.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHTS.DEVICE_COLUMN}>
+              <LineChart data={chartData} margin={CHART_CONFIG.MARGINS.COMPARE}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2a3649" />
+                <XAxis dataKey="timestamp" tick={{ fontSize: 9, fill: '#556677' }} />
+                <YAxis tick={{ fontSize: 9, fill: '#556677' }} width={36} />
+                <Tooltip
+                  contentStyle={{
+                    background: '#141D28',
+                    border: '1px solid #2a3649',
+                    borderRadius: 6,
+                    fontSize: 10,
+                  }}
                 />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        )}
+                {selectedMetrics.map((metricKey) => (
+                  <Line
+                    key={metricKey}
+                    type="monotone"
+                    dataKey={metricKey}
+                    name={METRIC_META[metricKey]?.label ?? metricKey}
+                    stroke={colorMap[metricKey] ?? CHART_CONFIG.THEME.ACCENT}
+                    dot={false}
+                    strokeWidth={1.5}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
       </div>
-    </div>
     </GreyStateWrapper>
   );
 };

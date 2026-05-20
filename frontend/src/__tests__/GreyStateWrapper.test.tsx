@@ -6,7 +6,7 @@ describe('GreyStateWrapper', () => {
     render(
       <GreyStateWrapper operationalState="On">
         <div data-testid="child">child</div>
-      </GreyStateWrapper>,
+      </GreyStateWrapper>
     );
     const wrapper = screen.getByTestId('grey-state-wrapper');
     expect(wrapper.style.opacity).toBe('1');
@@ -18,7 +18,7 @@ describe('GreyStateWrapper', () => {
     render(
       <GreyStateWrapper operationalState="Off" lastMeasured={null}>
         <div>child</div>
-      </GreyStateWrapper>,
+      </GreyStateWrapper>
     );
     const wrapper = screen.getByTestId('grey-state-wrapper');
     expect(wrapper.style.opacity).toBe('0.4');
@@ -30,7 +30,7 @@ describe('GreyStateWrapper', () => {
     render(
       <GreyStateWrapper operationalState="Off" badgePlacement="none">
         <div>child</div>
-      </GreyStateWrapper>,
+      </GreyStateWrapper>
     );
     expect(screen.queryByTestId('grey-state-badge')).toBeNull();
   });

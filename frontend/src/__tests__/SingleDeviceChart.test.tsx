@@ -63,11 +63,11 @@ jest.mock('../hooks/useMetricSelection', () => ({
 const { default: SingleDeviceChart } = require('../components/deepdive/SingleDeviceChart');
 
 describe('SingleDeviceChart', () => {
-    const { container } = render(
-      <SingleDeviceChart deviceId="e0101" deviceLabel="AHU-01" timeRange="7d" isOn={false} />
-    );
-    const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper?.style?.filter).toContain('grayscale');
+  const { container } = render(
+    <SingleDeviceChart deviceId="e0101" deviceLabel="AHU-01" timeRange="7d" isOn={false} />
+  );
+  const wrapper = container.firstChild as HTMLElement;
+  expect(wrapper?.style?.filter).toContain('grayscale');
 
   it('renders at full opacity when device is on with fresh state', () => {
     const { container } = render(

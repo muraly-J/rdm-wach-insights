@@ -137,134 +137,139 @@ const RawScoreRelationChart: React.FC<RawScoreRelationChartProps> = ({
       lastMeasured={lastMeasured}
       confidence={confidence}
     >
-    <div className="card p-6 hover:border-[#2e3f55] transition-all duration-300 w-full">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <h4 className="text-[18px] font-semibold text-white">{scoreName}</h4>
-        {headerAction && <div className="ml-2 flex-shrink-0">{headerAction}</div>}
-      </div>
+      <div className="card p-6 hover:border-[#2e3f55] transition-all duration-300 w-full">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <h4 className="text-[18px] font-semibold text-white">{scoreName}</h4>
+          {headerAction && <div className="ml-2 flex-shrink-0">{headerAction}</div>}
+        </div>
 
-      {/* Subtitle: list series */}
-      <p className="text-[13px] text-[#6d6e71] mb-4 font-mono">
-        {series.map((s) => s.label).join(' · ')} → Score 0–100
-      </p>
+        {/* Subtitle: list series */}
+        <p className="text-[13px] text-[#6d6e71] mb-4 font-mono">
+          {series.map((s) => s.label).join(' · ')} → Score 0–100
+        </p>
 
-      <ResponsiveContainer width="100%" height={560}>
-        <LineChart data={mergedData} margin={{ top: 15, right: 40, left: 0, bottom: 25 }}>
-          <CartesianGrid stroke="#2e3f55" strokeDasharray="3 3" vertical={false} />
+        <ResponsiveContainer width="100%" height={560}>
+          <LineChart data={mergedData} margin={{ top: 15, right: 40, left: 0, bottom: 25 }}>
+            <CartesianGrid stroke="#2e3f55" strokeDasharray="3 3" vertical={false} />
 
-          <XAxis
-            dataKey="timestamp"
-            stroke="#6d6e71"
-            fontSize={11}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(v) => {
-              if (timeRange === '7d') {
-                return formatDateMYT(new Date(v), { month: 'short', day: 'numeric' });
-              }
-              return formatTickByRange(v, timeRange);
-            }}
-            interval={tickIntervalByRange(timeRange)}
-          />
-
-          {/* Left Y-axis: raw series */}
-          <YAxis
-            yAxisId="left"
-            stroke="#6d6e71"
-            fontSize={11}
-            tickLine={false}
-            axisLine={{ stroke: '#6d6e71' } as any}
-            domain={['auto', 'auto']}
-          />
-
-          {/* Right Y-axis: score */}
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            stroke={chartColor}
-            fontSize={11}
-            tickLine={false}
-            axisLine={{ stroke: chartColor } as any}
-            domain={[0, 100]}
-          />
-
-          <Tooltip content={<CustomTooltip />} />
-
-          {/* Reference lines (e.g. IEEE 519: 5%) */}
-          {referenceLines.map((rl, i) => (
-            <ReferenceLine
-              key={i}
-              yAxisId="left"
-              y={rl.value}
-              stroke={rl.color}
-              strokeDasharray="4 4"
-              label={{ value: rl.label, fill: rl.color, fontSize: 10, position: 'insideTopRight' }}
+            <XAxis
+              dataKey="timestamp"
+              stroke="#6d6e71"
+              fontSize={11}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => {
+                if (timeRange === '7d') {
+                  return formatDateMYT(new Date(v), { month: 'short', day: 'numeric' });
+                }
+                return formatTickByRange(v, timeRange);
+              }}
+              interval={tickIntervalByRange(timeRange)}
             />
-          ))}
 
-          {/* Raw data series */}
-          {series.map((s, si) => {
-            const key = `s${si}`;
-            const color = SERIES_PALETTE[si % SERIES_PALETTE.length];
-            const strokeWidth = s.style === 'bold' ? 3 : 2;
-            const strokeDasharray =
-              s.style === 'dashed' ? '4 4' : s.style === 'ref' ? '3 3' : undefined;
-            const opacity = s.style === 'ref' ? 0.5 : 0.8;
-            return (
-              <Line
-                key={key}
+            {/* Left Y-axis: raw series */}
+            <YAxis
+              yAxisId="left"
+              stroke="#6d6e71"
+              fontSize={11}
+              tickLine={false}
+              axisLine={{ stroke: '#6d6e71' } as any}
+              domain={['auto', 'auto']}
+            />
+
+            {/* Right Y-axis: score */}
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              stroke={chartColor}
+              fontSize={11}
+              tickLine={false}
+              axisLine={{ stroke: chartColor } as any}
+              domain={[0, 100]}
+            />
+
+            <Tooltip content={<CustomTooltip />} />
+
+            {/* Reference lines (e.g. IEEE 519: 5%) */}
+            {referenceLines.map((rl, i) => (
+              <ReferenceLine
+                key={i}
                 yAxisId="left"
-                type="monotone"
-                dataKey={key}
-                stroke={color}
-                strokeWidth={strokeWidth}
-                strokeDasharray={strokeDasharray}
-                opacity={opacity}
-                dot={false}
-                name={s.label}
+                y={rl.value}
+                stroke={rl.color}
+                strokeDasharray="4 4"
+                label={{
+                  value: rl.label,
+                  fill: rl.color,
+                  fontSize: 10,
+                  position: 'insideTopRight',
+                }}
               />
-            );
-          })}
+            ))}
 
-          {/* Score line */}
-          <Line
-            yAxisId="right"
-            type="monotone"
-            dataKey="scoreValue"
-            stroke={chartColor}
-            strokeWidth={3}
-            dot={false}
-            name="Score"
-          />
+            {/* Raw data series */}
+            {series.map((s, si) => {
+              const key = `s${si}`;
+              const color = SERIES_PALETTE[si % SERIES_PALETTE.length];
+              const strokeWidth = s.style === 'bold' ? 3 : 2;
+              const strokeDasharray =
+                s.style === 'dashed' ? '4 4' : s.style === 'ref' ? '3 3' : undefined;
+              const opacity = s.style === 'ref' ? 0.5 : 0.8;
+              return (
+                <Line
+                  key={key}
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey={key}
+                  stroke={color}
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={strokeDasharray}
+                  opacity={opacity}
+                  dot={false}
+                  name={s.label}
+                />
+              );
+            })}
 
-          {renderOffPeriodAreas(mergedData, 'timestamp')}
-        </LineChart>
-      </ResponsiveContainer>
+            {/* Score line */}
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="scoreValue"
+              stroke={chartColor}
+              strokeWidth={3}
+              dot={false}
+              name="Score"
+            />
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-3 mt-3">
-        {series.map((s, si) => (
-          <div key={si} className="flex items-center gap-1.5 text-xs">
+            {renderOffPeriodAreas(mergedData, 'timestamp')}
+          </LineChart>
+        </ResponsiveContainer>
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-3 mt-3">
+          {series.map((s, si) => (
+            <div key={si} className="flex items-center gap-1.5 text-xs">
+              <span
+                className="inline-block w-4 h-0.5 rounded-full"
+                style={{ backgroundColor: SERIES_PALETTE[si % SERIES_PALETTE.length] }}
+              />
+              <span className="text-[#6d6e71]">
+                {s.label}
+                {s.unit ? ` (${s.unit})` : ''}
+              </span>
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5 text-xs">
             <span
               className="inline-block w-4 h-0.5 rounded-full"
-              style={{ backgroundColor: SERIES_PALETTE[si % SERIES_PALETTE.length] }}
+              style={{ backgroundColor: chartColor }}
             />
-            <span className="text-[#6d6e71]">
-              {s.label}
-              {s.unit ? ` (${s.unit})` : ''}
-            </span>
+            <span className="text-[#6d6e71]">Score</span>
           </div>
-        ))}
-        <div className="flex items-center gap-1.5 text-xs">
-          <span
-            className="inline-block w-4 h-0.5 rounded-full"
-            style={{ backgroundColor: chartColor }}
-          />
-          <span className="text-[#6d6e71]">Score</span>
         </div>
       </div>
-    </div>
     </GreyStateWrapper>
   );
 };

@@ -102,7 +102,12 @@ const DeepDiveView: React.FC<DeepDiveViewProps> = ({
           </div>
         )
       ) : hasCompareDevices ? (
-        <CompareMode deviceIds={compareDevices} labelMap={labelMap} timeRange={timeRange} stateMap={deviceStateMap} />
+        <CompareMode
+          deviceIds={compareDevices}
+          labelMap={labelMap}
+          timeRange={timeRange}
+          stateMap={deviceStateMap}
+        />
       ) : (
         <div style={{ padding: 40, textAlign: 'center', color: '#556677', fontSize: 13 }}>
           Select 2–3 Devices Using the Device Filter Above to Compare Them.
