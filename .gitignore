@@ -293,3 +293,7 @@ nohup.out
 
 # ── Backup and archive files ──────────────────────────────────────────
 *.bak[0-9]*
+*.orig
+
+# ── Local-only research scripts (contain credentials) ────────────────
+scripts/research/cyberview_audit.py
