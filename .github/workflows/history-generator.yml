@@ -65,10 +65,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -80,7 +80,7 @@ jobs:
       # On resume, previously-fetched metrics load instantly instead of re-querying InfluxDB.
       - name: Restore metric cache
         id: restore-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: data/metric_cache
           key: metric-cache-${{ github.run_id }}
@@ -194,7 +194,7 @@ jobs:
       # that is the whole point: next run picks up from where this one stopped.
       - name: Save metric cache
         if: ${{ always() && github.event.inputs.dry_run != 'true' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: data/metric_cache
           key: metric-cache-${{ github.run_id }}
@@ -215,7 +215,7 @@ jobs:
 
       - name: Upload DuckDB and predictions as artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: history-data-${{ github.run_number }}
           path: |
