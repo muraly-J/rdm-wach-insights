@@ -25,12 +25,10 @@ import argparse
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 import duckdb
 import httpx
 import pandas as pd
-
 from config import settings
 from core.logger import get_logger
 
@@ -288,7 +286,7 @@ def fetch_weather(
     lon: float,
     start: datetime,
     end: datetime,
-    cache_db: Optional[Path] = None,
+    cache_db: Path | None = None,
 ) -> pd.DataFrame:
     """
     Fetch hourly weather for a geographic location over a time range.
@@ -322,10 +320,6 @@ def fetch_weather(
     _init_cache(db_path)
 
     today = _today_utc()
-
-    # Determine boundary dates
-    start_date = start.date()
-    end_date = end.date()
 
     # Check what's already cached
     cached_ts = _cached_timestamps(db_path, lat, lon, start, end)

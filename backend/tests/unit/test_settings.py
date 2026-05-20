@@ -75,8 +75,8 @@ class TestSettingsModel:
 
     def test_holiday_subdivision_validator_rejects_unknown(self, monkeypatch):
         monkeypatch.setenv("HOLIDAY_SUBDIVISION", "KLU")  # typo
-        from config import Settings
         import pytest
+        from config import Settings
         with pytest.raises(ValueError, match="holiday_subdivision must be one of"):
             Settings()
 

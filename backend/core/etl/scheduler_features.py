@@ -51,7 +51,6 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
-
 from core.etl.telemetry_provider import RawTelemetryProvider
 from core.external.weather_openmeteo import OpenMeteoError
 from core.logger import get_logger

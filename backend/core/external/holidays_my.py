@@ -30,7 +30,6 @@ from datetime import date, datetime
 from typing import Any
 
 import holidays
-
 from config import settings
 
 __all__ = ["is_holiday", "holiday_name"]

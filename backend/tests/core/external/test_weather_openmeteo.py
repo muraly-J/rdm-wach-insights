@@ -198,7 +198,7 @@ def test_backfill_rounds_lat_lon_consistently(
     """
     import duckdb
     from core.external import weather_openmeteo
-    from core.external.weather_openmeteo import _backfill, _COORD_PRECISION
+    from core.external.weather_openmeteo import _COORD_PRECISION, _backfill
 
     # Noisy coordinates that round to the same 4-dp values as the mock response
     noisy_lat = 3.13900001

@@ -14,10 +14,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
-
 from core.external.cmms import APICMMSBackend, CMMSClient, CMMSValidationError, CSVCMMSBackend
 from models.cmms_event import CMMSEvent
-
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 

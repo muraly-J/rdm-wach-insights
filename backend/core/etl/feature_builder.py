@@ -21,13 +21,13 @@ is injected via the ``RawTelemetryProvider`` Protocol and the optional
 """
 
 import re
+from collections.abc import Callable
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Literal
 
 import duckdb
 import pandas as pd
-
 from config import settings
 from core.etl.telemetry_provider import RawTelemetryProvider
 from core.external.holidays_my import is_holiday as _default_is_holiday

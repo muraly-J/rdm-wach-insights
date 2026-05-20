@@ -25,7 +25,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pandas as pd
 import pytest
-
 from core.etl.scheduler_features import (
     _all_ahu_ids,
     _validate_ahu_ids,
@@ -33,7 +32,6 @@ from core.etl.scheduler_features import (
     refresh_recent_features,
     start_feature_refresh_loop,
 )
-
 
 # ── Shared fixtures ────────────────────────────────────────────────────────────
 

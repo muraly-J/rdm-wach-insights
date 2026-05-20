@@ -54,7 +54,6 @@ from datetime import datetime
 from typing import Protocol
 
 import pandas as pd
-
 from core.logger import get_logger
 
 logger = get_logger(__name__)

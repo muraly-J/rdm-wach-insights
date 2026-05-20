@@ -45,7 +45,6 @@ from typing import Any, Protocol
 
 import duckdb
 import pandas as pd
-
 from config import settings
 from core.logger import get_logger
 from models.cmms_event import VALID_EVENT_TYPES, CMMSEvent

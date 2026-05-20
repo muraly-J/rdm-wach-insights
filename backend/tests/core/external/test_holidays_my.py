@@ -17,10 +17,8 @@ Dates used
 from datetime import date, datetime
 
 import pytest
-
 from config import settings
 from core.external.holidays_my import holiday_name, is_holiday
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 

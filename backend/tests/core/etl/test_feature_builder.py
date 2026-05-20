@@ -15,10 +15,8 @@ from pathlib import Path
 import duckdb
 import pandas as pd
 import pytest
-
 from core.etl.feature_builder import build_features
 from models.feature_schema import AHUFeatureRow
-
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -259,8 +257,8 @@ def test_build_features_weather_joined(tmp_path: Path) -> None:
     assert not df.empty
     assert df["oat"].notna().all(), "oat must not be NaN after weather join"
     assert abs(df["oat"] - 33.5).max() < 1e-6, f"oat should be 33.5, got {df['oat'].tolist()}"
-    assert abs(df["oah"] - 80.0).max() < 1e-6, f"oah should be 80.0"
-    assert abs(df["ghi"] - 500.0).max() < 1e-6, f"ghi should be 500.0"
+    assert abs(df["oah"] - 80.0).max() < 1e-6, "oah should be 80.0"
+    assert abs(df["ghi"] - 500.0).max() < 1e-6, "ghi should be 500.0"
 
 
 # ── Test 5: drop_for_training removes sts==0 and am==1 rows ──────────────────

@@ -1,9 +1,8 @@
 from datetime import datetime, timezone
 
 import pytest
-from pydantic import ValidationError
-
 from models.feature_schema import AHUFeatureRow
+from pydantic import ValidationError
 
 
 def _valid_fixture() -> dict:
