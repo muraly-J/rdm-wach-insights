@@ -62,7 +62,7 @@ def _calendar(subdivision: str | None) -> holidays.HolidayBase:
     The object is built once and cached indefinitely; the ``holidays`` package
     expands years lazily on each ``__contains__`` / ``get()`` call.
     """
-    return holidays.country_holidays("MY", subdiv=subdivision)
+    return holidays.country_holidays("MY", subdiv=subdivision, language="en_US")
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
