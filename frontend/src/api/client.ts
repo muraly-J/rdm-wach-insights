@@ -11,7 +11,7 @@ import {
   SiteAlertsResponse,
   SiteSummaryData,
 } from '../types';
-import type { ActionItem, WorkOrder } from '../types/chat';
+import type { ActionItem, NavigateTarget, WorkOrder } from '../types/chat';
 
 // API base URL: use backend URL from env, fall back to /api (Vite proxy in dev)
 const API_BASE = import.meta.env.VITE_API_URL || '/api';

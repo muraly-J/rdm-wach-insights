@@ -16,6 +16,7 @@ import InfoTooltip from '../shared/InfoTooltip';
 interface HealthIndexChartProps {
   data: Array<{ timestamp: string; [key: string]: number | string | boolean | undefined }>;
   devices: Array<{ id: string; name: string; label?: string; department?: string }>;
+  offPeriods?: Array<{ start: string; end: string }>;
 }
 
 /**

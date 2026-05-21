@@ -51,7 +51,13 @@ import {
   fetchSiteSummary,
 } from './api/client';
 import { fetchFinancialImpact } from './api/financial';
-import type { HealthIndexResponse, OffPeriod, RawScoreResponse, ScoresResponse } from './types';
+import type {
+  HealthIndexResponse,
+  OffPeriod,
+  OperationalState,
+  RawScoreResponse,
+  ScoresResponse,
+} from './types';
 import type { TimeRange } from './utils/formatTick';
 
 interface ScoreEntry {
@@ -91,7 +97,14 @@ function App() {
   const [rawData, setRawData] = React.useState<RawScoreResponse | null>(null);
   const [rankingRows, setRankingRows] = React.useState<AHURankRow[]>([]);
   const [deviceStateMap, setDeviceStateMap] = React.useState<
-    Record<string, { operational_state?: string; last_on_timestamp?: string | null }>
+    Record<
+      string,
+      {
+        operational_state?: OperationalState;
+        last_on_timestamp?: string | null;
+        confidence?: number;
+      }
+    >
   >({});
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -152,7 +165,11 @@ function App() {
       return;
     }
     const range = toApiRange(timeRange);
-    fetchOffPeriods(selectedDevice, range as '24h' | '7d' | '30d' | 'all')
+    if (range === 'all') {
+      setOffPeriods([]);
+      return;
+    }
+    fetchOffPeriods(selectedDevice, range)
       .then((periods) => setOffPeriods(periods))
       .catch(() => setOffPeriods([]));
   }, [selectedDevice, timeRange]);
@@ -213,13 +230,18 @@ function App() {
         setRankingRows(rows);
         const stateMap: Record<
           string,
-          { operational_state?: string; last_on_timestamp?: string | null }
+          {
+            operational_state?: OperationalState;
+            last_on_timestamp?: string | null;
+            confidence?: number;
+          }
         > = {};
         allDevices.forEach((d: any) => {
           if (d.ahu_id) {
             stateMap[d.ahu_id] = {
-              operational_state: d.operational_state,
+              operational_state: d.operational_state as OperationalState | undefined,
               last_on_timestamp: d.last_on_timestamp,
+              confidence: d.confidence,
             };
           }
         });

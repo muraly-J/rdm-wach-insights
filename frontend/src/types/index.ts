@@ -62,6 +62,10 @@ export interface AppState {
   heroVisible: boolean; // Hero overlay visibility (not persisted)
   workOrderPanelOpen?: boolean; // Work order slide-out panel visibility
   workOrderDraftsCount?: number; // Count of draft work orders
+  dashboardMode?: 'simple' | 'deepdive' | 'workorders';
+  deepDiveSubMode?: 'single' | 'compare';
+  compareDevices?: string[];
+  chatMode?: 'panel' | 'fullscreen' | 'split';
 }
 
 // Chat types (from spec Section 6)

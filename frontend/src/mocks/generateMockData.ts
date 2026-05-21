@@ -277,6 +277,7 @@ export function generateSiteSummaryData(): SiteSummaryData {
     totalAHUs: 77,
     avgSiteHealth: 68,
     ahusInAlert: 12,
+    alertAHUs: [],
     estMonthlyCostMYR: 4210,
     starAHU: {
       id: 'e0306',

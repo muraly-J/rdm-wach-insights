@@ -26,6 +26,7 @@ const mockSummary: SiteSummaryData = {
   },
   levelTiles: [],
   trendDeltas: [],
+  alertAHUs: [],
 };
 
 describe('KPIStrip', () => {
