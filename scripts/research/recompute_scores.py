@@ -12,8 +12,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from backend.core import db_reader
-from backend.core.healthdb import HealthDB
 from backend.core.fair_health_scoring import (
     build_baselines,
     calculate_health_index,
@@ -23,6 +21,7 @@ from backend.core.fair_health_scoring import (
     score_power_factor,
     score_thd_drift,
 )
+from backend.core.healthdb import HealthDB
 
 REF_PATH = Path("data/research/2026-05-06/reference_ahus.json")
 OUT_DIR = Path("data/research/2026-05-06")

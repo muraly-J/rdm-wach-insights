@@ -47,12 +47,12 @@ def scan_for_metric(py_files, metric_name):
     """Find which files reference a given metric name."""
     consumers = []
     pattern = re.compile(r'\b' + re.escape(metric_name) + r'\b')
-    
+
     for fpath in py_files:
         try:
-            with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+            with open(fpath, encoding="utf-8", errors="ignore") as f:
                 lines = f.readlines()
-            
+
             for i, line in enumerate(lines, 1):
                 if pattern.search(line):
                     # Determine relative path
@@ -61,7 +61,7 @@ def scan_for_metric(py_files, metric_name):
                         if fpath.startswith(base):
                             rel_path = os.path.relpath(fpath, os.path.dirname(base))
                             break
-                    
+
                     # Classify consumer type
                     line_lower = line.lower().strip()
                     if "import" in line_lower or "from " in line_lower:
@@ -78,7 +78,7 @@ def scan_for_metric(py_files, metric_name):
                         consumer_type = "api"
                     else:
                         consumer_type = "usage"
-                    
+
                     consumers.append({
                         "metric_name": metric_name,
                         "consumer_file": rel_path,
@@ -88,44 +88,44 @@ def scan_for_metric(py_files, metric_name):
                     })
         except (OSError, UnicodeDecodeError):
             continue
-    
+
     return consumers
 
 
 def main() -> int:
     print("[consumer_map] Scanning codebase for metric references...")
-    
+
     # Find all Python files
     py_files = find_py_files(BACKEND_DIR) + find_py_files(SCRIPTS_DIR)
     print(f"[consumer_map] Found {len(py_files)} Python files to scan")
-    
+
     all_consumers = []
     for metric in sorted(ALLOWED_METRICS):
         print(f"  Scanning for: {metric}")
         consumers = scan_for_metric(py_files, metric)
         all_consumers.extend(consumers)
-    
+
     # Write CSV
     fieldnames = ["metric_name", "consumer_file", "line_number", "consumer_type", "context"]
     with open(OUTPUT, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(all_consumers)
-    
+
     # Print summary
     print(f"\n[consumer_map] Wrote {len(all_consumers)} rows to {OUTPUT}")
-    
+
     # Per-metric summary
     metric_counts = {}
     for c in all_consumers:
         metric_counts[c["metric_name"]] = metric_counts.get(c["metric_name"], 0) + 1
-    
+
     print("\n[consumer_map] References per metric:")
     for metric in sorted(ALLOWED_METRICS):
         count = metric_counts.get(metric, 0)
         if count > 0:
             print(f"  {metric:25s}: {count} references")
-    
+
     # Unique files consuming FAIR default metrics
     fair_defaults = {"power_total", "energy_import", "power_factor_avg",
                      "current_unbalance", "current_l1_thd", "current_l3_thd"}
@@ -133,11 +133,11 @@ def main() -> int:
     for c in all_consumers:
         if c["metric_name"] in fair_defaults:
             fair_files.add(c["consumer_file"])
-    
+
     print(f"\n[consumer_map] Files consuming FAIR default metrics ({len(fair_files)}):")
     for f in sorted(fair_files):
         print(f"  {f}")
-    
+
     print("\n[consumer_map] Done.")
     return 0
 

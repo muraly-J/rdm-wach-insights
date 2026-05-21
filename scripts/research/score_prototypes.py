@@ -10,13 +10,13 @@ import json
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")  # non-interactive backend
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
-from backend.core.healthdb import HealthDB
 from backend.core.fair_health_scoring import sigmoid_score
+from backend.core.healthdb import HealthDB
 
 REF_PATH = Path("data/research/2026-05-06/reference_ahus.json")
 OUT_DIR = Path("data/research/2026-05-06")

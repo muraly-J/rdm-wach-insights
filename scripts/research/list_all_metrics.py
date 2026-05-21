@@ -20,10 +20,10 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
 
 from models.schemas import (
+    AHU_LEVEL_CONFIG,
+    ALLOWED_DEVICES,
     ALLOWED_METRICS,
     ALLOWED_METRICS_WITH_UNITS,
-    ALLOWED_DEVICES,
-    AHU_LEVEL_CONFIG,
 )
 
 OUTPUT = "/tmp/metrics.csv"
@@ -92,7 +92,7 @@ def main() -> int:
     for r in fair_unused:
         print(f"  {r['metric_name']:25s} ({r['unit']})")
 
-    print(f"\n[metrics] Done.")
+    print("\n[metrics] Done.")
     return 0
 
 
