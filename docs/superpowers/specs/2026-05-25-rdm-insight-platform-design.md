@@ -444,11 +444,11 @@ apps/web/src/
 - **`packages/types` Pydantic → TS generation** with `datamodel-code-generator` can be finicky around generics and unions. Start manual if it stalls; revisit when the first 2–3 schema drifts cost more than the tooling setup.
 - **Application-layer tenant isolation** (no Postgres RLS) means a missing `Depends(get_tenant_ctx)` on a new route is a security bug, not a 500. The cross-tenant isolation test suite (§10) is the safety net — keep it complete.
 
-## 12. Open Questions (resolve before plan)
+## 12. Resolved Decisions
 
-- **Default `_default` adapter scope:** is the generic engine expected to handle anomaly detection in MVP, or strictly historical aggregation? (Affects whether `_default` ships with any anomaly logic at all.)
-- **Cyberview seed data:** mock fixtures or pull an existing sample from `scripts/research`? (Affects demo realism.)
-- **`X-Site-Id` vs path-based site routing:** header (simpler client) vs `/api/sites/{id}/…` (more RESTful, no header coupling). Recommendation: header for MVP, path option later if a public API ships.
+- **`_default` adapter MVP scope:** historical aggregation only — `health_trend`, `device_ranking`, `device_detail` driven by `site.config` point map and Flux templates. No anomaly detection in `_default` for MVP; anomaly engine is a Phase 3 concern with its own design.
+- **Cyberview seed data:** pull from existing `scripts/research` (Cyberview health index design + device analysis, commit `2d6f78e`). Build a `seed_cyberview.py` script that maps that research into the `_default` config schema. Fall back to fixtures only for fields the research does not cover.
+- **Site routing:** `X-Site-Id` header for MVP. Tenant middleware reads the header and resolves `tenant_ctx`. Path-based variant (`/api/sites/{id}/…`) is deferred to Phase 2+ when a public API ships.
 
 ## 13. Phase Roadmap (post-MVP)
 
