@@ -1,6 +1,8 @@
 backend/
 venv/
 data/
+*.db
+*.duckdb
 logs/
 paraquet_data/
 scripts/

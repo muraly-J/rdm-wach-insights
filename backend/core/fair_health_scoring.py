@@ -95,8 +95,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-
-from backend.core.score_normalize import to_canonical as _to_canonical_score
+from core.score_normalize import to_canonical as _to_canonical_score
 
 # Re-export for ergonomic call sites: from backend.core.fair_health_scoring import to_canonical
 to_canonical = _to_canonical_score
