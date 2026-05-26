@@ -845,6 +845,20 @@ def upgrade() -> None:
         sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
 
+    # Indexes for hot paths
+    op.create_index("ix_sessions_refresh_hash", "sessions", ["refresh_hash"])
+    op.create_index("ix_sessions_user_id", "sessions", ["user_id"])
+    op.create_index("ix_site_memberships_site_id", "site_memberships", ["site_id"])
+    op.create_index("ix_org_memberships_org_id", "org_memberships", ["org_id"])
+    op.create_index("ix_audit_log_user_id", "audit_log", ["user_id"])
+    op.create_index("ix_audit_log_site_id", "audit_log", ["site_id"])
+    op.create_index("ix_sites_org_id", "sites", ["org_id"])
+
+    # CHECK constraints on role columns
+    op.create_check_constraint("ck_org_memberships_role", "org_memberships", "role IN ('org_admin')")
+    op.create_check_constraint("ck_site_memberships_role", "site_memberships",
+                               "role IN ('site_viewer', 'site_operator')")
+
 
 def downgrade() -> None:
     for t in ["audit_log", "sessions", "site_memberships", "org_memberships", "users", "sites", "orgs"]:
@@ -1205,7 +1219,6 @@ git commit -m "feat(auth): add JWT access-token encode/decode"
 - [ ] **Step 1: Write `tests/conftest.py`**
 
 ```python
-import asyncio
 import uuid
 from datetime import datetime, timezone
 from collections.abc import AsyncIterator
@@ -1218,12 +1231,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from core.db.models import Base, Org, Site, User, OrgMembership, SiteMembership
 from core.auth.password import hash_password
 
-
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+# Note: pytest-asyncio >= 0.23 handles the event loop automatically via
+# asyncio_mode = "auto" (set in pyproject.toml). Do not override event_loop.
 
 
 @pytest_asyncio.fixture
@@ -2102,10 +2111,13 @@ class ChatContext:
 class SiteAdapter(Protocol):
     slug: str
 
-    def health_trend(self, ctx: TenantContext, range: TimeRange) -> TrendSeries: ...
-    def device_ranking(self, ctx: TenantContext, range: TimeRange) -> Ranking: ...
-    def device_detail(self, ctx: TenantContext, device_id: str, range: TimeRange) -> DeviceDetail: ...
-    def chat_context(self, ctx: TenantContext, query: str) -> ChatContext: ...
+    # Async methods so adapters can safely await blocking I/O wrapped in
+    # asyncio.to_thread (Influx, Chroma, HTTP). Sync helpers (list_devices,
+    # validate_device_id) stay sync because they don't do I/O.
+    async def health_trend(self, ctx: TenantContext, range: TimeRange) -> TrendSeries: ...
+    async def device_ranking(self, ctx: TenantContext, range: TimeRange) -> Ranking: ...
+    async def device_detail(self, ctx: TenantContext, device_id: str, range: TimeRange) -> DeviceDetail: ...
+    async def chat_context(self, ctx: TenantContext, query: str) -> ChatContext: ...
     def list_devices(self, ctx: TenantContext) -> list[Device]: ...
     def validate_device_id(self, device_id: str) -> bool: ...
 ```
@@ -2146,10 +2158,10 @@ def test_default_adapter_is_protocol_compliant():
     assert isinstance(a, SiteAdapter)
 
 
-def test_health_trend_returns_empty_series_when_no_config():
+async def test_health_trend_returns_empty_series_when_no_config():
     a = DefaultAdapter(config={})
-    s = a.health_trend(_ctx(), TimeRange(start=datetime.now(timezone.utc) - timedelta(hours=1),
-                                         end=datetime.now(timezone.utc)))
+    s = await a.health_trend(_ctx(), TimeRange(start=datetime.now(timezone.utc) - timedelta(hours=1),
+                                               end=datetime.now(timezone.utc)))
     assert s.series == []
 
 
@@ -2203,19 +2215,19 @@ class DefaultAdapter:
         self._config = config
         self._devices = [Device(**d) for d in config.get("devices", [])]
 
-    def health_trend(self, ctx: TenantContext, range: TimeRange) -> TrendSeries:
+    async def health_trend(self, ctx: TenantContext, range: TimeRange) -> TrendSeries:
         return TrendSeries(series=[], unit="score")
 
-    def device_ranking(self, ctx: TenantContext, range: TimeRange) -> Ranking:
+    async def device_ranking(self, ctx: TenantContext, range: TimeRange) -> Ranking:
         return Ranking()
 
-    def device_detail(self, ctx: TenantContext, device_id: str, range: TimeRange) -> DeviceDetail:
+    async def device_detail(self, ctx: TenantContext, device_id: str, range: TimeRange) -> DeviceDetail:
         dev = next((d for d in self._devices if d.id == device_id), None)
         if dev is None:
             dev = Device(id=device_id, type="unknown")
         return DeviceDetail(device=dev)
 
-    def chat_context(self, ctx: TenantContext, query: str) -> ChatContext:
+    async def chat_context(self, ctx: TenantContext, query: str) -> ChatContext:
         return ChatContext()
 
     def list_devices(self, ctx: TenantContext) -> list[Device]:
@@ -2424,7 +2436,7 @@ async def health_trend(range: str = "24h",
                        ctx: TenantContext = Depends(require_role("site_viewer")),
                        session: AsyncSession = Depends(get_session)):
     adapter = await _adapter_for(ctx, session)
-    series = adapter.health_trend(ctx, _parse_range(range))
+    series = await adapter.health_trend(ctx, _parse_range(range))
     return {
         "series": [{"ts": p.ts.isoformat(), "value": p.value} for p in series.series],
         "unit": series.unit,
@@ -2436,7 +2448,7 @@ async def ranking(range: str = "24h",
                   ctx: TenantContext = Depends(require_role("site_viewer")),
                   session: AsyncSession = Depends(get_session)):
     adapter = await _adapter_for(ctx, session)
-    r = adapter.device_ranking(ctx, _parse_range(range))
+    r = await adapter.device_ranking(ctx, _parse_range(range))
     return {
         "top": [{"device_id": row.device_id, "score": row.score} for row in r.top],
         "worst": [{"device_id": row.device_id, "score": row.score} for row in r.worst],
@@ -2448,7 +2460,7 @@ async def device_detail(device_id: str, range: str = "24h",
                         ctx: TenantContext = Depends(require_role("site_viewer")),
                         session: AsyncSession = Depends(get_session)):
     adapter = await _adapter_for(ctx, session)
-    d = adapter.device_detail(ctx, device_id, _parse_range(range))
+    d = await adapter.device_detail(ctx, device_id, _parse_range(range))
     return {
         "device": {"id": d.device.id, "type": d.device.type, "name": d.device.name, "metadata": d.device.metadata},
         "metrics": d.metrics,
@@ -2620,20 +2632,25 @@ async def main() -> None:
         viewer_b = User(id=uuid.uuid4(), email="viewer.cyberview@example.com",
                         password_hash=hash_password("password1234"), name="Viewer Cyberview",
                         is_super_admin=False, created_at=now)
+        operator_a = User(id=uuid.uuid4(), email="operator.wach@example.com",
+                          password_hash=hash_password("password1234"), name="Operator WACH",
+                          is_super_admin=False, created_at=now)
         super_u = User(id=uuid.uuid4(), email="super@example.com",
                        password_hash=hash_password("password1234"), name="Super",
                        is_super_admin=True, created_at=now)
-        s.add_all([org_a, org_b, site_a, site_b, viewer_a, viewer_b, super_u])
+        s.add_all([org_a, org_b, site_a, site_b, viewer_a, viewer_b, operator_a, super_u])
         await s.flush()
         s.add_all([
             SiteMembership(user_id=viewer_a.id, site_id=site_a.id, role="site_viewer"),
             SiteMembership(user_id=viewer_b.id, site_id=site_b.id, role="site_viewer"),
+            SiteMembership(user_id=operator_a.id, site_id=site_a.id, role="site_operator"),
         ])
         await s.commit()
         print("Seeded:")
-        print(f"  super        super@example.com / password1234")
-        print(f"  viewer wach  viewer.wach@example.com / password1234  site={site_a.id}")
-        print(f"  viewer cv    viewer.cyberview@example.com / password1234  site={site_b.id}")
+        print(f"  super         super@example.com / password1234")
+        print(f"  viewer wach   viewer.wach@example.com / password1234  site={site_a.id}")
+        print(f"  viewer cv     viewer.cyberview@example.com / password1234  site={site_b.id}")
+        print(f"  operator wach operator.wach@example.com / password1234  site={site_a.id}")
 
 
 if __name__ == "__main__":

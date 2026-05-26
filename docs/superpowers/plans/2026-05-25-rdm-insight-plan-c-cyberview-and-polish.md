@@ -191,7 +191,7 @@ class DefaultAdapter:
         self._rag = RagClient(host=config.get("chroma_host", "localhost"),
                               port=int(config.get("chroma_port", 8000)))
 
-    def _query(self, flux: str) -> list[dict]:
+    def _query_sync(self, flux: str) -> list[dict]:
         if not self._bucket or not self._url:
             return []
         with InfluxDBClient(url=self._url, token=self._token, org=self._org) as c:
@@ -202,31 +202,38 @@ class DefaultAdapter:
                 rows.append({"ts": r["_time"], "value": r["_value"], "tags": dict(r.values)})
         return rows
 
-    def health_trend(self, ctx: TenantContext, range: TimeRange) -> TrendSeries:
+    async def _query(self, flux: str) -> list[dict]:
+        import asyncio
+        return await asyncio.to_thread(self._query_sync, flux)
+
+    async def health_trend(self, ctx: TenantContext, range: TimeRange) -> TrendSeries:
         flux = build_flux_aggregate(bucket=self._bucket, measurement=self._measurement,
                                     field=self._score_field, start=range.start, end=range.end)
-        rows = self._query(flux)
+        rows = await self._query(flux)
         return TrendSeries(
             series=[TrendPoint(ts=datetime.fromisoformat(str(r["ts"]).replace("Z", "+00:00")),
                                value=float(r["value"])) for r in rows if r["value"] is not None],
             unit="score",
         )
 
-    def device_ranking(self, ctx: TenantContext, range: TimeRange) -> Ranking:
-        rows: list[dict] = []
-        for d in self._devices:
-            flux = f'''
+    async def device_ranking(self, ctx: TenantContext, range: TimeRange) -> Ranking:
+        # Single grouped query, no N+1.
+        flux = f'''
 from(bucket: "{self._bucket}")
   |> range(start: {range.start.isoformat()}, stop: {range.end.isoformat()})
-  |> filter(fn: (r) => r._measurement == "{self._measurement}" and r._field == "{self._score_field}" and r.device_id == "{d.id}")
+  |> filter(fn: (r) => r._measurement == "{self._measurement}" and r._field == "{self._score_field}")
+  |> group(columns: ["device_id"])
   |> mean()
+  |> keep(columns: ["device_id", "_value"])
 '''
-            results = self._query(flux)
-            if results and results[0]["value"] is not None:
-                rows.append({"device_id": d.id, "score": float(results[0]["value"])})
+        results = await self._query(flux)
+        valid_ids = {d.id for d in self._devices}
+        rows = [{"device_id": r["tags"].get("device_id", ""), "score": float(r["value"])}
+                for r in results
+                if r["value"] is not None and r["tags"].get("device_id") in valid_ids]
         return summarize_rankings(rows)
 
-    def device_detail(self, ctx: TenantContext, device_id: str, range: TimeRange) -> DeviceDetail:
+    async def device_detail(self, ctx: TenantContext, device_id: str, range: TimeRange) -> DeviceDetail:
         dev = next((d for d in self._devices if d.id == device_id), None)
         if dev is None:
             return DeviceDetail(device=Device(id=device_id, type="unknown"))
@@ -236,7 +243,7 @@ from(bucket: "{self._bucket}")
   |> filter(fn: (r) => r.device_id == "{device_id}")
   |> aggregateWindow(every: 5m, fn: mean)
 '''
-        rows = self._query(flux)
+        rows = await self._query(flux)
         metrics: dict[str, float] = {}
         trend: list[TrendPoint] = []
         for r in rows:
@@ -249,8 +256,9 @@ from(bucket: "{self._bucket}")
                                         value=float(r["value"])))
         return DeviceDetail(device=dev, metrics=metrics, trend=TrendSeries(series=trend, unit="score"))
 
-    def chat_context(self, ctx: TenantContext, query: str) -> ChatContext:
-        snippets = self._rag.search(ctx.site_id, query, k=5)
+    async def chat_context(self, ctx: TenantContext, query: str) -> ChatContext:
+        import asyncio
+        snippets = await asyncio.to_thread(self._rag.search, ctx.site_id, query, 5)
         return ChatContext(rag_snippets=[s["text"] for s in snippets if s["score"] >= 0.3],
                            structured_facts={}, recent_alerts=[])
 
@@ -289,7 +297,7 @@ async def test_default_adapter_returns_trend_when_query_mocked(app_client, seede
     await db_session.execute(update(Site).where(Site.id == seeded["site_a"].id).values(adapter="_default", config=cfg))
     await db_session.commit()
 
-    def fake_query(self, flux):
+    async def fake_query(self, flux):
         if "yield" in flux:
             return [{"ts": "2026-05-25T00:00:00+00:00", "value": 70.0, "tags": {}}]
         return []
@@ -938,7 +946,20 @@ git commit -m "feat(knowledge): per-site doc upload + Chroma ingest"
 - Replace: `apps/web/src/shell/AppShell.tsx` (lift switcher into its own file)
 - Create: `apps/web/src/shell/SiteSwitcher.tsx`
 
-- [ ] **Step 1: Implement `src/shell/ThemeProvider.tsx`**
+- [ ] **Step 1: Set default CSS variables in `src/index.css`**
+
+Create `apps/web/src/index.css` (or append to it) and import from `main.tsx`:
+
+```css
+:root {
+  --rdm-primary: #00E5A0;
+  --rdm-bg: #0B0F14;
+}
+```
+
+In `apps/web/src/main.tsx`, add `import "./index.css";` if not already imported. This prevents the first-load flash with default browser colors — defaults are set synchronously before any query resolves; `ThemeProvider` only overrides once `org.theme` arrives.
+
+- [ ] **Step 2: Implement `src/shell/ThemeProvider.tsx`**
 
 ```tsx
 import { useEffect } from "react";
@@ -988,11 +1009,39 @@ async def my_site(ctx: TenantContext = Depends(require_role("site_viewer")),
 
 Move this route under a separate `/me` router if cleaner — same content. Update frontend `apiFetch` path accordingly (`/me/site` instead of `/dashboard/me/site`).
 
-- [ ] **Step 3: Implement `src/shell/SiteSwitcher.tsx`**
+- [ ] **Step 3a: Add `/me/sites` backend route**
+
+Append to `apps/api/routes/dashboard.py` (or a new `routes/me.py` if you prefer to split):
+
+```python
+@router.get("/me/sites")
+async def my_sites(user: "User" = Depends(get_current_user),
+                   session: AsyncSession = Depends(get_session)):
+    from core.db.models import OrgMembership, SiteMembership, User
+    if user.is_super_admin:
+        sites = (await session.execute(select(Site))).scalars().all()
+    else:
+        # union of org-admin reachable sites and direct site memberships
+        org_ids = [m.org_id for m in (await session.execute(
+            select(OrgMembership).where(OrgMembership.user_id == user.id))).scalars()]
+        site_ids = [m.site_id for m in (await session.execute(
+            select(SiteMembership).where(SiteMembership.user_id == user.id))).scalars()]
+        sites = (await session.execute(
+            select(Site).where((Site.org_id.in_(org_ids)) | (Site.id.in_(site_ids)))
+        )).scalars().all()
+    return [{"id": str(s.id), "slug": s.slug, "name": s.name, "org_id": str(s.org_id)} for s in sites]
+```
+
+Add `from core.auth.dependencies import get_current_user` and `from core.db.models import User` at the top of the route file.
+
+- [ ] **Step 3b: Implement `src/shell/SiteSwitcher.tsx`**
 
 ```tsx
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "@/api/client";
 import { useAuthStore } from "@/store/useAuthStore";
+
+interface SiteRow { id: string; slug: string; name: string; org_id: string }
 
 export function SiteSwitcher() {
   const user = useAuthStore((s) => s.user);
@@ -1000,14 +1049,22 @@ export function SiteSwitcher() {
   const setActiveSite = useAuthStore((s) => s.setActiveSite);
   const qc = useQueryClient();
 
-  if (!user || user.site_memberships.length <= 1) return null;
+  // /me/sites does not need X-Site-Id; remove header by hitting fetch directly here
+  // if apiFetch's header injection causes problems. Otherwise the backend ignores
+  // X-Site-Id on this route.
+  const { data } = useQuery({
+    queryKey: ["me-sites"],
+    enabled: !!user,
+    queryFn: () => apiFetch<SiteRow[]>("/me/sites"),
+  });
+
+  if (!user || !data || data.length <= 1) return null;
 
   return (
     <select
       value={activeSiteId ?? ""}
       onChange={(e) => {
         const next = e.target.value || null;
-        // wipe site-scoped queries before switching
         qc.removeQueries({ predicate: (q) => Array.isArray(q.queryKey) && q.queryKey.includes(activeSiteId ?? "") });
         qc.removeQueries({ queryKey: ["site-meta"] });
         qc.removeQueries({ queryKey: ["health-trend"] });
@@ -1015,13 +1072,15 @@ export function SiteSwitcher() {
         setActiveSite(next);
       }}
     >
-      {user.site_memberships.map((s) => (
-        <option key={s.site_id} value={s.site_id}>{s.site_id}</option>
+      {data.map((s) => (
+        <option key={s.id} value={s.id}>{s.name}</option>
       ))}
     </select>
   );
 }
 ```
+
+> If `apiFetch` always attaches `X-Site-Id`, the `/me/sites` route must tolerate it (it does — the route ignores the header and uses the JWT). Confirm in the integration test for this route.
 
 - [ ] **Step 4: Implement `src/shell/Gate.tsx`**
 
@@ -1516,35 +1575,36 @@ git commit -m "ci: add nightly + PR e2e workflow"
 ## Task 9: Vercel deploy config (`apps/web`)
 
 **Files:**
-- Create: `infra/vercel.ts`
-- Modify: `apps/web/package.json` (if needed for build script)
+- Create: `vercel.json` (repo root) — set Project Settings → Root Directory to `apps/web` in the Vercel dashboard
 
-- [ ] **Step 1: Create `infra/vercel.ts`**
+> **Note:** Vercel does not support TypeScript project config in the form of a `vercel.ts` file with a hypothetical `@vercel/config` package — that package is not real. Use plain `vercel.json` plus Vercel dashboard settings.
 
-```ts
-import { routes, type VercelConfig } from "@vercel/config/v1";
+- [ ] **Step 1: Create `vercel.json` at the repo root**
 
-export const config: VercelConfig = {
-  buildCommand: "pnpm --filter @rdm/web build",
-  outputDirectory: "apps/web/dist",
-  installCommand: "pnpm install --frozen-lockfile",
-  framework: null,
-  rewrites: [
-    routes.rewrite("/api/(.*)", `${process.env.API_BASE_URL ?? "https://rdm-insight-api.up.railway.app"}/$1`),
+```json
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm --filter @rdm/web build",
+  "outputDirectory": "apps/web/dist",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": null,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://rdm-insight-api.up.railway.app/$1" }
   ],
-  headers: [
-    routes.cacheControl("/assets/(.*)", { public: true, maxAge: "1 year", immutable: true }),
-  ],
-};
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
+  ]
+}
 ```
 
-- [ ] **Step 2: Add `@vercel/config` dependency**
+Override the rewrite destination per environment via Vercel dashboard (Project → Settings → Environment Variables) by setting `API_BASE_URL` and editing `vercel.json` to reference it through deployment-time substitution if needed. For MVP, hardcode the Railway URL and rotate when it changes.
 
-```bash
-pnpm add -D -w @vercel/config
-```
-
-- [ ] **Step 3: Document env vars in README**
+- [ ] **Step 2: Document env vars in README**
 
 Append to root `README.md`:
 

@@ -450,6 +450,23 @@ apps/web/src/
 - **Cyberview seed data:** pull from existing `scripts/research` (Cyberview health index design + device analysis, commit `2d6f78e`). Build a `seed_cyberview.py` script that maps that research into the `_default` config schema. Fall back to fixtures only for fields the research does not cover.
 - **Site routing:** `X-Site-Id` header for MVP. Tenant middleware reads the header and resolves `tenant_ctx`. Path-based variant (`/api/sites/{id}/…`) is deferred to Phase 2+ when a public API ships.
 
+## 12b. Plan Review Fixes (applied 2026-05-26)
+
+Applied to Plans A/B/C after first-pass review. All changes are in the committed plan files; this section is a quick audit trail.
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 1 | Missing operator user in seed | Added `operator.wach@example.com` with site_operator role on WACH site. E2E users (`viewer.wach`, `viewer.cyberview`, `super`) already present. |
+| 2 | `vercel.ts` referenced non-existent `@vercel/config` | Replaced with `vercel.json` at repo root. |
+| 3 | Scoring placeholder could ship silently | Plan B Task 2 marked `[BLOCKED until real formula inlined]`; CI grep guard fails build if the placeholder marker remains. |
+| 4 | Blocking Influx/Chroma I/O on async loop | Adapter protocol methods made `async`; `sites/wach/influx.py` and `_default` adapter wrap all sync clients in `asyncio.to_thread`. |
+| 5 | N+1 Influx queries in device_ranking | New `query_all_device_scores` (single grouped Flux) used by both `wach` and `_default` adapters. |
+| 6 | Chat history dropped by frontend | `useChatStream.ts` now passes prior turns as `history`. |
+| 7 | Missing indexes + role CHECK | Added `ix_sessions_refresh_hash`, `ix_site_memberships_site_id`, `ix_audit_log_*`, `ix_sites_org_id`, and CHECK constraints on `role` columns to `0001_init.py`. |
+| 8 | Deprecated `event_loop` fixture | Removed; rely on `asyncio_mode = "auto"`. |
+| 9 | SiteSwitcher shows raw UUIDs | Added `GET /me/sites` returning `{id, slug, name}`; switcher renders `name`. |
+| 10 | ThemeProvider flash on first load | `:root` defaults in `apps/web/src/index.css` set synchronously before query resolves. |
+
 ## 13. Phase Roadmap (post-MVP)
 
 | Phase | Focus                                  | Pulls in                                       |

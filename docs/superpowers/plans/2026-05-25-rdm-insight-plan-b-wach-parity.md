@@ -191,11 +191,19 @@ git commit -m "feat(wach): port AHU_LEVEL_CONFIG + device-ID validation"
 
 ---
 
-## Task 2: Port scoring engine
+## Task 2: Port scoring engine — **[BLOCKED until real formula inlined]**
+
+> **BLOCKER:** This task ships the WACH health-scoring formula. The placeholder body must be replaced with the real formula from `$WACH/backend/core/scoring.py` (or whatever module the existing WACH `/api/dashboard/trend` route imports from). **Do not merge** this task with the placeholder body — CI will fail (see Step 7) and the demo will report incorrect health scores.
+>
+> Definition of done for Task 2:
+> 1. The marker `# --- PORTED FROM WACH (replace placeholder body with real formulas) ---` is removed from `sites/wach/scoring.py`.
+> 2. The new body is a verbatim port (with import paths adjusted) of WACH's production scoring function.
+> 3. The CI grep guard added in Step 7 passes.
 
 **Files:**
 - Create: `apps/api/sites/wach/scoring.py`
 - Test: `apps/api/tests/unit/test_wach_scoring.py`
+- Modify: `.github/workflows/ci.yml` to add the placeholder grep guard
 
 - [ ] **Step 1: Locate scoring source**
 
@@ -283,11 +291,32 @@ pytest tests/unit/test_wach_scoring.py -v
 
 Expected: 2 passed.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Commit (only after the real formula is inlined)**
 
 ```bash
 git add apps/api/sites/wach/scoring.py apps/api/tests/unit/test_wach_scoring.py
 git commit -m "feat(wach): port health scoring + ranking"
+```
+
+- [ ] **Step 7: Add CI grep guard against the placeholder marker**
+
+Modify `.github/workflows/ci.yml`, append to the `api` job after `Tests`:
+
+```yaml
+      - name: Ensure no scoring placeholder
+        working-directory: apps/api
+        run: |
+          if grep -q "PORTED FROM WACH (replace placeholder" sites/wach/scoring.py; then
+            echo "::error::scoring.py still contains the placeholder marker. Inline the real formula."
+            exit 1
+          fi
+```
+
+- [ ] **Step 8: Commit the guard**
+
+```bash
+git add .github/workflows/ci.yml
+git commit -m "ci: fail build if WACH scoring placeholder is still present"
 ```
 
 ---
@@ -300,13 +329,19 @@ git commit -m "feat(wach): port health scoring + ranking"
 
 - [ ] **Step 1: Implement `sites/wach/influx.py`**
 
+> **Note on blocking I/O:** `influxdb-client` is synchronous. Calling it directly inside a FastAPI async route blocks the event loop. Every public query function is `async` and wraps the blocking client in `asyncio.to_thread`. Adapter methods that call these must also be async or use `asyncio.run_until_complete` from sync paths (they aren't — both adapter methods are awaited by the route via `await loop.run_in_executor` if needed; in practice the route handler in Plan A is already async and the adapter call can be promoted to async by wrapping). The simplest path: make adapter dispatch methods async.
+
 ```python
 """WACH-specific Flux queries.
 
 Reads connection info from settings. Ported queries from
 $WACH/backend/routes/dashboard.py and $WACH/backend/core/data.py.
+
+All public functions are async + use asyncio.to_thread so the FastAPI event
+loop is never blocked by an Influx round-trip.
 """
 from __future__ import annotations
+import asyncio
 from datetime import datetime
 from typing import Any
 
@@ -328,7 +363,12 @@ def _client() -> InfluxDBClient:
     return InfluxDBClient(url=_settings.influx_url, token=_settings.influx_token, org=_settings.influx_org)
 
 
-def query_health_trend(bucket: str, start: datetime, end: datetime) -> list[dict[str, Any]]:
+def _run(flux: str) -> list[Any]:
+    with _client() as c:
+        return c.query_api().query(flux)
+
+
+async def query_health_trend(bucket: str, start: datetime, end: datetime) -> list[dict[str, Any]]:
     flux = f'''
     from(bucket: "{bucket}")
       |> range(start: {start.isoformat()}, stop: {end.isoformat()})
@@ -336,23 +376,47 @@ def query_health_trend(bucket: str, start: datetime, end: datetime) -> list[dict
       |> aggregateWindow(every: 5m, fn: mean)
       |> yield(name: "mean")
     '''
-    with _client() as c:
-        tables = c.query_api().query(flux)
+    tables = await asyncio.to_thread(_run, flux)
     return [{"ts": r["_time"], "value": r["_value"]}
             for tbl in tables for r in tbl.records if r["_value"] is not None]
 
 
-def query_device_metrics(bucket: str, device_id: str, start: datetime, end: datetime) -> list[dict[str, Any]]:
+async def query_device_metrics(bucket: str, device_id: str, start: datetime, end: datetime) -> list[dict[str, Any]]:
     flux = f'''
     from(bucket: "{bucket}")
       |> range(start: {start.isoformat()}, stop: {end.isoformat()})
       |> filter(fn: (r) => r.device_id == "{device_id}")
       |> aggregateWindow(every: 5m, fn: mean)
     '''
-    with _client() as c:
-        tables = c.query_api().query(flux)
+    tables = await asyncio.to_thread(_run, flux)
     return [{"ts": r["_time"], "field": r["_field"], "value": r["_value"]}
             for tbl in tables for r in tbl.records]
+
+
+async def query_all_device_scores(bucket: str, score_field: str, start: datetime, end: datetime) -> list[dict[str, Any]]:
+    """Single Flux query that returns mean(score) per device_id over the range.
+
+    Replaces the N+1 pattern of one query per device. Returns rows shaped
+    {device_id, score}.
+    """
+    flux = f'''
+    from(bucket: "{bucket}")
+      |> range(start: {start.isoformat()}, stop: {end.isoformat()})
+      |> filter(fn: (r) => r._field == "{score_field}")
+      |> group(columns: ["device_id"])
+      |> mean()
+      |> keep(columns: ["device_id", "_value"])
+    '''
+    tables = await asyncio.to_thread(_run, flux)
+    rows: list[dict[str, Any]] = []
+    for tbl in tables:
+        for r in tbl.records:
+            v = r.values.get("_value")
+            d = r.values.get("device_id")
+            if v is None or d is None:
+                continue
+            rows.append({"device_id": d, "score": float(v)})
+    return rows
 ```
 
 - [ ] **Step 2: Commit**
@@ -599,6 +663,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+import asyncio
 from core.llm.rag import RagClient
 from core.registry.protocol import (
     ChatContext, Device, DeviceDetail, Ranking, TimeRange, TrendPoint, TrendSeries,
@@ -606,7 +671,7 @@ from core.registry.protocol import (
 from core.tenancy.context import TenantContext
 from sites.wach import config as wach_config
 from sites.wach.chat import build_chat_context
-from sites.wach.influx import query_device_metrics, query_health_trend
+from sites.wach.influx import query_all_device_scores, query_device_metrics, query_health_trend
 from sites.wach.scoring import compute_ranking
 
 
@@ -619,28 +684,25 @@ class WachAdapter:
         self._rag = RagClient(host=config.get("chroma_host", "localhost"),
                               port=int(config.get("chroma_port", 8000)))
 
-    def health_trend(self, ctx: TenantContext, range: TimeRange) -> TrendSeries:
-        rows = query_health_trend(self._bucket, range.start, range.end)
+    async def health_trend(self, ctx: TenantContext, range: TimeRange) -> TrendSeries:
+        rows = await query_health_trend(self._bucket, range.start, range.end)
         return TrendSeries(
             series=[TrendPoint(ts=datetime.fromisoformat(str(r["ts"]).replace("Z", "+00:00")),
                                value=float(r["value"])) for r in rows],
             unit="score",
         )
 
-    def device_ranking(self, ctx: TenantContext, range: TimeRange) -> Ranking:
-        rows: list[dict] = []
-        for d in wach_config.list_devices():
-            metrics = query_device_metrics(self._bucket, d.id, range.start, range.end)
-            score_values = [m["value"] for m in metrics if m["field"] == "health_score" and m["value"] is not None]
-            if not score_values:
-                continue
-            rows.append({"device_id": d.id, "score": sum(score_values) / len(score_values)})
+    async def device_ranking(self, ctx: TenantContext, range: TimeRange) -> Ranking:
+        # Single grouped Flux query instead of N per-device queries.
+        rows = await query_all_device_scores(self._bucket, "health_score", range.start, range.end)
+        valid_ids = {d.id for d in wach_config.list_devices()}
+        rows = [r for r in rows if r["device_id"] in valid_ids]
         return compute_ranking(rows)
 
-    def device_detail(self, ctx: TenantContext, device_id: str, range: TimeRange) -> DeviceDetail:
+    async def device_detail(self, ctx: TenantContext, device_id: str, range: TimeRange) -> DeviceDetail:
         if not wach_config.validate_device_id(device_id):
             return DeviceDetail(device=Device(id=device_id, type="unknown"))
-        metrics = query_device_metrics(self._bucket, device_id, range.start, range.end)
+        metrics = await query_device_metrics(self._bucket, device_id, range.start, range.end)
         latest: dict[str, float] = {}
         for m in metrics:
             latest[m["field"]] = float(m["value"]) if m["value"] is not None else 0.0
@@ -657,8 +719,9 @@ class WachAdapter:
             trend=trend,
         )
 
-    def chat_context(self, ctx: TenantContext, query: str) -> ChatContext:
-        return build_chat_context(self._rag, ctx.site_id, query)
+    async def chat_context(self, ctx: TenantContext, query: str) -> ChatContext:
+        # RagClient is sync; offload to thread.
+        return await asyncio.to_thread(build_chat_context, self._rag, ctx.site_id, query)
 
     def list_devices(self, ctx: TenantContext) -> list[Device]:
         return wach_config.list_devices()
@@ -755,11 +818,10 @@ def test_validate_device_id_returns_bool(adapter):
     assert isinstance(adapter.validate_device_id("anything"), bool)
 
 
-def test_chat_context_returns_chatcontext(adapter, monkeypatch):
-    # Stub RAG to avoid network if adapter uses one.
+async def test_chat_context_returns_chatcontext(adapter, monkeypatch):
     from core.llm.rag import RagClient
     monkeypatch.setattr(RagClient, "search", lambda self, sid, q, k=5: [])
-    out = adapter.chat_context(_ctx(), "hello")
+    out = await adapter.chat_context(_ctx(), "hello")
     assert isinstance(out, ChatContext)
 ```
 
@@ -811,7 +873,7 @@ async def test_health_trend_through_wach_adapter(app_client, seeded, db_session,
 
     from sites.wach import influx as wach_influx
 
-    def fake_query(bucket, start, end):
+    async def fake_query(bucket, start, end):
         assert bucket == "wach"
         return [
             {"ts": "2026-05-25T00:00:00+00:00", "value": 82.4},
@@ -1040,7 +1102,7 @@ async def test_chat_uses_correct_collection_and_returns_text(app_client, seeded,
 
     captured = {}
 
-    def fake_chat_context(self, ctx, query):
+    async def fake_chat_context(self, ctx, query):
         captured["site_id"] = ctx.site_id
         return ChatContext(rag_snippets=["fixture snippet"], structured_facts={"q": query})
 
@@ -1072,7 +1134,7 @@ async def test_chat_fallback_when_llm_disabled(app_client, seeded, monkeypatch):
     from core.chat import orchestrator
     from core.registry.protocol import ChatContext
 
-    def fake_chat_context(self, ctx, query):
+    async def fake_chat_context(self, ctx, query):
         return ChatContext(structured_facts={"ranking": {"worst": [{"device_id": "e0101", "score": 12.0}]}})
 
     from sites._default.adapter import DefaultAdapter
@@ -1119,7 +1181,7 @@ async def stream_reply(*, ctx: TenantContext, message: str, history: list[dict],
                        session: AsyncSession) -> AsyncIterator[str]:
     site = (await session.execute(select(Site).where(Site.id == ctx.site_id))).scalar_one()
     adapter = get_adapter(site)
-    chat_ctx = adapter.chat_context(ctx, message)
+    chat_ctx = await adapter.chat_context(ctx, message)
 
     if not ENABLE_LLM:
         yield fallback_answer(message, chat_ctx)
@@ -1522,6 +1584,13 @@ export function useChatStream() {
     const { accessToken, activeSiteId } = useAuthStore.getState();
     if (!accessToken || !activeSiteId) return;
 
+    // Snapshot prior turns BEFORE appending the new pair, so we send
+    // {role, content} pairs from earlier turns only (not the in-flight
+    // assistant placeholder we're about to append).
+    const priorHistory = messages
+      .filter((m) => m.content.length > 0)
+      .map((m) => ({ role: m.role, content: m.content }));
+
     setMessages((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "" }]);
     setStreaming(true);
     abortRef.current = new AbortController();
@@ -1534,7 +1603,7 @@ export function useChatStream() {
         Authorization: `Bearer ${accessToken}`,
         "X-Site-Id": activeSiteId,
       },
-      body: JSON.stringify({ message: text, history: [] }),
+      body: JSON.stringify({ message: text, history: priorHistory }),
     });
 
     if (!r.body) { setStreaming(false); return; }
@@ -1562,7 +1631,7 @@ export function useChatStream() {
       }
     }
     setStreaming(false);
-  }, []);
+  }, [messages]);
 
   return { messages, streaming, send };
 }
