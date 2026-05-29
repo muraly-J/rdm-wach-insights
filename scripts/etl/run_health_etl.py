@@ -518,9 +518,12 @@ def build_baselines(df):
         else:
             grp_on = grp  # fallback: no phase data, use all rows
 
-        if len(grp_on) < 3:
-            baselines[ahu_id] = {}
-            continue
+        # NOTE: do NOT early-return an empty {} for sparse AHUs (<3 operational
+        # rows). Downstream record construction indexes baseline["power_total"]
+        # etc. directly, so an empty dict raises KeyError and aborts the whole
+        # pipeline. Each per-metric block below already falls back to NaN
+        # defaults when it sees <3 samples, so falling through here yields a
+        # complete (NaN-filled) baseline structure for sparse AHUs instead.
 
         # Standard metrics
         for col, min_r in [
