@@ -9,12 +9,24 @@
 
 ---
 
-## Part A — Stakeholder Sprint-Plan Summary (RDMI-008 send)
+## Part A — Scope-Decision Brief (RDMI-008 meeting)
 
-**Project:** RDM Insight — two-tenant building-intelligence MVP (WACH + Cyberview).
-**Timeline:** 7 one-week sprints, **Jun 2 → Jul 17**, buffer week Jul 20–24. Target demo Jul 17.
-**Scope:** Plans A (foundation + auth/tenancy), B (WACH port + chat), C (Cyberview + admin + deploy).
-**Out of scope (Phase 2+):** MQTT ingest, anomaly detection, optimization, ML.
+RDMI-008 is an **internal scope-decision meeting** — lock what goes in the MVP we eventually show clients, then build off it. Not an external send.
+
+**Project:** RDM Insight — two-tenant building-intelligence platform (WACH + Cyberview).
+**Timeline (P1 build):** 7 one-week sprints, **Jun 2 → Jul 17**, buffer week Jul 20–24. Target demo Jul 17.
+
+### Phasing
+- **Phase 1 — MVP base (what we build now):**
+  - Dashboard: **high-level** KPIs + **low-level** deep-dive (multi-variable plotting).
+  - Chatbot: queries the **respective site's DB**, answers both high-level and low-level questions.
+  - Delivered across Plans A (foundation + auth/tenancy), B (WACH port + chat), C (Cyberview + admin + deploy).
+- **Phase 2 — energy optimization algorithms.** Only feasible where data is collected.
+- **Phase 3 — ML forecasting for predictive maintenance.**
+
+**Phase 2 + 3 are WACH-only for now** — both need historical data, and Cyberview history isn't obtainable yet. Cyberview stays Phase-1-only until that changes.
+
+**Client sequencing:** first client meeting is **WACH** (the deeper phases only work there today).
 
 | Sprint | Dates | Goal | Pts |
 |---|---|---|---|
@@ -29,7 +41,7 @@
 **Security posture (from RDMI-006 threat model):** GO on app-layer tenant isolation for MVP (no Postgres RLS — engine-layer isolation via per-site Influx bucket + Chroma collection is structural). Conditional on 12 gating fixes (G1–G12) landing in Sprint 2; G10 router-conformance test gates merge to main.
 
 **Decision needed at sign-off:**
-1. **Lock MVP scope** — confirm Plans A/B/C in, Phase 2+ out.
+1. **Lock MVP scope** — confirm Phase 1 (dashboard + chatbot, Plans A/B/C) in; Phase 2 (energy optimization) + Phase 3 (ML predictive maintenance) deferred, WACH-only when they land.
 2. **Sprint 2 overload (~28.5 pts).** The 12 threat-model fixes add 10.5 pts on top of ~18 pts auth work. Need a rebalance call: defer which Sprint-2 tickets to Sprint 3? (Candidates that aren't on the demo path — TBD, no clean operator-override/audit-writer ticket exists in current backlog.)
 3. **Solo-dev velocity is a guess.** Re-baseline after Sprint 1 actuals.
 
