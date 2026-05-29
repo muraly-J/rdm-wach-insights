@@ -297,3 +297,4 @@ nohup.out
 
 # ── Local-only research scripts (contain credentials) ────────────────
 scripts/research/cyberview_audit.py
+QWEN.md
